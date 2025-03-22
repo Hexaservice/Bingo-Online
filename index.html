@@ -4,14 +4,79 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Enviar Cartón de Bingo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: url('https://source.unsplash.com/1600x900/?bingo,game') no-repeat center center fixed;
+            background-size: cover;
+        }
+        h2 {
+            font-size: 2rem;
+            color: #ffcc00;
+            text-shadow: 2px 2px 4px #000;
+        }
+        table {
+            margin: 20px auto;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        th, td {
+            border: 2px solid #ff6600;
+            width: 60px;
+            height: 60px;
+            text-align: center;
+        }
+        select {
+            width: 100%;
+            font-size: 16px;
+            padding: 5px;
+            text-align: center;
+        }
+        .free {
+            background-color: #ffcc00;
+            font-weight: bold;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 18px;
+            background: #ff6600;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #cc5500;
+        }
+        @media (max-width: 600px) {
+            table {
+                width: 90%;
+            }
+            th, td {
+                width: 50px;
+                height: 50px;
+            }
+            select {
+                font-size: 14px;
+            }
+        }
+    </style>
 </head>
 <body>
     <h2>Cartón de Bingo</h2>
-    <table border="1">
+    <table>
+        <thead>
+            <tr>
+                <th>B</th><th>I</th><th>N</th><th>G</th><th>O</th>
+            </tr>
+        </thead>
         <tbody id="bingo-board"></tbody>
     </table>
     <button onclick="enviarDatos()">Enviar Cartón</button>
-
+    
     <script>
         const board = document.getElementById("bingo-board");
         const ranges = [[1, 15], [16, 30], [31, 45], [46, 60], [61, 75]];
@@ -22,15 +87,19 @@
                 for (let col = 0; col < 5; col++) {
                     let td = document.createElement("td");
                     if (row === 2 && col === 2) {
-                        td.textContent = "★"; // Espacio libre
+                        td.classList.add("free");
+                        td.textContent = "★"; 
                     } else {
-                        let input = document.createElement("input");
-                        input.type = "number";
-                        input.min = ranges[col][0];
-                        input.max = ranges[col][1];
-                        input.dataset.row = row;
-                        input.dataset.col = col;
-                        td.appendChild(input);
+                        let select = document.createElement("select");
+                        select.dataset.row = row;
+                        select.dataset.col = col;
+                        for (let i = ranges[col][0]; i <= ranges[col][1]; i++) {
+                            let option = document.createElement("option");
+                            option.value = i;
+                            option.textContent = i;
+                            select.appendChild(option);
+                        }
+                        td.appendChild(select);
                     }
                     tr.appendChild(td);
                 }
@@ -41,13 +110,13 @@
         async function enviarDatos() {
             let data = [[], [], [], [], []];
 
-            document.querySelectorAll("input").forEach(input => {
-                let row = input.dataset.row;
-                let col = input.dataset.col;
-                data[row][col] = input.value || "";
+            document.querySelectorAll("select").forEach(select => {
+                let row = select.dataset.row;
+                let col = select.dataset.col;
+                data[row][col] = select.value || "";
             });
 
-            let url = "https://script.google.com/macros/s/AKfycbwHECPJbnC4cvLlEiRL5h-DTe20AhtY-CGNPFsmU-hAtGgit8JogeZ-nMQ9SdkB5uSy9g/exec"; // Pega aquí la URL del script de Google Apps Script
+            let url = "https://script.google.com/macros/s/AKfycbwHECPJbnC4cvLlEiRL5h-DTe20AhtY-CGNPFsmU-hAtGgit8JogeZ-nMQ9SdkB5uSy9g/exec";
 
             try {
                 let response = await fetch(url, {
@@ -66,3 +135,4 @@
     </script>
 </body>
 </html>
+
