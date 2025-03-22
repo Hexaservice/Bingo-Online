@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario de Bingo</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        table { margin: 20px auto; border-collapse: collapse; }
+        th, td { border: 1px solid black; width: 50px; height: 50px; text-align: center; }
+        input { width: 40px; height: 40px; text-align: center; font-size: 16px; }
+        .free { background-color: lightgray; }
+    </style>
+</head>
+<body>
+    <h2>Cartón de Bingo</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>B</th><th>I</th><th>N</th><th>G</th><th>O</th>
+            </tr>
+        </thead>
+        <tbody id="bingo-board"></tbody>
+    </table>
+    <button onclick="validateAndSubmit()">Validar y Enviar</button>
+    
+    <script>
+        const ranges = [ [1, 15], [16, 30], [31, 45], [46, 60], [61, 75] ];
+        const board = document.getElementById("bingo-board");
+        
+        function createBoard() {
+            for (let row = 0; row < 5; row++) {
+                let tr = document.createElement("tr");
+                for (let col = 0; col < 5; col++) {
+                    let td = document.createElement("td");
+                    if (row === 2 && col === 2) { // Casilla central
+                        td.classList.add("free");
+                        td.textContent = "★";
+                    } else {
+                        let input = document.createElement("input");
+                        input.type = "number";
+                        input.min = ranges[col][0];
+                        input.max = ranges[col][1];
+                        input.dataset.column = col;
+                        input.dataset.row = row;
+                        td.appendChild(input);
+                    }
+                    tr.appendChild(td);
+                }
+                board.appendChild(tr);
+            }
+        }
+        
+        async function validateAndSubmit() {
+            let columns = [[], [], [], [], []];
+            let valid = true;
+            let data = [[], [], [], [], []];
+            
+            document.querySelectorAll("input").forEach(input => {
+                let value = parseInt(input.value);
+                let col = input.dataset.column;
+                let row = input.dataset.row;
+                
+                if (isNaN(value) || value < ranges[col][0] || value > ranges[col][1] || columns[col].includes(value)) {
+                    input.style.border = "2px solid red";
+                    valid = false;
+                } else {
+                    input.style.border = "1px solid black";
+                    columns[col].push(value);
+                    data[row][col] = value;
+                }
+            });
+            
+            if (valid) {
+                let url = "https://script.google.com/macros/s/AKfycbwHECPJbnC4cvLlEiRL5h-DTe20AhtY-CGNPFsmU-hAtGgit8JogeZ-nMQ9SdkB5uSy9g/exec"; // Cambia por la URL del script de Google Apps Script
+                let response = await fetch(url, {
+                    method: "POST",
+                    body: JSON.stringify(data),
+                    headers: { "Content-Type": "application/json" }
+                });
+                let result = await response.text();
+                alert(result);
+            } else {
+                alert("Corrige los errores antes de enviar.");
+            }
+        }
+        
+        createBoard();
+    </script>
+</body>
+</html>
