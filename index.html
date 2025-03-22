@@ -107,6 +107,7 @@
                             option.textContent = i;
                             select.appendChild(option);
                         }
+                        select.addEventListener("change", validateBoard);
                         td.appendChild(select);
                     }
                     tr.appendChild(td);
@@ -115,9 +116,32 @@
             }
         }
 
-        async function enviarDatos() {
-            let data = [[], [], [], [], []];
+        function validateBoard() {
+            let columns = [[], [], [], [], []];
+            let isValid = true;
+            
+            document.querySelectorAll("select").forEach(select => {
+                let col = select.dataset.col;
+                let value = select.value;
+                
+                if (columns[col].includes(value)) {
+                    select.style.border = "2px solid red";
+                    isValid = false;
+                } else {
+                    select.style.border = "none";
+                    columns[col].push(value);
+                }
+            });
+            return isValid;
+        }
 
+        async function enviarDatos() {
+            if (!validateBoard()) {
+                alert("Corrige los errores antes de enviar.");
+                return;
+            }
+            
+            let data = [[], [], [], [], []];
             document.querySelectorAll("select").forEach(select => {
                 let row = select.dataset.row;
                 let col = select.dataset.col;
@@ -143,4 +167,3 @@
     </script>
 </body>
 </html>
-
