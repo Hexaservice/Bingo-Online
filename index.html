@@ -87,97 +87,125 @@
       </thead>
       <tbody id="bingo-board"></tbody>
   </table>
-  <button onclick="enviarDatos()">Enviar Cartón</button>
-  
-  <script>
-      const board = document.getElementById("bingo-board");
-      const ranges = [[1, 15], [16, 30], [31, 45], [46, 60], [61, 75]];
+  <button id="enviar-btn">Enviar Cartón</button>
 
-      function createBoard() {
-          for (let row = 0; row < 5; row++) {
-              let tr = document.createElement("tr");
-              for (let col = 0; col < 5; col++) {
-                  let td = document.createElement("td");
-                  if (row === 2 && col === 2) {
-                      td.classList.add("free");
-                      td.textContent = "★"; 
-                  } else {
-                      let select = document.createElement("select");
-                      select.dataset.row = row;
-                      select.dataset.col = col;
-                      let defaultOption = document.createElement("option");
-                      defaultOption.value = "";
-                      defaultOption.textContent = "";
-                      defaultOption.selected = true;
-                      select.appendChild(defaultOption);
-                      for (let i = ranges[col][0]; i <= ranges[col][1]; i++) {
-                          let option = document.createElement("option");
-                          option.value = i;
-                          option.textContent = i;
-                          select.appendChild(option);
-                      }
-                      select.addEventListener("change", validateBoard);
-                      td.appendChild(select);
-                  }
-                  tr.appendChild(td);
-              }
-              board.appendChild(tr);
-          }
+  <!-- Importar el SDK modular de Firebase -->
+  <script type="module">
+    // Importar funciones necesarias de Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
+    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-database.js";
+
+    // Configuración de Firebase (reemplaza con tus datos)
+    const firebaseConfig = {
+      apiKey: "AIzaSyBztIl46s-vOOxrUVDilJNSN6zuzldeUWI",
+      authDomain: "bingo-online-231fd.firebaseapp.com",
+      databaseURL: "https://bingo-online-231fd-default-rtdb.firebaseio.com",
+      projectId: "bingo-online-231fd",
+      storageBucket: "bingo-online-231fd.firebasestorage.app",
+      messagingSenderId: "455917034653",
+      appId: "1:455917034653:web:ef3f7a1d14be86a1580874"
+    };
+
+    // Inicializar Firebase y la base de datos
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+
+    // Función para enviar datos a Firebase
+    async function enviarDatosAFirebase(data) {
+      try {
+        // Se crea un nodo único bajo "bingo"
+        const dbRef = ref(database, 'bingo');
+        const newEntryRef = push(dbRef);
+        await set(newEntryRef, {
+          timestamp: Date.now(),
+          data: data
+        });
+        alert("Datos enviados correctamente a Firebase.");
+      } catch (error) {
+        alert("Error al enviar a Firebase: " + error.message);
       }
+    }
 
-      function validateBoard() {
-          let columns = [[], [], [], [], []];
-          let isValid = true;
-          
-          document.querySelectorAll("select").forEach(select => {
-              let col = select.dataset.col;
-              let value = select.value;
-              
-              if (value === "" || columns[col].includes(value)) {
-                  select.style.border = "2px solid red";
-                  isValid = false;
-              } else {
-                  select.style.border = "none";
-                  columns[col].push(value);
-              }
-          });
-          return isValid;
-      }
+    // Variables y funciones para el tablero de bingo
+    const board = document.getElementById("bingo-board");
+    const ranges = [[1, 15], [16, 30], [31, 45], [46, 60], [61, 75]];
 
-      async function enviarDatos() {
-          if (!validateBoard()) {
-              alert("Corrige los errores antes de enviar. Asegúrate de seleccionar todos los valores y no repetir valores en las columnas.");
-              return;
+    function createBoard() {
+      for (let row = 0; row < 5; row++) {
+        let tr = document.createElement("tr");
+        for (let col = 0; col < 5; col++) {
+          let td = document.createElement("td");
+          if (row === 2 && col === 2) {
+            td.classList.add("free");
+            td.textContent = "★"; 
+          } else {
+            let select = document.createElement("select");
+            select.dataset.row = row;
+            select.dataset.col = col;
+            let defaultOption = document.createElement("option");
+            defaultOption.value = "";
+            defaultOption.textContent = "";
+            defaultOption.selected = true;
+            select.appendChild(defaultOption);
+            for (let i = ranges[col][0]; i <= ranges[col][1]; i++) {
+              let option = document.createElement("option");
+              option.value = i;
+              option.textContent = i;
+              select.appendChild(option);
+            }
+            select.addEventListener("change", validateBoard);
+            td.appendChild(select);
           }
-          
-          let data = [[], [], [], [], []];
-          document.querySelectorAll("select").forEach(select => {
-              let row = select.dataset.row;
-              let col = select.dataset.col;
-              data[row][col] = select.value || "";
-          });
-
-          let url = "https://script.google.com/macros/s/AKfycbwHECPJbnC4cvLlEiRL5h-DTe20AhtY-CGNPFsmU-hAtGgit8JogeZ-nMQ9SdkB5uSy9g/exec";
-
-          try {
-              let response = await fetch(url, {
-                  method: "POST",
-                  mode: "cors", // Modo CORS explícito
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(data)
-              });
-              // Se asume que el servidor responde con JSON
-              let result = await response.json();
-              alert("Respuesta del servidor: " + JSON.stringify(result));
-          } catch (error) {
-              alert("Error al enviar los datos: " + error.message);
-          }
+          tr.appendChild(td);
+        }
+        board.appendChild(tr);
       }
+    }
 
-      createBoard();
+    function validateBoard() {
+      let columns = [[], [], [], [], []];
+      let isValid = true;
+      
+      document.querySelectorAll("select").forEach(select => {
+        let col = select.dataset.col;
+        let value = select.value;
+        
+        if (value === "" || columns[col].includes(value)) {
+          select.style.border = "2px solid red";
+          isValid = false;
+        } else {
+          select.style.border = "none";
+          columns[col].push(value);
+        }
+      });
+      return isValid;
+    }
+
+    // Función que se ejecuta al presionar el botón "Enviar Cartón"
+    async function enviarDatos() {
+      if (!validateBoard()) {
+        alert("Corrige los errores antes de enviar. Asegúrate de seleccionar todos los valores y no repetir valores en las columnas.");
+        return;
+      }
+      
+      // Recopilar los datos del tablero en un arreglo 2D
+      let data = [[], [], [], [], []];
+      document.querySelectorAll("select").forEach(select => {
+        let row = select.dataset.row;
+        let col = select.dataset.col;
+        data[row][col] = select.value || "";
+      });
+
+      // Enviar los datos a Firebase
+      await enviarDatosAFirebase(data);
+    }
+
+    // Agregar listener al botón para enviar datos
+    document.getElementById("enviar-btn").addEventListener("click", enviarDatos);
+
+    // Crear el tablero de bingo al cargar la página
+    createBoard();
   </script>
-
-
 </body>
 </html>
 
