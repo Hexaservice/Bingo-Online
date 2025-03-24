@@ -5,35 +5,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cartón de Bingo</title>
   <style>
-      body {
-          font-family: Arial, sans-serif;
-          text-align: center;
-          background: url('https://source.unsplash.com/1600x900/?bingo,game') no-repeat center center fixed;
-          background-size: cover;
-      }
+     		
+		body {
+			background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)), 
+						url('https://img.freepik.com/vetores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg');
+			background-repeat: repeat;
+			background-size: auto;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			min-height: 100vh;
+			text-align: center;
+		} 
+		
       h2 {
           font-size: 2.5rem;
           color: #ffcc00;
           text-shadow: 3px 3px 6px #000;
       }
       table {
-          margin: 20px auto;
-          border-collapse: collapse;
-          background: rgba(255, 255, 255, 0.8);
-          border-radius: 10px;
-          overflow: hidden;
-      }
+			margin: 20px auto;
+			border-collapse: collapse;
+			background: rgba(255, 255, 255, 0.9);
+			border-radius: 15px; /* Bordes redondeados */
+			border: 15px solid #004d00; /* Borde externo verde oscuro */
+			padding: 10px;
+			box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* Sombra para mejorar el efecto */
+	  }
       th {
           font-size: 2rem;
           color: #ff6600;
           text-shadow: 2px 2px 4px #000;
       }
       th, td {
-          border: 2px solid #ff6600;
-          width: 60px;
-          height: 60px;
-          text-align: center;
-      }
+			border: 2px solid black;
+			width: 60px;
+			height: 60px;
+			text-align: center;
+			font-weight: bold;
+		}
       select {
           width: 100%;
           font-size: 2rem;
@@ -59,6 +70,7 @@
           border: none;
           border-radius: 5px;
           cursor: pointer;
+		  align: center;
       }
       button:hover {
           background: #cc5500;
@@ -78,7 +90,9 @@
   </style>
 </head>
 <body>
-  <h2>Cartón de Bingo</h2>
+    <h3 id="fecha-actual" style="font-size: 1rem; color: black; margin-bottom: 5px; text-shadow: 0 0 20px yellow, 0 0 20px yellow;"></h3>
+	<!-- <h2 style="font-size: 2rem;">Cartón de Bingo</h2> -->
+	<input type="text" id="alias-jugador" placeholder="Alias de jugador" style="font-size: 1.5rem; padding: 5px; text-align: center; border-radius: 5px; border: 1px solid #ccc; width: 200px; display: block; margin: 10px auto; color: orange;" required>
   <table>
       <thead>
           <tr>
@@ -87,6 +101,23 @@
       </thead>
       <tbody id="bingo-board"></tbody>
   </table>
+   <!-- Banco -->
+  <select id="banco-seleccionado" 
+        style="font-size: 1rem; padding: 5px; text-align: center; border-radius: 5px; border: 1px solid #ccc; width: 250px; display: block; margin: 10px auto; color: black; background-color: white;" required>
+    <option value="" selected disabled>Banco donde transferiste</option>
+    <option value="Banco de Venezuela">Banco de Venezuela</option>
+    <option value="Banco Mercantil">Banco Mercantil</option>
+    <option value="Otro Banco">Otro Banco</option>
+  </select>
+  
+   <!-- Referencia -->
+  <input id="referencia-transferencia" placeholder="Referencia de pago"
+        style="font-size: 1.5rem; padding: 5px; text-align: center; border-radius: 5px; border: 1px solid #ccc; width: 250px; display: block; margin: 10px auto; color: green;"
+        min="0" max="99999" oninput="if(this.value.length > 5) this.value = this.value.slice(0, 5);" required>
+	<!-- Comentarios -->	
+  <textarea id="comentario" placeholder="Comentario (opcional)" 
+          style="font-size: 1rem; padding: 5px; text-align: left; border-radius: 5px; border: 1px solid #ccc; width: 250px; height: 40px; display: block; margin: 10px auto; color: black;"></textarea>
+  
   <button id="enviar-btn">Enviar Cartón</button>
 
   <!-- Importar el SDK modular de Firebase -->
@@ -125,6 +156,17 @@
         alert("Error al enviar jugada: " + error.message);
       }
     }
+	
+	  // Función para mostrar la fecha actual
+  function mostrarFechaActual() {
+    const fechaElemento = document.getElementById("fecha-actual");
+    const hoy = new Date();
+    const opciones = { year: 'numeric', month: 'long', day: 'numeric' };
+    fechaElemento.textContent = hoy.toLocaleDateString('es-ES', opciones);
+  }
+
+  // Llamar a la función al cargar la página
+  mostrarFechaActual();
 
     // Variables y funciones para el tablero de bingo
     const board = document.getElementById("bingo-board");
@@ -183,20 +225,38 @@
 
     // Función que se ejecuta al presionar el botón "Enviar Cartón"
     async function enviarDatos() {
+      const alias = document.getElementById("alias-jugador").value.trim();
+      const banco = document.getElementById("banco-seleccionado").value;
+      const referencia = document.getElementById("referencia-transferencia").value.trim();
+      const comentario = document.getElementById("comentario").value.trim(); // Nuevo campo opcional
+
+      if (alias === "") {
+          alert("Por favor, ingresa tu Alias antes de enviar el cartón.");
+          return;
+      }
+
+      if (banco === "") {
+          alert("Por favor, selecciona el banco donde realizaste la transferencia.");
+          return;
+      }
+
+      if (referencia === "" || isNaN(referencia) || referencia.length > 5) {
+          alert("Por favor, ingresa un número de referencia válido (solo números, máximo 5 dígitos).");
+          return;
+      }
+
       if (!validateBoard()) {
-        alert("Corrige los errores antes de enviar. Asegúrate de seleccionar todos los valores y no repetir valores en las columnas.");
-        return;
+          alert("Corrige los errores antes de enviar. Asegúrate de seleccionar todos los valores y no repetir valores en las columnas.");
+          return;
       }
       
-      // Recopilar los datos del tablero en un arreglo 2D
-      let data = [[], [], [], [], []];
-      document.querySelectorAll("select").forEach(select => {
-        let row = select.dataset.row;
-        let col = select.dataset.col;
-        data[row][col] = select.value || "";
+      let data = { alias: alias, banco: banco, referencia: referencia, comentario: comentario, carton: [[], [], [], [], []] };
+      document.querySelectorAll("select[data-row]").forEach(select => {
+          let row = select.dataset.row;
+          let col = select.dataset.col;
+          data.carton[row][col] = select.value || "";
       });
 
-      // Enviar los datos a Firebase
       await enviarDatosAFirebase(data);
     }
 
@@ -208,7 +268,5 @@
   </script>
 </body>
 </html>
-
-
 
 
