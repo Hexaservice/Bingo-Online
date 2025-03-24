@@ -122,152 +122,150 @@
 
   <!-- Importar el SDK modular de Firebase -->
   <script type="module">
-    // Importar funciones necesarias de Firebase
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
-    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-database.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
+  import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-database.js";
 
-    // Configuración de Firebase (reemplaza con tus datos)
-    const firebaseConfig = {
-      apiKey: "AIzaSyBztIl46s-vOOxrUVDilJNSN6zuzldeUWI",
-      authDomain: "bingo-online-231fd.firebaseapp.com",
-      databaseURL: "https://bingo-online-231fd-default-rtdb.firebaseio.com",
-      projectId: "bingo-online-231fd",
-      storageBucket: "bingo-online-231fd.firebasestorage.app",
-      messagingSenderId: "455917034653",
-      appId: "1:455917034653:web:ef3f7a1d14be86a1580874"
-    };
+  const firebaseConfig = {
+    apiKey: "AIzaSyBztIl46s-vOOxrUVDilJNSN6zuzldeUWI",
+    authDomain: "bingo-online-231fd.firebaseapp.com",
+    databaseURL: "https://bingo-online-231fd-default-rtdb.firebaseio.com",
+    projectId: "bingo-online-231fd",
+    storageBucket: "bingo-online-231fd.firebasestorage.app",
+    messagingSenderId: "455917034653",
+    appId: "1:455917034653:web:ef3f7a1d14be86a1580874"
+  };
 
-    // Inicializar Firebase y la base de datos
-    const app = initializeApp(firebaseConfig);
-    const database = getDatabase(app);
+  const app = initializeApp(firebaseConfig);
+  const database = getDatabase(app);
 
-    // Función para enviar datos a Firebase
-    async function enviarDatosAFirebase(data) {
-      try {
-        // Se crea un nodo único bajo "bingo"
-        const dbRef = ref(database, 'bingo');
-        const newEntryRef = push(dbRef);
-        await set(newEntryRef, {
-          timestamp: Date.now(),
-          data: data
-        });
-        alert("Jugada de Cartón enviada correctamente.");
-      } catch (error) {
-        alert("Error al enviar jugada: " + error.message);
-	console.error("Error en Firebase:", error);
-      }
-    }
-	
-	  // Función para mostrar la fecha actual
+  // Función para mostrar la fecha actual
   function mostrarFechaActual() {
     const fechaElemento = document.getElementById("fecha-actual");
     const hoy = new Date();
     const opciones = { year: 'numeric', month: 'long', day: 'numeric' };
     fechaElemento.textContent = hoy.toLocaleDateString('es-ES', opciones);
   }
-
-  // Llamar a la función al cargar la página
   mostrarFechaActual();
 
-    // Variables y funciones para el tablero de bingo
-    const board = document.getElementById("bingo-board");
-    const ranges = [[1, 15], [16, 30], [31, 45], [46, 60], [61, 75]];
+  // Variables para el tablero
+  const board = document.getElementById("bingo-board");
+  const ranges = [[1, 15], [16, 30], [31, 45], [46, 60], [61, 75]];
 
-    function createBoard() {
-      for (let row = 0; row < 5; row++) {
-        let tr = document.createElement("tr");
-        for (let col = 0; col < 5; col++) {
-          let td = document.createElement("td");
-          if (row === 2 && col === 2) {
-            td.classList.add("free");
-            td.textContent = "★"; 
-          } else {
-            let select = document.createElement("select");
-            select.dataset.row = row;
-            select.dataset.col = col;
-            let defaultOption = document.createElement("option");
-            defaultOption.value = "";
-            defaultOption.textContent = "";
-            defaultOption.selected = true;
-            select.appendChild(defaultOption);
-            for (let i = ranges[col][0]; i <= ranges[col][1]; i++) {
-              let option = document.createElement("option");
-              option.value = i;
-              option.textContent = i;
-              select.appendChild(option);
-            }
-            select.addEventListener("change", validateBoard);
-            td.appendChild(select);
-          }
-          tr.appendChild(td);
-        }
-        board.appendChild(tr);
-      }
-    }
-
-    function validateBoard() {
-      let columns = [[], [], [], [], []];
-      let isValid = true;
-      
-      document.querySelectorAll("select").forEach(select => {
-        let col = select.dataset.col;
-        let value = select.value;
-        
-        if (value === "" || columns[col].includes(value)) {
-          select.style.border = "2px solid red";
-          isValid = false;
+  function createBoard() {
+    for (let row = 0; row < 5; row++) {
+      let tr = document.createElement("tr");
+      for (let col = 0; col < 5; col++) {
+        let td = document.createElement("td");
+        if (row === 2 && col === 2) {
+          td.classList.add("free");
+          td.textContent = "★"; 
         } else {
-          select.style.border = "none";
-          columns[col].push(value);
+          let select = document.createElement("select");
+          select.dataset.row = row;
+          select.dataset.col = col;
+          let defaultOption = document.createElement("option");
+          defaultOption.value = "";
+          defaultOption.textContent = "";
+          defaultOption.selected = true;
+          select.appendChild(defaultOption);
+          for (let i = ranges[col][0]; i <= ranges[col][1]; i++) {
+            let option = document.createElement("option");
+            option.value = i;
+            option.textContent = i;
+            select.appendChild(option);
+          }
+          select.addEventListener("change", validateBoard);
+          td.appendChild(select);
         }
-      });
-      return isValid;
+        tr.appendChild(td);
+      }
+      board.appendChild(tr);
     }
+  }
 
-    // Función que se ejecuta al presionar el botón "Enviar Cartón"
-    async function enviarDatos() {
-      const alias = document.getElementById("alias-jugador").value.trim();
-      const banco = document.getElementById("banco-seleccionado").value;
-      const referencia = document.getElementById("referencia-transferencia").value.trim();
-      const comentario = document.getElementById("comentario").value.trim(); // Nuevo campo opcional
-
-      if (alias === "") {
-          alert("Por favor, ingresa tu Alias antes de enviar el cartón.");
-          return;
-      }
-
-      if (banco === "") {
-          alert("Por favor, selecciona el banco donde realizaste la transferencia.");
-          return;
-      }
-
-      if (referencia === "" || isNaN(referencia) || referencia.length > 5) {
-          alert("Por favor, ingresa un número de referencia válido (solo números, máximo 5 dígitos).");
-          return;
-      }
-
-      if (!validateBoard()) {
-          alert("Corrige los errores antes de enviar. Asegúrate de seleccionar todos los valores y no repetir valores en las columnas.");
-          return;
-      }
+  function validateBoard() {
+    let columns = [[], [], [], [], []];
+    let isValid = true;
+    
+    // Filtrar solo los selects del tablero
+    document.querySelectorAll("select[data-col]").forEach(select => {
+      const col = parseInt(select.dataset.col);
+      const value = select.value;
       
-      let data = { alias: alias, banco: banco, referencia: referencia, comentario: comentario, carton: [[], [], [], [], []] };
-      document.querySelectorAll("select[data-row]").forEach(select => {
-          let row = select.dataset.row;
-          let col = select.dataset.col;
-          data.carton[row][col] = select.value || "";
-      });
+      if (value === "" || columns[col].includes(value)) {
+        select.style.border = "2px solid red";
+        isValid = false;
+      } else {
+        select.style.border = "none";
+        columns[col].push(value);
+      }
+    });
+    return isValid;
+  }
 
-      await enviarDatosAFirebase(data);
+  // Función para enviar datos a Firebase
+  async function enviarDatos() {
+    const alias = document.getElementById("alias-jugador").value.trim();
+    const banco = document.getElementById("banco-seleccionado").value;
+    const referencia = document.getElementById("referencia-transferencia").value.trim();
+    const comentario = document.getElementById("comentario").value.trim();
+    
+    if (alias === "") {
+      alert("Por favor, ingresa tu Alias antes de enviar el cartón.");
+      return;
+    }
+    if (banco === "") {
+      alert("Por favor, selecciona el banco donde realizaste la transferencia.");
+      return;
+    }
+    if (referencia === "" || isNaN(referencia) || referencia.length > 5) {
+      alert("Por favor, ingresa un número de referencia válido (solo números, máximo 5 dígitos).");
+      return;
+    }
+    if (!validateBoard()) {
+      alert("Corrige los errores antes de enviar. Asegúrate de seleccionar todos los valores y no repetir valores en las columnas.");
+      return;
     }
 
-    // Agregar listener al botón para enviar datos
-    document.getElementById("enviar-btn").addEventListener("click", enviarDatos);
+    // Construir el array para el cartón
+    let carton = [[], [], [], [], []];
+    document.querySelectorAll("select[data-row]").forEach(select => {
+      const row = parseInt(select.dataset.row);
+      const col = parseInt(select.dataset.col);
+      carton[row][col] = select.value || "";
+    });
 
-    // Crear el tablero de bingo al cargar la página
-    createBoard();
-  </script>
+    // Obtener la fecha actual formateada
+    const hoy = new Date();
+    const opciones = { year: 'numeric', month: 'long', day: 'numeric' };
+    const fechaActual = hoy.toLocaleDateString('es-ES', opciones);
+    
+    // Crear objeto de metadatos
+    const metadata = {
+      alias: alias,
+      banco: banco,
+      referencia: referencia,
+      comentario: comentario,
+      fecha: fechaActual,
+      timestamp: Date.now()
+    };
+
+    // Crear un nodo único en "jugadas"
+    const jugadasRef = ref(database, 'jugadas');
+    const newEntryRef = push(jugadasRef);
+    
+    // Guardar los metadatos y el cartón en ramas separadas bajo la misma clave
+    await set(ref(database, 'jugadas/' + newEntryRef.key + '/metadata'), metadata);
+    await set(ref(database, 'jugadas/' + newEntryRef.key + '/carton'), carton);
+
+    alert("Jugada de Cartón enviada correctamente.");
+  }
+
+  document.getElementById("enviar-btn").addEventListener("click", enviarDatos);
+  createBoard();
+</script>
 </body>
 </html>
+
 
 
