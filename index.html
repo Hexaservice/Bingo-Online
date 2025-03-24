@@ -109,6 +109,10 @@
     <option value="Banco Mercantil">Banco Mercantil</option>
     <option value="Otro Banco">Otro Banco</option>
   </select>
+  <!-- monto -->
+  <input type="number" id="monto-transferencia" placeholder="monto"
+        style="font-size: 1.5rem; padding: 5px; text-align: center; border-radius: 5px; border: 1px solid #ccc; width: 250px; display: block; margin: 10px auto; color: black;"
+        min="0" max="9999999" oninput="if(this.value.length > 5) this.value = this.value.slice(0, 5);" required>
   
    <!-- Referencia -->
   <input type="number" id="referencia-transferencia" placeholder="Referencia de pago"
@@ -207,6 +211,7 @@
   async function enviarDatos() {
     const alias = document.getElementById("alias-jugador").value.trim();
     const banco = document.getElementById("banco-seleccionado").value;
+	const monto = document.getElementById("monto-transferencia").value.trim();
     const referencia = document.getElementById("referencia-transferencia").value.trim();
     const comentario = document.getElementById("comentario").value.trim();
     
@@ -216,6 +221,10 @@
     }
     if (banco === "") {
       alert("Por favor, selecciona el banco donde realizaste la transferencia.");
+      return;
+    }
+	 if (monto === "" || isNaN(monto) || monto.length > 5) {
+      alert("Por favor, ingresa un monto válido (solo números).");
       return;
     }
     if (referencia === "" || isNaN(referencia) || referencia.length > 5) {
@@ -244,6 +253,7 @@
     const metadata = {
       alias: alias,
       banco: banco,
+	  monto: monto,
       referencia: referencia,
       comentario: comentario,
       fecha: fechaActual,
@@ -266,6 +276,7 @@
 </script>
 </body>
 </html>
+
 
 
 
