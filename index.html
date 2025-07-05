@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cartón de Bingo</title>
+  <title>Bingo Online</title>
   <style>
      		
 		body {
@@ -90,9 +90,34 @@
   </style>
 </head>
 <body>
+  <div id="login-container">
+    <h2>Bingo Online</h2>
+    <button id="login-btn">Ingresar con Google</button>
+  </div>
+
+  <div id="main-menu" style="display:none; width:100%;">
+    <div style="display:flex;justify-content:space-between;align-items:center; padding:10px;">
+      <div style="display:flex;align-items:center;">
+        <img id="user-pic" src="" alt="Usuario" style="width:40px;height:40px;border-radius:50%;margin-right:10px;">
+        <div style="text-align:left;">
+          <div id="user-name" style="font-weight:bold;"></div>
+          <div id="user-email" style="font-size:0.9em;"></div>
+        </div>
+      </div>
+      <button id="logout-btn">Cerrar sesión</button>
+    </div>
+    <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px; align-items:center;">
+      <button id="play-btn">Jugar cartón de Bingo</button>
+      <button id="wallet-btn">Recarga tu Billetera</button>
+      <button id="results-btn">Ver Resultados Online</button>
+    </div>
+  </div>
+
+  <div id="bingo-container" style="display:none;">
+    <button id="back-btn" style="margin-bottom:10px;">Volver al menú</button>
     <h3 id="fecha-actual" style="font-size: 1rem; color: black; margin-bottom: 5px; text-shadow: 0 0 20px yellow, 0 0 20px yellow;"></h3>
-	<!-- <h2 style="font-size: 2rem;">Cartón de Bingo</h2> -->
-	<input type="text" id="alias-jugador" placeholder="Alias de jugador" style="font-size: 1.5rem; padding: 5px; text-align: center; border-radius: 5px; border: 1px solid #ccc; width: 200px; display: block; margin: 10px auto; color: orange;" required>
+        <!-- <h2 style="font-size: 2rem;">Cartón de Bingo</h2> -->
+        <input type="text" id="alias-jugador" placeholder="Alias de jugador" style="font-size: 1.5rem; padding: 5px; text-align: center; border-radius: 5px; border: 1px solid #ccc; width: 200px; display: block; margin: 10px auto; color: orange;" required>
   <table>
       <thead>
           <tr>
@@ -102,7 +127,7 @@
       <tbody id="bingo-board"></tbody>
   </table>
    <!-- Banco -->
-  <select id="banco-seleccionado" 
+  <select id="banco-seleccionado"
         style="font-size: 1rem; padding: 5px; text-align: center; border-radius: 5px; border: 1px solid #ccc; width: 250px; display: block; margin: 10px auto; color: black; background-color: white;" required>
     <option value="" selected disabled>Banco donde transferiste</option>
     <option value="Banco de Venezuela">Banco de Venezuela</option>
@@ -113,21 +138,23 @@
   <input type="number" id="monto-transferencia" placeholder="monto"
         style="font-size: 1.5rem; padding: 5px; text-align: center; border-radius: 5px; border: 1px solid #ccc; width: 250px; display: block; margin: 10px auto; color: black;"
         min="0" max="9999999" oninput="if(this.value.length > 5) this.value = this.value.slice(0, 5);" required>
-  
+
    <!-- Referencia -->
   <input type="number" id="referencia-transferencia" placeholder="Referencia de pago"
         style="font-size: 1.5rem; padding: 5px; text-align: center; border-radius: 5px; border: 1px solid #ccc; width: 250px; display: block; margin: 10px auto; color: green;"
         min="0" max="99999" oninput="if(this.value.length > 5) this.value = this.value.slice(0, 5);" required>
-	<!-- Comentarios -->	
-  <textarea id="comentario" placeholder="Comentario (opcional)" 
+        <!-- Comentarios -->
+  <textarea id="comentario" placeholder="Comentario (opcional)"
           style="font-size: 1rem; padding: 5px; text-align: left; border-radius: 5px; border: 1px solid #ccc; width: 250px; height: 40px; display: block; margin: 10px auto; color: black;"></textarea>
-  
+
   <button id="enviar-btn">Enviar Cartón</button>
+  </div>
 
   <!-- Importar el SDK modular de Firebase -->
   <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
   import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-database.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBztIl46s-vOOxrUVDilJNSN6zuzldeUWI",
@@ -141,6 +168,8 @@
 
   const app = initializeApp(firebaseConfig);
   const database = getDatabase(app);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
 
   // Función para mostrar la fecha actual
   function mostrarFechaActual() {
@@ -283,6 +312,39 @@
 
   document.getElementById("enviar-btn").addEventListener("click", enviarDatos);
   createBoard();
+
+  // Manejar autenticación
+  document.getElementById("login-btn").addEventListener("click", () => {
+    signInWithPopup(auth, provider).catch(console.error);
+  });
+
+  document.getElementById("logout-btn").addEventListener("click", () => {
+    signOut(auth);
+  });
+
+  document.getElementById("play-btn").addEventListener("click", () => {
+    document.getElementById("main-menu").style.display = "none";
+    document.getElementById("bingo-container").style.display = "block";
+  });
+
+  document.getElementById("back-btn").addEventListener("click", () => {
+    document.getElementById("bingo-container").style.display = "none";
+    document.getElementById("main-menu").style.display = "block";
+  });
+
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      document.getElementById("login-container").style.display = "none";
+      document.getElementById("main-menu").style.display = "block";
+      document.getElementById("user-pic").src = user.photoURL;
+      document.getElementById("user-name").textContent = user.displayName;
+      document.getElementById("user-email").textContent = user.email;
+    } else {
+      document.getElementById("login-container").style.display = "block";
+      document.getElementById("main-menu").style.display = "none";
+      document.getElementById("bingo-container").style.display = "none";
+    }
+  });
 </script>
 </body>
 </html>
