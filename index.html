@@ -80,13 +80,22 @@
 
       /* Estilos para el login */
       #login-container {
+          position: relative;
+          min-height: 100vh;
           display: flex;
           flex-direction: column;
           align-items: center;
+          justify-content: center;
       }
       #logo-bingo {
           width: 200px;
           margin-bottom: 15px;
+      }
+      #login-footer {
+          position: absolute;
+          bottom: 10px;
+          left: 0;
+          right: 0;
       }
       #login-btn {
           width: 220px;
@@ -145,23 +154,26 @@
           gap: 10px;
           align-items: center;
       }
-      #logout-btn {
-          position: absolute;
-          top: 10px;
-          left: 10px;
+      #logout-link {
+          color: #007bff;
+          text-decoration: underline;
+          cursor: pointer;
+          font-size: 0.8rem;
+          margin-top: 5px;
       }
       #user-info {
           position: absolute;
           top: 10px;
           right: 10px;
           display: flex;
+          flex-direction: column;
           align-items: center;
       }
-      #user-name,
-      #user-email {
+      #user-name {
           color: gray;
           text-shadow: 1px 1px 2px #000;
           font-family: Arial, sans-serif;
+          font-size: 0.9rem;
       }
       #fecha-hora, #derechos {
           font-size: 0.7rem;
@@ -187,21 +199,20 @@
 </head>
 <body>
   <div id="login-container">
-    <img id="logo-bingo" src="https://drive.google.com/file/d/1npZxYTZm1t50Ka6t6Ltm55F8clOV2exp/view?usp=sharing" />
+    <img id="logo-bingo" src="https://drive.google.com/uc?export=view&id=1npZxYTZm1t50Ka6t6Ltm55F8clOV2exp" />
     <button id="login-btn">Iniciar Sesión</button>
-    <div id="fecha-hora"></div>
-    <div id="derechos">Todos los derechos reservados ® Hexaservice 2025</div>
+    <div id="login-footer">
+      <div id="fecha-hora"></div>
+      <div id="derechos">Todos los derechos reservados ® Hexaservice 2025</div>
+    </div>
   </div>
 
   <div id="main-menu" style="display:none;">
     <div id="user-info">
-      <img id="user-pic" src="" alt="Usuario" style="width:40px;height:40px;border-radius:50%;margin-right:10px;">
-      <div>
-        <div id="user-name"></div>
-        <div id="user-email"></div>
-      </div>
+      <img id="user-pic" src="" alt="Usuario" style="width:40px;height:40px;border-radius:50%;margin-bottom:5px;">
+      <div id="user-name"></div>
+      <a id="logout-link" href="#">Cerrar sesión</a>
     </div>
-    <button id="logout-btn" class="menu-btn">Cerrar sesión</button>
     <div id="menu-buttons">
       <button id="play-btn" class="menu-btn">Jugar cartón de Bingo</button>
       <button id="wallet-btn" class="menu-btn">Recarga tu Billetera</button>
@@ -418,7 +429,8 @@
     }
   });
 
-  document.getElementById("logout-btn").addEventListener("click", () => {
+  document.getElementById("logout-link").addEventListener("click", (e) => {
+    e.preventDefault();
     signOut(auth);
   });
 
@@ -438,7 +450,6 @@
       document.getElementById("main-menu").style.display = "block";
       document.getElementById("user-pic").src = user.photoURL;
       document.getElementById("user-name").textContent = user.displayName;
-      document.getElementById("user-email").textContent = user.email;
     } else {
       document.getElementById("login-container").style.display = "block";
       document.getElementById("main-menu").style.display = "none";
