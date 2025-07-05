@@ -257,17 +257,25 @@
   <button id="enviar-btn">Enviar Cartón</button>
   </div>
 
-  <!-- Importar el SDK modular de Firebase -->
-  <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
-  import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-database.js";
-  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-auth.js";
-  // Firebase configuration is stored in a separate file for clarity
-  import { firebaseConfig } from "./config.js";
-  const app = initializeApp(firebaseConfig);
-  const database = getDatabase(app);
-  const auth = getAuth(app);
-  const provider = new GoogleAuthProvider();
+  <!-- Importar el SDK de Firebase (compatibilidad para evitar problemas de CORS al abrir el archivo localmente) -->
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
+  <script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBztIl46s-vOOxrUVDilJNSN6zuzldeUWI",
+    authDomain: "bingo-online-231fd.firebaseapp.com",
+    databaseURL: "https://bingo-online-231fd-default-rtdb.firebaseio.com",
+    projectId: "bingo-online-231fd",
+    storageBucket: "bingo-online-231fd.appspot.com",
+    messagingSenderId: "455917034653",
+    appId: "1:455917034653:web:ef3f7a1d14be86a1580874"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
+  const auth = firebase.auth();
+  const provider = new firebase.auth.GoogleAuthProvider();
 
   // Función para mostrar la fecha actual
   function mostrarFechaActual() {
@@ -397,12 +405,12 @@
     };
 
     // Crear un nodo único en "jugadas"
-    const jugadasRef = ref(database, 'jugadas');
-    const newEntryRef = push(jugadasRef);
-    
+    const jugadasRef = database.ref('jugadas');
+    const newEntryRef = jugadasRef.push();
+
     // Guardar los metadatos y el cartón en ramas separadas bajo la misma clave
-    await set(ref(database, 'jugadas/' + newEntryRef.key + '/metadata'), metadata);
-    await set(ref(database, 'jugadas/' + newEntryRef.key + '/carton'), carton);
+    await newEntryRef.child('metadata').set(metadata);
+    await newEntryRef.child('carton').set(carton);
 
     alert("Jugada de Cartón enviada correctamente.");
 	limpiarcarton();
@@ -422,7 +430,7 @@
   // Manejar autenticación
   document.getElementById("login-btn").addEventListener("click", async () => {
     try {
-      await signInWithPopup(auth, provider);
+      await auth.signInWithPopup(provider);
     } catch (err) {
       console.error("Google sign-in failed:", err);
       alert("No se pudo iniciar sesión con Google. Revisa la configuración de Firebase.");
@@ -431,7 +439,7 @@
 
   document.getElementById("logout-link").addEventListener("click", (e) => {
     e.preventDefault();
-    signOut(auth);
+    auth.signOut();
   });
 
   document.getElementById("play-btn").addEventListener("click", () => {
@@ -444,7 +452,7 @@
     document.getElementById("main-menu").style.display = "block";
   });
 
-  onAuthStateChanged(auth, user => {
+  auth.onAuthStateChanged(user => {
     if (user) {
       document.getElementById("login-container").style.display = "none";
       document.getElementById("main-menu").style.display = "block";
