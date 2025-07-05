@@ -305,8 +305,13 @@
   createBoard();
 
   // Manejar autenticación
-  document.getElementById("login-btn").addEventListener("click", () => {
-    signInWithPopup(auth, provider).catch(console.error);
+  document.getElementById("login-btn").addEventListener("click", async () => {
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (err) {
+      console.error("Google sign-in failed:", err);
+      alert("No se pudo iniciar sesión con Google. Revisa la configuración de Firebase.");
+    }
   });
 
   document.getElementById("logout-btn").addEventListener("click", () => {
