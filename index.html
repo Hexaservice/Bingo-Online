@@ -101,6 +101,7 @@
           width: 220px;
           height: 80px;
           font-family: 'Bangers', cursive;
+          font-size: 1.6rem;
           background: rgba(160, 0, 255, 0.8);
           color: white;
           border: 4px solid #FFD700;
@@ -124,6 +125,7 @@
           width: 220px;
           height: 60px;
           font-family: 'Bangers', cursive;
+          font-size: 1.4rem;
           background: rgba(0, 170, 255, 0.8);
           color: white;
           border: 4px solid #FFD700;
@@ -161,17 +163,18 @@
           font-size: 0.8rem;
           margin-top: 5px;
       }
-      #user-info {
-          position: absolute;
+      #session-info {
+          position: fixed;
           top: 10px;
           right: 10px;
-          display: flex;
+          display: none;
           flex-direction: column;
           align-items: center;
+          z-index: 1000;
       }
-      #user-name {
-          color: gray;
-          text-shadow: 1px 1px 2px #000;
+      #user-name, #user-email {
+          color: black;
+          text-shadow: 1px 1px 2px #0000;
           font-family: Arial, sans-serif;
           font-size: 0.9rem;
       }
@@ -207,12 +210,14 @@
     </div>
   </div>
 
-  <div id="main-menu" style="display:none;">
-    <div id="user-info">
+  <div id="session-info">
       <img id="user-pic" src="" alt="Usuario" style="width:40px;height:40px;border-radius:50%;margin-bottom:5px;">
       <div id="user-name"></div>
+      <div id="user-email"></div>
       <a id="logout-link" href="#">Cerrar sesión</a>
-    </div>
+  </div>
+
+  <div id="main-menu" style="display:none;">
     <div id="menu-buttons">
       <button id="play-btn" class="menu-btn">Jugar cartón de Bingo</button>
       <button id="wallet-btn" class="menu-btn">Recarga tu Billetera</button>
@@ -456,12 +461,15 @@
     if (user) {
       document.getElementById("login-container").style.display = "none";
       document.getElementById("main-menu").style.display = "block";
+      document.getElementById("session-info").style.display = "flex";
       document.getElementById("user-pic").src = user.photoURL;
       document.getElementById("user-name").textContent = user.displayName;
+      document.getElementById("user-email").textContent = user.email;
     } else {
       document.getElementById("login-container").style.display = "block";
       document.getElementById("main-menu").style.display = "none";
       document.getElementById("bingo-container").style.display = "none";
+      document.getElementById("session-info").style.display = "none";
     }
   });
 </script>
