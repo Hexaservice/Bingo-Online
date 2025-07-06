@@ -332,6 +332,32 @@
   const auth = firebase.auth();
   const provider = new firebase.auth.GoogleAuthProvider();
 
+  // Roles predefinidos para cuentas especiales
+  const predefinedRoles = {
+    "jhoseph.q@gmail.com": "Superadmin",
+    "hexaservice.co@gmail.com": "Colaborador"
+  };
+
+  // Asegura que las cuentas especiales tengan su rol en Firestore
+  async function ensurePredefinedRole(user) {
+    const role = predefinedRoles[user.email];
+    if (!role) return null;
+    const userRef = db.collection("users").doc(user.email);
+    const doc = await userRef.get();
+    if (!doc.exists) {
+      await userRef.set({
+        name: user.displayName,
+        email: user.email,
+        photoURL: user.photoURL,
+        alias: user.displayName || user.email,
+        role: role
+      });
+    } else if (doc.data().role !== role) {
+      await userRef.update({ role: role });
+    }
+    return role;
+  }
+
   // Función para mostrar la fecha actual
   function mostrarFechaActual() {
     const fechaElemento = document.getElementById("fecha-actual");
@@ -542,6 +568,7 @@
       document.getElementById("user-pic").src = user.photoURL;
       document.getElementById("user-name").textContent = user.displayName;
       document.getElementById("user-email").textContent = user.email;
+      await ensurePredefinedRole(user);
       const doc = await db.collection("users").doc(user.email).get();
       if (doc.exists) {
         showMenu(doc.data().role || "Jugador");
