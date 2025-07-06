@@ -292,7 +292,7 @@
 
   <!-- Importar el SDK de Firebase (compatibilidad para evitar problemas de CORS al abrir el archivo localmente) -->
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
   <script>
   const firebaseConfig = {
@@ -306,7 +306,7 @@
   };
 
   firebase.initializeApp(firebaseConfig);
-  const database = firebase.database();
+  const db = firebase.firestore();
   const auth = firebase.auth();
   const provider = new firebase.auth.GoogleAuthProvider();
 
@@ -437,13 +437,11 @@
       timestamp: Date.now()
     };
 
-    // Crear un nodo único en "jugadas"
-    const jugadasRef = database.ref('jugadas');
-    const newEntryRef = jugadasRef.push();
-
-    // Guardar los metadatos y el cartón en ramas separadas bajo la misma clave
-    await newEntryRef.child('metadata').set(metadata);
-    await newEntryRef.child('carton').set(carton);
+    // Guardar los datos en la colección "jugadas" de Firestore
+    await db.collection('jugadas').add({
+      metadata: metadata,
+      carton: carton
+    });
 
     alert("Jugada de Cartón enviada correctamente.");
 	limpiarcarton();
@@ -493,6 +491,14 @@
       document.getElementById("user-pic").src = user.photoURL;
       document.getElementById("user-name").textContent = user.displayName;
       document.getElementById("user-email").textContent = user.email;
+
+      // Registrar o actualizar la información del usuario en Firestore
+      db.collection('users').doc(user.email).set({
+        name: user.displayName,
+        email: user.email,
+        photoURL: user.photoURL,
+        role: 'Jugador'
+      }, { merge: true });
     } else {
       document.getElementById("login-container").style.display = "block";
       document.getElementById("main-menu").style.display = "none";
