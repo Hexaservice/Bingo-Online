@@ -161,12 +161,12 @@
           align-items: center;
       }
 
-      #bingo-container {
+      #carton-screen {
           position: relative;
           width: 100%;
       }
 
-      #back-btn {
+      .back-btn {
           position: absolute;
           top: 2px;
           left: 10px;
@@ -178,7 +178,7 @@
           justify-content: center;
       }
 
-      #back-btn::before {
+      .back-btn::before {
           content: "\25C0"; /* left-pointing triangle */
           margin-right: 5px;
           font-size: 1.2rem;
@@ -257,12 +257,13 @@
       <a id="logout-link" href="#">Cerrar sesión</a>
   </div>
 
-  <div id="main-menu" style="display:none;">
+  <div id="main-menu" class="view" style="display:none;">
     <div id="menu-buttons">
       <img id="menu-logo" src="https://i.imgur.com/twjhNtZ.png" />
-      <button id="play-btn" class="menu-btn">Jugar cartón de Bingo</button>
-      <button id="wallet-btn" class="menu-btn">Recarga tu Billetera</button>
-      <button id="results-btn" class="menu-btn">Ver Resultados Online</button>
+      <button id="carton-btn" class="menu-btn">Jugar Cartón</button>
+      <button id="jugando-btn" class="menu-btn">Jugando</button>
+      <button id="billetera-btn" class="menu-btn">Billetera</button>
+      <button id="perfil-btn" class="menu-btn">Perfil</button>
     </div>
   </div>
   <div id="collab-menu" style="display:none;">
@@ -275,41 +276,63 @@
     <p>Menú de Superadmin</p>
   </div>
 
-  <div id="bingo-container" style="display:none;">
-    <button id="back-btn" class="menu-btn">Volver</button>
-    <h3 id="fecha-actual" style="font-size: 1rem; color: black; margin-bottom: 5px; text-shadow: 0 0 20px yellow, 0 0 20px yellow;"></h3>
-        <!-- <h2 style="font-size: 2rem;">Cartón de Bingo</h2> -->
-        <input type="text" id="alias-jugador" placeholder="Alias de jugador" style="font-size: 1.5rem; padding: 5px; text-align: center; border-radius: 5px; border: 1px solid #ccc; width: 200px; display: block; margin: 10px auto; color: orange;" required>
-  <table>
+  <div id="carton-screen" class="view" style="display:none;">
+    <button id="carton-back" class="menu-btn back-btn">Volver</button>
+    <h3 id="carton-sorteo" style="font-size: 1rem; color: black; margin-bottom: 5px; text-shadow: 0 0 20px yellow, 0 0 20px yellow;">Sorteo N° XXX fecha XX/XX/XXXX</h3>
+    <input type="text" id="alias-jugador" readonly placeholder="Alias" style="font-size: 1.5rem; padding: 5px; text-align: center; border-radius: 5px; border: 1px solid #ccc; width: 200px; display: block; margin: 10px auto; color: orange;">
+    <div style="font-size:0.6rem;margin-top:-8px;">Si deseas cambiar tu alias dirigite a Perfil &gt; Alias</div>
+    <div id="creditos-info" style="margin:10px;">Créditos disponibles: <span id="creditos-label">0</span> <button id="ir-billetera-btn" style="font-size:0.8rem;margin-left:5px;">Recargar Billetera</button></div>
+    <table>
       <thead>
-          <tr>
-              <th>B</th><th>I</th><th>N</th><th>G</th><th>O</th>
-          </tr>
+        <tr>
+          <th>B</th><th>I</th><th>N</th><th>G</th><th>O</th>
+        </tr>
       </thead>
       <tbody id="bingo-board"></tbody>
-  </table>
-   <!-- Banco -->
-  <select id="banco-seleccionado"
-        style="font-size: 1rem; padding: 5px; text-align: center; border-radius: 5px; border: 1px solid #ccc; width: 250px; display: block; margin: 10px auto; color: black; background-color: white;" required>
-    <option value="" selected disabled>Banco donde transferiste</option>
-    <option value="Banco de Venezuela">Banco de Venezuela</option>
-    <option value="Banco Mercantil">Banco Mercantil</option>
-    <option value="Otro Banco">Otro Banco</option>
-  </select>
-  <!-- monto -->
-  <input type="number" id="monto-transferencia" placeholder="monto"
-        style="font-size: 1.5rem; padding: 5px; text-align: center; border-radius: 5px; border: 1px solid #ccc; width: 250px; display: block; margin: 10px auto; color: black;"
-        min="0" max="9999999" oninput="if(this.value.length > 5) this.value = this.value.slice(0, 5);" required>
+    </table>
+    <label style="display:block;margin:10px 0;"><input type="checkbox" id="guardar-carton"> Guardar cartón</label>
+    <div id="nombre-carton-div" style="display:none;">
+      <input type="text" id="nombre-carton" placeholder="Nombre de cartón" style="font-size:1rem;padding:5px;text-align:center;">
+      <button id="guardar-carton-btn">Guardar Cartón</button>
+    </div>
+    <button id="cartones-guardados-btn" class="menu-btn" style="width:180px;margin-top:10px;">Cartones Guardados</button>
+    <button id="jugar-carton-btn" class="menu-btn" style="margin-top:10px;">Jugar Cartón</button>
+  </div>
 
-   <!-- Referencia -->
-  <input type="number" id="referencia-transferencia" placeholder="Referencia de pago"
-        style="font-size: 1.5rem; padding: 5px; text-align: center; border-radius: 5px; border: 1px solid #ccc; width: 250px; display: block; margin: 10px auto; color: green;"
-        min="0" max="99999" oninput="if(this.value.length > 5) this.value = this.value.slice(0, 5);" required>
-        <!-- Comentarios -->
-  <textarea id="comentario" placeholder="Comentario (opcional)"
-          style="font-size: 1rem; padding: 5px; text-align: left; border-radius: 5px; border: 1px solid #ccc; width: 250px; height: 40px; display: block; margin: 10px auto; color: black;"></textarea>
+  <div id="resultados-screen" class="view" style="display:none;">
+    <button id="resultados-back" class="menu-btn back-btn">Volver</button>
+    <h3 style="font-size:1rem;margin:10px 0;">Sorteo N° XXX fecha XX/XX/XXXX Nombre de sorteo</h3>
+    <div id="resultados-contenedor"></div>
+  </div>
 
-  <button id="enviar-btn">Enviar Cartón</button>
+  <div id="billetera-screen" class="view" style="display:none;">
+    <button id="billetera-back" class="menu-btn back-btn">Volver</button>
+    <h3 style="color:green;text-shadow:1px 1px 2px black;">Créditos Actuales: <span id="creditos-actuales">0</span> Créditos</h3>
+    <p>Para realizar tus depositos o transferencias: Banco Mercantil cuenta N° 0105 0105XXXXX Nombre numero pago móvil 0412XXXX Cedula 165XXXXX</p>
+    <select id="banco-seleccionado" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;color:black;background-color:white;">
+      <option value="" selected disabled>Banco donde transferiste</option>
+      <option value="Banco de Venezuela">Banco de Venezuela</option>
+      <option value="Banco Mercantil">Banco Mercantil</option>
+      <option value="Otro Banco">Otro Banco</option>
+    </select>
+    <input type="number" id="monto-transferencia" placeholder="Monto" style="font-size:1.5rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;color:black;">
+    <input type="number" id="referencia-transferencia" placeholder="Referencia de pago" style="font-size:1.5rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;color:green;">
+    <textarea id="comentario" placeholder="Comentario (opcional)" style="font-size:1rem;padding:5px;text-align:left;border-radius:5px;border:1px solid #ccc;width:250px;height:40px;display:block;margin:10px auto;color:black;"></textarea>
+    <button id="depositar-btn" class="menu-btn" style="width:150px;">Depositar</button>
+    <h4 style="margin-top:20px;">Solicitar Retiro</h4>
+    <input type="number" id="monto-retiro" placeholder="Monto" style="font-size:1.5rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;color:black;">
+    <button id="retirar-btn" class="menu-btn" style="width:150px;">Retirar</button>
+  </div>
+
+  <div id="perfil-screen" class="view" style="display:none;">
+    <button id="perfil-back" class="menu-btn back-btn">Volver</button>
+    <h3>Perfil del Jugador</h3>
+    <input type="text" id="perfil-nombre" placeholder="Nombre" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;" />
+    <input type="text" id="perfil-apellido" placeholder="Apellido" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;" />
+    <input type="text" id="perfil-alias" placeholder="Alias" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;" />
+    <input type="text" id="perfil-telefono" placeholder="Teléfono" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;" />
+    <input type="text" id="perfil-direccion" placeholder="Dirección (opcional)" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;" />
+    <button id="guardar-perfil-btn" class="menu-btn" style="width:150px;">Guardar</button>
   </div>
 
   <!-- Importar el SDK de Firebase (compatibilidad para evitar problemas de CORS al abrir el archivo localmente) -->
@@ -433,25 +456,9 @@
   // Función para enviar datos a Firebase
   async function enviarDatos() {
     const alias = document.getElementById("alias-jugador").value.trim();
-    const banco = document.getElementById("banco-seleccionado").value;
-	const monto = document.getElementById("monto-transferencia").value.trim();
-    const referencia = document.getElementById("referencia-transferencia").value.trim();
-    const comentario = document.getElementById("comentario").value.trim();
     
     if (alias === "") {
       alert("Por favor, ingresa tu Alias antes de enviar el cartón.");
-      return;
-    }
-    if (banco === "") {
-      alert("Por favor, selecciona el banco donde realizaste la transferencia.");
-      return;
-    }
-    if (monto === "" || isNaN(monto) || monto.length > 5) {
-      alert("Por favor, ingresa un monto válido (máximo 5 dígitos).");
-      return;
-    }
-    if (referencia === "" || isNaN(referencia) || referencia.length > 5) {
-      alert("Por favor, ingresa un número de referencia válido (máximo 5 dígitos).");
       return;
     }
     if (!validateBoard()) {
@@ -477,10 +484,6 @@
     // Crear objeto de metadatos
     const metadata = {
       alias: alias,
-      banco: banco,
-	  monto: monto,
-      referencia: referencia,
-      comentario: comentario,
       fecha: fechaActual,
       timestamp: Date.now()
     };
@@ -495,7 +498,7 @@
 	limpiarcarton();
   }
 
-  document.getElementById("enviar-btn").addEventListener("click", enviarDatos);
+  document.getElementById("jugar-carton-btn").addEventListener("click", enviarDatos);
   createBoard();
 
   function actualizarFechaHora() {
@@ -528,14 +531,71 @@
     auth.signOut();
   });
 
-  document.getElementById("play-btn").addEventListener("click", () => {
-    document.getElementById("main-menu").style.display = "none";
-    document.getElementById("bingo-container").style.display = "block";
+  function hideViews() {
+    document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
+  }
+
+  document.getElementById("carton-btn").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("carton-screen").style.display = "block";
   });
 
-  document.getElementById("back-btn").addEventListener("click", () => {
-    document.getElementById("bingo-container").style.display = "none";
+  document.getElementById("jugando-btn").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("resultados-screen").style.display = "block";
+  });
+
+  document.getElementById("billetera-btn").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("billetera-screen").style.display = "block";
+  });
+
+  document.getElementById("perfil-btn").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("perfil-screen").style.display = "block";
+  });
+
+  document.getElementById("carton-back").addEventListener("click", () => {
+    hideViews();
     document.getElementById("main-menu").style.display = "block";
+  });
+
+  document.getElementById("resultados-back").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("main-menu").style.display = "block";
+  });
+
+  document.getElementById("billetera-back").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("main-menu").style.display = "block";
+  });
+
+  document.getElementById("perfil-back").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("main-menu").style.display = "block";
+  });
+
+  document.getElementById("ir-billetera-btn").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("billetera-screen").style.display = "block";
+  });
+
+  document.getElementById("guardar-carton").addEventListener("change", (e) => {
+    document.getElementById("nombre-carton-div").style.display = e.target.checked ? 'block' : 'none';
+  });
+
+  document.getElementById("depositar-btn").addEventListener("click", () => {
+    alert("Bien, recibimos tu solicitud, una vez verificado el pago seran recargados en tu billetera");
+  });
+
+  document.getElementById("retirar-btn").addEventListener("click", () => {
+    const monto = parseFloat(document.getElementById("monto-retiro").value) || 0;
+    const disponibles = parseFloat(document.getElementById("creditos-actuales").textContent) || 0;
+    if (monto > disponibles) {
+      alert("El monto supera los créditos disponibles");
+      return;
+    }
+    alert("Bien, recibimos tu solicitud, una vez verificada te transferimos a tu banco");
   });
   document.getElementById("terms-link").addEventListener("click", (e) => {
     e.preventDefault();
@@ -572,6 +632,12 @@
       const doc = await db.collection("users").doc(user.email).get();
       if (doc.exists) {
         showMenu(doc.data().role || "Jugador");
+        document.getElementById("alias-jugador").value = doc.data().alias || user.displayName || user.email;
+        document.getElementById("perfil-nombre").value = doc.data().name || user.displayName || "";
+        document.getElementById("perfil-alias").value = doc.data().alias || "";
+        document.getElementById("perfil-apellido").value = doc.data().apellido || "";
+        document.getElementById("perfil-telefono").value = doc.data().telefono || "";
+        document.getElementById("perfil-direccion").value = doc.data().direccion || "";
       } else {
         document.getElementById("register-container").style.display = "block";
       }
@@ -579,7 +645,7 @@
       document.getElementById("login-container").style.display = "block";
       document.getElementById("session-info").style.display = "none";
       showMenu(null);
-      document.getElementById("bingo-container").style.display = "none";
+      hideViews();
     }
   });
 
