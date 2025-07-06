@@ -231,10 +231,23 @@
   <div id="login-container">
     <img id="logo-bingo" src="https://i.imgur.com/twjhNtZ.png" />
     <button id="login-btn">Iniciar Sesión</button>
+    <div><input type="checkbox" id="accept-terms"> <label for="accept-terms">Acepto los <a href="#" id="terms-link">términos y condiciones</a></label></div>
+    <div style="margin-top:10px;font-size:0.8rem;">¿Aún no tienes cuenta? <a href="#" id="register-link">Regístrate</a></div>
     <div id="login-footer">
       <div id="fecha-hora"></div>
       <div id="derechos">Todos los derechos reservados ® Hexaservice 2025</div>
     </div>
+  </div>
+  <div id="terms-container" style="display:none;">
+    <h2>Términos y Condiciones</h2>
+    <p>Al usar esta aplicación aceptas las reglas del juego.</p>
+    <button id="close-terms-btn">Volver</button>
+  </div>
+
+  <div id="register-container" style="display:none;">
+    <h2>Registro de Jugador</h2>
+    <input id="alias-registro" placeholder="Alias" style="font-size:1rem;padding:5px;text-align:center;"/>
+    <button id="registrar-btn">Registrar</button>
   </div>
 
   <div id="session-info">
@@ -251,6 +264,15 @@
       <button id="wallet-btn" class="menu-btn">Recarga tu Billetera</button>
       <button id="results-btn" class="menu-btn">Ver Resultados Online</button>
     </div>
+  </div>
+  <div id="collab-menu" style="display:none;">
+    <p>Menú de Colaborador</p>
+  </div>
+  <div id="admin-menu" style="display:none;">
+    <p>Menú de Administrador</p>
+  </div>
+  <div id="super-menu" style="display:none;">
+    <p>Menú de Superadmin</p>
   </div>
 
   <div id="bingo-container" style="display:none;">
@@ -459,14 +481,21 @@
   setInterval(actualizarFechaHora, 60000);
 
   // Manejar autenticación
-  document.getElementById("login-btn").addEventListener("click", async () => {
-    try {
-      await auth.signInWithPopup(provider);
-    } catch (err) {
+  document.getElementById("login-btn").addEventListener("click", loginGoogle);
+  document.getElementById("register-link").addEventListener("click", (e) => {
+    e.preventDefault();
+    loginGoogle();
+  });
+  function loginGoogle() {
+    if (!document.getElementById("accept-terms").checked) {
+      alert("Debes aceptar los términos y condiciones");
+      return;
+    }
+    auth.signInWithPopup(provider).catch(err => {
       console.error("Google sign-in failed:", err);
       alert("No se pudo iniciar sesión con Google. Revisa la configuración de Firebase.");
-    }
-  });
+    });
+  }
 
   document.getElementById("logout-link").addEventListener("click", (e) => {
     e.preventDefault();
@@ -482,30 +511,66 @@
     document.getElementById("bingo-container").style.display = "none";
     document.getElementById("main-menu").style.display = "block";
   });
+  document.getElementById("terms-link").addEventListener("click", (e) => {
+    e.preventDefault();
+    document.getElementById("login-container").style.display = "none";
+    document.getElementById("terms-container").style.display = "block";
+  });
+  document.getElementById("close-terms-btn").addEventListener("click", () => {
+    document.getElementById("terms-container").style.display = "none";
+    document.getElementById("login-container").style.display = "block";
+  });
+  document.getElementById("registrar-btn").addEventListener("click", async () => {
+    const alias = document.getElementById("alias-registro").value.trim();
+    const user = auth.currentUser;
+    if(!alias){ alert("Ingresa un alias"); return; }
+    await db.collection("users").doc(user.email).set({
+      name: user.displayName,
+      email: user.email,
+      photoURL: user.photoURL,
+      alias: alias,
+      role: "Jugador"
+    });
+    document.getElementById("register-container").style.display = "none";
+    document.getElementById("main-menu").style.display = "block";
+  });
 
-  auth.onAuthStateChanged(user => {
+  auth.onAuthStateChanged(async user => {
     if (user) {
       document.getElementById("login-container").style.display = "none";
-      document.getElementById("main-menu").style.display = "block";
       document.getElementById("session-info").style.display = "flex";
       document.getElementById("user-pic").src = user.photoURL;
       document.getElementById("user-name").textContent = user.displayName;
       document.getElementById("user-email").textContent = user.email;
-
-      // Registrar o actualizar la información del usuario en Firestore
-      db.collection('users').doc(user.email).set({
-        name: user.displayName,
-        email: user.email,
-        photoURL: user.photoURL,
-        role: 'Jugador'
-      }, { merge: true });
+      const doc = await db.collection("users").doc(user.email).get();
+      if (doc.exists) {
+        showMenu(doc.data().role || "Jugador");
+      } else {
+        document.getElementById("register-container").style.display = "block";
+      }
     } else {
       document.getElementById("login-container").style.display = "block";
-      document.getElementById("main-menu").style.display = "none";
-      document.getElementById("bingo-container").style.display = "none";
       document.getElementById("session-info").style.display = "none";
+      showMenu(null);
+      document.getElementById("bingo-container").style.display = "none";
     }
   });
+
+  function showMenu(role) {
+    document.getElementById("main-menu").style.display = "none";
+    document.getElementById("collab-menu").style.display = "none";
+    document.getElementById("admin-menu").style.display = "none";
+    document.getElementById("super-menu").style.display = "none";
+    if (role === "Colaborador") {
+      document.getElementById("collab-menu").style.display = "block";
+    } else if (role === "Administrador") {
+      document.getElementById("admin-menu").style.display = "block";
+    } else if (role === "Superadmin") {
+      document.getElementById("super-menu").style.display = "block";
+    } else if (role) {
+      document.getElementById("main-menu").style.display = "block";
+    }
+  }
 </script>
 </body>
 </html>
