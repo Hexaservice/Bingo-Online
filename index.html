@@ -612,6 +612,11 @@
     }
     auth.signInWithPopup(provider).catch(err => {
       console.error("Google sign-in failed:", err);
+      if (err.code === "auth/popup-blocked" || err.code === "auth/popup-closed-by-user") {
+        // Si el popup fue bloqueado, intentar con redirección
+        auth.signInWithRedirect(provider);
+        return;
+      }
       alert("No se pudo iniciar sesión con Google. Revisa la configuración de Firebase.");
     });
   }
