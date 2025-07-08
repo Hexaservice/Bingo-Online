@@ -88,8 +88,16 @@ function ensureAuth(roleExpected){
       redirectByRole(role);
       return;
     }
-    document.getElementById('user-name')?.textContent = user.displayName;
-    document.getElementById('user-email')?.textContent = user.email;
-    document.getElementById('logout-link')?.addEventListener('click', e => { e.preventDefault(); logout(); });
+    const nameEl = document.getElementById('user-name');
+    if (nameEl) nameEl.textContent = user.displayName;
+    const emailEl = document.getElementById('user-email');
+    if (emailEl) emailEl.textContent = user.email;
+    const logoutEl = document.getElementById('logout-link');
+    if (logoutEl) {
+      logoutEl.addEventListener('click', e => {
+        e.preventDefault();
+        logout();
+      });
+    }
   });
 }
