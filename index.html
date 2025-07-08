@@ -84,19 +84,24 @@
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
   <script src="auth.js"></script>
   <script>
-    initFirebase();
-    handleRedirect();
-    document.getElementById('login-btn').addEventListener('click', loginGoogle);
-    document.getElementById('register-link').addEventListener('click', e => { e.preventDefault(); loginGoogle(); });
-    const logoutLink = document.getElementById('logout-link');
-    if (logoutLink) {
-      logoutLink.addEventListener('click', e => {
-        e.preventDefault();
-        logout();
-      });
-    }
-    document.getElementById('close-terms-btn').addEventListener('click', () => document.getElementById('terms-container').style.display='none');
-    document.getElementById('terms-link').addEventListener('click', e => { e.preventDefault(); document.getElementById('terms-container').style.display='block'; });
+    document.addEventListener('DOMContentLoaded', () => {
+      if(typeof firebase === 'undefined'){
+        console.error('Firebase no se cargó correctamente');
+        return;
+      }
+      initFirebase();
+      handleRedirect();
+      document.getElementById('login-btn').addEventListener('click', loginGoogle);
+      document.getElementById('register-link').addEventListener('click', e => { e.preventDefault(); loginGoogle(); });
+      const logoutLink = document.getElementById('logout-link');
+      if (logoutLink) {
+        logoutLink.addEventListener('click', e => {
+          e.preventDefault();
+          logout();
+        });
+      }
+      document.getElementById('close-terms-btn').addEventListener('click', () => document.getElementById('terms-container').style.display='none');
+      document.getElementById('terms-link').addEventListener('click', e => { e.preventDefault(); document.getElementById('terms-container').style.display='block'; });
 
     function actualizarFechaHora(){
       const ahora = new Date();
