@@ -101,6 +101,10 @@ function ensureAuth(roleExpected){
     if (nameEl) nameEl.textContent = user.displayName;
     const emailEl = document.getElementById('user-email');
     if (emailEl) emailEl.textContent = user.email;
+    const picEl = document.getElementById('user-pic');
+    if (picEl) picEl.src = user.photoURL;
+    const infoEl = document.getElementById('session-info');
+    if (infoEl) infoEl.style.display = 'flex';
     const logoutEl = document.getElementById('logout-link');
     if (logoutEl) {
       logoutEl.addEventListener('click', e => {
