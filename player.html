@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bingo Online</title>
+  <!-- Fuente llamativa -->
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+  <style>
+     		
+		body {
+			background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)), 
+						url('https://img.freepik.com/vetores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg');
+			background-repeat: repeat;
+			background-size: auto;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			min-height: 100vh;
+			text-align: center;
+		} 
+		
+      h2 {
+          font-size: 2.5rem;
+          color: #ffcc00;
+          text-shadow: 3px 3px 6px #000;
+      }
+      table {
+			margin: 20px auto;
+			border-collapse: collapse;
+			background: rgba(255, 255, 255, 0.9);
+			border-radius: 15px; /* Bordes redondeados */
+			border: 15px solid #004d00; /* Borde externo verde oscuro */
+			padding: 10px;
+			box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* Sombra para mejorar el efecto */
+	  }
+      th {
+          font-size: 2rem;
+          color: #ff6600;
+          text-shadow: 2px 2px 4px #000;
+      }
+      th, td {
+			border: 2px solid black;
+			width: 60px;
+			height: 60px;
+			text-align: center;
+			font-weight: bold;
+		}
+      select {
+          width: 100%;
+          font-size: 2rem;
+          font-weight: bold;
+          padding: 5px;
+          text-align: center;
+          border: none;
+          background: transparent;
+          outline: none;
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          appearance: none;
+      }
+      .free {
+          background-color: #ffcc00;
+          font-weight: bold;
+      }
+      button {
+          padding: 10px 20px;
+          font-size: 18px;
+          background: #ff6600;
+          color: white;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          align: center;
+      }
+      button:hover {
+          background: #cc5500;
+      }
+
+      /* Estilos para el login */
+      #login-container {
+          position: relative;
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+      }
+      #logo-bingo {
+          width: 250px;
+          margin-bottom: 15px;
+      }
+      #menu-logo {
+          width: 250px;
+          margin-bottom: 15px;
+      }
+      #login-footer {
+          position: absolute;
+          bottom: 10px;
+          left: 0;
+          right: 0;
+      }
+      #login-btn {
+          width: 220px;
+          height: 80px;
+          font-family: 'Bangers', cursive;
+          font-size: 1.6rem;
+          background: rgba(160, 0, 255, 0.8);
+          color: white;
+          border: 4px solid #FFD700;
+          border-radius: 10px;
+          text-shadow: 2px 2px 4px #000;
+          text-transform: uppercase;
+          cursor: pointer;
+          transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+      }
+      #login-btn:hover {
+          transform: scale(1.05);
+          box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+      }
+      #login-btn:active {
+          transform: scale(0.95);
+          box-shadow: 0 0 5px rgba(255, 215, 0, 0.8);
+      }
+
+      /* Estilos para botones del menú principal */
+      .menu-btn {
+          width: 250px;
+          height: 60px;
+          font-family: 'Bangers', cursive;
+          font-size: 1.4rem;
+          background: rgba(0, 170, 255, 0.8);
+          color: white;
+          border: 4px solid #FFD700;
+          border-radius: 10px;
+          text-shadow: 2px 2px 4px #000;
+          text-transform: uppercase;
+          cursor: pointer;
+          transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+      }
+      .menu-btn:hover {
+          transform: scale(1.05);
+          box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+      }
+      .menu-btn:active {
+          transform: scale(0.95);
+          box-shadow: 0 0 5px rgba(255, 215, 0, 0.8);
+      }
+
+      /* Posicionamiento y estilos del menú */
+      #main-menu {
+          position: relative;
+          width: 100%;
+      }
+      #menu-buttons {
+          margin-top: 80px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          align-items: center;
+      }
+
+      #carton-screen {
+          position: relative;
+          width: 100%;
+      }
+
+      .back-btn {
+          position: absolute;
+          top: 2px;
+          left: 10px;
+          width: 95px;
+          height: 40px;
+          font-size: 1rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+      }
+
+      .back-btn::before {
+          content: "\25C0"; /* left-pointing triangle */
+          margin-right: 5px;
+          font-size: 1.2rem;
+      }
+      #logout-link {
+          color: #007bff;
+          text-decoration: underline;
+          cursor: pointer;
+          font-size: 0.8rem;
+          margin-top: 5px;
+      }
+      #session-info {
+          position: fixed;
+          top: 10px;
+          right: 10px;
+          display: none;
+          flex-direction: column;
+          align-items: center;
+          z-index: 1000;
+      }
+      #user-name, #user-email {
+          color: black;
+          text-shadow: 1px 1px 2px #0000;
+          font-family: Arial, sans-serif;
+          font-size: 0.7rem;
+      }
+      #fecha-hora, #derechos {
+          font-size: 0.7rem;
+          text-align: center;
+          color: #000;
+      }
+      #derechos {
+          font-size: 0.6rem;
+      }
+      @media (max-width: 600px) {
+          table {
+              width: 90%;
+          }
+          th, td {
+              width: 50px;
+              height: 50px;
+          }
+          select {
+              font-size: 1.5rem;
+          }
+      }
+  </style>
+</head>
+<body>
+  <div id="terms-container" style="display:none;">
+    <h2>Términos y Condiciones</h2>
+    <p>Al usar esta aplicación aceptas las reglas del juego.</p>
+    <button id="close-terms-btn">Volver</button>
+  </div>
+
+  <div id="register-container" style="display:none;">
+    <h2>Registro de Jugador</h2>
+    <input id="alias-registro" placeholder="Alias" style="font-size:1rem;padding:5px;text-align:center;"/>
+    <button id="registrar-btn">Registrar</button>
+  </div>
+
+  <div id="session-info">
+      <img id="user-pic" src="" alt="Usuario" style="width:40px;height:40px;border-radius:50%;margin-bottom:5px;">
+      <div id="user-name"></div>
+      <div id="user-email"></div>
+      <a id="logout-link" href="#">Cerrar sesión</a>
+  </div>
+
+  <div id="main-menu" class="view" style="display:none;">
+    <div id="menu-buttons">
+      <img id="menu-logo" src="https://i.imgur.com/twjhNtZ.png" />
+      <button id="carton-btn" class="menu-btn">Jugar Cartón</button>
+      <button id="jugando-btn" class="menu-btn">Jugando</button>
+      <button id="billetera-btn" class="menu-btn">Billetera</button>
+      <button id="perfil-btn" class="menu-btn">Perfil</button>
+    </div>
+  </div>
+  <div id="collab-menu" class="view" style="display:none;">
+    <button id="collab-back" class="menu-btn back-btn">Volver</button>
+    <h3>Menú de Colaborador</h3>
+    <button id="ver-recargas-btn" class="menu-btn">Verificar Recargas</button>
+    <button id="aprobar-retiros-btn" class="menu-btn">Aprobar Retiros</button>
+    <h4>Gestión de Jugadores</h4>
+    <button id="gestion-jugadores-btn" class="menu-btn">Gestión Jugadores</button>
+  </div>
+  <div id="admin-menu" class="view" style="display:none;">
+    <button id="admin-back" class="menu-btn back-btn">Volver</button>
+    <h3>Menú de Administrador</h3>
+    <button id="gestionar-sorteos-btn" class="menu-btn">Gestionar Sorteos</button>
+    <button id="publicar-resultados-btn" class="menu-btn">Publicar Resultados</button>
+    <button id="gestionar-usuarios-btn" class="menu-btn">Gestionar Usuarios</button>
+    <button id="monitoreo-btn" class="menu-btn">Monitoreo en Tiempo Real</button>
+  </div>
+  <div id="super-menu" class="view" style="display:none;">
+    <button id="super-back" class="menu-btn back-btn">Volver</button>
+    <h3>Menú de Superadmin</h3>
+    <button id="crear-admin-btn" class="menu-btn">Crear Administrador</button>
+    <button id="privilegios-btn" class="menu-btn">Asignar Privilegios</button>
+    <button id="reportes-btn" class="menu-btn">Reportes Generales</button>
+  </div>
+
+  <div id="carton-screen" class="view" style="display:none;">
+    <button id="carton-back" class="menu-btn back-btn">Volver</button>
+    <h3 id="carton-sorteo" style="font-size: 1rem; color: black; margin-bottom: 5px; text-shadow: 0 0 20px yellow, 0 0 20px yellow;">Sorteo N° XXX fecha XX/XX/XXXX</h3>
+    <input type="text" id="alias-jugador" readonly placeholder="Alias" style="font-size: 1.5rem; padding: 5px; text-align: center; border-radius: 5px; border: 1px solid #ccc; width: 200px; display: block; margin: 10px auto; color: orange;">
+    <div style="font-size:0.6rem;margin-top:-8px;">Si deseas cambiar tu alias dirigite a Perfil &gt; Alias</div>
+    <div id="creditos-info" style="margin:10px;">Créditos disponibles: <span id="creditos-label">0</span> <button id="ir-billetera-btn" style="font-size:0.8rem;margin-left:5px;">Recargar Billetera</button></div>
+    <table>
+      <thead>
+        <tr>
+          <th>B</th><th>I</th><th>N</th><th>G</th><th>O</th>
+        </tr>
+      </thead>
+      <tbody id="bingo-board"></tbody>
+    </table>
+    <label style="display:block;margin:10px 0;"><input type="checkbox" id="guardar-carton"> Guardar cartón</label>
+    <div id="nombre-carton-div" style="display:none;">
+      <input type="text" id="nombre-carton" placeholder="Nombre de cartón" style="font-size:1rem;padding:5px;text-align:center;">
+      <button id="guardar-carton-btn">Guardar Cartón</button>
+    </div>
+    <button id="cartones-guardados-btn" class="menu-btn" style="width:180px;margin-top:10px;">Cartones Guardados</button>
+    <button id="jugar-carton-btn" class="menu-btn" style="margin-top:10px;">Jugar Cartón</button>
+  </div>
+
+  <div id="resultados-screen" class="view" style="display:none;">
+    <button id="resultados-back" class="menu-btn back-btn">Volver</button>
+    <h3 style="font-size:1rem;margin:10px 0;">Sorteo N° XXX fecha XX/XX/XXXX Nombre de sorteo</h3>
+    <div id="resultados-contenedor"></div>
+  </div>
+
+  <div id="billetera-screen" class="view" style="display:none;">
+    <button id="billetera-back" class="menu-btn back-btn">Volver</button>
+    <h3 style="color:green;text-shadow:1px 1px 2px black;">Créditos Actuales: <span id="creditos-actuales">0</span> Créditos</h3>
+    <p>Para realizar tus depositos o transferencias: Banco Mercantil cuenta N° 0105 0105XXXXX Nombre numero pago móvil 0412XXXX Cedula 165XXXXX</p>
+    <select id="banco-seleccionado" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;color:black;background-color:white;">
+      <option value="" selected disabled>Banco donde transferiste</option>
+      <option value="Banco de Venezuela">Banco de Venezuela</option>
+      <option value="Banco Mercantil">Banco Mercantil</option>
+      <option value="Otro Banco">Otro Banco</option>
+    </select>
+    <input type="number" id="monto-transferencia" placeholder="Monto" style="font-size:1.5rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;color:black;">
+    <input type="number" id="referencia-transferencia" placeholder="Referencia de pago" style="font-size:1.5rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;color:green;">
+    <textarea id="comentario" placeholder="Comentario (opcional)" style="font-size:1rem;padding:5px;text-align:left;border-radius:5px;border:1px solid #ccc;width:250px;height:40px;display:block;margin:10px auto;color:black;"></textarea>
+    <button id="depositar-btn" class="menu-btn" style="width:150px;">Depositar</button>
+    <h4 style="margin-top:20px;">Solicitar Retiro</h4>
+    <input type="number" id="monto-retiro" placeholder="Monto" style="font-size:1.5rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;color:black;">
+    <button id="retirar-btn" class="menu-btn" style="width:150px;">Retirar</button>
+  </div>
+
+  <div id="perfil-screen" class="view" style="display:none;">
+    <button id="perfil-back" class="menu-btn back-btn">Volver</button>
+    <h3>Perfil del Jugador</h3>
+    <h4>Tus Datos Personales</h4>
+    <input type="text" id="perfil-nombre" placeholder="Nombre" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;" />
+    <input type="text" id="perfil-apellido" placeholder="Apellido" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;" />
+    <input type="text" id="perfil-alias" placeholder="Alias" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;" />
+    <h4>Tus Datos Bancarios</h4>
+    <select id="perfil-banco" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;">
+      <option value="" selected disabled>Selecciona Banco</option>
+      <option value="Banco Mercantil">Banco Mercantil</option>
+      <option value="Banco de Venezuela">Banco de Venezuela</option>
+      <option value="Banesco">Banesco</option>
+    </select>
+    <input type="text" id="perfil-pagomovil" placeholder="Número Pago móvil" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;" />
+    <input type="text" id="perfil-cedula" placeholder="Número de Cédula" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;" />
+    <button id="guardar-perfil-btn" class="menu-btn" style="width:150px;">Guardar</button>
+  </div>
+
+  <div id="verificar-recargas-screen" class="view" style="display:none;">
+    <button id="ver-recargas-back" class="menu-btn back-btn">Volver</button>
+    <h3 style="color:orange;text-shadow:1px 1px 2px black;">Solicitudes Recargas Actuales: <span id="recargas-pendientes">0</span> Solicitudes</h3>
+    <table id="tabla-recargas" style="width:90%;font-size:0.8rem;"></table>
+    <button id="cargar-recarga-btn" class="menu-btn">Cargar solicitud</button>
+    <div id="detalle-recarga" style="margin-top:10px;text-align:left;font-size:0.9rem;"></div>
+    <button id="verificar-recarga-btn" class="menu-btn">Verificar</button>
+  </div>
+
+  <div id="aprobar-retiros-screen" class="view" style="display:none;">
+    <button id="retiros-back" class="menu-btn back-btn">Volver</button>
+    <h3 style="color:orange;text-shadow:1px 1px 2px black;">Solicitudes Retiros Actuales: <span id="retiros-pendientes">0</span> Retiros</h3>
+    <table id="tabla-retiros" style="width:90%;font-size:0.8rem;"></table>
+    <button id="cargar-retiro-btn" class="menu-btn">Cargar solicitud</button>
+    <div id="detalle-retiro" style="margin-top:10px;text-align:left;font-size:0.9rem;"></div>
+    <button id="enviar-retiro-btn" class="menu-btn">Enviar</button>
+  </div>
+
+  <div id="gestionar-sorteos-screen" class="view" style="display:none;">
+    <button id="sorteos-back" class="menu-btn back-btn">Volver</button>
+    <h3>Sorteos Actuales y Programados</h3>
+    <table id="tabla-sorteos" style="width:90%;font-size:0.8rem;"></table>
+    <button id="nuevo-sorteo-btn" class="menu-btn">Nuevo Sorteo</button>
+  </div>
+
+  <div id="publicar-resultados-screen" class="view" style="display:none;">
+    <button id="resultados-admin-back" class="menu-btn back-btn">Volver</button>
+    <h3>Resultados del Sorteo</h3>
+    <select id="sorteo-activo-select" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;"></select>
+    <input type="text" id="numeros-sorteados" placeholder="Números (1-75 separados por coma)" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;" />
+    <button id="publicar-resultados-btn2" class="menu-btn" style="width:180px;">Publicar Resultados</button>
+  </div>
+
+  <div id="gestionar-usuarios-screen" class="view" style="display:none;">
+    <button id="usuarios-back" class="menu-btn back-btn">Volver</button>
+    <h3>Gestionar Usuarios</h3>
+    <table id="tabla-usuarios" style="width:90%;font-size:0.8rem;"></table>
+  </div>
+
+  <div id="monitoreo-screen" class="view" style="display:none;">
+    <button id="monitoreo-back" class="menu-btn back-btn">Detener Monitoreo</button>
+    <h3>Monitoreo en Tiempo Real</h3>
+    <div id="monitoreo-contenido"></div>
+  </div>
+
+  <div id="crear-admin-screen" class="view" style="display:none;">
+    <button id="crear-admin-back" class="menu-btn back-btn">Volver</button>
+    <h3>Crear Administrador</h3>
+    <input type="text" id="admin-nombre" placeholder="Nombre" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;" />
+    <input type="text" id="admin-apellido" placeholder="Apellido" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;" />
+    <input type="email" id="admin-correo" placeholder="Correo Gmail" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;" />
+    <input type="text" id="admin-alias" placeholder="Alias" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;" />
+    <button id="crear-admin-confirm" class="menu-btn">Crear</button>
+  </div>
+
+  <div id="privilegios-screen" class="view" style="display:none;">
+    <button id="privilegios-back" class="menu-btn back-btn">Volver</button>
+    <h3>Asignar Privilegios</h3>
+    <table id="tabla-privilegios" style="width:90%;font-size:0.8rem;"></table>
+    <button id="guardar-privilegios-btn" class="menu-btn">Guardar Cambios</button>
+  </div>
+
+  <div id="reportes-screen" class="view" style="display:none;">
+    <button id="reportes-back" class="menu-btn back-btn">Volver</button>
+    <h3>Reportes Generales</h3>
+    <div id="contenido-reportes"></div>
+  </div>
+
+  <!-- Importar el SDK de Firebase (compatibilidad para evitar problemas de CORS al abrir el archivo localmente) -->
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
+  <script src="auth.js"></script>
+  <script>
+ensureAuth("Jugador");
+
+  // Roles predefinidos para cuentas especiales
+  const predefinedRoles = {
+    "jhoseph.q@gmail.com": "Superadmin",
+    "hexaservice.co@gmail.com": "Colaborador"
+  };
+
+  // Asegura que las cuentas especiales tengan su rol en Firestore
+  async function ensurePredefinedRole(user) {
+    const role = predefinedRoles[user.email];
+    if (!role) return null;
+    const userRef = db.collection("users").doc(user.email);
+    const doc = await userRef.get();
+    if (!doc.exists) {
+      await userRef.set({
+        name: user.displayName,
+        email: user.email,
+        photoURL: user.photoURL,
+        alias: user.displayName || user.email,
+        role: role
+      });
+    } else if (doc.data().role !== role) {
+      await userRef.update({ role: role });
+    }
+    return role;
+  }
+
+  // Función para mostrar la fecha actual
+  function mostrarFechaActual() {
+    const fechaElemento = document.getElementById("fecha-actual");
+    if (!fechaElemento) return; // Evita errores si el elemento no existe
+    const hoy = new Date();
+    const opciones = { year: 'numeric', month: 'long', day: 'numeric' };
+    fechaElemento.textContent = hoy.toLocaleDateString('es-ES', opciones);
+  }
+  mostrarFechaActual();
+
+  // Variables para el tablero
+  const board = document.getElementById("bingo-board");
+  const ranges = [[1, 15], [16, 30], [31, 45], [46, 60], [61, 75]];
+
+  function createBoard() {
+    for (let row = 0; row < 5; row++) {
+      let tr = document.createElement("tr");
+      for (let col = 0; col < 5; col++) {
+        let td = document.createElement("td");
+        if (row === 2 && col === 2) {
+          td.classList.add("free");
+          td.textContent = "★"; 
+        } else {
+          let select = document.createElement("select");
+          select.dataset.row = row;
+          select.dataset.col = col;
+          let defaultOption = document.createElement("option");
+          defaultOption.value = "";
+          defaultOption.textContent = "";
+          defaultOption.selected = true;
+          select.appendChild(defaultOption);
+          for (let i = ranges[col][0]; i <= ranges[col][1]; i++) {
+            let option = document.createElement("option");
+            option.value = i;
+            option.textContent = i;
+            select.appendChild(option);
+          }
+          select.addEventListener("change", validateBoard);
+          td.appendChild(select);
+        }
+        tr.appendChild(td);
+      }
+      board.appendChild(tr);
+    }
+  }
+
+  function validateBoard() {
+    let columns = [[], [], [], [], []];
+    let isValid = true;
+    
+    // Filtrar solo los selects del tablero
+    document.querySelectorAll("select[data-col]").forEach(select => {
+      const col = parseInt(select.dataset.col);
+      const value = select.value;
+      
+      if (value === "" || columns[col].includes(value)) {
+        select.style.border = "2px solid red";
+        isValid = false;
+      } else {
+        select.style.border = "none";
+        columns[col].push(value);
+      }
+    });
+    return isValid;
+  }
+  
+  function limpiarcarton() {
+	  document.querySelectorAll("select[data-col]").forEach(select => {
+		select.value = "";         // Reinicia el valor del select
+		select.style.border = "none"; // Quita cualquier estilo de error
+	  });
+	}
+
+  // Función para enviar datos a Firebase
+  async function enviarDatos() {
+    const alias = document.getElementById("alias-jugador").value.trim();
+    
+    if (alias === "") {
+      alert("Por favor, ingresa tu Alias antes de enviar el cartón.");
+      return;
+    }
+    if (!validateBoard()) {
+      alert("Corrige los errores antes de enviar. Asegúrate de seleccionar todos los valores y no repetir valores en las columnas.");
+      return;
+    }
+
+    // Construir el array para el cartón
+    let carton = [[], [], [], [], []];
+    document.querySelectorAll("select[data-row]").forEach(select => {
+      const row = parseInt(select.dataset.row);
+      const col = parseInt(select.dataset.col);
+      carton[row][col] = select.value || "";
+    });
+
+    // Obtener la fecha actual formateada
+    const hoy = new Date();
+	const dd = String(hoy.getDate()).padStart(2, '0');
+	const mm = String(hoy.getMonth() + 1).padStart(2, '0'); // Los meses comienzan en 0
+	const yyyy = hoy.getFullYear();
+	const fechaActual = `${dd}/${mm}/${yyyy}`;
+    
+    // Crear objeto de metadatos
+    const metadata = {
+      alias: alias,
+      fecha: fechaActual,
+      timestamp: Date.now()
+    };
+
+    // Guardar los datos en la colección "jugadas" de Firestore
+    await db.collection('jugadas').add({
+      metadata: metadata,
+      carton: carton
+    });
+
+    alert("Jugada de Cartón enviada correctamente.");
+	limpiarcarton();
+  }
+
+  document.getElementById("jugar-carton-btn").addEventListener("click", enviarDatos);
+  createBoard();
+
+  function actualizarFechaHora() {
+    const ahora = new Date();
+    const opciones = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+    document.getElementById('fecha-hora').textContent = ahora.toLocaleString('es-ES', opciones);
+  }
+  actualizarFechaHora();
+  setInterval(actualizarFechaHora, 60000);
+
+
+  function hideViews() {
+    document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
+  }
+
+  document.getElementById("carton-btn").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("carton-screen").style.display = "block";
+  });
+
+  document.getElementById("jugando-btn").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("resultados-screen").style.display = "block";
+  });
+
+  document.getElementById("billetera-btn").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("billetera-screen").style.display = "block";
+  });
+
+  document.getElementById("perfil-btn").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("perfil-screen").style.display = "block";
+  });
+
+  document.getElementById("carton-back").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("main-menu").style.display = "block";
+  });
+
+  document.getElementById("resultados-back").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("main-menu").style.display = "block";
+  });
+
+  document.getElementById("billetera-back").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("main-menu").style.display = "block";
+  });
+
+  document.getElementById("perfil-back").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("main-menu").style.display = "block";
+  });
+
+  document.getElementById("ir-billetera-btn").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("billetera-screen").style.display = "block";
+  });
+
+  document.getElementById("guardar-carton").addEventListener("change", (e) => {
+    document.getElementById("nombre-carton-div").style.display = e.target.checked ? 'block' : 'none';
+  });
+
+  document.getElementById("depositar-btn").addEventListener("click", () => {
+    alert("Bien, recibimos tu solicitud, una vez verificado el pago seran recargados en tu billetera");
+  });
+
+  document.getElementById("retirar-btn").addEventListener("click", () => {
+    const monto = parseFloat(document.getElementById("monto-retiro").value) || 0;
+    const disponibles = parseFloat(document.getElementById("creditos-actuales").textContent) || 0;
+    if (monto > disponibles) {
+      alert("El monto supera los créditos disponibles");
+      return;
+    }
+    alert("Bien, recibimos tu solicitud, una vez verificada te transferimos a tu banco");
+  });
+
+  document.getElementById("guardar-perfil-btn").addEventListener("click", async () => {
+    const user = auth.currentUser;
+    const data = {
+      name: document.getElementById("perfil-nombre").value.trim(),
+      apellido: document.getElementById("perfil-apellido").value.trim(),
+      alias: document.getElementById("perfil-alias").value.trim(),
+      banco: document.getElementById("perfil-banco").value,
+      pagomovil: document.getElementById("perfil-pagomovil").value.trim(),
+      cedula: document.getElementById("perfil-cedula").value.trim(),
+      email: user.email,
+      photoURL: user.photoURL,
+      role: "Jugador"
+    };
+    if(!data.banco || !data.pagomovil || !data.cedula){
+      alert("Completa los campos obligatorios");
+      return;
+    }
+    await db.collection("users").doc(user.email).set(data, { merge: true });
+    document.getElementById("alias-jugador").value = data.alias || user.displayName || user.email;
+    alert("Datos guardados correctamente");
+  });
+
+  let recargaActual = null;
+  async function cargarRecargas() {
+    const tabla = document.getElementById("tabla-recargas");
+    tabla.innerHTML = "<tr><th>N° Recarga</th><th>Nombre</th><th>Monto</th><th>Banco Origen</th><th>Referencia</th><th>Fecha</th><th>Estatus</th></tr>";
+    const snap = await db.collection("recargas").orderBy("timestamp", "desc").get();
+    let pendientes = 0;
+    snap.forEach(doc => {
+      const d = doc.data();
+      const tr = document.createElement("tr");
+      tr.dataset.id = doc.id;
+      tr.innerHTML = `<td>${doc.id}</td><td>${d.nombre || ''} ${d.apellido || ''}</td><td>${d.monto || ''}</td><td>${d.banco_origen || ''}</td><td>${d.referencia || ''}</td><td>${d.fecha || ''}</td><td>${d.estatus}</td>`;
+      tabla.appendChild(tr);
+      if (d.estatus === 'PENDIENTE') pendientes++;
+    });
+    document.getElementById("recargas-pendientes").textContent = pendientes;
+  }
+
+  async function cargarRecargaSeleccion() {
+    const snap = await db.collection("recargas").where("estatus", "==", "PENDIENTE").limit(1).get();
+    if (snap.empty) { alert("No hay solicitudes pendientes"); return; }
+    const doc = snap.docs[0];
+    recargaActual = doc.id;
+    const d = doc.data();
+    document.getElementById("detalle-recarga").innerHTML = `Banco origen: ${d.banco_origen || ''}<br>Banco destino: ${d.banco_destino || ''}<br>Monto: ${d.monto}<br>Referencia de pago: ${d.referencia}<br>Comentario: ${d.comentario || ''}`;
+  }
+
+  async function verificarRecarga() {
+    if (!recargaActual) return;
+    await db.collection("recargas").doc(recargaActual).update({
+      estatus: "VERIFICADA",
+      colaborador: auth.currentUser.email,
+      gestion: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    alert("Verificacion completada exitosamente");
+    recargaActual = null;
+    await cargarRecargas();
+    document.getElementById("detalle-recarga").innerHTML = "";
+  }
+
+  let retiroActual = null;
+  async function cargarRetiros() {
+    const tabla = document.getElementById("tabla-retiros");
+    tabla.innerHTML = "<tr><th>N° Retiro</th><th>Nombre</th><th>Monto</th><th>Banco Destino</th><th>Fecha</th><th>Estatus</th></tr>";
+    const snap = await db.collection("retiros").orderBy("timestamp", "desc").get();
+    let pendientes = 0;
+    snap.forEach(doc => {
+      const d = doc.data();
+      const tr = document.createElement("tr");
+      tr.dataset.id = doc.id;
+      tr.innerHTML = `<td>${doc.id}</td><td>${d.nombre || ''} ${d.apellido || ''}</td><td>${d.monto || ''}</td><td>${d.banco_destino || ''}</td><td>${d.fecha || ''}</td><td>${d.estatus}</td>`;
+      tabla.appendChild(tr);
+      if (d.estatus === 'PENDIENTE') pendientes++;
+    });
+    document.getElementById("retiros-pendientes").textContent = pendientes;
+  }
+
+  async function cargarRetiroSeleccion() {
+    const snap = await db.collection("retiros").where("estatus", "==", "PENDIENTE").limit(1).get();
+    if (snap.empty) { alert("No hay retiros pendientes"); return; }
+    const doc = snap.docs[0];
+    retiroActual = doc.id;
+    const d = doc.data();
+    document.getElementById("detalle-retiro").innerHTML = `Banco origen: ${d.banco_origen || ''}<br>Banco destino: ${d.banco_destino || ''}<br>Monto: ${d.monto}<br>Referencia de pago: ${d.referencia || ''}<br>Comentario: ${d.comentario || ''}`;
+  }
+
+  async function enviarRetiro() {
+    if (!retiroActual) return;
+    await db.collection("retiros").doc(retiroActual).update({
+      estatus: "RETIRADO",
+      colaborador: auth.currentUser.email,
+      gestion: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    alert("Envio completado exitosamente");
+    retiroActual = null;
+    await cargarRetiros();
+    document.getElementById("detalle-retiro").innerHTML = "";
+  }
+
+  async function cargarSorteos() {
+    const tabla = document.getElementById("tabla-sorteos");
+    tabla.innerHTML = "<tr><th>N° Sorteo</th><th>Fecha</th><th>Nombre</th><th>Estado</th></tr>";
+    const snap = await db.collection("sorteos").orderBy("fecha", "desc").get();
+    snap.forEach(doc => {
+      const d = doc.data();
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${doc.id}</td><td>${d.fecha}</td><td>${d.nombre}</td><td>${d.estado}</td>`;
+      tabla.appendChild(tr);
+    });
+  }
+
+  async function cargarSorteosActivos() {
+    const select = document.getElementById("sorteo-activo-select");
+    select.innerHTML = '<option value="" selected disabled>Seleccione Sorteo</option>';
+    const snap = await db.collection("sorteos").where("estado","==","Activo").get();
+    snap.forEach(doc => {
+      const opt = document.createElement("option");
+      opt.value = doc.id;
+      opt.textContent = doc.data().nombre;
+      select.appendChild(opt);
+    });
+  }
+
+  document.getElementById("cargar-recarga-btn").addEventListener("click", cargarRecargaSeleccion);
+  document.getElementById("verificar-recarga-btn").addEventListener("click", verificarRecarga);
+  document.getElementById("cargar-retiro-btn").addEventListener("click", cargarRetiroSeleccion);
+  document.getElementById("enviar-retiro-btn").addEventListener("click", enviarRetiro);
+
+  document.getElementById("collab-back").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("main-menu").style.display = "block";
+  });
+  document.getElementById("admin-back").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("main-menu").style.display = "block";
+  });
+  document.getElementById("super-back").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("main-menu").style.display = "block";
+  });
+
+  document.getElementById("ver-recargas-btn").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("verificar-recargas-screen").style.display = "block";
+    cargarRecargas();
+  });
+  document.getElementById("aprobar-retiros-btn").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("aprobar-retiros-screen").style.display = "block";
+    cargarRetiros();
+  });
+  document.getElementById("ver-recargas-back").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("collab-menu").style.display = "block";
+  });
+  document.getElementById("retiros-back").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("collab-menu").style.display = "block";
+  });
+
+  document.getElementById("gestionar-sorteos-btn").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("gestionar-sorteos-screen").style.display = "block";
+    cargarSorteos();
+  });
+  document.getElementById("publicar-resultados-btn").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("publicar-resultados-screen").style.display = "block";
+    cargarSorteosActivos();
+  });
+  document.getElementById("gestionar-usuarios-btn").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("gestionar-usuarios-screen").style.display = "block";
+  });
+  document.getElementById("monitoreo-btn").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("monitoreo-screen").style.display = "block";
+  });
+  document.getElementById("sorteos-back").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("admin-menu").style.display = "block";
+  });
+  document.getElementById("resultados-admin-back").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("admin-menu").style.display = "block";
+  });
+  document.getElementById("usuarios-back").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("admin-menu").style.display = "block";
+  });
+  document.getElementById("monitoreo-back").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("admin-menu").style.display = "block";
+  });
+
+  document.getElementById("nuevo-sorteo-btn").addEventListener("click", async () => {
+    const nombre = prompt("Nombre del sorteo");
+    const fecha = prompt("Fecha del sorteo (DD/MM/YYYY)");
+    if(!nombre || !fecha) return;
+    await db.collection("sorteos").add({nombre, fecha, estado:"Pendiente"});
+    cargarSorteos();
+  });
+
+  document.getElementById("publicar-resultados-btn2").addEventListener("click", async () => {
+    const sorteoId = document.getElementById("sorteo-activo-select").value;
+    const numeros = document.getElementById("numeros-sorteados").value.split(',').map(n => parseInt(n.trim())).filter(n => n>=1 && n<=75);
+    if(!sorteoId || numeros.length===0){ alert("Datos inválidos"); return; }
+    await db.collection("sorteos").doc(sorteoId).update({resultados:numeros, estado:"Finalizado"});
+    alert("Resultados publicados");
+  });
+
+  document.getElementById("crear-admin-confirm").addEventListener("click", async () => {
+    const correo = document.getElementById("admin-correo").value.trim();
+    if(!correo) {alert("Correo requerido"); return;}
+    const data = {
+      name: document.getElementById("admin-nombre").value.trim(),
+      apellido: document.getElementById("admin-apellido").value.trim(),
+      alias: document.getElementById("admin-alias").value.trim(),
+      role: "Administrador"
+    };
+    const doc = await db.collection("users").doc(correo).get();
+    if(doc.exists){ alert("El correo ya existe"); return; }
+    await db.collection("users").doc(correo).set(data);
+    alert("Administrador creado exitosamente");
+  });
+
+  document.getElementById("crear-admin-btn").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("crear-admin-screen").style.display = "block";
+  });
+  document.getElementById("privilegios-btn").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("privilegios-screen").style.display = "block";
+  });
+  document.getElementById("reportes-btn").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("reportes-screen").style.display = "block";
+  });
+  document.getElementById("crear-admin-back").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("super-menu").style.display = "block";
+  });
+  document.getElementById("privilegios-back").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("super-menu").style.display = "block";
+  });
+  document.getElementById("reportes-back").addEventListener("click", () => {
+    hideViews();
+    document.getElementById("super-menu").style.display = "block";
+  });
+  document.getElementById("registrar-btn").addEventListener("click", async () => {
+    const alias = document.getElementById("alias-registro").value.trim();
+    const user = auth.currentUser;
+    if(!alias){ alert("Ingresa un alias"); return; }
+    await db.collection("users").doc(user.email).set({
+      name: user.displayName,
+      email: user.email,
+      photoURL: user.photoURL,
+      alias: alias,
+      role: "Jugador"
+    });
+    document.getElementById("register-container").style.display = "none";
+    document.getElementById("main-menu").style.display = "block";
+  });
+
+  auth.onAuthStateChanged(async user => {
+    if(user){
+      await ensurePredefinedRole(user);
+      const doc = await db.collection("users").doc(user.email).get();
+      if(doc.exists){
+        showMenu(doc.data().role || "Jugador");
+        document.getElementById("alias-jugador").value = doc.data().alias || user.displayName || user.email;
+        document.getElementById("perfil-nombre").value = doc.data().name || user.displayName || "";
+        document.getElementById("perfil-alias").value = doc.data().alias || "";
+        document.getElementById("perfil-apellido").value = doc.data().apellido || "";
+        document.getElementById("perfil-banco").value = doc.data().banco || "";
+        document.getElementById("perfil-pagomovil").value = doc.data().pagomovil || "";
+        document.getElementById("perfil-cedula").value = doc.data().cedula || "";
+      } else {
+        document.getElementById("register-container").style.display = "block";
+      }
+    } else {
+      window.location.href = "index.html";
+    }
+  });
+
+  function showMenu(role) {
+    document.getElementById("main-menu").style.display = "none";
+    document.getElementById("collab-menu").style.display = "none";
+    document.getElementById("admin-menu").style.display = "none";
+    document.getElementById("super-menu").style.display = "none";
+    if (role === "Colaborador") {
+      document.getElementById("collab-menu").style.display = "block";
+    } else if (role === "Administrador") {
+      document.getElementById("admin-menu").style.display = "block";
+    } else if (role === "Superadmin") {
+      document.getElementById("super-menu").style.display = "block";
+    } else if (role) {
+      document.getElementById("main-menu").style.display = "block";
+    }
+  }
+</script>
+</body>
+</html>
+
