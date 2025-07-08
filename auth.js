@@ -9,24 +9,45 @@ function initFirebase(){
     messagingSenderId: "455917034653",
     appId: "1:455917034653:web:ef3f7a1d14be86a1580874"
   };
-  app = firebase.initializeApp(firebaseConfig);
+  app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
   db = firebase.firestore();
   auth = firebase.auth();
   provider = new firebase.auth.GoogleAuthProvider();
+  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 }
 
-function loginGoogle(){
+async function loginGoogle(){
   if(!document.getElementById('accept-terms').checked){
     alert('Debes aceptar los términos y condiciones');
     return;
   }
-  auth.signInWithPopup(provider).catch(err => {
-    console.error('Error login Google', err);
-  });
+  try {
+    await auth.signInWithPopup(provider);
+  } catch(err) {
+    console.warn('Popup login failed, trying redirect', err);
+    try {
+      await auth.signInWithRedirect(provider);
+    } catch(e){
+      console.error('Error login Google', e);
+      alert('Error al iniciar sesión con Google');
+    }
+  }
 }
 
 function logout(){
   auth.signOut();
+}
+
+async function handleRedirect(){
+  try {
+    const result = await auth.getRedirectResult();
+    if(result.user){
+      const role = await getUserRole(result.user);
+      redirectByRole(role);
+    }
+  } catch(err){
+    console.error('Error processing redirect login', err);
+  }
 }
 
 async function getUserRole(user){
