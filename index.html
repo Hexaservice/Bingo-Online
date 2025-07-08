@@ -4,6 +4,58 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login - Bingo Online</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)),
+                  url('https://img.freepik.com/vectores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg');
+      background-repeat: repeat;
+      background-size: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+    }
+    #login-container {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #logo-bingo {
+      width: 250px;
+      margin-bottom: 15px;
+    }
+    #login-btn {
+      width: 220px;
+      height: 80px;
+      font-family: 'Bangers', cursive;
+      font-size: 1.6rem;
+      background: rgba(160, 0, 255, 0.8);
+      color: white;
+      border: 4px solid #FFD700;
+      border-radius: 10px;
+      text-shadow: 2px 2px 4px #000;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+    }
+    #login-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+    }
+    #login-footer {
+      position: absolute;
+      bottom: 10px;
+      left: 0;
+      right: 0;
+      font-size: 0.7rem;
+    }
+  </style>
 </head>
 <body>
   <div id="login-container">
@@ -11,6 +63,10 @@
     <button id="login-btn">Iniciar Sesión</button>
     <div><input type="checkbox" id="accept-terms"> <label for="accept-terms">Acepto los <a href="#" id="terms-link">términos y condiciones</a></label></div>
     <div style="margin-top:10px;font-size:0.8rem;">¿Aún no tienes cuenta? <a href="#" id="register-link">Regístrate</a></div>
+    <div id="login-footer">
+      <div id="fecha-hora"></div>
+      <div id="derechos">Todos los derechos reservados ® Hexaservice 2025</div>
+    </div>
   </div>
   <div id="terms-container" style="display:none;">
     <h2>Términos y Condiciones</h2>
@@ -34,6 +90,14 @@
     document.getElementById('logout-link')?.addEventListener('click', e => { e.preventDefault(); logout(); });
     document.getElementById('close-terms-btn').addEventListener('click', () => document.getElementById('terms-container').style.display='none');
     document.getElementById('terms-link').addEventListener('click', e => { e.preventDefault(); document.getElementById('terms-container').style.display='block'; });
+
+    function actualizarFechaHora(){
+      const ahora = new Date();
+      const opciones = { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' };
+      document.getElementById('fecha-hora').textContent = ahora.toLocaleString('es-ES', opciones);
+    }
+    actualizarFechaHora();
+    setInterval(actualizarFechaHora, 60000);
 
     auth.onAuthStateChanged(async user => {
       if(user) {
