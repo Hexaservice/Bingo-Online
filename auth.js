@@ -80,12 +80,9 @@ async function getUserRole(user){
 }
 
 function redirectByRole(role){
-  switch(role){
-    case 'Superadmin': window.location.href='super.html'; break;
-    case 'Administrador': window.location.href='admin.html'; break;
-    case 'Colaborador': window.location.href='collab.html'; break;
-    default: window.location.href='player.html';
-  }
+  // Todas las funcionalidades se manejan en player.html,
+  // por lo que cualquier rol redirige a dicha página
+  window.location.href = 'player.html';
 }
 
 function ensureAuth(roleExpected){
