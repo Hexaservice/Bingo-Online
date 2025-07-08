@@ -17,6 +17,15 @@ function initFirebase(){
 }
 
 async function loginGoogle(){
+  if(!app){
+    try{
+      initFirebase();
+    }catch(e){
+      console.error('No se pudo inicializar Firebase', e);
+      alert('Error de inicialización de Firebase');
+      return;
+    }
+  }
   if(!document.getElementById('accept-terms').checked){
     alert('Debes aceptar los términos y condiciones');
     return;
