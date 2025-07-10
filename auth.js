@@ -118,3 +118,5 @@ function ensureAuth(roleExpected){
     }
   });
 }
+
+if (typeof module !== "undefined") { module.exports = { redirectByRole, ensureAuth }; }
