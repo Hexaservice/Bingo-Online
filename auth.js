@@ -37,8 +37,12 @@ async function loginGoogle(){
     try {
       await auth.signInWithRedirect(provider);
     } catch(e){
-      console.error('Error login Google', e);
-      alert('Error al iniciar sesión con Google');
+      if (e.code === 'auth/web-storage-unsupported') {
+        alert('El navegador ha bloqueado las cookies necesarias para continuar. Intenta habilitarlas o abre la aplicación desde un dominio configurado en Firebase.');
+      } else {
+        console.error('Error login Google', e);
+        alert('Error al iniciar sesión con Google');
+      }
     }
   }
 }
@@ -55,6 +59,9 @@ async function handleRedirect(){
       redirectByRole(role);
     }
   } catch(err){
+    if (err.code === 'auth/web-storage-unsupported') {
+      alert('El navegador impide usar el almacenamiento necesario para mantener la sesión. Abre la aplicación desde un dominio configurado en Firebase o habilita las cookies.');
+    }
     console.error('Error processing redirect login', err);
   }
 }
