@@ -86,15 +86,48 @@
     <img id="user-pic" referrerpolicy="no-referrer" crossorigin="anonymous" src="" alt="Usuario" />
     <a href="#" id="logout-link">Cerrar sesión</a>
   </div>
-  <div>
-    <button class="menu-btn">Crear Administrador</button>
-    <button class="menu-btn">Asignar Privilegios</button>
-    <button class="menu-btn">Reportes Generales</button>
+  <div id="main-menu">
+    <button id="crear-admin-btn" class="menu-btn">Crear Administrador</button>
+    <button id="privilegios-btn" class="menu-btn">Asignar Privilegios</button>
+    <button id="reportes-btn" class="menu-btn">Reportes Generales</button>
+  </div>
+
+  <div id="crear-admin-screen" class="view" style="display:none;">
+    <button id="crear-admin-back" class="menu-btn back-btn">Volver</button>
+    <h3>Crear Administrador</h3>
+    <input type="text" id="admin-nombre" placeholder="Nombre" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;" />
+    <input type="text" id="admin-apellido" placeholder="Apellido" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;" />
+    <input type="email" id="admin-correo" placeholder="Correo Gmail" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;" />
+    <input type="text" id="admin-alias" placeholder="Alias" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;" />
+    <button id="crear-admin-confirm" class="menu-btn">Crear</button>
+  </div>
+
+  <div id="privilegios-screen" class="view" style="display:none;">
+    <button id="privilegios-back" class="menu-btn back-btn">Volver</button>
+    <h3>Asignar Privilegios</h3>
+    <table id="tabla-privilegios" style="width:90%;font-size:0.8rem;"></table>
+    <button id="guardar-privilegios-btn" class="menu-btn">Guardar Cambios</button>
+  </div>
+
+  <div id="reportes-screen" class="view" style="display:none;">
+    <button id="reportes-back" class="menu-btn back-btn">Volver</button>
+    <h3>Reportes Generales</h3>
+    <div id="contenido-reportes"></div>
   </div>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
   <script src="auth.js"></script>
-  <script>ensureAuth('Superadmin');</script>
+  <script>
+  ensureAuth('Superadmin');
+  function hideViews(){document.querySelectorAll('.view').forEach(v=>v.style.display='none');}
+  document.getElementById('crear-admin-btn').addEventListener('click',()=>{hideViews();document.getElementById('crear-admin-screen').style.display='block';});
+  document.getElementById('privilegios-btn').addEventListener('click',()=>{hideViews();document.getElementById('privilegios-screen').style.display='block';});
+  document.getElementById('reportes-btn').addEventListener('click',()=>{hideViews();document.getElementById('reportes-screen').style.display='block';});
+  document.getElementById('crear-admin-back').addEventListener('click',()=>{hideViews();document.getElementById('main-menu').style.display='block';});
+  document.getElementById('privilegios-back').addEventListener('click',()=>{hideViews();document.getElementById('main-menu').style.display='block';});
+  document.getElementById('reportes-back').addEventListener('click',()=>{hideViews();document.getElementById('main-menu').style.display='block';});
+  document.getElementById('crear-admin-confirm').addEventListener('click',async()=>{const correo=document.getElementById('admin-correo').value.trim();if(!correo){alert('Correo requerido');return;}const data={name:document.getElementById('admin-nombre').value.trim(),apellido:document.getElementById('admin-apellido').value.trim(),alias:document.getElementById('admin-alias').value.trim(),role:'Administrador'};const doc=await db.collection('users').doc(correo).get();if(doc.exists){alert('El correo ya existe');return;}await db.collection('users').doc(correo).set(data);alert('Administrador creado exitosamente');});
+  </script>
 </body>
 </html>
