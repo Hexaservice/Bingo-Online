@@ -157,18 +157,18 @@
     document.getElementById('estado-sorteo').value = d.estado || '';
     const snap = await db.collection('formas').where('sorteoId','==',sorteoId).get();
     const forms = document.querySelectorAll('.forma-item');
-    let i=0;
-    snap.forEach(df=>{
-      if(i<forms.length){
-        const data=df.data();
-        const div=forms[i];
+    const datos=[];
+    snap.forEach(d=>datos.push({id:d.id,...d.data()}));
+    datos.sort((a,b)=>{const ia=a.idx||0, ib=b.idx||0;return ia-ib;});
+    datos.forEach((data,idx)=>{
+      if(idx<forms.length){
+        const div=forms[idx];
         div.querySelector('.nombre-forma').value=data.nombre||'';
         div.querySelector('.porcentaje-forma').value=data.porcentaje||0;
         data.posiciones.forEach(p=>{
           const td=div.querySelector(`td[data-row="${p.r}"][data-col="${p.c}"]`);
           if(td){ td.classList.add('selected'); td.textContent='\u2605'; }
         });
-        i++;
       }
     });
   }
