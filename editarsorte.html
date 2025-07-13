@@ -184,18 +184,30 @@
     const estado=document.getElementById('estado-sorteo').value;
     if(!nombre||!fecha||!hora){alert('Completa los datos del sorteo');return;}
     const formas=[];let total=0;
-    document.querySelectorAll('.forma-item').forEach(div=>{
-      const nom=div.querySelector('.nombre-forma').value.trim();
-      const por=parseFloat(div.querySelector('.porcentaje-forma').value)||0;
-      total+=por;
+    const divs=document.querySelectorAll('.forma-item');
+    for(let i=0;i<divs.length;i++){
+      const div=divs[i];
+      const nomInput=div.querySelector('.nombre-forma');
+      const porInput=div.querySelector('.porcentaje-forma');
+      const nom=nomInput.value.trim();
+      const por=parseFloat(porInput.value);
       const pos=[];
       div.querySelectorAll('td.selected').forEach(td=>{
         const r=parseInt(td.dataset.row); const c=parseInt(td.dataset.col);
         if(!(r===2&&c===2)) pos.push({r,c});
       });
-      formas.push({nombre:nom,porcentaje:por,posiciones:pos});
-    });
+      if(!nom){alert(`Asigna un nombre a la forma ${i+1}`);nomInput.focus();return;}
+      if(isNaN(por)||por<=0){alert(`Asigna un porcentaje a la forma ${i+1}`);porInput.focus();return;}
+      if(pos.length===0){
+        alert(`Debes elegir al menos una posicion en el carton para la forma ${i+1}`);
+        div.querySelector('.carton').scrollIntoView({behavior:'smooth'});
+        return;
+      }
+      formas.push({idx:i+1,nombre:nom,porcentaje:por,posiciones:pos});
+      total+=por;
+    }
     if(total>100){alert('La suma de porcentajes supera 100%');return;}
+    if(total<100){alert('Falta asignar porcentaje en las formas');return;}
     try{
       await db.collection('sorteos').doc(sorteoId).update({nombre,tipo,fecha,hora,cierreMinutos:cierre,valorCarton:valor,estado});
       const snap = await db.collection('formas').where('sorteoId','==',sorteoId).get();
