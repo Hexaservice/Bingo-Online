@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editar Sorteo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)),
+                  url('https://img.freepik.com/vectores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg');
+      background-repeat: repeat;
+      background-size: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      text-align: center;
+      font-family: 'Bangers', cursive;
+      padding-top: 20px;
+    }
+    .menu-btn {
+      width: 250px;
+      height: 60px;
+      font-family: 'Bangers', cursive;
+      font-size: 1.4rem;
+      background: rgba(0, 170, 255, 0.8);
+      color: white;
+      border: 4px solid #FFD700;
+      border-radius: 10px;
+      text-shadow: 2px 2px 4px #000;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+      margin: 5px;
+    }
+    .menu-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+    }
+    .back-btn {
+      position: fixed;
+      top: 5px;
+      left: 5px;
+      width: 120px;
+      height: 40px;
+      background: orange;
+    }
+    input, select {
+      font-size:1rem;
+      padding:5px;
+      text-align:center;
+      border-radius:5px;
+      border:1px solid #ccc;
+      width:250px;
+      display:block;
+      margin:10px auto;
+      color:black;
+    }
+    .carton {
+      margin: 10px auto;
+      border-collapse: collapse;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 15px;
+      border: 15px solid #004d00;
+      padding: 5px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    .carton td {
+      border:2px solid black;
+      width:40px;
+      height:40px;
+      text-align:center;
+      font-weight:bold;
+      cursor:pointer;
+    }
+    .carton td.selected {
+      background-color: orange;
+      color:white;
+    }
+    .carton td.free {
+      background-color:#ffcc00;
+    }
+    .forma-item { margin-bottom:20px; }
+  </style>
+</head>
+<body>
+  <button id="volver-btn" class="menu-btn back-btn">&#9664; Volver</button>
+  <h2>Editar Sorteo</h2>
+  <input id="nombre-sorteo" maxlength="70" placeholder="Nombre de sorteo">
+  <select id="tipo-sorteo">
+    <option value="Sorteo Diario">Sorteo Diario</option>
+    <option value="Sorteo Especial">Sorteo Especial</option>
+  </select>
+  <input id="fecha-sorteo" type="date">
+  <input id="hora-sorteo" type="time">
+  <input id="cierre-minutos" type="number" placeholder="Minutos antes de cerrar jugadas">
+  <input id="valor-carton" type="number" placeholder="Valor del Cartón">
+  <select id="estado-sorteo">
+    <option value="Inactivo">Inactivo</option>
+    <option value="Activo">Activo</option>
+    <option value="Archivado">Archivado</option>
+  </select>
+  <div id="forms-container"></div>
+  <button id="actualizar-sorteo-btn" class="menu-btn">Actualizar sorteo</button>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
+  <script src="auth.js"></script>
+  <script>
+  ensureAuth('Administrador');
+  function crearTabla(tbody){
+    for(let r=0;r<5;r++){
+      const tr=document.createElement('tr');
+      for(let c=0;c<5;c++){
+        const td=document.createElement('td');
+        td.dataset.row=r;td.dataset.col=c;
+        if(r===2&&c===2){ td.classList.add('free','selected'); td.textContent='\u2605'; }
+        td.addEventListener('click',()=>{
+          if(td.classList.contains('free')) return;
+          td.classList.toggle('selected');
+          td.textContent = td.classList.contains('selected') ? '\u2605' : '';
+        });
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+  }
+  function crearFormas(){
+    const cont=document.getElementById('forms-container');
+    for(let i=1;i<=5;i++){
+      const div=document.createElement('div');
+      div.className='forma-item';
+      div.innerHTML=`<h3>Forma ${i}</h3>
+      <input class="nombre-forma" placeholder="Nombre de forma">
+      <input type="number" class="porcentaje-forma" placeholder="% Premio">
+      <table class="carton" data-idx="${i}"><tbody></tbody></table>`;
+      cont.appendChild(div);
+      const tbody=div.querySelector('tbody');
+      crearTabla(tbody);
+    }
+  }
+  crearFormas();
+  const sorteoId = localStorage.getItem('editSorteoId');
+  if(!sorteoId){ window.location.href = 'gestionsorteos.html'; }
+  async function cargarDatos(){
+    const doc = await db.collection('sorteos').doc(sorteoId).get();
+    if(!doc.exists){ alert('Sorteo no encontrado'); return; }
+    const d = doc.data();
+    document.getElementById('nombre-sorteo').value = d.nombre || '';
+    document.getElementById('tipo-sorteo').value = d.tipo || '';
+    document.getElementById('fecha-sorteo').value = d.fecha || '';
+    document.getElementById('hora-sorteo').value = d.hora || '';
+    document.getElementById('cierre-minutos').value = d.cierreMinutos || '';
+    document.getElementById('valor-carton').value = d.valorCarton || '';
+    document.getElementById('estado-sorteo').value = d.estado || '';
+    const snap = await db.collection('formas').where('sorteoId','==',sorteoId).get();
+    const forms = document.querySelectorAll('.forma-item');
+    let i=0;
+    snap.forEach(df=>{
+      if(i<forms.length){
+        const data=df.data();
+        const div=forms[i];
+        div.querySelector('.nombre-forma').value=data.nombre||'';
+        div.querySelector('.porcentaje-forma').value=data.porcentaje||0;
+        data.posiciones.forEach(p=>{
+          const td=div.querySelector(`td[data-row="${p.r}"][data-col="${p.c}"]`);
+          if(td){ td.classList.add('selected'); td.textContent='\u2605'; }
+        });
+        i++;
+      }
+    });
+  }
+  cargarDatos();
+  document.getElementById('volver-btn').addEventListener('click',()=>{window.history.back();});
+  document.getElementById('actualizar-sorteo-btn').addEventListener('click',async()=>{
+    const nombre=document.getElementById('nombre-sorteo').value.trim();
+    const tipo=document.getElementById('tipo-sorteo').value;
+    const fecha=document.getElementById('fecha-sorteo').value;
+    const hora=document.getElementById('hora-sorteo').value;
+    const cierre=parseInt(document.getElementById('cierre-minutos').value)||0;
+    const valor=parseFloat(document.getElementById('valor-carton').value)||0;
+    const estado=document.getElementById('estado-sorteo').value;
+    if(!nombre||!fecha||!hora){alert('Completa los datos del sorteo');return;}
+    const formas=[];let total=0;
+    document.querySelectorAll('.forma-item').forEach(div=>{
+      const nom=div.querySelector('.nombre-forma').value.trim();
+      const por=parseFloat(div.querySelector('.porcentaje-forma').value)||0;
+      total+=por;
+      const pos=[];
+      div.querySelectorAll('td.selected').forEach(td=>{
+        const r=parseInt(td.dataset.row); const c=parseInt(td.dataset.col);
+        if(!(r===2&&c===2)) pos.push({r,c});
+      });
+      formas.push({nombre:nom,porcentaje:por,posiciones:pos});
+    });
+    if(total>100){alert('La suma de porcentajes supera 100%');return;}
+    try{
+      await db.collection('sorteos').doc(sorteoId).update({nombre,tipo,fecha,hora,cierreMinutos:cierre,valorCarton:valor,estado});
+      const snap = await db.collection('formas').where('sorteoId','==',sorteoId).get();
+      const batch=db.batch();
+      snap.forEach(d=>batch.delete(db.collection('formas').doc(d.id)));
+      formas.forEach(f=>{const ref=db.collection('formas').doc();batch.set(ref,{sorteoId,...f});});
+      await batch.commit();
+      alert('Sorteo actualizado');
+      localStorage.removeItem('editSorteoId');
+      window.location.href='gestionsorteos.html';
+    }catch(e){console.error(e);alert('Error al actualizar');}
+  });
+</script>
+</body>
+</html>
