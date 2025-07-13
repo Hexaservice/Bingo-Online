@@ -90,6 +90,7 @@
   <h2>Nuevo Sorteo</h2>
   <input id="nombre-sorteo" maxlength="70" placeholder="Nombre de sorteo">
   <select id="tipo-sorteo">
+    <option value="">-- Tipo de sorteo --</option>
     <option value="Sorteo Diario">Sorteo Diario</option>
     <option value="Sorteo Especial">Sorteo Especial</option>
   </select>
@@ -144,14 +145,27 @@
   crearFormas();
   document.getElementById('volver-btn').addEventListener('click',()=>{window.history.back();});
   document.getElementById('guardar-sorteo-btn').addEventListener('click',async()=>{
-    const nombre=document.getElementById('nombre-sorteo').value.trim();
-    const tipo=document.getElementById('tipo-sorteo').value;
-    const fecha=document.getElementById('fecha-sorteo').value;
-    const hora=document.getElementById('hora-sorteo').value;
-    const cierre=parseInt(document.getElementById('cierre-minutos').value)||0;
-    const valor=parseFloat(document.getElementById('valor-carton').value)||0;
+    const nombreInput=document.getElementById('nombre-sorteo');
+    const tipoInput=document.getElementById('tipo-sorteo');
+    const fechaInput=document.getElementById('fecha-sorteo');
+    const horaInput=document.getElementById('hora-sorteo');
+    const cierreInput=document.getElementById('cierre-minutos');
+    const valorInput=document.getElementById('valor-carton');
+    const nombre=nombreInput.value.trim();
+    const tipo=tipoInput.value;
+    const fecha=fechaInput.value;
+    const hora=horaInput.value;
+    const cierreVal=cierreInput.value;
+    const valorVal=valorInput.value;
     const estado=document.getElementById('estado-sorteo').value;
-    if(!nombre||!fecha||!hora){alert('Completa los datos del sorteo');return;}
+    if(!nombre){alert('Asigna un nombre al Sorteo');nombreInput.focus();return;}
+    if(!tipo){alert('Elije un tipo de sorteo');tipoInput.focus();return;}
+    if(!fecha){alert('Elige una fecha para el Sorteo');fechaInput.focus();return;}
+    if(!hora){alert('Debes elegir una hora para el Sorteo');horaInput.focus();return;}
+    if(!cierreVal){alert('Elije una cantidad de minutos para cierre previo de Jugadas');cierreInput.focus();return;}
+    if(!valorVal){alert('Coloca un valor para el cart\u00f3n');valorInput.focus();return;}
+    const cierre=parseInt(cierreVal);
+    const valor=parseFloat(valorVal);
     const formas=[];let total=0;
     const divs=document.querySelectorAll('.forma-item');
     for(let i=0;i<divs.length;i++){
