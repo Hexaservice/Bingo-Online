@@ -102,14 +102,16 @@
     tabla.innerHTML='<tr><th>N°</th><th>Nombre</th><th>Fecha</th><th>Estado</th><th></th></tr>';
     let q=db.collection('sorteos');
     if(estado!=='Todos') q=q.where('estado','==',estado);
-    const snap=await q.orderBy('fecha','desc').get();
+    const snap=await q.get();
+    const datos=[];
+    snap.forEach(doc=>datos.push({id:doc.id,...doc.data()}));
+    datos.sort((a,b)=>{const fa=a.fecha||'';const fb=b.fecha||'';return fa>fb?-1:fa<fb?1:0;});
     let idx=1;
-    snap.forEach(doc=>{
-      const d=doc.data();
+    datos.forEach(d=>{
       let fecha=d.fecha||'';
       if(fecha.includes('-')) fecha=fecha.split('-').reverse().join('/');
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${idx++}</td><td>${d.nombre}</td><td>${fecha}</td><td>${d.estado}</td><td><input type="checkbox" data-id="${doc.id}"></td>`;
+      tr.innerHTML=`<td>${idx++}</td><td>${d.nombre}</td><td>${fecha}</td><td>${d.estado}</td><td><input type="checkbox" data-id="${d.id}"></td>`;
       tabla.appendChild(tr);
     });
   }
