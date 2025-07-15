@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registrarse</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)), url('https://img.freepik.com/vectores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg');
+      background-repeat: repeat;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      min-height:100vh;
+      text-align:center;
+    }
+    input {
+      font-size:1rem;
+      padding:5px;
+      margin:5px;
+      width:250px;
+      text-align:center;
+    }
+    button {
+      padding:10px 20px;
+      margin:5px;
+      font-family:'Bangers',cursive;
+      background:#ff6600;
+      color:white;
+      border:none;
+      border-radius:5px;
+      cursor:pointer;
+    }
+  </style>
+</head>
+<body>
+  <h2>Registro de Jugador</h2>
+  <input type="text" id="nombre" placeholder="Nombre">
+  <input type="text" id="apellido" placeholder="Apellido">
+  <input type="text" id="alias" placeholder="Alias">
+  <div id="email" style="margin:10px;font-weight:bold;"></div>
+  <button id="registrar">Registrarse</button>
+  <button id="cancelar">Cancelar</button>
+
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    ensureAuth();
+    auth.onAuthStateChanged(user=>{
+      if(!user) return;
+      document.getElementById('email').textContent = user.email;
+    });
+    function validarTexto(txt,max){
+      return txt && txt.length<=max && /^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]+$/.test(txt);
+    }
+    document.getElementById('registrar').addEventListener('click', async ()=>{
+      const nombre = document.getElementById('nombre').value.trim();
+      if(!validarTexto(nombre,40)){ alert('Nombre inválido'); document.getElementById('nombre').focus(); return; }
+      const apellido = document.getElementById('apellido').value.trim();
+      if(!validarTexto(apellido,40)){ alert('Apellido inválido'); document.getElementById('apellido').focus(); return; }
+      const alias = document.getElementById('alias').value.trim();
+      if(!alias || alias.length>60){ alert('Alias inválido'); document.getElementById('alias').focus(); return; }
+      const user = auth.currentUser;
+      await db.collection('users').doc(user.email).set({
+        name:nombre,
+        apellido:apellido,
+        alias:alias,
+        email:user.email,
+        photoURL:user.photoURL,
+        role:'Jugador'
+      });
+      window.location.href='player.html';
+    });
+    document.getElementById('cancelar').addEventListener('click', ()=>{ window.location.href='index.html'; });
+  </script>
+</body>
+</html>
