@@ -272,7 +272,7 @@
     <h3 id="carton-sorteo" style="font-size: 1rem; color: black; margin-bottom: 5px; text-shadow: 0 0 20px yellow, 0 0 20px yellow;">Sorteo N° XXX fecha XX/XX/XXXX</h3>
     <input type="text" id="alias-jugador" readonly placeholder="Alias" style="font-size: 1.5rem; padding: 5px; text-align: center; border-radius: 5px; border: 1px solid #ccc; width: 200px; display: block; margin: 10px auto; color: orange;">
     <div style="font-size:0.6rem;margin-top:-8px;">Si deseas cambiar tu alias dirigite a Perfil &gt; Alias</div>
-    <div id="creditos-info" style="margin:10px;">Créditos disponibles: <span id="creditos-label">0</span> <button id="ir-billetera-btn" style="font-size:0.8rem;margin-left:5px;">Recargar Billetera</button></div>
+    <div id="creditos-info" style="margin:10px;">Créditos disponibles: <span id="creditos-label">0</span> <button id="ir-billetera-btn" onclick="window.location.href='billetera.html'" style="font-size:0.8rem;margin-left:5px;">Recargar Billetera</button></div>
     <table>
       <thead>
         <tr>
@@ -296,24 +296,6 @@
     <div id="resultados-contenedor"></div>
   </div>
 
-  <div id="billetera-screen" class="view" style="display:none;">
-    <button id="billetera-back" class="menu-btn back-btn">&#9664; Volver</button>
-    <h3 style="color:green;text-shadow:1px 1px 2px black;">Créditos Actuales: <span id="creditos-actuales">0</span> Créditos</h3>
-    <p>Para realizar tus depositos o transferencias: Banco Mercantil cuenta N° 0105 0105XXXXX Nombre numero pago móvil 0412XXXX Cedula 165XXXXX</p>
-    <select id="banco-seleccionado" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;color:black;background-color:white;">
-      <option value="" selected disabled>Banco donde transferiste</option>
-      <option value="Banco de Venezuela">Banco de Venezuela</option>
-      <option value="Banco Mercantil">Banco Mercantil</option>
-      <option value="Otro Banco">Otro Banco</option>
-    </select>
-    <input type="number" id="monto-transferencia" placeholder="Monto" style="font-size:1.5rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;color:black;">
-    <input type="number" id="referencia-transferencia" placeholder="Referencia de pago" style="font-size:1.5rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;color:green;">
-    <textarea id="comentario" placeholder="Comentario (opcional)" style="font-size:1rem;padding:5px;text-align:left;border-radius:5px;border:1px solid #ccc;width:250px;height:40px;display:block;margin:10px auto;color:black;"></textarea>
-    <button id="depositar-btn" class="menu-btn" style="width:150px;">Depositar</button>
-    <h4 style="margin-top:20px;">Solicitar Retiro</h4>
-    <input type="number" id="monto-retiro" placeholder="Monto" style="font-size:1.5rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;color:black;">
-    <button id="retirar-btn" class="menu-btn" style="width:150px;">Retirar</button>
-  </div>
 
   <div id="perfil-screen" class="view" style="display:none;">
     <button id="perfil-back" class="menu-btn back-btn">&#9664; Volver</button>
@@ -521,8 +503,7 @@ ensureAuth();
   });
 
   document.getElementById("billetera-btn").addEventListener("click", () => {
-    hideViews();
-    document.getElementById("billetera-screen").style.display = "block";
+    window.location.href = "billetera.html";
   });
 
   document.getElementById("perfil-btn").addEventListener("click", () => {
@@ -540,38 +521,17 @@ ensureAuth();
     document.getElementById("main-menu").style.display = "block";
   });
 
-  document.getElementById("billetera-back").addEventListener("click", () => {
-    hideViews();
-    document.getElementById("main-menu").style.display = "block";
-  });
 
   document.getElementById("perfil-back").addEventListener("click", () => {
     hideViews();
     document.getElementById("main-menu").style.display = "block";
   });
 
-  document.getElementById("ir-billetera-btn").addEventListener("click", () => {
-    hideViews();
-    document.getElementById("billetera-screen").style.display = "block";
-  });
 
   document.getElementById("guardar-carton").addEventListener("change", (e) => {
     document.getElementById("nombre-carton-div").style.display = e.target.checked ? 'block' : 'none';
   });
 
-  document.getElementById("depositar-btn").addEventListener("click", () => {
-    alert("Bien, recibimos tu solicitud, una vez verificado el pago seran recargados en tu billetera");
-  });
-
-  document.getElementById("retirar-btn").addEventListener("click", () => {
-    const monto = parseFloat(document.getElementById("monto-retiro").value) || 0;
-    const disponibles = parseFloat(document.getElementById("creditos-actuales").textContent) || 0;
-    if (monto > disponibles) {
-      alert("El monto supera los créditos disponibles");
-      return;
-    }
-    alert("Bien, recibimos tu solicitud, una vez verificada te transferimos a tu banco");
-  });
 
   document.getElementById("guardar-perfil-btn").addEventListener("click", async () => {
     const user = auth.currentUser;

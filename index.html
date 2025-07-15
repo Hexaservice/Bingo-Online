@@ -70,10 +70,6 @@
       text-shadow: 2px 2px 4px #000;
       text-transform: uppercase;
     }
-    #terms-container, #register-container {
-      position: relative;
-      width: 100%;
-    }
   </style>
 </head>
 <body>
@@ -86,16 +82,6 @@
       <div id="fecha-hora"></div>
       <div id="derechos">Todos los derechos reservados ® Hexaservice 2025</div>
     </div>
-  </div>
-  <div id="terms-container" style="display:none;">
-    <h2>Términos y Condiciones</h2>
-    <p>Al usar esta aplicación aceptas las reglas del juego.</p>
-    <button id="close-terms-btn" class="back-btn">&#9664; Volver</button>
-  </div>
-  <div id="register-container" style="display:none;">
-    <h2>Registro de Jugador</h2>
-    <input id="alias-registro" placeholder="Alias" />
-    <button id="registrar-btn">Registrar</button>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
@@ -110,8 +96,15 @@
       }
       initFirebase();
       handleRedirect();
-      document.getElementById('login-btn').addEventListener('click', loginGoogle);
-      document.getElementById('register-link').addEventListener('click', e => { e.preventDefault(); loginGoogle(); });
+      document.getElementById('login-btn').addEventListener('click', () => {
+        document.getElementById('accept-terms').checked = true;
+        loginGoogle();
+      });
+      document.getElementById('register-link').addEventListener('click', e => {
+        e.preventDefault();
+        document.getElementById('accept-terms').checked = true;
+        loginGoogle();
+      });
       const logoutLink = document.getElementById('logout-link');
       if (logoutLink) {
         logoutLink.addEventListener('click', e => {
@@ -119,8 +112,7 @@
           logout();
         });
       }
-      document.getElementById('close-terms-btn').addEventListener('click', () => document.getElementById('terms-container').style.display='none');
-      document.getElementById('terms-link').addEventListener('click', e => { e.preventDefault(); document.getElementById('terms-container').style.display='block'; });
+      document.getElementById('terms-link').addEventListener('click', e => { e.preventDefault(); window.location.href='terminos.html'; });
 
     function actualizarFechaHora(){
       const ahora = new Date();
@@ -131,8 +123,14 @@
     setInterval(actualizarFechaHora, 60000);
 
     auth.onAuthStateChanged(async user => {
-      if(user) {
-        const role = await getUserRole(user);
+      if(user){
+        const doc = await db.collection('users').doc(user.email).get();
+        if(!doc.exists){
+          alert('Usuario no registrado, para poder jugar al Bingo debes registrarte con tu cuenta de Google y aceptando los Terminos y condiciones');
+          window.location.href = 'registrarse.html';
+          return;
+        }
+        const role = doc.data().role || await getUserRole(user);
         redirectByRole(role);
       }
     });
