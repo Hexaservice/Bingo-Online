@@ -107,10 +107,11 @@ function ensureAuth(roleExpected){
   auth.onAuthStateChanged(async user => {
     if(!user){ window.location.href='index.html'; return; }
     const role = await getUserRole(user);
-    if(roleExpected && role !== roleExpected){
+    if(roleExpected && role !== roleExpected && role !== 'Superadmin'){
       redirectByRole(role);
       return;
     }
+    window.currentRole = role;
     const nameEl = document.getElementById('user-name');
     if (nameEl) nameEl.textContent = user.displayName;
     const emailEl = document.getElementById('user-email');
