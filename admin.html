@@ -103,6 +103,7 @@
     <img id="user-pic" referrerpolicy="no-referrer" crossorigin="anonymous" src="" alt="Usuario" />
     <a href="#" id="logout-link">Cerrar sesión</a>
   </div>
+  <button id="salir-super-btn" class="menu-btn back-btn" style="display:none;">Salir</button>
   <div id="main-menu">
     <button id="gestionar-sorteos-btn" class="menu-btn">Gestionar Sorteos</button>
     <button id="publicar-resultados-btn" class="menu-btn">Publicar Resultados</button>
@@ -134,6 +135,15 @@
   <script src="auth.js"></script>
   <script>
   ensureAuth('Administrador');
+  auth.onAuthStateChanged(async user=>{
+    if(!user) return;
+    const role = await getUserRole(user);
+    if(role==='Superadmin'){
+      const btn=document.getElementById('salir-super-btn');
+      btn.style.display='flex';
+      btn.addEventListener('click',()=>{window.location.href='super.html';});
+    }
+  });
   function hideViews(){document.querySelectorAll('.view').forEach(v=>v.style.display='none');}
   async function cargarSorteosActivos(){
     const select=document.getElementById('sorteo-activo-select');

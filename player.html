@@ -259,6 +259,7 @@
       <img id="user-pic" referrerpolicy="no-referrer" crossorigin="anonymous" src="" alt="Usuario" style="width:40px;height:40px;border-radius:50%;">
       <a id="logout-link" href="#">Cerrar sesión</a>
   </div>
+  <button id="salir-super-btn" class="menu-btn back-btn" style="display:none;">Salir</button>
 
   <div id="main-menu" class="view" style="display:none;">
     <div id="menu-buttons">
@@ -333,6 +334,15 @@
   <script src="auth.js"></script>
   <script>
 ensureAuth();
+auth.onAuthStateChanged(async user=>{
+  if(!user) return;
+  const role = await getUserRole(user);
+  if(role==='Superadmin'){
+    const btn=document.getElementById('salir-super-btn');
+    btn.style.display='flex';
+    btn.addEventListener('click',()=>{window.location.href='super.html';});
+  }
+});
 
   // Roles predefinidos para cuentas especiales
   const predefinedRoles = {
