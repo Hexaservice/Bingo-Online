@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestionar Usuarios - Bingo Online</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)),
+                  url('https://img.freepik.com/vectores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg');
+      background-repeat: repeat;
+      background-size: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      text-align: center;
+      font-family: 'Bangers', cursive;
+      padding-top: 20px;
+    }
+    .menu-btn {
+      width: 250px;
+      height: 60px;
+      font-family: 'Bangers', cursive;
+      font-size: 1.4rem;
+      background: rgba(0, 170, 255, 0.8);
+      color: white;
+      border: 4px solid #FFD700;
+      border-radius: 10px;
+      text-shadow: 2px 2px 4px #000;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+      margin: 5px;
+    }
+    .menu-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+    }
+    #logo-bingo {
+      width: 250px;
+      margin-bottom: 15px;
+    }
+    #session-info {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      align-items: center;
+      font-size: 0.7rem;
+    }
+    #user-data {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      margin-right: 5px;
+    }
+    #user-name, #user-email {
+      font-family: Calibri, Arial, sans-serif;
+      color: #333;
+    }
+    #user-pic {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+    }
+    #logout-link {
+      font-family: Calibri, Arial, sans-serif;
+      margin-left: 5px;
+      font-size: 0.7rem;
+      color: #007bff;
+      text-decoration: underline;
+    }
+    .back-btn {
+      position: fixed;
+      top: 5px;
+      left: 5px;
+      width: 120px;
+      height: 40px;
+      background: orange;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:5px;
+    }
+    table {
+      background: rgba(255,255,255,0.9);
+      border-collapse: collapse;
+      width: 90%;
+      margin-bottom: 10px;
+    }
+    th, td { border: 1px solid #ccc; padding: 4px; font-size:0.8rem; }
+  </style>
+</head>
+<body>
+  <img id="logo-bingo" src="https://i.imgur.com/twjhNtZ.png" alt="logo" />
+  <h2>Gestionar Usuarios</h2>
+  <div id="session-info">
+    <div id="user-data">
+      <div id="user-name"></div>
+      <div id="user-email"></div>
+    </div>
+    <img id="user-pic" referrerpolicy="no-referrer" crossorigin="anonymous" src="" alt="Usuario" />
+    <a href="#" id="logout-link">Cerrar sesión</a>
+  </div>
+  <button id="volver-btn" class="menu-btn back-btn">&#9664; Volver</button>
+
+  <table id="tabla-usuarios">
+    <thead>
+      <tr><th></th><th>Nombre</th><th>Apellido</th><th>Correo</th><th>Alias</th><th>Rol</th></tr>
+    </thead>
+    <tbody id="usuarios-body"></tbody>
+  </table>
+
+  <div>
+    <input type="text" id="usu-nombre" placeholder="Nombre" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:5px auto;" />
+    <input type="text" id="usu-apellido" placeholder="Apellido" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:5px auto;" />
+    <input type="email" id="usu-correo" placeholder="Correo" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:5px auto;" />
+    <input type="text" id="usu-alias" placeholder="Alias" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:5px auto;" />
+    <input type="text" id="usu-rol" placeholder="Rol" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:5px auto;" />
+  </div>
+
+  <button id="consultar-btn" class="menu-btn">Consultar</button>
+  <button id="actualizar-btn" class="menu-btn">Actualizar</button>
+  <button id="eliminar-btn" class="menu-btn">Eliminar</button>
+
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    ensureAuth('Superadmin');
+    const bodyTabla = document.getElementById('usuarios-body');
+
+    async function cargarTabla(){
+      bodyTabla.innerHTML='';
+      const snap = await db.collection('users').get();
+      snap.forEach(doc=>{
+        const d = doc.data();
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td><input type="radio" name="seleccion" value="${doc.id}"></td><td>${d.name||''}</td><td>${d.apellido||''}</td><td>${doc.id}</td><td>${d.alias||''}</td><td>${d.role||''}</td>`;
+        bodyTabla.appendChild(tr);
+      });
+    }
+
+    cargarTabla();
+
+    document.getElementById('consultar-btn').addEventListener('click', async () => {
+      const sel = document.querySelector('input[name="seleccion"]:checked');
+      if(!sel){ alert('Seleccione un usuario'); return; }
+      const docu = await db.collection('users').doc(sel.value).get();
+      if(docu.exists){
+        const d = docu.data();
+        document.getElementById('usu-nombre').value = d.name||'';
+        document.getElementById('usu-apellido').value = d.apellido||'';
+        document.getElementById('usu-correo').value = sel.value;
+        document.getElementById('usu-alias').value = d.alias||'';
+        document.getElementById('usu-rol').value = d.role||'';
+      } else {
+        alert('No encontrado');
+      }
+    });
+
+    document.getElementById('actualizar-btn').addEventListener('click', async () => {
+      const correo = document.getElementById('usu-correo').value.trim();
+      if(!correo){ alert('Correo requerido'); return; }
+      const data = {
+        name: document.getElementById('usu-nombre').value.trim(),
+        apellido: document.getElementById('usu-apellido').value.trim(),
+        alias: document.getElementById('usu-alias').value.trim(),
+        role: document.getElementById('usu-rol').value.trim()
+      };
+      await db.collection('users').doc(correo).set(data, { merge: true });
+      alert('Datos actualizados');
+      cargarTabla();
+    });
+
+    document.getElementById('eliminar-btn').addEventListener('click', async () => {
+      const correo = document.getElementById('usu-correo').value.trim();
+      if(!correo){ alert('Correo requerido'); return; }
+      if(!confirm('¿Desea eliminar los datos completos del usuario consultado?')) return;
+      await db.collection('users').doc(correo).delete();
+      alert('Usuario eliminado');
+      cargarTabla();
+    });
+
+    document.getElementById('volver-btn').addEventListener('click', ()=>{ window.location.href='super.html'; });
+  </script>
+</body>
+</html>
