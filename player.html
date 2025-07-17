@@ -4,22 +4,23 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bingo Online</title>
-  <!-- Fuente llamativa -->
-  <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+  <!-- Fuentes -->
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
      		
-		body {
-			background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)), 
-						url('https://img.freepik.com/vetores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg');
-			background-repeat: repeat;
-			background-size: auto;
-			display: flex;
-			flex-direction: column;
-			align-items: center;
-			justify-content: center;
-			min-height: 100vh;
-			text-align: center;
-		} 
+      body {
+          font-family: 'Poppins', sans-serif;
+          background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)),
+                      url('https://img.freepik.com/vetores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg');
+          background-repeat: repeat;
+          background-size: auto;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-height: 100vh;
+          text-align: center;
+      }
 		
       h2 {
           font-size: 2.5rem;
@@ -76,15 +77,25 @@
       }
       .sorteo-info, #valor-carton, #creditos-info {
           margin: 5px 0;
-          font-family: Calibri, Arial, sans-serif;
+          font-family: 'Poppins', sans-serif;
           font-size: 1rem;
           color: #000;
+      }
+      .sorteo-info {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
       }
       #creditos-info {
           display: flex;
           align-items: center;
-          justify-content: center;
           gap: 5px;
+      }
+      #fecha-hora-sorteo {
+          display: flex;
+          flex-direction: column;
+          text-align: left;
       }
       #ir-billetera-btn {
           font-family: 'Bangers', cursive;
@@ -317,12 +328,22 @@
         <option value="" disabled selected>Selecciona Sorteo</option>
         <option value="demo" data-fecha="2025-07-13" data-hora="22:00" data-valor="120">Sorteo de Prueba</option>
       </select>
-      <span id="fecha-sorteo"></span>
+      <div id="fecha-hora-sorteo">
+        <div id="fecha-sorteo"></div>
+        <div id="hora-sorteo"></div>
+      </div>
     </div>
-    <div id="valor-carton"></div>
-    <div id="creditos-info">Créditos disponibles: <span id="creditos-label">0</span>
-      <button id="ir-billetera-btn" onclick="window.location.href='billetera.html'">Recargar Billetera</button>
-    </div>
+    <table id="info-carton" style="border-collapse:collapse;margin:auto;">
+      <tr>
+        <td id="valor-carton"></td>
+        <td rowspan="2" style="padding-left:10px;">
+          <button id="ir-billetera-btn" onclick="window.location.href='billetera.html'">Recargar Billetera</button>
+        </td>
+      </tr>
+      <tr>
+        <td id="creditos-info">Créditos disponibles: <span id="creditos-label">0</span></td>
+      </tr>
+    </table>
     <input type="text" id="alias-jugador" readonly placeholder="Alias" style="font-size: 1.5rem; padding: 5px; text-align: center; border-radius: 5px; border: 1px solid #ccc; width: 200px; display: block; margin: 10px auto; color: orange;">
     <div style="font-size:0.6rem;margin-top:-8px;">Si deseas cambiar tu alias dirigite a Perfil &gt; Alias</div>
     <table>
@@ -574,7 +595,8 @@ auth.onAuthStateChanged(async user=>{
     const sel=document.getElementById("select-sorteo");
     const opt=sel.selectedOptions[0];
     if(!opt) return;
-    document.getElementById("fecha-sorteo").textContent=`Fecha: ${formatearFecha(opt.dataset.fecha)} hora ${formatearHora(opt.dataset.hora)}`;
+    document.getElementById("fecha-sorteo").textContent=`Fecha: ${formatearFecha(opt.dataset.fecha)}`;
+    document.getElementById("hora-sorteo").textContent=`Hora: ${formatearHora(opt.dataset.hora)}`;
     document.getElementById("valor-carton").textContent=`Valor de Carton: ${opt.dataset.valor}`;
   }
   document.getElementById("select-sorteo").addEventListener("change",actualizarInfoSorteo);
@@ -669,6 +691,14 @@ auth.onAuthStateChanged(async user=>{
         document.getElementById("perfil-cedula").value = doc.data().cedula || "";
       } else {
         document.getElementById("register-container").style.display = "block";
+      }
+      const billeteraRef = db.collection('Billetera').doc(user.email);
+      const billeteraDoc = await billeteraRef.get();
+      if(billeteraDoc.exists){
+        document.getElementById('creditos-label').textContent = billeteraDoc.data().creditos || 0;
+      } else {
+        await billeteraRef.set({creditos:0});
+        document.getElementById('creditos-label').textContent = '0';
       }
     } else {
       window.location.href = "index.html";
