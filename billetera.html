@@ -25,23 +25,13 @@
       justify-content:center;
       gap:5px;
     }
-    #creditos-linea {
-      font-family: 'Bangers', cursive;
-      font-size: 1.6rem;
-      color: #0a8800;
-      text-shadow: 2px 2px 4px #000;
-      box-shadow: 0 0 10px yellow;
-      display:inline-block;
-      animation: mover 4s linear infinite alternate;
-      padding:4px 8px;
-    }
-    @keyframes mover {
-      0% {transform: translate(0,0);}
-      25% {transform: translate(5px,0);}
-      50% {transform: translate(5px,5px);}
-      75% {transform: translate(0,5px);}
-      100% {transform: translate(0,0);}
-    }
+    #creditos-container{margin:10px auto;}
+    #creditos-title,#creditos-valor{font-family:"Bangers",cursive;color:#fff;}
+    #creditos-title{font-size:1.2rem;animation:pulse 1s infinite;}
+    #creditos-valor{font-size:2rem;}
+    #creditos-valor.verde{text-shadow:0 0 5px #0f0;}
+    #creditos-valor.rojo{text-shadow:0 0 5px red;}
+    @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.1);}100%{transform:scale(1);}}
     table {
       margin: 10px auto;
       border-collapse: collapse;
@@ -55,22 +45,17 @@
       word-break:break-word;
     }
     .tabs {
-      margin-top: 20px;
+      margin-top:20px;
     }
+    .tab-buttons{display:flex;justify-content:center;}
+
     .tab-buttons button {
-      padding: 12px 24px;
-      margin: 0 5px;
-      font-family: 'Bangers', cursive;
-      font-size: 1.2rem;
-      border: none;
-      color: white;
-      cursor: pointer;
-      text-shadow:2px 2px 4px #000;
+      flex:1;max-width:150px;padding:12px 0;margin:0 2px;font-family:"Bangers",cursive;font-size:1.2rem;border:1px solid #333;border-bottom:none;border-radius:10px 10px 0 0;color:white;cursor:pointer;text-shadow:2px 2px 4px #000;
     }
-    .tab-buttons button[data-tab="depositar"] { background: #0a8800; }
-    .tab-buttons button[data-tab="retirar"] { background: #cc0000; }
-    .tab-buttons button.active { filter: brightness(1.2); }
-    .tab-content { display:none; margin-top:10px; }
+    .tab-buttons button[data-tab="depositar"] { background:#0a8800; }
+    .tab-buttons button[data-tab="retirar"] { background:#cc0000; }
+    .tab-buttons button.active { filter:brightness(1.2); position:relative; top:1px; }
+    .tab-content { display:none; margin-top:0; border:1px solid #333; border-radius:0 10px 10px 10px; padding:10px; }
     .tab-content.active { display:block; }
     input, select, textarea {
       font-size:1rem;
@@ -120,7 +105,7 @@
 </head>
 <body>
   <button id="volver-btn" class="menu-btn back-btn">&#9664; Volver</button>
-  <div id="creditos-linea">CREDITOS: <span id="creditos-actuales">0</span></div>
+  <div id="creditos-container"><div id="creditos-title">CREDITOS</div><div id="creditos-valor" class="rojo">0</div></div>
 
   <div id="mis-datos">
     <h3>Mis datos bancarios</h3>
@@ -141,7 +126,7 @@
       <h3>Bancos habilitados para depósitos</h3>
       <table id="tabla-bancos">
         <thead>
-          <tr><th>N°</th><th>Banco</th><th>Número pago móvil</th><th>Número de cuenta</th><th>Tipo de cuenta</th><th>Cédula</th></tr>
+          <tr><th>Banco</th><th>Número de pago móvil</th><th>Cédula</th></tr>
         </thead>
         <tbody></tbody>
       </table>
@@ -167,47 +152,35 @@
   <script src="auth.js"></script>
   <script>
     ensureAuth();
-    const bancosList = [
-      '0102-Banco de Venezuela',
-      '0105-Banco Mercantil',
-      '0108-Banco Provincial',
-      '0134-Banesco Banco Universal',
-      '0116-Banco Occidental de Descuento',
-      '0191-Banco Nacional de Crédito',
-      '0163-Banco del Tesoro',
-      '0115-Banco Exterior',
-      '0128-Banco Caroní',
-      '0151-Banco Fondo Común',
-      '0138-Banco Plaza',
-      '0175-Banco Bicentenario',
-      '0137-Banco Sofitasa',
-      '0171-Banco Activo',
-      '0104-Banco Venezolano de Crédito',
-      '0166-Banco Agrícola de Venezuela',
-      '0174-Banplus Banco Universal',
-      '0114-Banco del Caribe',
-      '0156-100% Banco',
-      '0106-Banco Industrial de Venezuela',
-      '0177-Banco BANFANB',
-      '0168-Banco Mi Banco',
-      '0146-Banco del Pueblo Soberano',
-      '0121-Banco Provincial de Crédito',
-      '0132-Banco Guayana',
-      '0190-Citibank',
-      '0187-Banco de Exportación y Comercio',
-      '0172-Banco Bancamiga',
-      '0193-Banco Fintec'
-    ];
 
-    function cargarSelects() {
-      const selects = [document.getElementById('banco'), document.getElementById('banco-deposito')];
-      selects.forEach(sel => {
-        bancosList.forEach(b => {
-          const opt = document.createElement('option');
-          opt.value = b;
-          opt.textContent = b;
-          sel.appendChild(opt);
-        });
+    async function cargarBancosBilleteras(){
+      const snap=await db.collection('BancosBilleteras').get();
+      const sel=document.getElementById('banco');
+      sel.innerHTML='<option value="" disabled selected>Banco</option>';
+      snap.forEach(doc=>{
+        const nombre=doc.data().nombre||doc.id;
+        const opt=document.createElement('option');
+        opt.value=nombre;
+        opt.textContent=nombre;
+        sel.appendChild(opt);
+      });
+    }
+
+    async function cargarBancosBingo(){
+      const snap=await db.collection('BancosBingo').get();
+      const tbody=document.querySelector('#tabla-bancos tbody');
+      const sel=document.getElementById('banco-deposito');
+      sel.innerHTML='<option value="" disabled selected>Banco donde transferiste</option>';
+      tbody.innerHTML='';
+      snap.forEach(doc=>{
+        const d=doc.data();
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${d.banco}</td><td>${d.pagomovil}</td><td>${d.cedula}</td>`;
+        tbody.appendChild(tr);
+        const opt=document.createElement('option');
+        opt.value=d.banco;
+        opt.textContent=d.banco;
+        sel.appendChild(opt);
       });
     }
 
@@ -226,13 +199,17 @@
       const doc = await billeteraRef.get();
       if(doc.exists){
         const data = doc.data();
-        document.getElementById('creditos-actuales').textContent = data.creditos || 0;
+        const valorEl=document.getElementById('creditos-valor');
+        valorEl.textContent=data.creditos||0;
+        valorEl.className=data.creditos>0?'verde':'rojo';
         document.getElementById('cedula').value = data.cedula || '';
         document.getElementById('pagomovil').value = data.pagomovil || '';
         document.getElementById('banco').value = data.banco || '';
         document.getElementById('banco-retiro').textContent = 'Banco donde recibirás: '+(data.banco||'');
       } else {
         await billeteraRef.set({creditos:0});
+        document.getElementById('creditos-valor').textContent='0';
+        document.getElementById('creditos-valor').className='rojo';
         document.getElementById('banco-retiro').textContent='Banco donde recibirás:';
       }
     });
@@ -274,7 +251,7 @@
     document.getElementById('btn-retirar').addEventListener('click', async () => {
       const user = auth.currentUser;
       const monto = parseFloat(document.getElementById('monto-retiro').value) || 0;
-      const creditos = parseFloat(document.getElementById('creditos-actuales').textContent) || 0;
+      const creditos = parseFloat(document.getElementById('creditos-valor').textContent) || 0;
       if(monto>creditos){ alert('El monto supera los créditos disponibles'); return; }
       const data = {
         billeteraId: user.email,
@@ -291,7 +268,8 @@
       window.location.href='player.html';
     });
 
-    cargarSelects();
+    cargarBancosBilleteras();
+    cargarBancosBingo();
   </script>
 </body>
 </html>

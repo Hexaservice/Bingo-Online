@@ -96,10 +96,8 @@
           margin-bottom: 15px;
       }
       #login-footer {
-          position: absolute;
-          bottom: 10px;
-          left: 0;
-          right: 0;
+          position: relative;
+          margin-top: 20px;
       }
       #login-btn {
           width: 220px;
@@ -183,6 +181,7 @@
           height: 40px;
           background: orange;
           display:flex;
+          white-space: nowrap;
           align-items:center;
           justify-content:center;
           gap:5px;
@@ -274,10 +273,13 @@
 
   <div id="carton-screen" class="view" style="display:none;">
     <button id="carton-back" class="menu-btn back-btn">&#9664; Volver</button>
-    <h3 id="carton-sorteo" style="font-size: 1rem; color: black; margin-bottom: 5px; text-shadow: 0 0 20px yellow, 0 0 20px yellow;">Sorteo N° XXX fecha XX/XX/XXXX</h3>
+    <div style="margin-bottom:5px;">
+      <select id="select-sorteo" style="font-size:1rem;"></select> <span id="fecha-sorteo" style="font-size:0.9rem;margin-left:5px;"></span>
+    </div>
+    <div id="valor-carton" style="font-size:1rem;margin-bottom:5px;"></div>
+    <div id="creditos-info" style="margin:10px;">Créditos disponibles: <span id="creditos-label">0</span> <button id="ir-billetera-btn" onclick="window.location.href='billetera.html'" style="font-family:'Bangers',cursive;background:linear-gradient(#0a8800,#ffffff);color:white;border:3px solid #FFD700;border-radius:8px;text-shadow:2px 2px 4px #000;font-size:1.2rem;width:200px;cursor:pointer;margin-left:5px;">Recargar Billetera</button></div>
     <input type="text" id="alias-jugador" readonly placeholder="Alias" style="font-size: 1.5rem; padding: 5px; text-align: center; border-radius: 5px; border: 1px solid #ccc; width: 200px; display: block; margin: 10px auto; color: orange;">
     <div style="font-size:0.6rem;margin-top:-8px;">Si deseas cambiar tu alias dirigite a Perfil &gt; Alias</div>
-    <div id="creditos-info" style="margin:10px;">Créditos disponibles: <span id="creditos-label">0</span> <button id="ir-billetera-btn" onclick="window.location.href='billetera.html'" style="font-size:0.8rem;margin-left:5px;">Recargar Billetera</button></div>
     <table>
       <thead>
         <tr>
@@ -342,6 +344,7 @@ auth.onAuthStateChanged(async user=>{
     btn.style.display='flex';
     btn.addEventListener('click',()=>{window.location.href='super.html';});
   }
+  cargarSorteosActivos();
 });
 
   // Roles predefinidos para cuentas especiales
@@ -500,14 +503,27 @@ auth.onAuthStateChanged(async user=>{
   setInterval(actualizarFechaHora, 60000);
 
 
-  function hideViews() {
-    document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
+  function hideViews(){
+    document.querySelectorAll('.view').forEach(v => v.style.display='none');
   }
-
-  function mostrarCarton(){
-    hideViews();
-    document.getElementById("carton-screen").style.display = "block";
+  async function cargarSorteosActivos(){
+    const sel=document.getElementById("select-sorteo");
+    sel.innerHTML="<option value="" disabled selected>Selecciona Sorteo</option>";
+    const snap=await db.collection("sorteos").where("estado","==","Activo").get();
+    snap.forEach(doc=>{const d=doc.data();const opt=document.createElement("option");opt.value=doc.id;opt.textContent=d.nombre;opt.dataset.fecha=d.fecha;opt.dataset.hora=d.hora;opt.dataset.valor=d.valorCarton;sel.appendChild(opt);});
+    if(sel.options.length>1) sel.selectedIndex=1;
+    actualizarInfoSorteo();
   }
+  function formatearFecha(f){if(!f) return "";const [y,m,d]=f.split("-");return `${d}/${m}/${y}`;}
+  function formatearHora(h){if(!h) return "";const [hh,mm]=h.split(":");let n=parseInt(hh);const ampm=n>=12?"pm":"am";n=n%12||12;return `${n}:${mm} ${ampm}`;}
+  function actualizarInfoSorteo(){
+    const sel=document.getElementById("select-sorteo");
+    const opt=sel.selectedOptions[0];
+    if(!opt) return;
+    document.getElementById("fecha-sorteo").textContent=`Fecha: ${formatearFecha(opt.dataset.fecha)} hora ${formatearHora(opt.dataset.hora)}`;
+    document.getElementById("valor-carton").textContent=`Valor de Carton: ${opt.dataset.valor}`;
+  }
+  document.getElementById("select-sorteo").addEventListener("change",actualizarInfoSorteo);
 
   document.getElementById("carton-btn").addEventListener("click", mostrarCarton);
 
