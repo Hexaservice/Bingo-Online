@@ -14,7 +14,9 @@ Para crear los documentos iniciales en Firestore ejecute:
 ```bash
 npm install
 node initUsers.js
+node initBanks.js
 ```
+Este segundo script poblará las colecciones `BancosBilletera` y `BancosBingo` con los bancos iniciales.
 
 Debe disponer de un archivo `serviceAccountKey.json` con las credenciales de Firebase o definir la variable `GOOGLE_APPLICATION_CREDENTIALS` apuntando al archivo de claves.
 
