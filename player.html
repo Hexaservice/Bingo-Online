@@ -47,7 +47,8 @@
 			text-align: center;
 			font-weight: bold;
 		}
-      select {
+      /* Estilo de los selects dentro del cartón */
+      #bingo-board select {
           width: 100%;
           font-size: 2rem;
           font-weight: bold;
@@ -59,6 +60,42 @@
           -webkit-appearance: none;
           -moz-appearance: none;
           appearance: none;
+      }
+      /* Menú desplegable de sorteos visible */
+      #select-sorteo {
+          width: 220px;
+          font-size: 1.1rem;
+          padding: 5px 10px;
+          text-align: center;
+          border: 1px solid #333;
+          border-radius: 5px;
+          background: #fff;
+          -webkit-appearance: menulist;
+          -moz-appearance: menulist;
+          appearance: auto;
+      }
+      .sorteo-info, #valor-carton, #creditos-info {
+          margin: 5px 0;
+          font-family: Calibri, Arial, sans-serif;
+          font-size: 1rem;
+          color: #000;
+      }
+      #creditos-info {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 5px;
+      }
+      #ir-billetera-btn {
+          font-family: 'Bangers', cursive;
+          background: linear-gradient(#0a8800, #ffffff);
+          color: white;
+          border: 3px solid #FFD700;
+          border-radius: 8px;
+          text-shadow: 2px 2px 4px #000;
+          font-size: 1.2rem;
+          width: 200px;
+          cursor: pointer;
       }
       .free {
           background-color: #ffcc00;
@@ -171,6 +208,7 @@
       #carton-screen {
           position: relative;
           width: 100%;
+          margin-top: 70px;
       }
 
       .back-btn {
@@ -274,11 +312,17 @@
 
   <div id="carton-screen" class="view" style="display:none;">
     <button id="carton-back" class="menu-btn back-btn">&#9664; Volver</button>
-    <div style="margin-bottom:5px;">
-      <select id="select-sorteo" style="font-size:1rem;"></select> <span id="fecha-sorteo" style="font-size:0.9rem;margin-left:5px;"></span>
+    <div class="sorteo-info">
+      <select id="select-sorteo">
+        <option value="" disabled selected>Selecciona Sorteo</option>
+        <option value="demo" data-fecha="2025-07-13" data-hora="22:00" data-valor="120">Sorteo de Prueba</option>
+      </select>
+      <span id="fecha-sorteo"></span>
     </div>
-    <div id="valor-carton" style="font-size:1rem;margin-bottom:5px;"></div>
-    <div id="creditos-info" style="margin:10px;">Créditos disponibles: <span id="creditos-label">0</span> <button id="ir-billetera-btn" onclick="window.location.href='billetera.html'" style="font-family:'Bangers',cursive;background:linear-gradient(#0a8800,#ffffff);color:white;border:3px solid #FFD700;border-radius:8px;text-shadow:2px 2px 4px #000;font-size:1.2rem;width:200px;cursor:pointer;margin-left:5px;">Recargar Billetera</button></div>
+    <div id="valor-carton"></div>
+    <div id="creditos-info">Créditos disponibles: <span id="creditos-label">0</span>
+      <button id="ir-billetera-btn" onclick="window.location.href='billetera.html'">Recargar Billetera</button>
+    </div>
     <input type="text" id="alias-jugador" readonly placeholder="Alias" style="font-size: 1.5rem; padding: 5px; text-align: center; border-radius: 5px; border: 1px solid #ccc; width: 200px; display: block; margin: 10px auto; color: orange;">
     <div style="font-size:0.6rem;margin-top:-8px;">Si deseas cambiar tu alias dirigite a Perfil &gt; Alias</div>
     <table>
@@ -514,10 +558,14 @@ auth.onAuthStateChanged(async user=>{
   }
   async function cargarSorteosActivos(){
     const sel=document.getElementById("select-sorteo");
-    sel.innerHTML = '<option value="" disabled selected>Selecciona Sorteo</option>';
-    const snap=await db.collection("sorteos").where("estado","==","Activo").get();
-    snap.forEach(doc=>{const d=doc.data();const opt=document.createElement("option");opt.value=doc.id;opt.textContent=d.nombre;opt.dataset.fecha=d.fecha;opt.dataset.hora=d.hora;opt.dataset.valor=d.valorCarton;sel.appendChild(opt);});
-    if(sel.options.length>1) sel.selectedIndex=1;
+    try{
+      sel.innerHTML = '<option value="" disabled selected>Selecciona Sorteo</option>';
+      const snap=await db.collection("sorteos").where("estado","==","Activo").get();
+      snap.forEach(doc=>{const d=doc.data();const opt=document.createElement("option");opt.value=doc.id;opt.textContent=d.nombre;opt.dataset.fecha=d.fecha;opt.dataset.hora=d.hora;opt.dataset.valor=d.valorCarton;sel.appendChild(opt);});
+      if(sel.options.length>1) sel.selectedIndex=1;
+    }catch(e){
+      console.warn('No se pudieron cargar sorteos desde Firestore');
+    }
     actualizarInfoSorteo();
   }
   function formatearFecha(f){if(!f) return "";const [y,m,d]=f.split("-");return `${d}/${m}/${y}`;}
