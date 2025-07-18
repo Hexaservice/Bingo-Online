@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jugar Cartón</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+      body {
+          font-family: 'Poppins', sans-serif;
+          background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)),
+                      url('https://img.freepik.com/vetores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg');
+          background-repeat: repeat;
+          background-size: auto;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-height: 100vh;
+          text-align: center;
+      }
+      table {
+            margin: 20px auto;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            border: 15px solid #004d00;
+            padding: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      }
+      th {
+          font-size: 2rem;
+          color: #ff6600;
+          text-shadow: 2px 2px 4px #000;
+      }
+      th, td {
+            border: 2px solid black;
+            width: 60px;
+            height: 60px;
+            text-align: center;
+            font-weight: bold;
+      }
+      #bingo-board select {
+          width: 100%;
+          font-size: 2rem;
+          font-weight: bold;
+          padding: 5px;
+          text-align: center;
+          border: none;
+          background: transparent;
+          outline: none;
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          appearance: none;
+      }
+      #select-sorteo {
+          width: 220px;
+          font-size: 1.1rem;
+          padding: 5px 10px;
+          text-align: center;
+          border: 1px solid #333;
+          border-radius: 5px;
+          background: #fff;
+      }
+      .sorteo-info, #valor-carton, #creditos-info {
+          margin:5px 0;
+          font-family:'Poppins', sans-serif;
+          font-size:1rem;
+          color:#000;
+      }
+      .sorteo-info {
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          gap:10px;
+      }
+      #info-carton {
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          gap:10px;
+          margin:5px 0;
+      }
+      #info-text { display:flex; flex-direction:column; text-align:left; }
+      #creditos-info { display:flex; align-items:center; gap:5px; }
+      #fecha-hora-sorteo { display:flex; flex-direction:column; text-align:left; }
+      #ir-billetera-btn {
+          font-family: 'Bangers', cursive;
+          background: linear-gradient(#0a8800, #ffffff);
+          color: white;
+          border: 3px solid #FFD700;
+          border-radius: 8px;
+          text-shadow: 2px 2px 4px #000;
+          font-size: 1.2rem;
+          width: 200px;
+          cursor: pointer;
+      }
+      .free { background-color:#ffcc00; font-weight:bold; }
+      button { padding:10px 20px; font-size:18px; background:#ff6600; color:white; border:none; border-radius:5px; cursor:pointer; }
+      button:hover { background:#cc5500; }
+      .back-btn {
+          position: fixed;
+          top:5px;
+          left:5px;
+          width:120px;
+          height:40px;
+          background:orange;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          gap:5px;
+      }
+      #login-footer { margin-top:20px; }
+      #fecha-hora, #derechos { font-size:0.7rem; text-align:center; color:#000; }
+      #derechos { font-size:0.6rem; }
+  </style>
+</head>
+<body>
+  <button id="volver-btn" class="menu-btn back-btn">&#9664; Volver</button>
+  <div class="sorteo-info">
+    <select id="select-sorteo">
+      <option value="" disabled selected>Selecciona Sorteo</option>
+      <option value="demo" data-fecha="2025-07-13" data-hora="22:00" data-valor="120">Sorteo de Prueba</option>
+    </select>
+    <div id="fecha-hora-sorteo">
+      <div id="fecha-sorteo"></div>
+      <div id="hora-sorteo"></div>
+    </div>
+  </div>
+  <div id="info-carton">
+    <div id="info-text">
+      <div id="valor-carton"></div>
+      <div id="creditos-info">Créditos disponibles: <span id="creditos-label">0</span></div>
+    </div>
+    <button id="ir-billetera-btn" onclick="window.location.href='billetera.html'">Recargar Billetera</button>
+  </div>
+  <input type="text" id="alias-jugador" readonly placeholder="Alias" style="font-size:1.5rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:200px;display:block;margin:10px auto;color:orange;">
+  <div style="font-size:0.6rem;margin-top:-8px;">Si deseas cambiar tu alias dirigite a Perfil &gt; Alias</div>
+  <table>
+    <thead>
+      <tr><th>B</th><th>I</th><th>N</th><th>G</th><th>O</th></tr>
+    </thead>
+    <tbody id="bingo-board"></tbody>
+  </table>
+  <label style="display:block;margin:10px 0;"><input type="checkbox" id="guardar-carton"> Guardar cartón</label>
+  <div id="nombre-carton-div" style="display:none;">
+    <input type="text" id="nombre-carton" placeholder="Nombre de cartón" style="font-size:1rem;padding:5px;text-align:center;">
+    <button id="guardar-carton-btn">Guardar Cartón</button>
+  </div>
+  <button id="cartones-guardados-btn" class="menu-btn" style="width:180px;margin-top:10px;">Cartones Guardados</button>
+  <button id="jugar-carton-btn" class="menu-btn" style="margin-top:10px;">Jugar Cartón</button>
+
+  <div id="login-footer">
+    <div id="fecha-hora"></div>
+    <div id="derechos">Todos los derechos reservados ® Hexaservice 2025</div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
+  <script src="auth.js"></script>
+  <script>
+  ensureAuth();
+
+  const board = document.getElementById('bingo-board');
+  const ranges = [[1,15],[16,30],[31,45],[46,60],[61,75]];
+
+  function createBoard(){
+    for(let r=0;r<5;r++){
+      const tr=document.createElement('tr');
+      for(let c=0;c<5;c++){
+        const td=document.createElement('td');
+        if(r===2 && c===2){ td.classList.add('free'); td.textContent='★'; }
+        else {
+          const select=document.createElement('select');
+          select.dataset.row=r; select.dataset.col=c;
+          const def=document.createElement('option');
+          def.value=''; def.textContent=''; def.selected=true; select.appendChild(def);
+          for(let i=ranges[c][0]; i<=ranges[c][1]; i++){
+            const opt=document.createElement('option'); opt.value=i; opt.textContent=i; select.appendChild(opt);
+          }
+          select.addEventListener('change',validateBoard);
+          td.appendChild(select);
+        }
+        tr.appendChild(td);
+      }
+      board.appendChild(tr);
+    }
+  }
+
+  function validateBoard(){
+    let cols=[[],[],[],[],[]];
+    let ok=true;
+    document.querySelectorAll('select[data-col]').forEach(sel=>{
+      const col=parseInt(sel.dataset.col); const val=sel.value;
+      if(val===''||cols[col].includes(val)){ sel.style.border='2px solid red'; ok=false; }
+      else{ sel.style.border='none'; cols[col].push(val); }
+    });
+    return ok;
+  }
+  function limpiarcarton(){
+    document.querySelectorAll('select[data-col]').forEach(s=>{s.value='';s.style.border='none';});
+  }
+  async function enviarDatos(){
+    const alias=document.getElementById('alias-jugador').value.trim();
+    if(alias===''){ alert('Por favor, ingresa tu Alias antes de enviar el cartón.'); return; }
+    if(!validateBoard()){ alert('Corrige los errores antes de enviar. Asegúrate de seleccionar todos los valores y no repetir valores en las columnas.'); return; }
+    let carton=[[],[],[],[],[]];
+    document.querySelectorAll('select[data-row]').forEach(sel=>{ carton[parseInt(sel.dataset.row)][parseInt(sel.dataset.col)]=sel.value||''; });
+    const hoy=new Date();
+    const dd=String(hoy.getDate()).padStart(2,'0');
+    const mm=String(hoy.getMonth()+1).padStart(2,'0');
+    const yyyy=hoy.getFullYear();
+    const metadata={ alias:alias, fecha:`${dd}/${mm}/${yyyy}`, timestamp:Date.now() };
+    await db.collection('jugadas').add({metadata, carton});
+    alert('Jugada de Cartón enviada correctamente.');
+    limpiarcarton();
+  }
+
+  function actualizarFechaHora(){
+    const ahora=new Date();
+    const opciones={year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'};
+    document.getElementById('fecha-hora').textContent=ahora.toLocaleString('es-ES',opciones);
+  }
+
+  async function cargarSorteosActivos(){
+    const sel=document.getElementById('select-sorteo');
+    try{
+      sel.innerHTML='<option value="" disabled selected>Selecciona Sorteo</option>';
+      const snap=await db.collection('sorteos').where('estado','==','Activo').get();
+      snap.forEach(doc=>{const d=doc.data();const opt=document.createElement('option');opt.value=doc.id;opt.textContent=d.nombre;opt.dataset.fecha=d.fecha;opt.dataset.hora=d.hora;opt.dataset.valor=d.valorCarton;sel.appendChild(opt);});
+      if(sel.options.length>1) sel.selectedIndex=1;
+    }catch(e){ console.warn('No se pudieron cargar sorteos desde Firestore'); }
+    actualizarInfoSorteo();
+  }
+  function formatearFecha(f){ if(!f) return ''; const [y,m,d]=f.split('-'); return `${d}/${m}/${y}`; }
+  function formatearHora(h){ if(!h) return ''; const [hh,mm]=h.split(':'); let n=parseInt(hh); const ampm=n>=12?'pm':'am'; n=n%12||12; return `${n}:${mm} ${ampm}`; }
+  function actualizarInfoSorteo(){
+    const opt=document.getElementById('select-sorteo').selectedOptions[0];
+    if(!opt) return;
+    document.getElementById('fecha-sorteo').textContent=`Fecha: ${formatearFecha(opt.dataset.fecha)}`;
+    document.getElementById('hora-sorteo').textContent=`Hora: ${formatearHora(opt.dataset.hora)}`;
+    document.getElementById('valor-carton').textContent=`Valor de Carton: ${opt.dataset.valor}`;
+  }
+
+  document.getElementById('select-sorteo').addEventListener('change',actualizarInfoSorteo);
+  document.getElementById('jugar-carton-btn').addEventListener('click',enviarDatos);
+  document.getElementById('guardar-carton').addEventListener('change',e=>{
+    document.getElementById('nombre-carton-div').style.display=e.target.checked?'block':'none';
+  });
+  document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='player.html';});
+
+  auth.onAuthStateChanged(async user=>{
+    if(user){
+      const doc=await db.collection('users').doc(user.email).get();
+      if(doc.exists){
+        document.getElementById('alias-jugador').value=doc.data().alias||user.displayName||user.email;
+      }
+      const billeteraRef=db.collection('Billetera').doc(user.email);
+      const billeteraDoc=await billeteraRef.get();
+      if(billeteraDoc.exists){ document.getElementById('creditos-label').textContent=billeteraDoc.data().creditos||0; }
+      else { await billeteraRef.set({creditos:0}); document.getElementById('creditos-label').textContent='0'; }
+    } else { window.location.href='index.html'; }
+    cargarSorteosActivos();
+  });
+
+  createBoard();
+  actualizarFechaHora();
+  setInterval(actualizarFechaHora,60000);
+  </script>
+</body>
+</html>
