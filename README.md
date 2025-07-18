@@ -24,7 +24,7 @@ Este script creará las entradas en la colección `users` y actualizará los rol
 
 ## Despliegue estático
 
-El archivo `index.html` contiene toda la lógica de inicio de la aplicación. Sólo es necesario servirlo desde cualquier servidor web estático. El inicio de sesión se realiza con cuentas de Google y se redirige automáticamente al menú correspondiente según el rol almacenado en Firestore.
+El archivo `index.html` contiene toda la lógica de la aplicación. Sólo es necesario servirlo desde cualquier servidor web estático. El inicio de sesión se realiza con cuentas de Google y se redirige automáticamente al menú correspondiente según el rol almacenado en Firestore.
 
 ### Dominio y cookies
 
