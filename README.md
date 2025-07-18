@@ -7,7 +7,7 @@ Este proyecto utiliza Firebase para autenticar usuarios mediante Google y almace
 Se incluyen dos cuentas con roles especiales:
 
 - `jhoseph.q@gmail.com` como **Superadmin**
-- `cyz513@gmail.com` como **Superadmin**
+- `hexaservice.co@gmail.com` como **Colaborador**
 
 Para crear los documentos iniciales en Firestore ejecute:
 
