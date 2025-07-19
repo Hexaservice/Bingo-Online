@@ -96,16 +96,6 @@
       align-items: center;
       font-size: 0.7rem;
     }
-    #user-data {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      margin-right: 5px;
-    }
-    #user-name, #user-email {
-      font-family: Calibri, Arial, sans-serif;
-      color: #333;
-    }
     #user-pic {
       width: 40px;
       height: 40px;
@@ -121,6 +111,12 @@
     #mis-datos h3{
       font-size:1.3rem;
       margin:0 0 5px;
+    }
+    #depositar h3{
+      margin:0 0 5px;
+    }
+    #depositar table{
+      margin:5px auto;
     }
     #datos-pm{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;}
     #datos-pm input{flex:1 0 120px;max-width:150px;}
@@ -164,10 +160,6 @@
 </head>
 <body>
   <div id="session-info" style="display:none;">
-    <div id="user-data">
-      <div id="user-name"></div>
-      <div id="user-email"></div>
-    </div>
     <img id="user-pic" referrerpolicy="no-referrer" crossorigin="anonymous" src="" alt="Usuario" />
     <a href="#" id="logout-link">Cerrar sesión</a>
   </div>
@@ -178,35 +170,6 @@
     <h3>Mis datos bancarios</h3>
     <select id="banco">
       <option value="" disabled selected>Banco</option>
-      <option value="0102 - Banco de Venezuela">0102 - Banco de Venezuela</option>
-      <option value="0105 - Banco Mercantil">0105 - Banco Mercantil</option>
-      <option value="0108 - Banco Provincial">0108 - Banco Provincial</option>
-      <option value="0134 - Banesco Banco Universal">0134 - Banesco Banco Universal</option>
-      <option value="0116 - Banco Occidental de Descuento">0116 - Banco Occidental de Descuento</option>
-      <option value="0191 - Banco Nacional de Crédito">0191 - Banco Nacional de Crédito</option>
-      <option value="0163 - Banco del Tesoro">0163 - Banco del Tesoro</option>
-      <option value="0115 - Banco Exterior">0115 - Banco Exterior</option>
-      <option value="0128 - Banco Caroní">0128 - Banco Caroní</option>
-      <option value="0151 - Banco Fondo Común">0151 - Banco Fondo Común</option>
-      <option value="0138 - Banco Plaza">0138 - Banco Plaza</option>
-      <option value="0175 - Banco Bicentenario">0175 - Banco Bicentenario</option>
-      <option value="0137 - Banco Sofitasa">0137 - Banco Sofitasa</option>
-      <option value="0171 - Banco Activo">0171 - Banco Activo</option>
-      <option value="0104 - Banco Venezolano de Crédito">0104 - Banco Venezolano de Crédito</option>
-      <option value="0166 - Banco Agrícola de Venezuela">0166 - Banco Agrícola de Venezuela</option>
-      <option value="0174 - Banplus Banco Universal">0174 - Banplus Banco Universal</option>
-      <option value="0114 - Banco del Caribe">0114 - Banco del Caribe</option>
-      <option value="0156 - 100% Banco">0156 - 100% Banco</option>
-      <option value="0106 - Banco Industrial de Venezuela">0106 - Banco Industrial de Venezuela</option>
-      <option value="0177 - Banco BANFANB">0177 - Banco BANFANB</option>
-      <option value="0168 - Banco Mi Banco">0168 - Banco Mi Banco</option>
-      <option value="0146 - Banco del Pueblo Soberano">0146 - Banco del Pueblo Soberano</option>
-      <option value="0121 - Banco Provincial de Crédito">0121 - Banco Provincial de Crédito</option>
-      <option value="0132 - Banco Guayana">0132 - Banco Guayana</option>
-      <option value="0190 - Citibank">0190 - Citibank</option>
-      <option value="0187 - Banco de Exportación y Comercio">0187 - Banco de Exportación y Comercio</option>
-      <option value="0172 - Banco Bancamiga">0172 - Banco Bancamiga</option>
-      <option value="0193 - Banco Fintec">0193 - Banco Fintec</option>
     </select>
     <input type="number" id="cuenta" placeholder="N° Cuenta Bancaria" inputmode="numeric" pattern="\d*" oninput="this.value=this.value.replace(/\D/g,'');">
     <div id="tipo-cuenta">
@@ -222,8 +185,8 @@
 
   <div class="tabs">
     <div class="tab-buttons">
-      <button data-tab="depositar" class="active">DEPOSITAR</button>
-      <button data-tab="retirar">RETIRAR</button>
+      <button data-tab="depositar" class="active">DEPÓSITOS</button>
+      <button data-tab="retirar">RETIROS</button>
     </div>
     <div id="depositar" class="tab-content active">
       <h3>Bancos habilitados para depósitos</h3>
@@ -235,10 +198,6 @@
       </table>
       <select id="banco-deposito">
         <option value="" disabled selected>Banco donde transferiste</option>
-        <option value="0102 - Banco de Venezuela">0102 - Banco de Venezuela</option>
-        <option value="0105 - Banco Mercantil">0105 - Banco Mercantil</option>
-        <option value="0108 - Banco Provincial">0108 - Banco Provincial</option>
-        <option value="0134 - Banesco Banco Universal">0134 - Banesco Banco Universal</option>
       </select>
       <input type="number" id="monto-deposito" placeholder="Monto">
       <input type="text" id="referencia" placeholder="Referencia de pago">
@@ -278,16 +237,19 @@
       const tbody=document.querySelector('#tabla-bancos tbody');
       const sel=document.getElementById('banco-deposito');
       sel.innerHTML='<option value="" disabled selected>Banco donde transferiste</option>';
+      const permitidos=['0172 - Banco Bancamiga','0102 - Banco de Venezuela'];
       tbody.innerHTML='';
       snap.forEach(doc=>{
         const d=doc.data();
         const tr=document.createElement('tr');
         tr.innerHTML=`<td>${d.banco}</td><td>${d.pagomovil}</td><td>${d.cedula}</td>`;
         tbody.appendChild(tr);
-        const opt=document.createElement('option');
-        opt.value=d.banco;
-        opt.textContent=d.banco;
-        sel.appendChild(opt);
+        if(permitidos.includes(d.banco)){
+          const opt=document.createElement('option');
+          opt.value=d.banco;
+          opt.textContent=d.banco;
+          sel.appendChild(opt);
+        }
       });
     }
 
