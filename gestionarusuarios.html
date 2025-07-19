@@ -39,9 +39,17 @@
       transform: scale(1.05);
       box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
     }
-    #logo-bingo {
-      width: 250px;
-      margin-bottom: 15px;
+    .icon-square {
+      width: 30px;
+      height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin: 0 2px;
+      cursor: pointer;
     }
     #session-info {
       position: fixed;
@@ -88,14 +96,14 @@
     table {
       background: rgba(255,255,255,0.9);
       border-collapse: collapse;
-      width: 90%;
+      width: 95%;
       margin-bottom: 10px;
+      font-size:0.8rem;
     }
-    th, td { border: 1px solid #ccc; padding: 4px; font-size:0.8rem; }
+    th, td { border: 1px solid #ccc; padding: 4px; }
   </style>
 </head>
 <body>
-  <img id="logo-bingo" src="https://i.imgur.com/twjhNtZ.png" alt="logo" />
   <h2>Gestionar Usuarios</h2>
   <div id="session-info">
     <div id="user-data">
@@ -107,28 +115,41 @@
   </div>
   <button id="volver-btn" class="menu-btn back-btn">&#9664; Volver</button>
 
-  <table id="tabla-usuarios">
-    <thead>
-      <tr><th></th><th>Nombre</th><th>Apellido</th><th>Correo</th><th>Alias</th><th>Rol</th></tr>
-    </thead>
-    <tbody id="usuarios-body"></tbody>
-  </table>
-
-  <div>
-    <input type="text" id="usu-nombre" placeholder="Nombre" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:5px auto;" />
-    <input type="text" id="usu-apellido" placeholder="Apellido" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:5px auto;" />
-    <input type="email" id="usu-correo" placeholder="Correo" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:5px auto;" />
-    <input type="text" id="usu-alias" placeholder="Alias" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:5px auto;" />
-    <select id="usu-rol" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:5px auto;">
+  <div id="formulario-usuario" style="width:95%;display:flex;flex-direction:column;align-items:center;">
+    <div style="display:flex;align-items:center;width:90%;gap:5px;">
+      <input type="text" id="usu-nombre" placeholder="Nombre" style="flex:1;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
+      <input type="text" id="usu-apellido" placeholder="Apellido" style="flex:1;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
+    </div>
+    <div style="display:flex;align-items:center;width:90%;gap:5px;margin-top:5px;">
+      <input type="email" id="usu-correo" placeholder="Correo" style="flex:1;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
+      <input type="text" id="usu-alias" placeholder="Alias" style="flex:1;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
+    </div>
+    <select id="usu-rol" style="width:90%;padding:5px;margin-top:5px;text-align:center;border-radius:5px;border:1px solid #ccc;">
       <option value="Administrador">Administrador</option>
       <option value="Colaborador">Colaborador</option>
       <option value="Jugador">Jugador</option>
     </select>
+    <div style="text-align:center;margin-top:5px;">
+      <button id="consultar-btn" class="icon-square" title="Buscar">&#128269;</button>
+      <button id="actualizar-btn" class="icon-square" title="Actualizar" style="color:green;">&#9998;</button>
+      <button id="eliminar-btn" class="icon-square" title="Eliminar" style="color:red;">&#128465;</button>
+    </div>
   </div>
 
-  <button id="consultar-btn" class="menu-btn">Consultar</button>
-  <button id="actualizar-btn" class="menu-btn">Actualizar</button>
-  <button id="eliminar-btn" class="menu-btn">Eliminar</button>
+  <table id="tabla-usuarios" style="max-height:50vh;overflow-y:auto;">
+    <thead>
+      <tr>
+        <th>N°</th>
+        <th><input id="filtro-nombre" type="text" placeholder="Nombre" style="width:100%;box-sizing:border-box;" /></th>
+        <th><input id="filtro-apellido" type="text" placeholder="Apellido" style="width:100%;box-sizing:border-box;" /></th>
+        <th><input id="filtro-correo" type="text" placeholder="Correo" style="width:100%;box-sizing:border-box;" /></th>
+        <th><input id="filtro-alias" type="text" placeholder="Alias" style="width:100%;box-sizing:border-box;" /></th>
+        <th><select id="filtro-rol" style="width:100%;"><option value="">Rol</option><option value="Administrador">Administrador</option><option value="Colaborador">Colaborador</option><option value="Jugador">Jugador</option></select></th>
+        <th style="text-align:center;">&#10004;</th>
+      </tr>
+    </thead>
+    <tbody id="usuarios-body"></tbody>
+  </table>
 
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
@@ -136,31 +157,63 @@
   <script src="auth.js"></script>
   <script>
     ensureAuth('Superadmin');
+    const datos = [];
     const bodyTabla = document.getElementById('usuarios-body');
 
-    async function cargarTabla(){
-      bodyTabla.innerHTML='';
+    async function cargarDatos(){
       const snap = await db.collection('users').get();
+      datos.length = 0;
       snap.forEach(doc=>{
         const d = doc.data();
         if(d.role === 'Superadmin') return;
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td><input type="radio" name="seleccion" value="${doc.id}"></td><td>${d.name||''}</td><td>${d.apellido||''}</td><td>${doc.id}</td><td>${d.alias||''}</td><td>${d.role||''}</td>`;
+        datos.push({id:doc.id, ...d});
+      });
+      filtrar();
+    }
+
+    function renderTabla(lista){
+      bodyTabla.innerHTML='';
+      let idx=1;
+      lista.forEach(u=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${idx++}</td><td>${u.name||''}</td><td>${u.apellido||''}</td><td>${u.id}</td><td>${u.alias||''}</td><td>${u.role||''}</td><td style="text-align:center;"><input type='radio' name='seleccion' data-correo='${u.id}' value='${u.id}'></td>`;
         bodyTabla.appendChild(tr);
       });
     }
 
-    cargarTabla();
+    function filtrar(){
+      const nom=document.getElementById('filtro-nombre').value.trim().toLowerCase();
+      const ape=document.getElementById('filtro-apellido').value.trim().toLowerCase();
+      const cor=document.getElementById('filtro-correo').value.trim().toLowerCase();
+      const ali=document.getElementById('filtro-alias').value.trim().toLowerCase();
+      const rol=document.getElementById('filtro-rol').value;
+      let lista=datos;
+      if(nom) lista=lista.filter(u=>(u.name||'').toLowerCase().includes(nom));
+      if(ape) lista=lista.filter(u=>(u.apellido||'').toLowerCase().includes(ape));
+      if(cor) lista=lista.filter(u=>u.id.toLowerCase().includes(cor));
+      if(ali) lista=lista.filter(u=>(u.alias||'').toLowerCase().includes(ali));
+      if(rol) lista=lista.filter(u=>(u.role||'')===rol);
+      renderTabla(lista);
+    }
+
+    document.getElementById('filtro-nombre').addEventListener('input', filtrar);
+    document.getElementById('filtro-apellido').addEventListener('input', filtrar);
+    document.getElementById('filtro-correo').addEventListener('input', filtrar);
+    document.getElementById('filtro-alias').addEventListener('input', filtrar);
+    document.getElementById('filtro-rol').addEventListener('change', filtrar);
+
+    cargarDatos();
 
     document.getElementById('consultar-btn').addEventListener('click', async () => {
       const sel = document.querySelector('input[name="seleccion"]:checked');
       if(!sel){ alert('Seleccione un usuario'); return; }
-      const docu = await db.collection('users').doc(sel.value).get();
+      const correo = sel.dataset.correo;
+      const docu = await db.collection('users').doc(correo).get();
       if(docu.exists){
         const d = docu.data();
         document.getElementById('usu-nombre').value = d.name||'';
         document.getElementById('usu-apellido').value = d.apellido||'';
-        document.getElementById('usu-correo').value = sel.value;
+        document.getElementById('usu-correo').value = correo;
         document.getElementById('usu-alias').value = d.alias||'';
         document.getElementById('usu-rol').value = d.role||'';
       } else {
@@ -179,7 +232,7 @@
       };
       await db.collection('users').doc(correo).set(data, { merge: true });
       alert('Datos actualizados');
-      cargarTabla();
+      cargarDatos();
     });
 
     document.getElementById('eliminar-btn').addEventListener('click', async () => {
@@ -188,7 +241,7 @@
       if(!confirm('¿Desea eliminar los datos completos del usuario consultado?')) return;
       await db.collection('users').doc(correo).delete();
       alert('Usuario eliminado');
-      cargarTabla();
+      cargarDatos();
     });
 
     document.getElementById('volver-btn').addEventListener('click', ()=>{ window.location.href='super.html'; });
