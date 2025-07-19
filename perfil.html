@@ -55,9 +55,6 @@
   <h4>Tus Datos Bancarios</h4>
   <select id="perfil-banco">
     <option value="" selected disabled>Selecciona Banco</option>
-    <option value="Banco Mercantil">Banco Mercantil</option>
-    <option value="Banco de Venezuela">Banco de Venezuela</option>
-    <option value="Banesco">Banesco</option>
   </select>
   <input type="text" id="perfil-pagomovil" placeholder="Número Pago móvil" />
   <input type="text" id="perfil-cedula" placeholder="Número de Cédula" />
@@ -83,8 +80,25 @@
   actualizarFechaHora();
   setInterval(actualizarFechaHora,60000);
 
+  function cargarBancosPerfil(){
+    db.collection('Bancos').onSnapshot(snap=>{
+      const sel=document.getElementById('perfil-banco');
+      const actual=sel.value;
+      sel.innerHTML='<option value="" selected disabled>Selecciona Banco</option>';
+      snap.forEach(doc=>{
+        const nombre=doc.data().nombre||doc.id;
+        const opt=document.createElement('option');
+        opt.value=nombre;
+        opt.textContent=nombre;
+        sel.appendChild(opt);
+      });
+      if(actual) sel.value=actual;
+    });
+  }
+
   document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='player.html';});
   document.getElementById('guardar-perfil-btn').addEventListener('click',guardarPerfil);
+  cargarBancosPerfil();
 
   async function guardarPerfil(){
     const user = auth.currentUser;
@@ -119,6 +133,7 @@
         document.getElementById('perfil-pagomovil').value=d.pagomovil||'';
         document.getElementById('perfil-cedula').value=d.cedula||'';
       }
+      cargarBancosPerfil();
     } else { window.location.href='index.html'; }
   });
   </script>
