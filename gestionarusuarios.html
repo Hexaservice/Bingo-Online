@@ -99,8 +99,9 @@
       width: 95%;
       margin-bottom: 10px;
       font-size:0.8rem;
+      font-family: inherit;
     }
-    th, td { border: 1px solid #ccc; padding: 4px; }
+    th, td { border: 1px solid #ccc; padding: 4px; font-weight: normal; }
   </style>
 </head>
 <body>
@@ -116,15 +117,15 @@
   <button id="volver-btn" class="menu-btn back-btn">&#9664; Volver</button>
 
   <div id="formulario-usuario" style="width:95%;display:flex;flex-direction:column;align-items:center;">
-    <div style="display:flex;align-items:center;width:90%;gap:5px;">
-      <input type="text" id="usu-nombre" placeholder="Nombre" style="flex:1;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
-      <input type="text" id="usu-apellido" placeholder="Apellido" style="flex:1;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
+    <div style="display:flex;justify-content:center;flex-wrap:wrap;align-items:center;width:100%;gap:5px;">
+      <input type="text" id="usu-nombre" placeholder="Nombre" style="flex:1 0 120px;max-width:180px;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
+      <input type="text" id="usu-apellido" placeholder="Apellido" style="flex:1 0 120px;max-width:180px;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
     </div>
-    <div style="display:flex;align-items:center;width:90%;gap:5px;margin-top:5px;">
-      <input type="email" id="usu-correo" placeholder="Correo" style="flex:1;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
-      <input type="text" id="usu-alias" placeholder="Alias" style="flex:1;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
+    <div style="display:flex;justify-content:center;flex-wrap:wrap;align-items:center;width:100%;gap:5px;margin-top:5px;">
+      <input type="email" id="usu-correo" placeholder="Correo" style="flex:1 0 120px;max-width:180px;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
+      <input type="text" id="usu-alias" placeholder="Alias" style="flex:1 0 120px;max-width:180px;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
     </div>
-    <select id="usu-rol" style="width:90%;padding:5px;margin-top:5px;text-align:center;border-radius:5px;border:1px solid #ccc;">
+    <select id="usu-rol" style="width:180px;padding:5px;margin-top:5px;text-align:center;border-radius:5px;border:1px solid #ccc;">
       <option value="Administrador">Administrador</option>
       <option value="Colaborador">Colaborador</option>
       <option value="Jugador">Jugador</option>
@@ -206,7 +207,7 @@
 
     document.getElementById('consultar-btn').addEventListener('click', async () => {
       const sel = document.querySelector('input[name="seleccion"]:checked');
-      if(!sel){ alert('Seleccione un usuario'); return; }
+      if(!sel){ alert('Debe seleccionar un usuario en la tabla'); return; }
       const correo = sel.dataset.correo;
       const docu = await db.collection('users').doc(correo).get();
       if(docu.exists){
@@ -217,28 +218,35 @@
         document.getElementById('usu-alias').value = d.alias||'';
         document.getElementById('usu-rol').value = d.role||'';
       } else {
-        alert('No encontrado');
+        alert('Usuario no encontrado');
       }
     });
 
     document.getElementById('actualizar-btn').addEventListener('click', async () => {
       const correo = document.getElementById('usu-correo').value.trim();
-      if(!correo){ alert('Correo requerido'); return; }
-      const data = {
-        name: document.getElementById('usu-nombre').value.trim(),
-        apellido: document.getElementById('usu-apellido').value.trim(),
-        alias: document.getElementById('usu-alias').value.trim(),
-        role: document.getElementById('usu-rol').value.trim()
-      };
+      const nombre = document.getElementById('usu-nombre').value.trim();
+      const apellido = document.getElementById('usu-apellido').value.trim();
+      const alias = document.getElementById('usu-alias').value.trim();
+      const rol = document.getElementById('usu-rol').value.trim();
+      if(!correo){ alert('Ingrese el correo'); return; }
+      if(!nombre){ alert('Ingrese el nombre'); return; }
+      if(!apellido){ alert('Ingrese el apellido'); return; }
+      if(!alias){ alert('Ingrese el alias'); return; }
+      if(!rol){ alert('Seleccione el rol'); return; }
+      const data = { name:nombre, apellido, alias, role:rol };
       await db.collection('users').doc(correo).set(data, { merge: true });
       alert('Datos actualizados');
       cargarDatos();
     });
 
     document.getElementById('eliminar-btn').addEventListener('click', async () => {
-      const correo = document.getElementById('usu-correo').value.trim();
-      if(!correo){ alert('Correo requerido'); return; }
-      if(!confirm('¿Desea eliminar los datos completos del usuario consultado?')) return;
+      const sel = document.querySelector('input[name="seleccion"]:checked');
+      if(!sel){ alert('Debe seleccionar un usuario en la tabla'); return; }
+      const correo = sel.dataset.correo;
+      const docu = await db.collection('users').doc(correo).get();
+      if(!docu.exists){ alert('Usuario no encontrado'); return; }
+      const alias = docu.data().alias || '';
+      if(!confirm(`¿Esta seguro que desea eliminar el usuario ${correo} Alias: ${alias}?`)) return;
       await db.collection('users').doc(correo).delete();
       alert('Usuario eliminado');
       cargarDatos();
