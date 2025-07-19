@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuraciones</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)),
+                  url('https://img.freepik.com/vectores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg');
+      background-repeat: repeat;
+      background-size: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      text-align: center;
+      font-family: 'Bangers', cursive;
+    }
+    #session-info {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      align-items: center;
+      font-size: 0.7rem;
+    }
+    #user-pic {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+    }
+    #logout-link {
+      font-family: Calibri, Arial, sans-serif;
+      margin-left: 5px;
+      font-size: 0.7rem;
+      color: #007bff;
+      text-decoration: underline;
+    }
+    .back-btn {
+      position: fixed;
+      top: 5px;
+      left: 5px;
+      width: 120px;
+      height: 40px;
+      background: orange;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:5px;
+    }
+    .icon-square {
+      width: 30px;
+      height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin: 0 2px;
+      cursor: pointer;
+    }
+    #bancos-table {
+      width: 95%;
+      max-height: 50vh;
+      overflow-y: auto;
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 0.8rem;
+      border-collapse: collapse;
+      background: rgba(255,255,255,0.6);
+      margin-top: 10px;
+    }
+    #bancos-table th, #bancos-table td {
+      border: 1px solid #ccc;
+      padding: 4px 6px;
+    }
+    #bancos-table thead th {
+      position: sticky;
+      top: 0;
+      background: rgba(255,255,255,0.8);
+    }
+    #gestionar-section {
+      width: 95%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 0.9rem;
+      margin-top: 60px;
+    }
+    #estado-container {
+      display:flex;
+      width:100%;
+      justify-content:space-between;
+      padding:5px 0;
+    }
+    #estado-container label {
+      display:flex;
+      align-items:center;
+      gap:4px;
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <button id="volver-btn" class="menu-btn back-btn">&#9664; Volver</button>
+  <div id="session-info">
+    <img id="user-pic" referrerpolicy="no-referrer" crossorigin="anonymous" src="" alt="Usuario" />
+    <a href="#" id="logout-link">Cerrar sesión</a>
+  </div>
+  <h2>Configuraciones</h2>
+  <section id="gestionar-section">
+    <h3>Gestión de bancos</h3>
+    <input type="text" id="banco-nombre" placeholder="0105-Banco Mercantil" style="width:90%;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
+    <select id="banco-categoria" style="width:90%;margin-top:5px;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;">
+      <option value="Jugadores">Jugadores</option>
+      <option value="Bingo">Bingo</option>
+    </select>
+    <div id="estado-container">
+      <label><input type="radio" name="banco-estado" value="Activo" checked> Activo</label>
+      <label><input type="radio" name="banco-estado" value="Inactivo"> Inactivo</label>
+    </div>
+    <div style="text-align:center;margin-top:5px;">
+      <button id="buscar-btn" class="icon-square" title="Buscar">&#128269;</button>
+      <button id="editar-btn" class="icon-square" title="Editar" style="color:green;">&#9998;</button>
+      <button id="borrar-btn" class="icon-square" title="Borrar" style="color:red;">&#128465;</button>
+    </div>
+    <table id="bancos-table">
+      <thead>
+        <tr>
+          <th>N°</th>
+          <th>
+            <input id="filtro-nombre" type="text" placeholder="Nombre" style="width:100%;box-sizing:border-box;" />
+          </th>
+          <th>
+            <select id="filtro-categoria" style="width:100%;">
+              <option value="">Banco</option>
+              <option value="Jugadores">Jugadores</option>
+              <option value="Bingo">Bingo</option>
+            </select>
+          </th>
+          <th>
+            <select id="filtro-estado" style="width:100%;">
+              <option value="">Estado</option>
+              <option value="Activo">Activo</option>
+              <option value="Inactivo">Inactivo</option>
+            </select>
+          </th>
+          <th style="text-align:center;">&#10004;</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    ensureAuth('Administrador');
+    const datos = [];
+    const tbody = document.querySelector('#bancos-table tbody');
+
+    function renderTabla(lista){
+      tbody.innerHTML='';
+      let idx=1;
+      lista.forEach(d=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${idx++}</td><td>${d.nombre}</td><td>${d.categoria}</td><td>${d.estado}</td><td style="text-align:center;"><input type='radio' name='select-banco' data-nombre='${d.nombre}'></td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filtrar(){
+      const nom=document.getElementById('filtro-nombre').value.trim().toLowerCase();
+      const cat=document.getElementById('filtro-categoria').value;
+      const est=document.getElementById('filtro-estado').value;
+      let lista=datos;
+      if(nom) lista=lista.filter(b=>b.nombre.toLowerCase().includes(nom));
+      if(cat) lista=lista.filter(b=>b.categoria===cat);
+      if(est) lista=lista.filter(b=>b.estado===est);
+      renderTabla(lista);
+    }
+
+    document.getElementById('filtro-nombre').addEventListener('input', filtrar);
+    document.getElementById('filtro-categoria').addEventListener('change', filtrar);
+    document.getElementById('filtro-estado').addEventListener('change', filtrar);
+
+    document.getElementById('buscar-btn').addEventListener('click', ()=>{
+      const val=document.getElementById('banco-nombre').value.trim();
+      if(!val){
+        alert('Debes colocar un nombre de banco para realizar busquedas');
+        document.getElementById('banco-nombre').focus();
+        return;
+      }
+      const res=datos.filter(b=>b.nombre.toLowerCase().includes(val.toLowerCase()));
+      if(res.length===0){
+        alert('No existe el banco buscado');
+      }
+      renderTabla(res);
+    });
+
+    document.getElementById('editar-btn').addEventListener('click', ()=>{
+      const chk=document.querySelector('input[name="select-banco"]:checked');
+      if(!chk){ alert('Elije un banco para editar o borrar'); return; }
+      const banco=datos.find(b=>b.nombre===chk.dataset.nombre);
+      if(banco){
+        document.getElementById('banco-nombre').value=banco.nombre;
+        document.getElementById('banco-categoria').value=banco.categoria;
+        const estadoRadios=document.getElementsByName('banco-estado');
+        estadoRadios.forEach(r=>{r.checked = r.value===banco.estado});
+      }
+    });
+
+    document.getElementById('borrar-btn').addEventListener('click', ()=>{
+      const chk=document.querySelector('input[name="select-banco"]:checked');
+      if(!chk){ alert('Elije un banco para editar o borrar'); return; }
+      const idx=datos.findIndex(b=>b.nombre===chk.dataset.nombre);
+      if(idx>-1){ datos.splice(idx,1); filtrar(); }
+    });
+
+    document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='admin.html';});
+    auth.onAuthStateChanged(user=>{
+      if(user){ document.getElementById('user-pic').src=user.photoURL; document.getElementById('logout-link').addEventListener('click',e=>{e.preventDefault(); logout();}); }
+    });
+
+    // Datos iniciales de ejemplo
+    datos.push({nombre:'0105 - Banco Mercantil',categoria:'Jugadores',estado:'Activo'});
+    datos.push({nombre:'0102 - Banco de Venezuela',categoria:'Bingo',estado:'Inactivo'});
+    filtrar();
+  </script>
+</body>
+</html>
