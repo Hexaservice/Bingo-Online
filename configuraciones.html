@@ -173,7 +173,8 @@
         <span class="slider"></span>
       </label>
     </div>
-    <div id="bancos-content" style="display:none;">
+    <div id="bancos-content" style="display:none;margin-top:10px;">
+    <input type="hidden" id="banco-id" />
     <input type="text" id="banco-nombre" placeholder="Nombre de banco" style="width:90%;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
     <select id="banco-categoria" style="width:90%;margin-top:5px;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;">
       <option value="Jugadores">Jugadores</option>
@@ -229,7 +230,7 @@
     function cargarDatos(){
       db.collection('Bancos').get().then(snap=>{
         datos.length = 0;
-        snap.forEach(doc=>datos.push(doc.data()));
+        snap.forEach(doc=>datos.push({id:doc.id, ...doc.data()}));
         filtrar();
       });
     }
@@ -239,7 +240,7 @@
       let idx=1;
       lista.forEach(d=>{
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${idx++}</td><td>${d.nombre}</td><td>${d.categoria}</td><td>${d.estado}</td><td style="text-align:center;"><input type='radio' name='select-banco' data-nombre='${d.nombre}'></td>`;
+        tr.innerHTML=`<td>${idx++}</td><td>${d.nombre}</td><td>${d.categoria}</td><td>${d.estado}</td><td style="text-align:center;"><input type='radio' name='select-banco' data-id='${d.id}' data-nombre='${d.nombre}'></td>`;
         tbody.appendChild(tr);
       });
     }
@@ -260,6 +261,7 @@
     document.getElementById('filtro-estado').addEventListener('change', filtrar);
 
     document.getElementById('guardar-btn').addEventListener('click', async ()=>{
+      const id=document.getElementById('banco-id').value.trim();
       const nombre=document.getElementById('banco-nombre').value.trim();
       const categoria=document.getElementById('banco-categoria').value;
       const estado=document.querySelector('input[name="banco-estado"]:checked')?.value;
@@ -267,7 +269,14 @@
         alert('Completa todos los campos antes de guardar');
         return;
       }
-      await db.collection('Bancos').doc(nombre).set({nombre,categoria,estado});
+      if(id){
+        await db.collection('Bancos').doc(id).set({id,nombre,categoria,estado});
+        alert('Datos del banco actualizados exitosamente');
+      }else{
+        const docRef=await db.collection('Bancos').add({nombre,categoria,estado});
+        await docRef.update({id:docRef.id});
+      }
+      document.getElementById('banco-id').value='';
       cargarDatos();
     });
 
@@ -288,8 +297,9 @@
     document.getElementById('editar-btn').addEventListener('click', ()=>{
       const chk=document.querySelector('input[name="select-banco"]:checked');
       if(!chk){ alert('Elije un banco para editar o borrar'); return; }
-      const banco=datos.find(b=>b.nombre===chk.dataset.nombre);
+      const banco=datos.find(b=>b.id===chk.dataset.id);
       if(banco){
+        document.getElementById('banco-id').value=banco.id;
         document.getElementById('banco-nombre').value=banco.nombre;
         document.getElementById('banco-categoria').value=banco.categoria;
         const estadoRadios=document.getElementsByName('banco-estado');
@@ -300,8 +310,10 @@
     document.getElementById('borrar-btn').addEventListener('click', async ()=>{
       const chk=document.querySelector('input[name="select-banco"]:checked');
       if(!chk){ alert('Elije un banco para editar o borrar'); return; }
-      await db.collection('Bancos').doc(chk.dataset.nombre).delete();
-      cargarDatos();
+      if(confirm(`¿Confirma borrar el banco ${chk.dataset.nombre}?`)){
+        await db.collection('Bancos').doc(chk.dataset.id).delete();
+        cargarDatos();
+      }
     });
 
     const toggle=document.getElementById('toggle-bancos');
