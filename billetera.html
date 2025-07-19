@@ -48,7 +48,10 @@
     #creditos-container{margin:10px auto;}
     #creditos-title,#creditos-valor{font-family:"Bangers",cursive;color:#fff;}
     #creditos-title{font-size:2rem;text-shadow:0 0 8px #ff8c00;animation:pulse 1s infinite;}
+    #creditos-info{display:flex;align-items:center;justify-content:center;gap:15px;}
     #creditos-valor{font-size:2.4rem;}
+    #cartones-gratis{font-family:"Bangers",cursive;color:#fff;font-size:2rem;text-shadow:0 0 8px #00008B;animation:pulse 1s infinite;display:flex;align-items:center;gap:3px;}
+    #carton-icon{width:24px;height:24px;}
     #creditos-valor.verde{text-shadow:0 0 5px #006600;}
     #creditos-valor.rojo{text-shadow:0 0 5px red;}
     @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.1);}100%{transform:scale(1);}}
@@ -164,7 +167,16 @@
     <a href="#" id="logout-link">Cerrar sesión</a>
   </div>
   <button id="volver-btn" class="menu-btn back-btn">&#9664; Volver</button>
-  <div id="creditos-container"><div id="creditos-title">CREDITOS</div><div id="creditos-valor" class="rojo">0</div></div>
+  <div id="creditos-container">
+    <div id="creditos-title">CREDITOS</div>
+    <div id="creditos-info">
+      <div id="creditos-valor" class="rojo">0</div>
+      <div id="cartones-gratis">
+        <img id="carton-icon" src="https://cdn-icons-png.flaticon.com/32/9424/9424875.png" alt="Cartón">
+        <span id="cartones-valor">0</span>
+      </div>
+    </div>
+  </div>
 
   <div id="mis-datos">
     <h3>Mis datos bancarios</h3>
@@ -220,7 +232,7 @@
     ensureAuth();
 
     function cargarBancosBilletera(){
-      db.collection('Bancos').onSnapshot(snap=>{
+      db.collection('Bancos').where('categoria','==','Jugadores').onSnapshot(snap=>{
         const sel=document.getElementById('banco');
         sel.innerHTML='<option value="" disabled selected>Banco</option>';
         snap.forEach(doc=>{
@@ -234,23 +246,20 @@
     }
 
     function cargarBancosBingo(){
-      db.collection('Bancos').onSnapshot(snap=>{
+      db.collection('Bancos').where('categoria','==','Bingo').onSnapshot(snap=>{
       const tbody=document.querySelector('#tabla-bancos tbody');
       const sel=document.getElementById('banco-deposito');
       sel.innerHTML='<option value="" disabled selected>Banco donde transferiste</option>';
-      const permitidos=['0172 - Banco Bancamiga','0102 - Banco de Venezuela'];
       tbody.innerHTML='';
       snap.forEach(doc=>{
         const nombre=doc.data().nombre||doc.id;
         const tr=document.createElement('tr');
         tr.innerHTML=`<td>${nombre}</td><td>${doc.data().pagomovil||''}</td><td>${doc.data().cedula||''}</td>`;
         tbody.appendChild(tr);
-        if(permitidos.includes(nombre)){
-          const opt=document.createElement('option');
-          opt.value=nombre;
-          opt.textContent=nombre;
-          sel.appendChild(opt);
-        }
+        const opt=document.createElement('option');
+        opt.value=nombre;
+        opt.textContent=nombre;
+        sel.appendChild(opt);
       });
     });
     }
@@ -275,6 +284,7 @@
         const valorEl=document.getElementById('creditos-valor');
         valorEl.textContent=data.creditos||0;
         valorEl.className=data.creditos>0?'verde':'rojo';
+        document.getElementById('cartones-valor').textContent = data.CartonesGratis || 0;
         document.getElementById('cedula').value = data.cedula || '';
         document.getElementById('pagomovil').value = data.pagomovil || '';
         document.getElementById('banco').value = data.banco || '';
@@ -285,9 +295,10 @@
         }
         document.getElementById('banco-retiro').textContent = 'Banco donde recibirás: '+(data.banco||'');
       } else {
-        await billeteraRef.set({creditos:0});
+        await billeteraRef.set({creditos:0, CartonesGratis:0});
         document.getElementById('creditos-valor').textContent='0';
         document.getElementById('creditos-valor').className='rojo';
+        document.getElementById('cartones-valor').textContent='0';
         document.getElementById('banco-retiro').textContent='Banco donde recibirás:';
       }
     });
@@ -309,6 +320,7 @@
       if(!data.cuenta){ alert('Ingrese su número de cuenta'); document.getElementById('cuenta').focus(); return; }
       if(!/^\d+$/.test(data.cuenta)){ alert('La cuenta solo debe contener números'); document.getElementById('cuenta').focus(); return; }
       if(!data.tipoCuenta){ alert('Seleccione el tipo de cuenta'); return; }
+      data.CartonesGratis=parseInt(document.getElementById('cartones-valor').textContent)||0;
       await db.collection('Billetera').doc(user.email).set(data, {merge:true});
       alert('Datos guardados');
     });
