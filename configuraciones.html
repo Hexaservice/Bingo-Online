@@ -108,7 +108,39 @@
       align-items: center;
       font-family: Calibri, Arial, sans-serif;
       font-size: 0.9rem;
-      margin-top: 10px;
+      margin-top: 0;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 42px;
+      height: 24px;
+    }
+    .switch input { display:none; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #4caf50;
+    }
+    input:checked + .slider:before {
+      transform: translateX(18px);
     }
     #estado-container {
       display:flex;
@@ -134,7 +166,14 @@
   </div>
   <h2>Configuraciones</h2>
   <section id="gestionar-section">
-    <h3>Gestión de bancos</h3>
+    <div id="gestionar-header" style="display:flex;align-items:center;justify-content:center;gap:10px;">
+      <h3 style="margin:0;">Gestión de bancos</h3>
+      <label class="switch">
+        <input type="checkbox" id="toggle-bancos">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div id="bancos-content" style="display:none;">
     <input type="text" id="banco-nombre" placeholder="Nombre de banco" style="width:90%;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
     <select id="banco-categoria" style="width:90%;margin-top:5px;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;">
       <option value="Jugadores">Jugadores</option>
@@ -176,6 +215,7 @@
       </thead>
       <tbody></tbody>
     </table>
+    </div>
   </section>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
@@ -264,12 +304,17 @@
       cargarDatos();
     });
 
+    const toggle=document.getElementById('toggle-bancos');
+    const cont=document.getElementById('bancos-content');
+    toggle.addEventListener('change',()=>{
+      cont.style.display=toggle.checked?'block':'none';
+      if(toggle.checked) cargarDatos();
+    });
     document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='admin.html';});
     auth.onAuthStateChanged(user=>{
       if(user){
         document.getElementById('user-pic').src=user.photoURL;
         document.getElementById('logout-link').addEventListener('click',e=>{e.preventDefault(); logout();});
-        cargarDatos();
       }
     });
   </script>
