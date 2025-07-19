@@ -269,12 +269,19 @@
         alert('Completa todos los campos antes de guardar');
         return;
       }
-      if(id){
-        await db.collection('Bancos').doc(id).set({id,nombre,categoria,estado});
+      let idTemporal=id;
+      let existe=false;
+      if(idTemporal){
+        const consulta=await db.collection('Bancos').doc(idTemporal).get();
+        existe=consulta.exists;
+      }
+      if(existe){
+        await db.collection('Bancos').doc(idTemporal).set({id:idTemporal,nombre,categoria,estado});
         alert('Datos del banco actualizados exitosamente');
       }else{
         const docRef=await db.collection('Bancos').add({nombre,categoria,estado});
         await docRef.update({id:docRef.id});
+        alert('Banco creado exitosamente');
       }
       document.getElementById('banco-id').value='';
       cargarDatos();
