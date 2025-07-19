@@ -15,8 +15,6 @@ const db = admin.firestore();
 
 async function main() {
   const bancos = [
-    '0102 - Banco de Venezuela',
-    '0105 - Banco Mercantil',
     '0108 - Banco Provincial',
     '0134 - Banesco Banco Universal',
     '0116 - Banco Occidental de Descuento',
@@ -47,7 +45,7 @@ async function main() {
   ];
 
   for (const nombre of bancos) {
-    await db.collection('Bancos').doc(nombre).set({ nombre });
+    await db.collection('Bancos').doc(nombre).set({ nombre, estado:'Activo', categoria:'Bingo' });
   }
 
   console.log('Bancos inicializados');
