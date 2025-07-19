@@ -39,6 +39,25 @@
       color: #007bff;
       text-decoration: underline;
     }
+    .menu-btn {
+      width: 250px;
+      height: 60px;
+      font-family: 'Bangers', cursive;
+      font-size: 1.4rem;
+      background: rgba(0, 170, 255, 0.8);
+      color: white;
+      border: 4px solid #FFD700;
+      border-radius: 10px;
+      text-shadow: 2px 2px 4px #000;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+      margin: 5px;
+    }
+    .menu-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+    }
     .back-btn {
       position: fixed;
       top: 5px;
@@ -89,12 +108,13 @@
       align-items: center;
       font-family: Calibri, Arial, sans-serif;
       font-size: 0.9rem;
-      margin-top: 60px;
+      margin-top: 10px;
     }
     #estado-container {
       display:flex;
       width:100%;
-      justify-content:space-between;
+      justify-content:center;
+      gap:20px;
       padding:5px 0;
     }
     #estado-container label {
@@ -115,7 +135,7 @@
   <h2>Configuraciones</h2>
   <section id="gestionar-section">
     <h3>Gestión de bancos</h3>
-    <input type="text" id="banco-nombre" placeholder="0105-Banco Mercantil" style="width:90%;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
+    <input type="text" id="banco-nombre" placeholder="Nombre de banco" style="width:90%;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
     <select id="banco-categoria" style="width:90%;margin-top:5px;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;">
       <option value="Jugadores">Jugadores</option>
       <option value="Bingo">Bingo</option>
@@ -125,6 +145,7 @@
       <label><input type="radio" name="banco-estado" value="Inactivo"> Inactivo</label>
     </div>
     <div style="text-align:center;margin-top:5px;">
+      <button id="guardar-btn" class="icon-square" title="Guardar" style="color:blue;">&#128190;</button>
       <button id="buscar-btn" class="icon-square" title="Buscar">&#128269;</button>
       <button id="editar-btn" class="icon-square" title="Editar" style="color:green;">&#9998;</button>
       <button id="borrar-btn" class="icon-square" title="Borrar" style="color:red;">&#128465;</button>
@@ -165,6 +186,14 @@
     const datos = [];
     const tbody = document.querySelector('#bancos-table tbody');
 
+    function cargarDatos(){
+      db.collection('Bancos').get().then(snap=>{
+        datos.length = 0;
+        snap.forEach(doc=>datos.push(doc.data()));
+        filtrar();
+      });
+    }
+
     function renderTabla(lista){
       tbody.innerHTML='';
       let idx=1;
@@ -189,6 +218,18 @@
     document.getElementById('filtro-nombre').addEventListener('input', filtrar);
     document.getElementById('filtro-categoria').addEventListener('change', filtrar);
     document.getElementById('filtro-estado').addEventListener('change', filtrar);
+
+    document.getElementById('guardar-btn').addEventListener('click', async ()=>{
+      const nombre=document.getElementById('banco-nombre').value.trim();
+      const categoria=document.getElementById('banco-categoria').value;
+      const estado=document.querySelector('input[name="banco-estado"]:checked')?.value;
+      if(!nombre || !categoria || !estado){
+        alert('Completa todos los campos antes de guardar');
+        return;
+      }
+      await db.collection('Bancos').doc(nombre).set({nombre,categoria,estado});
+      cargarDatos();
+    });
 
     document.getElementById('buscar-btn').addEventListener('click', ()=>{
       const val=document.getElementById('banco-nombre').value.trim();
@@ -216,22 +257,21 @@
       }
     });
 
-    document.getElementById('borrar-btn').addEventListener('click', ()=>{
+    document.getElementById('borrar-btn').addEventListener('click', async ()=>{
       const chk=document.querySelector('input[name="select-banco"]:checked');
       if(!chk){ alert('Elije un banco para editar o borrar'); return; }
-      const idx=datos.findIndex(b=>b.nombre===chk.dataset.nombre);
-      if(idx>-1){ datos.splice(idx,1); filtrar(); }
+      await db.collection('Bancos').doc(chk.dataset.nombre).delete();
+      cargarDatos();
     });
 
     document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='admin.html';});
     auth.onAuthStateChanged(user=>{
-      if(user){ document.getElementById('user-pic').src=user.photoURL; document.getElementById('logout-link').addEventListener('click',e=>{e.preventDefault(); logout();}); }
+      if(user){
+        document.getElementById('user-pic').src=user.photoURL;
+        document.getElementById('logout-link').addEventListener('click',e=>{e.preventDefault(); logout();});
+        cargarDatos();
+      }
     });
-
-    // Datos iniciales de ejemplo
-    datos.push({nombre:'0105 - Banco Mercantil',categoria:'Jugadores',estado:'Activo'});
-    datos.push({nombre:'0102 - Banco de Venezuela',categoria:'Bingo',estado:'Inactivo'});
-    filtrar();
   </script>
 </body>
 </html>
