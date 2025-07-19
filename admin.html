@@ -90,6 +90,18 @@
       justify-content:center;
       gap:5px;
     }
+    .icon-square {
+      width: 30px;
+      height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-top: 4px;
+      cursor: pointer;
+    }
     #salir-super-btn { background: red; }
   </style>
 </head>
@@ -103,6 +115,7 @@
     </div>
     <img id="user-pic" referrerpolicy="no-referrer" crossorigin="anonymous" src="" alt="Usuario" />
     <a href="#" id="logout-link">Cerrar sesión</a>
+    <button id="config-btn" class="icon-square" title="Configuraciones">&#9881;</button>
   </div>
   <button id="salir-super-btn" class="menu-btn back-btn" style="display:none;">Salir</button>
   <div id="main-menu">
@@ -162,6 +175,7 @@
   document.getElementById('usuarios-back').addEventListener('click',()=>{hideViews();document.getElementById('main-menu').style.display='block';});
   document.getElementById('monitoreo-back').addEventListener('click',()=>{hideViews();document.getElementById('main-menu').style.display='block';});
   document.getElementById('publicar-resultados-btn2').addEventListener('click',async()=>{const id=document.getElementById('sorteo-activo-select').value;const nums=document.getElementById('numeros-sorteados').value.split(',').map(n=>parseInt(n.trim())).filter(n=>n>=1&&n<=75);if(!id||nums.length===0){alert('Datos inválidos');return;}await db.collection('sorteos').doc(id).update({resultados:nums,estado:'Finalizado'});alert('Resultados publicados');});
+  document.getElementById('config-btn').addEventListener('click',()=>{window.location.href='configuraciones.html';});
   </script>
 </body>
 </html>
