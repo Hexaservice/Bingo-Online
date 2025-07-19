@@ -183,6 +183,10 @@
             <option value="Bingo">Bingo</option>
         </select>
     </div>
+    <div id="bingo-extra-fields" style="display:none;width:90%;margin-top:5px;">
+        <input type="text" id="banco-pagomovil" placeholder="Número Pago móvil" style="width:100%;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;margin-bottom:5px;" />
+        <input type="text" id="banco-cedula" placeholder="Cédula" style="width:100%;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
+    </div>
     <div id="estado-container">
       <label><input type="radio" name="banco-estado" value="Activo" checked> Activo</label>
       <label><input type="radio" name="banco-estado" value="Inactivo"> Inactivo</label>
@@ -263,13 +267,27 @@
     document.getElementById('filtro-categoria').addEventListener('change', filtrar);
     document.getElementById('filtro-estado').addEventListener('change', filtrar);
 
+    const extraFields=document.getElementById('bingo-extra-fields');
+    const categoriaSelect=document.getElementById('banco-categoria');
+    function toggleExtraFields(){
+      extraFields.style.display=categoriaSelect.value==='Bingo'?'block':'none';
+    }
+    categoriaSelect.addEventListener('change',toggleExtraFields);
+    toggleExtraFields();
+
     document.getElementById('guardar-btn').addEventListener('click', async ()=>{
       const id=document.getElementById('banco-id').value.trim();
       const nombre=document.getElementById('banco-nombre').value.trim();
       const categoria=document.getElementById('banco-categoria').value;
       const estado=document.querySelector('input[name="banco-estado"]:checked')?.value;
+      const pagomovil=document.getElementById('banco-pagomovil').value.trim();
+      const cedula=document.getElementById('banco-cedula').value.trim();
       if(!nombre || !categoria || !estado){
         alert('Completa todos los campos antes de guardar');
+        return;
+      }
+      if(categoria==='Bingo' && (!pagomovil || !cedula)){
+        alert('Debe ingresar número de Pago móvil y cédula');
         return;
       }
       let idTemporal=id;
@@ -278,15 +296,24 @@
         const consulta=await db.collection('Bancos').doc(idTemporal).get();
         existe=consulta.exists;
       }
+      const data={nombre,categoria,estado};
+      if(categoria==='Bingo'){
+        data.pagomovil=pagomovil;
+        data.cedula=cedula;
+      }
       if(existe){
-        await db.collection('Bancos').doc(idTemporal).set({id:idTemporal,nombre,categoria,estado});
+        data.id=idTemporal;
+        await db.collection('Bancos').doc(idTemporal).set(data);
         alert('Datos del banco actualizados exitosamente');
       }else{
-        const docRef=await db.collection('Bancos').add({nombre,categoria,estado});
+        const docRef=await db.collection('Bancos').add(data);
         await docRef.update({id:docRef.id});
         alert('Banco creado exitosamente');
       }
       document.getElementById('banco-id').value='';
+      document.getElementById('banco-pagomovil').value='';
+      document.getElementById('banco-cedula').value='';
+      toggleExtraFields();
       cargarDatos();
     });
 
@@ -312,8 +339,11 @@
         document.getElementById('banco-id').value=banco.id;
         document.getElementById('banco-nombre').value=banco.nombre;
         document.getElementById('banco-categoria').value=banco.categoria;
+        document.getElementById('banco-pagomovil').value=banco.pagomovil||'';
+        document.getElementById('banco-cedula').value=banco.cedula||'';
         const estadoRadios=document.getElementsByName('banco-estado');
         estadoRadios.forEach(r=>{r.checked = r.value===banco.estado});
+        toggleExtraFields();
       }
     });
 
@@ -322,6 +352,11 @@
       if(!chk){ alert('Elije un banco para editar o borrar'); return; }
       if(confirm(`¿Confirma borrar el banco ${chk.dataset.nombre}?`)){
         await db.collection('Bancos').doc(chk.dataset.id).delete();
+        document.getElementById('banco-id').value='';
+        document.getElementById('banco-nombre').value='';
+        document.getElementById('banco-pagomovil').value='';
+        document.getElementById('banco-cedula').value='';
+        toggleExtraFields();
         cargarDatos();
       }
     });
