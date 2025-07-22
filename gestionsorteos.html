@@ -35,6 +35,18 @@
       transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
       margin: 5px;
     }
+    .mini-btn {
+      display:inline-flex;
+      align-items:center;
+      gap:2px;
+      padding:2px 4px;
+      font-size:0.7rem;
+      border:1px solid #ccc;
+      border-radius:4px;
+      background:rgba(255,255,255,0.9);
+      cursor:pointer;
+      margin-right:2px;
+    }
     .menu-btn:hover {
       transform: scale(1.05);
       box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
@@ -51,85 +63,133 @@
       justify-content:center;
       gap:5px;
     }
-    table {
-      width: 90%;
-      font-size: 0.9rem;
-      font-family: Calibri, Arial, sans-serif;
-      margin-top: 10px;
-      border-collapse: collapse;
-      background: rgba(255, 255, 255, 0.5);
+    #actions {
+      width:95%;
+      display:flex;
+      justify-content:flex-start;
+      margin-top:5px;
+      font-family:Calibri, Arial, sans-serif;
     }
-    th, td {
+    #tabla-sorteos {
+      width: 95%;
+      max-height: 50vh;
+      overflow-y: auto;
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 0.8rem;
+      border-collapse: collapse;
+      background: rgba(255,255,255,0.6);
+      margin-top: 10px;
+    }
+    #tabla-sorteos th, #tabla-sorteos td {
       border: 1px solid #ccc;
       padding: 4px 6px;
     }
-    #filter-container {
-      width: 90%;
-      display: flex;
-      justify-content: flex-start;
-      align-items: center;
-      font-family: Calibri, Arial, sans-serif;
-      font-size: 0.9rem;
-      margin-top: 10px;
-    }
-    #filtro-estado {
-      margin-left: 5px;
-      padding: 4px;
-      font-size: 0.9rem;
-      border-radius: 5px;
+    #tabla-sorteos thead th {
+      position: sticky;
+      top: 0;
+      background: rgba(255,255,255,0.8);
     }
   </style>
 </head>
 <body>
   <button id="volver-btn" class="menu-btn back-btn">&#9664; Volver</button>
   <h2>Gestionar Sorteos</h2>
-  <div id="filter-container">
-    <span>Filtrar por:</span>
-    <select id="filtro-estado">
-      <option value="Todos">Todos</option>
-      <option value="Activo">Activo</option>
-      <option value="Inactivo">Inactivo</option>
-      <option value="Finalizado">Finalizado</option>
-      <option value="Archivado">Archivado</option>
-    </select>
+  <div id="actions">
+    <button id="nuevo-btn" class="mini-btn">&#9728; Nuevo</button>
+    <button id="editar-btn" class="mini-btn">&#9998; Editar</button>
+    <button id="inactivar-btn" class="mini-btn" style="color:red;">&#128683; Inactivar</button>
+    <button id="archivar-btn" class="mini-btn">&#128230; Archivar</button>
   </div>
-  <table id="tabla-sorteos"></table>
-  <button id="nuevo-sorteo-btn" class="menu-btn">Nuevo Sorteo</button>
-  <button id="editar-sorteo-btn" class="menu-btn">Editar Sorteo</button>
+  <table id="tabla-sorteos">
+    <thead>
+      <tr>
+        <th>N°</th>
+        <th><input type="text" id="filtro-nombre" placeholder="Nombre de sorteo" style="width:100%;box-sizing:border-box;"></th>
+        <th><input type="date" id="filtro-fecha" style="width:100%;"></th>
+        <th>
+          <select id="filtro-estado" style="width:100%;">
+            <option value="">Estado</option>
+            <option value="Activo">Activo</option>
+            <option value="Inactivo">Inactivo</option>
+            <option value="Finalizado">Finalizado</option>
+            <option value="Archivado">Archivado</option>
+          </select>
+        </th>
+        <th style="text-align:center;">&#10004;</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
   <script src="auth.js"></script>
   <script>
   ensureAuth('Administrador');
-  async function cargarSorteos(estado='Todos'){
-    const tabla=document.getElementById('tabla-sorteos');
-    tabla.innerHTML='<tr><th>N°</th><th>Nombre</th><th>Fecha</th><th>Estado</th><th></th></tr>';
-    let q=db.collection('sorteos');
-    if(estado!=='Todos') q=q.where('estado','==',estado);
-    const snap=await q.get();
-    const datos=[];
+  const datos=[];
+  const tbody=document.querySelector('#tabla-sorteos tbody');
+
+  async function cargarDatos(){
+    const snap=await db.collection('sorteos').get();
+    datos.length=0;
     snap.forEach(doc=>datos.push({id:doc.id,...doc.data()}));
     datos.sort((a,b)=>{const fa=a.fecha||'';const fb=b.fecha||'';return fa>fb?-1:fa<fb?1:0;});
+    filtrar();
+  }
+
+  function renderTabla(lista){
+    tbody.innerHTML='';
     let idx=1;
-    datos.forEach(d=>{
+    lista.forEach(d=>{
       let fecha=d.fecha||'';
       if(fecha.includes('-')) fecha=fecha.split('-').reverse().join('/');
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${idx++}</td><td>${d.nombre}</td><td>${fecha}</td><td>${d.estado}</td><td><input type="checkbox" data-id="${d.id}"></td>`;
-      tabla.appendChild(tr);
+      tr.innerHTML=`<td>${idx++}</td><td>${d.nombre}</td><td>${fecha}</td><td>${d.estado}</td><td style="text-align:center;"><input type="checkbox" data-id="${d.id}"></td>`;
+      tbody.appendChild(tr);
     });
   }
-  document.getElementById('filtro-estado').addEventListener('change',e=>cargarSorteos(e.target.value));
-  document.getElementById('nuevo-sorteo-btn').addEventListener('click',()=>{window.location.href='nuevosorteo.html';});
-  document.getElementById('editar-sorteo-btn').addEventListener('click',()=>{
+
+  function filtrar(){
+    const nom=document.getElementById('filtro-nombre').value.trim().toLowerCase();
+    const fecha=document.getElementById('filtro-fecha').value;
+    const est=document.getElementById('filtro-estado').value;
+    let lista=datos;
+    if(nom) lista=lista.filter(s=>s.nombre.toLowerCase().includes(nom));
+    if(fecha) lista=lista.filter(s=>s.fecha===fecha);
+    if(est) lista=lista.filter(s=>s.estado===est);
+    renderTabla(lista);
+  }
+
+  document.getElementById('filtro-nombre').addEventListener('input',filtrar);
+  document.getElementById('filtro-fecha').addEventListener('change',filtrar);
+  document.getElementById('filtro-estado').addEventListener('change',filtrar);
+
+  document.getElementById('nuevo-btn').addEventListener('click',()=>{window.location.href='nuevosorteo.html';});
+  document.getElementById('editar-btn').addEventListener('click',()=>{
     const chk=document.querySelector('#tabla-sorteos input[type=checkbox]:checked');
     if(!chk){alert('Elige al menos un sorteo para editarlo');return;}
     localStorage.setItem('editSorteoId',chk.dataset.id);
     window.location.href='editarsorte.html';
   });
+  document.getElementById('inactivar-btn').addEventListener('click',async ()=>{
+    const chks=document.querySelectorAll('#tabla-sorteos input[type=checkbox]:checked');
+    if(chks.length===0){alert('Debes seleccionar al menos un sorteo para poder ponerlo incativo');return;}
+    const batch=db.batch();
+    chks.forEach(c=>batch.update(db.collection('sorteos').doc(c.dataset.id),{estado:'Inactivo'}));
+    await batch.commit();
+    cargarDatos();
+  });
+  document.getElementById('archivar-btn').addEventListener('click',async ()=>{
+    const chks=document.querySelectorAll('#tabla-sorteos input[type=checkbox]:checked');
+    if(chks.length===0){alert('Debes seleccionar al menos un sorteo para poder ponerlo archivarlo');return;}
+    const batch=db.batch();
+    chks.forEach(c=>batch.update(db.collection('sorteos').doc(c.dataset.id),{estado:'Archivado'}));
+    await batch.commit();
+    cargarDatos();
+  });
+
   document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='admin.html';});
-  cargarSorteos();
+  cargarDatos();
   </script>
 </body>
 </html>
