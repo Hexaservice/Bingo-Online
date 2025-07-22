@@ -114,15 +114,42 @@
       border: 1px solid #ccc;
       padding: 4px 6px;
     }
+    #tabla-sorteos tbody td {
+      font-weight: bold;
+    }
     #tabla-sorteos thead th {
       position: sticky;
       top: 0;
       background: rgba(255,255,255,0.8);
     }
+    #session-info {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      align-items: center;
+      font-size: 0.7rem;
+    }
+    #user-pic {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+    }
+    #logout-link {
+      font-family: Calibri, Arial, sans-serif;
+      margin-left: 5px;
+      font-size: 0.7rem;
+      color: #007bff;
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
   <button id="volver-btn" class="menu-btn back-btn">&#9664; Volver</button>
+  <div id="session-info">
+    <img id="user-pic" referrerpolicy="no-referrer" crossorigin="anonymous" src="" alt="Usuario" />
+    <a href="#" id="logout-link">Cerrar sesión</a>
+  </div>
   <h2>Gestionar Sorteos</h2>
   <div id="actions">
     <button id="nuevo-btn" class="mini-btn"><span class="icon">&#9728;</span> <span class="txt">Nuevo</span></button>
@@ -180,7 +207,10 @@
       if(fecha.includes('-')) fecha=fecha.split('-').reverse().join('/');
       const tr=document.createElement('tr');
       tr.innerHTML=`<td>${idx++}</td><td>${d.nombre}</td><td>${fecha}</td><td>${d.estado}</td><td style="text-align:center;"><input type="checkbox" data-id="${d.id}"></td>`;
-      const color=d.estado==='Activo'?'green':d.estado==='Inactivo'?'red':d.estado==='Archivado'?'brown':'';
+      const color=d.estado==='Activo'?'green':
+                   d.estado==='Inactivo'?'red':
+                   d.estado==='Archivado'?'brown':
+                   d.estado==='Finalizado'?'black':'';
       if(color){
         tr.children[1].style.color=color;
         tr.children[2].style.color=color;
