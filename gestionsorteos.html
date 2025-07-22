@@ -66,9 +66,39 @@
     #actions {
       width:95%;
       display:flex;
-      justify-content:flex-start;
+      justify-content:center;
       margin-top:5px;
       font-family:Calibri, Arial, sans-serif;
+    }
+
+    #nuevo-btn .icon, #nuevo-btn .txt {
+      color: yellow;
+      text-shadow: 1px 1px 1px #000;
+    }
+
+    #editar-btn .icon, #editar-btn .txt {
+      color: blue;
+      text-shadow: 1px 1px 1px #000;
+    }
+
+    #inactivar-btn .icon, #inactivar-btn .txt {
+      color: red;
+      text-shadow: 1px 1px 1px #000;
+    }
+
+    #archivar-btn .txt {
+      color: brown;
+      text-shadow: 1px 1px 1px #000;
+    }
+
+    .fecha-container { position:relative; }
+    .fecha-placeholder {
+      position:absolute;
+      left:4px;
+      top:2px;
+      pointer-events:none;
+      color:#666;
+      font-size:0.8rem;
     }
     #tabla-sorteos {
       width: 95%;
@@ -95,17 +125,22 @@
   <button id="volver-btn" class="menu-btn back-btn">&#9664; Volver</button>
   <h2>Gestionar Sorteos</h2>
   <div id="actions">
-    <button id="nuevo-btn" class="mini-btn">&#9728; Nuevo</button>
-    <button id="editar-btn" class="mini-btn">&#9998; Editar</button>
-    <button id="inactivar-btn" class="mini-btn" style="color:red;">&#128683; Inactivar</button>
-    <button id="archivar-btn" class="mini-btn">&#128230; Archivar</button>
+    <button id="nuevo-btn" class="mini-btn"><span class="icon">&#9728;</span> <span class="txt">Nuevo</span></button>
+    <button id="editar-btn" class="mini-btn"><span class="icon">&#9998;</span> <span class="txt">Editar</span></button>
+    <button id="inactivar-btn" class="mini-btn"><span class="icon">&#128683;</span> <span class="txt">Inactivar</span></button>
+    <button id="archivar-btn" class="mini-btn"><span class="icon">&#128230;</span> <span class="txt">Archivar</span></button>
   </div>
   <table id="tabla-sorteos">
     <thead>
       <tr>
         <th>N°</th>
         <th><input type="text" id="filtro-nombre" placeholder="Nombre de sorteo" style="width:100%;box-sizing:border-box;"></th>
-        <th><input type="date" id="filtro-fecha" style="width:100%;"></th>
+        <th>
+          <div class="fecha-container">
+            <input type="date" id="filtro-fecha" style="width:100%;">
+            <span class="fecha-placeholder">Fecha</span>
+          </div>
+        </th>
         <th>
           <select id="filtro-estado" style="width:100%;">
             <option value="">Estado</option>
@@ -145,6 +180,12 @@
       if(fecha.includes('-')) fecha=fecha.split('-').reverse().join('/');
       const tr=document.createElement('tr');
       tr.innerHTML=`<td>${idx++}</td><td>${d.nombre}</td><td>${fecha}</td><td>${d.estado}</td><td style="text-align:center;"><input type="checkbox" data-id="${d.id}"></td>`;
+      const color=d.estado==='Activo'?'green':d.estado==='Inactivo'?'red':d.estado==='Archivado'?'brown':'';
+      if(color){
+        tr.children[1].style.color=color;
+        tr.children[2].style.color=color;
+        tr.children[3].style.color=color;
+      }
       tbody.appendChild(tr);
     });
   }
@@ -161,8 +202,15 @@
   }
 
   document.getElementById('filtro-nombre').addEventListener('input',filtrar);
-  document.getElementById('filtro-fecha').addEventListener('change',filtrar);
+  const fechaInput=document.getElementById('filtro-fecha');
+  const fechaPh=document.querySelector('.fecha-placeholder');
+  function toggleFechaPh(){
+    if(fechaInput.value) fechaPh.style.display='none';
+    else fechaPh.style.display='block';
+  }
+  fechaInput.addEventListener('change',()=>{toggleFechaPh();filtrar();});
   document.getElementById('filtro-estado').addEventListener('change',filtrar);
+  toggleFechaPh();
 
   document.getElementById('nuevo-btn').addEventListener('click',()=>{window.location.href='nuevosorteo.html';});
   document.getElementById('editar-btn').addEventListener('click',()=>{
