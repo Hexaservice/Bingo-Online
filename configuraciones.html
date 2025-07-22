@@ -86,7 +86,7 @@
       display:inline-flex;
       align-items:center;
       gap:4px;
-      font-size:1rem;
+      font-size:0.8rem;
       border:1px solid #ccc;
       border-radius:4px;
       padding:4px 8px;
@@ -262,8 +262,13 @@
         tr.innerHTML=`<td>${idx++}</td><td>${d.nombre}</td><td>${d.categoria}</td><td>${d.estado}</td><td style="text-align:center;"><input type='radio' name='select-banco' data-id='${d.id}' data-nombre='${d.nombre}'></td>`;
         const tds=tr.querySelectorAll('td');
         const color=d.estado==='Activo'?'green':'red';
-        const bg=d.categoria==='Bingo'?'#eeeeee':'transparent';
-        [tds[1],tds[2],tds[3]].forEach(td=>{td.style.color=color;td.style.background=bg;});
+        const esBingo=d.categoria==='Bingo';
+        const bg=esBingo?'orange':'transparent';
+        [tds[0],tds[1],tds[2],tds[3]].forEach(td=>{
+          td.style.color=color;
+          td.style.background=bg;
+          if(esBingo) td.style.textShadow='1px 1px 1px #000';
+        });
         tbody.appendChild(tr);
       });
     }
