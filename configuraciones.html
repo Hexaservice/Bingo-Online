@@ -82,6 +82,17 @@
       margin: 0 2px;
       cursor: pointer;
     }
+    .icon-btn {
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      font-size:1rem;
+      border:1px solid #ccc;
+      border-radius:4px;
+      padding:4px 8px;
+      margin:0 2px;
+      cursor:pointer;
+    }
     #bancos-table {
       width: 95%;
       max-height: 50vh;
@@ -96,6 +107,7 @@
       border: 1px solid #ccc;
       padding: 4px 6px;
     }
+    #bancos-table td { font-weight:bold; }
     #bancos-table thead th {
       position: sticky;
       top: 0;
@@ -192,10 +204,10 @@
       <label><input type="radio" name="banco-estado" value="Inactivo"> Inactivo</label>
     </div>
     <div style="text-align:center;margin-top:5px;">
-      <button id="guardar-btn" class="icon-square" title="Guardar" style="color:blue;">&#128190;</button>
-      <button id="buscar-btn" class="icon-square" title="Buscar">&#128269;</button>
-      <button id="editar-btn" class="icon-square" title="Editar" style="color:green;">&#9998;</button>
-      <button id="borrar-btn" class="icon-square" title="Borrar" style="color:red;">&#128465;</button>
+      <button id="guardar-btn" class="icon-btn" title="Guardar" style="color:blue;">&#128190; Guardar</button>
+      <button id="buscar-btn" class="icon-btn" title="Buscar">&#128269; Buscar</button>
+      <button id="editar-btn" class="icon-btn" title="Editar" style="color:green;">&#9998; Editar</button>
+      <button id="borrar-btn" class="icon-btn" title="Borrar" style="color:red;">&#128465; Borrar</button>
     </div>
     <table id="bancos-table">
       <thead>
@@ -248,6 +260,10 @@
       lista.forEach(d=>{
         const tr=document.createElement('tr');
         tr.innerHTML=`<td>${idx++}</td><td>${d.nombre}</td><td>${d.categoria}</td><td>${d.estado}</td><td style="text-align:center;"><input type='radio' name='select-banco' data-id='${d.id}' data-nombre='${d.nombre}'></td>`;
+        const tds=tr.querySelectorAll('td');
+        const color=d.estado==='Activo'?'green':'red';
+        const bg=d.categoria==='Bingo'?'#eeeeee':'transparent';
+        [tds[1],tds[2],tds[3]].forEach(td=>{td.style.color=color;td.style.background=bg;});
         tbody.appendChild(tr);
       });
     }
