@@ -8,9 +8,10 @@
   <style>
     body {background: linear-gradient(rgba(255,255,255,0.7),rgba(255,255,255,0.7)), url('https://img.freepik.com/vectores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg'); background-repeat: repeat; text-align:center; font-family: 'Bangers', cursive; padding:20px;}
     .menu-btn{width:120px;height:40px;background:orange;border:4px solid #FFD700;border-radius:10px;color:#fff;text-shadow:2px 2px 4px #000;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:5px;}
-    table{margin:10px auto;border-collapse:collapse;width:100%;font-size:0.8rem;}
+    .icon-btn{display:inline-flex;align-items:center;gap:4px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;padding:4px 8px;margin:0 2px;cursor:pointer;}
+    table{margin:10px auto;border-collapse:collapse;width:95%;font-size:0.8rem;font-family:Calibri, Arial, sans-serif;background:rgba(255,255,255,0.6);}
     th,td{border:1px solid #ccc;padding:4px 6px;word-break:break-word;}
-    th{font-weight:bold;}
+    th{font-weight:bold;position:sticky;top:0;background:rgba(255,255,255,0.8);}
     .switch{position:relative;display:inline-block;width:42px;height:24px;}
     .switch input{display:none;}
     .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#ccc;transition:.4s;border-radius:24px;}
@@ -30,9 +31,9 @@
     </div>
     <div id="recargas-content">
       <div class="acciones">
-        <button id="aprobar-rec" class="menu-btn">Aprobar</button>
-        <button id="anular-rec" class="menu-btn">Anular</button>
-        <button id="archivar-rec" class="menu-btn">Archivar</button>
+        <button id="aprobar-rec" class="icon-btn" title="Aprobar"><span class="icon">&#10004;</span><span>Aprobar</span></button>
+        <button id="anular-rec" class="icon-btn" title="Anular"><span class="icon">&#10060;</span><span>Anular</span></button>
+        <button id="archivar-rec" class="icon-btn" title="Archivar"><span class="icon">&#128230;</span><span>Archivar</span></button>
       </div>
       <table id="tabla-recargas">
         <thead>
@@ -59,9 +60,9 @@
     <div id="retiros-content">
       <div class="acciones">
         <input type="text" id="ref-retiro" placeholder="Referencia" maxlength="5" style="width:100px;">
-        <button id="aprobar-ret" class="menu-btn">Aprobar</button>
-        <button id="anular-ret" class="menu-btn">Anular</button>
-        <button id="archivar-ret" class="menu-btn">Archivar</button>
+        <button id="aprobar-ret" class="icon-btn" title="Aprobar"><span class="icon">&#10004;</span><span>Aprobar</span></button>
+        <button id="anular-ret" class="icon-btn" title="Anular"><span class="icon">&#10060;</span><span>Anular</span></button>
+        <button id="archivar-ret" class="icon-btn" title="Archivar"><span class="icon">&#128230;</span><span>Archivar</span></button>
       </div>
       <table id="tabla-retiros">
         <thead>
@@ -109,7 +110,28 @@
 
     function seleccionados(tb){return Array.from(tb.querySelectorAll('input[type=checkbox]:checked')).map(c=>c.dataset.id);}
 
-    async function actualizar(ids,estado,nota,ref){for(const id of ids){const upd={estado,usuariogestor:auth.currentUser.email,rolusuario:window.currentRole,fechagestion:fecha(),horagestion:hora()};if(nota)upd.nota=nota;if(ref)upd.referencia=ref;await transRef.doc(id).update(upd);}cargar();}
+    async function actualizar(ids,estado,nota,ref){
+      for(const id of ids){
+        const doc=await transRef.doc(id).get();
+        const data=doc.data();
+        const upd={estado,usuariogestor:auth.currentUser.email,rolusuario:window.currentRole,fechagestion:fecha(),horagestion:hora()};
+        if(nota)upd.nota=nota;
+        if(ref)upd.referencia=ref;
+        await transRef.doc(id).update(upd);
+        if(estado==='REALIZADO'){
+          const billeteraRef=db.collection('Billetera').doc(data.IDbilletera);
+          await db.runTransaction(async t=>{
+            const bdoc=await t.get(billeteraRef);
+            const cred=bdoc.exists?(bdoc.data().creditos||0):0;
+            let nuevo=cred;
+            if(data.tipotrans==='deposito') nuevo+=parseFloat(data.Monto)||0;
+            else if(data.tipotrans==='retiro') nuevo-=parseFloat(data.Monto)||0;
+            t.set(billeteraRef,{creditos:nuevo},{merge:true});
+          });
+        }
+      }
+      cargar();
+    }
 
     document.getElementById('aprobar-rec').addEventListener('click',()=>{const ids=seleccionados(document.getElementById('tabla-recargas'));if(ids.length)actualizar(ids,'REALIZADO');});
     document.getElementById('anular-rec').addEventListener('click',()=>{const ids=seleccionados(document.getElementById('tabla-recargas'));if(ids.length){const nota=prompt('Motivo');actualizar(ids,'ANULADO',nota);}});
