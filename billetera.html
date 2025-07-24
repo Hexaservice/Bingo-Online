@@ -251,15 +251,44 @@
         <option value="" disabled selected>Banco donde transferiste</option>
       </select>
       <input type="number" id="monto-deposito" placeholder="Monto">
-        <input type="number" id="referencia" placeholder="Referencia de pago" inputmode="numeric" pattern="\d*" oninput="this.value=this.value.replace(/\D/g,'');">
+        <input type="text" id="referencia" placeholder="Referencia (últimos 5 dígitos)" inputmode="numeric" pattern="\d*" maxlength="5" oninput="this.value=this.value.replace(/\D/g,"");">
       <textarea id="comentario-deposito" placeholder="Comentario (opcional)"></textarea>
-      <button id="btn-depositar">Depositar</button>
+      <button id="btn-depositar">Solicitar Depósito</button>
     </div>
     <div id="retirar" class="tab-content">
       <label id="banco-retiro"></label>
       <input type="number" id="monto-retiro" placeholder="Monto">
       <textarea id="comentario-retiro" placeholder="Comentario (opcional)"></textarea>
       <button id="btn-retirar">Retirar</button>
+    </div>
+  </div>
+  <div id="transacciones-section">
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
+      <h3 style="margin:0;">Mis transacciones</h3>
+      <label class="switch">
+        <input type="checkbox" id="toggle-transacciones">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div id="transacciones-content">
+      <table id="tabla-transacciones">
+        <thead>
+          <tr>
+            <th>N°</th>
+            <th>
+              <select id="filtro-tipo">
+                <option value="">TIPO</option>
+                <option value="deposito">Deposito</option>
+                <option value="retiro">Retiro</option>
+              </select>
+            </th>
+            <th><input id="filtro-monto" type="number" placeholder="MONTO"></th>
+            <th><input id="filtro-fecha" type="date"></th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
     </div>
   </div>
 
@@ -269,6 +298,7 @@
   <script src="auth.js"></script>
   <script>
     ensureAuth();
+    const transacciones=[];
 
     function cargarBancosBilletera(){
       db.collection('Bancos').where('categoria','==','Jugadores').where('estado','==','Activo').onSnapshot(snap=>{
@@ -340,6 +370,7 @@
         document.getElementById('cartones-valor').textContent='0';
         document.getElementById('banco-retiro').textContent='Banco donde recibirás:';
       }
+      cargarTransacciones();
     });
 
     document.getElementById('guardar-datos').addEventListener('click', async () => {
@@ -364,22 +395,71 @@
       alert('Datos guardados');
     });
 
+    function fechaActual(){
+      const d=new Date();
+      return d.toLocaleDateString('es-VE');
+    }
+    function horaActual(){
+      const d=new Date();
+      return d.toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'});
+    }
+
+    async function cargarTransacciones(){
+      const user=auth.currentUser;
+      const snap=await db.collection('transacciones').where('IDbilletera','==',user.email).get();
+      transacciones.length=0;
+      snap.forEach(doc=>transacciones.push({id:doc.id,...doc.data()}));
+      filtrarTransacciones();
+    }
+
+    function filtrarTransacciones(){
+      const tipo=document.getElementById('filtro-tipo').value;
+      const monto=document.getElementById('filtro-monto').value.trim();
+      const fecha=document.getElementById('filtro-fecha').value;
+      const tbody=document.querySelector('#tabla-transacciones tbody');
+      tbody.innerHTML='';
+      let n=1;
+      transacciones.forEach(t=>{
+        if(t.estado==='ARCHIVADO') return;
+        if(tipo && t.tipotrans!==tipo) return;
+        if(monto && parseFloat(t.Monto)!=parseFloat(monto)) return;
+        const f=t.estado==='PENDIENTE'?t.fechasolicitud:t.fechagestion;
+        if(fecha && f!==fecha) return;
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${n}</td><td style="color:${t.tipotrans==='deposito'?'green':'red'}">${t.tipotrans.toUpperCase()}</td><td style="color:${t.tipotrans==='deposito'?'green':'red'}">${t.Monto}</td><td style="color:${t.estado==='PENDIENTE'?'orange':'green'}">${f}</td><td style="color:${t.estado==='REALIZADO'?'green':t.estado==='ANULADO'?'orange':'black'}">${t.estado}</td>`;
+        if(t.estado==='ANULADO' && t.nota){tr.addEventListener('click',()=>alert(t.nota));}
+        tbody.appendChild(tr);n++;});
+    }
+
+    document.getElementById('filtro-tipo').addEventListener('change',filtrarTransacciones);
+    document.getElementById('filtro-monto').addEventListener('input',filtrarTransacciones);
+    document.getElementById('filtro-fecha').addEventListener('change',filtrarTransacciones);
+
     document.getElementById('btn-depositar').addEventListener('click', async () => {
       const user = auth.currentUser;
+      const ref=document.getElementById('referencia').value.trim();
+      if(!/^[0-9]{1,5}$/.test(ref)){ alert('Coloca solo los últimos 5 dígitos de la referencia'); return; }
       const data = {
-        billeteraId: user.email,
-        banco: document.getElementById('banco-deposito').value,
-        monto: parseFloat(document.getElementById('monto-deposito').value) || 0,
-        referencia: document.getElementById('referencia').value.trim(),
+        tipotrans:'deposito',
+        bancoreceptor: document.getElementById('banco-deposito').value,
+        Monto: parseFloat(document.getElementById('monto-deposito').value) || 0,
+        referencia: ref,
         comentario: document.getElementById('comentario-deposito').value.trim(),
-        tipo: 'Deposito',
-        fecha: new Date()
+        estado:'PENDIENTE',
+        IDbilletera: user.email,
+        fechasolicitud: fechaActual(),
+        horasolicitud: horaActual(),
+        usuariogestor:'',
+        rolusuario:'',
+        fechagestion:'',
+        horagestion:'',
+        nota:''
       };
-      if(!data.banco){ alert('Seleccione el banco'); return; }
-      if(data.monto<=0){ alert('Monto inválido'); return; }
-      if(!data.referencia){ alert('Ingrese referencia'); return; }
-      await db.collection('Transacciones').add(data);
+      if(!data.bancoreceptor){ alert('Seleccione el banco'); return; }
+      if(data.Monto<=0){ alert('Monto inválido'); return; }
+      await db.collection('transacciones').add(data);
       alert('Bien, recibimos tu solicitud, una vez verificado el pago se recargará tu billetera');
+      cargarTransacciones();
     });
 
     document.getElementById('btn-retirar').addEventListener('click', async () => {
@@ -387,15 +467,26 @@
       const monto = parseFloat(document.getElementById('monto-retiro').value) || 0;
       const creditos = parseFloat(document.getElementById('creditos-valor').textContent) || 0;
       if(monto>creditos){ alert('El monto supera los créditos disponibles'); return; }
+      const docB=await db.collection('Billetera').doc(user.email).get();
       const data = {
-        billeteraId: user.email,
-        monto: monto,
+        tipotrans:'retiro',
+        bancoreceptor: docB.exists?(docB.data().banco||''):'' ,
+        Monto: monto,
+        referencia:'',
         comentario: document.getElementById('comentario-retiro').value.trim(),
-        tipo: 'Retiro',
-        fecha: new Date()
+        estado:'PENDIENTE',
+        IDbilletera:user.email,
+        fechasolicitud:fechaActual(),
+        horasolicitud:horaActual(),
+        usuariogestor:'',
+        rolusuario:'',
+        fechagestion:'',
+        horagestion:'',
+        nota:''
       };
-      await db.collection('Transacciones').add(data);
+      await db.collection('transacciones').add(data);
       alert('Solicitud enviada, una vez validada se transferirá a tu pago móvil');
+      cargarTransacciones();
     });
 
     document.getElementById('volver-btn').addEventListener('click',()=>{
@@ -409,6 +500,14 @@
     }
     toggle.addEventListener('change',actualizarVisibilidad);
     actualizarVisibilidad();
+
+    const toggleT=document.getElementById('toggle-transacciones');
+    const transDiv=document.getElementById('transacciones-content');
+    function visTrans(){
+      transDiv.style.display=toggleT.checked?'block':'none';
+    }
+    toggleT.addEventListener('change',visTrans);
+    visTrans();
 
   </script>
 </body>
