@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transacciones</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+  <style>
+    body {background: linear-gradient(rgba(255,255,255,0.7),rgba(255,255,255,0.7)), url('https://img.freepik.com/vectores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg'); background-repeat: repeat; text-align:center; font-family: 'Bangers', cursive; padding:20px;}
+    .menu-btn{width:120px;height:40px;background:orange;border:4px solid #FFD700;border-radius:10px;color:#fff;text-shadow:2px 2px 4px #000;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:5px;}
+    table{margin:10px auto;border-collapse:collapse;width:100%;font-size:0.8rem;}
+    th,td{border:1px solid #ccc;padding:4px 6px;word-break:break-word;}
+    th{font-weight:bold;}
+    .switch{position:relative;display:inline-block;width:42px;height:24px;}
+    .switch input{display:none;}
+    .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#ccc;transition:.4s;border-radius:24px;}
+    .slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background-color:white;transition:.4s;border-radius:50%;}
+    input:checked + .slider{background-color:#4caf50;}
+    input:checked + .slider:before{transform:translateX(18px);}
+    .acciones{margin:5px;}
+  </style>
+</head>
+<body>
+  <button id="volver-btn" class="menu-btn">&#9664; Volver</button>
+  <h2>Gestionar transferencias</h2>
+  <div id="recargas-section">
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
+      <h3 style="margin:0;">Gestionar Recargas</h3>
+      <label class="switch"><input type="checkbox" id="toggle-recargas"><span class="slider"></span></label>
+    </div>
+    <div id="recargas-content">
+      <div class="acciones">
+        <button id="aprobar-rec" class="menu-btn">Aprobar</button>
+        <button id="anular-rec" class="menu-btn">Anular</button>
+        <button id="archivar-rec" class="menu-btn">Archivar</button>
+      </div>
+      <table id="tabla-recargas">
+        <thead>
+          <tr>
+            <th>N°</th>
+            <th style="color:#4b0082;">Monto</th>
+            <th>Nombre</th>
+            <th>Banco</th>
+            <th style="color:#4b0082;">Referencia</th>
+            <th style="color:#A52A2A;">Fecha</th>
+            <th>Estado</th>
+            <th><input type="checkbox" id="sel-all-rec"></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+  <div id="retiros-section">
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
+      <h3 style="margin:0;">Gestionar Retiros</h3>
+      <label class="switch"><input type="checkbox" id="toggle-retiros"><span class="slider"></span></label>
+    </div>
+    <div id="retiros-content">
+      <div class="acciones">
+        <input type="text" id="ref-retiro" placeholder="Referencia" maxlength="5" style="width:100px;">
+        <button id="aprobar-ret" class="menu-btn">Aprobar</button>
+        <button id="anular-ret" class="menu-btn">Anular</button>
+        <button id="archivar-ret" class="menu-btn">Archivar</button>
+      </div>
+      <table id="tabla-retiros">
+        <thead>
+          <tr>
+            <th>N°</th>
+            <th style="color:#4b0082;">Monto</th>
+            <th>Nombre</th>
+            <th>Banco receptor</th>
+            <th style="color:#4b0082;">Referencia</th>
+            <th style="color:#A52A2A;">Fecha</th>
+            <th>Estado</th>
+            <th><input type="checkbox" id="sel-all-ret"></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    ensureAuth('Colaborador');
+    const transRef=db.collection('transacciones');
+    const datosRec=[];const datosRet=[];
+    function fecha(){const d=new Date();return d.toLocaleDateString('es-VE');}
+    function hora(){const d=new Date();return d.toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'});}
+
+    function toggleView(id,content){document.getElementById(id).addEventListener('change',()=>{content.style.display=document.getElementById(id).checked?'block':'none';});content.style.display='none';}
+    toggleView('toggle-recargas',document.getElementById('recargas-content'));
+    toggleView('toggle-retiros',document.getElementById('retiros-content'));
+
+    async function cargar(){
+      const snap=await transRef.get();
+      datosRec.length=0;datosRet.length=0;
+      snap.forEach(d=>{const dt={id:d.id,...d.data()};
+        if(dt.tipotrans==='deposito')datosRec.push(dt); else datosRet.push(dt);});
+      renderRec();renderRet();
+    }
+    function abreviar(mail){return mail.split('@')[0];}
+    function estadoColor(e){return e==='REALIZADO'?'green':e==='ANULADO'?'orange':e==='ARCHIVADO'?'brown':'orange';}
+    function renderRec(){const tb=document.querySelector('#tabla-recargas tbody');tb.innerHTML='';let i=1;datosRec.forEach(t=>{if(t.estado!=='ARCHIVADO'){const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;'>${t.referencia}</td><td style='color:#A52A2A;'>${t.fechasolicitud}</td><td style='color:${estadoColor(t.estado)}'>${t.estado}</td><td><input type='checkbox' data-id='${t.id}'></td>`;tb.appendChild(tr);i++;}});}
+    function renderRet(){const tb=document.querySelector('#tabla-retiros tbody');tb.innerHTML='';let i=1;datosRet.forEach(t=>{if(t.estado!=='ARCHIVADO'){const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;'>${t.referencia||''}</td><td style='color:#A52A2A;'>${t.fechasolicitud}</td><td style='color:${estadoColor(t.estado)}'>${t.estado}</td><td><input type='checkbox' data-id='${t.id}'></td>`;tb.appendChild(tr);i++;}});}
+
+    function seleccionados(tb){return Array.from(tb.querySelectorAll('input[type=checkbox]:checked')).map(c=>c.dataset.id);}
+
+    async function actualizar(ids,estado,nota,ref){for(const id of ids){const upd={estado,usuariogestor:auth.currentUser.email,rolusuario:window.currentRole,fechagestion:fecha(),horagestion:hora()};if(nota)upd.nota=nota;if(ref)upd.referencia=ref;await transRef.doc(id).update(upd);}cargar();}
+
+    document.getElementById('aprobar-rec').addEventListener('click',()=>{const ids=seleccionados(document.getElementById('tabla-recargas'));if(ids.length)actualizar(ids,'REALIZADO');});
+    document.getElementById('anular-rec').addEventListener('click',()=>{const ids=seleccionados(document.getElementById('tabla-recargas'));if(ids.length){const nota=prompt('Motivo');actualizar(ids,'ANULADO',nota);}});
+    document.getElementById('archivar-rec').addEventListener('click',()=>{const ids=seleccionados(document.getElementById('tabla-recargas'));if(ids.length)actualizar(ids,'ARCHIVADO');});
+
+    document.getElementById('aprobar-ret').addEventListener('click',()=>{const ids=seleccionados(document.getElementById('tabla-retiros'));const ref=document.getElementById('ref-retiro').value.trim();if(!ref){alert('Ingrese la referencia');return;}if(ids.length)actualizar(ids,'REALIZADO',null,ref);});
+    document.getElementById('anular-ret').addEventListener('click',()=>{const ids=seleccionados(document.getElementById('tabla-retiros'));if(ids.length){const nota=prompt('Motivo');actualizar(ids,'ANULADO',nota);}});
+    document.getElementById('archivar-ret').addEventListener('click',()=>{const ids=seleccionados(document.getElementById('tabla-retiros'));if(ids.length)actualizar(ids,'ARCHIVADO');});
+
+    document.getElementById('volver-btn').addEventListener('click',()=>{history.back();});
+    auth.onAuthStateChanged(()=>cargar());
+  </script>
+</body>
+</html>
