@@ -67,8 +67,12 @@
       font-size:0.8rem;
       word-break:break-word;
     }
-    #tabla-transacciones{width:95%;background:#fff;font-family:Calibri, Arial, sans-serif;}
+    #tabla-transacciones{width:98%;background:#fff;font-family:Calibri, Arial, sans-serif;margin:5px auto;}
     #tabla-transacciones th,#tabla-transacciones td{font-size:0.7rem;padding:2px 4px;}
+    #tabla-transacciones th:nth-child(2),#tabla-transacciones td:nth-child(2){width:80px;}
+    #tabla-transacciones th:nth-child(3),#tabla-transacciones td:nth-child(3){width:70px;}
+    #tabla-transacciones th:nth-child(4),#tabla-transacciones td:nth-child(4){width:90px;}
+    #tabla-transacciones th:nth-child(5),#tabla-transacciones td:nth-child(5){width:100px;}
     #tabla-transacciones select,#tabla-transacciones input{font-size:0.7rem;width:90px;}
     #transacciones-content{overflow-x:auto;}
     #transacciones-section .switch{margin-top:4px;}
@@ -289,7 +293,14 @@
             </th>
             <th><input id="filtro-monto" type="number" placeholder="MONTO"></th>
             <th><input id="filtro-fecha" type="date"></th>
-            <th>Estado</th>
+            <th>
+              <select id="filtro-estado">
+                <option value="">ESTADO</option>
+                <option value="PENDIENTE">Pendiente</option>
+                <option value="REALIZADO">Realizado</option>
+                <option value="ANULADO">Anulado</option>
+              </select>
+            </th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -421,6 +432,7 @@
       const tipo=document.getElementById('filtro-tipo').value;
       const monto=document.getElementById('filtro-monto').value.trim();
       const fecha=document.getElementById('filtro-fecha').value;
+      const estado=document.getElementById('filtro-estado').value;
       const tbody=document.querySelector('#tabla-transacciones tbody');
       tbody.innerHTML='';
       let n=1;
@@ -430,6 +442,7 @@
         if(monto && parseFloat(t.Monto)!=parseFloat(monto)) return;
         const f=t.estado==='PENDIENTE'?t.fechasolicitud:t.fechagestion;
         if(fecha && f!==fecha) return;
+        if(estado && t.estado!==estado) return;
         const tr=document.createElement('tr');
         tr.innerHTML=`<td>${n}</td><td style="color:${t.tipotrans==='deposito'?'green':'red'}">${t.tipotrans.toUpperCase()}</td><td style="color:${t.tipotrans==='deposito'?'green':'red'}">${t.Monto}</td><td style="color:${t.estado==='PENDIENTE'?'orange':'green'}">${f}</td><td style="color:${t.estado==='REALIZADO'?'green':t.estado==='ANULADO'?'orange':'black'}">${t.estado}</td>`;
         if(t.estado==='ANULADO' && t.nota){tr.addEventListener('click',()=>alert(t.nota));}
@@ -439,6 +452,7 @@
     document.getElementById('filtro-tipo').addEventListener('change',filtrarTransacciones);
     document.getElementById('filtro-monto').addEventListener('input',filtrarTransacciones);
     document.getElementById('filtro-fecha').addEventListener('change',filtrarTransacciones);
+    document.getElementById('filtro-estado').addEventListener('change',filtrarTransacciones);
 
     document.getElementById('btn-depositar').addEventListener('click', async () => {
       const user = auth.currentUser;
