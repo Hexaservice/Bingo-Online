@@ -27,6 +27,7 @@
     .slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background-color:white;transition:.4s;border-radius:50%;}
     input:checked + .slider{background-color:#4caf50;}
     input:checked + .slider:before{transform:translateX(18px);}
+    .badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;background:red;color:#fff;border-radius:50%;font-size:0.8rem;margin-right:5px;}
     @media (orientation:portrait){
       table{font-size:0.6rem;}
       #tabla-recargas col:nth-child(2),#tabla-retiros col:nth-child(2){width:9%;}
@@ -44,6 +45,7 @@
   <div id="recargas-section">
     <div class="section-header">
       <h3>Gestionar Recargas</h3>
+      <span id="badge-rec" class="badge">0</span>
       <label class="switch"><input type="checkbox" id="toggle-recargas"><span class="slider"></span></label>
     </div>
     <div id="recargas-content">
@@ -83,6 +85,7 @@
   <div id="retiros-section">
     <div class="section-header">
       <h3>Gestionar Retiros</h3>
+      <span id="badge-ret" class="badge">0</span>
       <label class="switch"><input type="checkbox" id="toggle-retiros"><span class="slider"></span></label>
     </div>
     <div id="retiros-content">
@@ -127,6 +130,7 @@
     ensureAuth('Colaborador');
     const transRef=db.collection('transacciones');
     const datosRec=[];const datosRet=[];
+    let editRefs={};
     let mostrarRecArch=false;
     let mostrarRetArch=false;
     const filtrosRec={monto:'',nombre:'',banco:'',ref:'',fecha:'',estado:''};
@@ -162,6 +166,7 @@
     function toggleView(id,content){document.getElementById(id).addEventListener('change',()=>{content.style.display=document.getElementById(id).checked?'block':'none';});content.style.display='none';}
     toggleView('toggle-recargas',document.getElementById('recargas-content'));
     toggleView('toggle-retiros',document.getElementById('retiros-content'));
+    actualizarBotonRet();
 
     async function cargarBancos(){
       const selRec=document.getElementById('filtro-rec-banco');
@@ -178,13 +183,24 @@
       snap.forEach(d=>{const dt={id:d.id,...d.data()};
         dt.Condicion = dt.Condicion || (dt.estado==='ARCHIVADO'?'ARCHIVADA':'VISIBLE');
         if(dt.tipotrans==='deposito')datosRec.push(dt); else datosRet.push(dt);});
+      datosRec.sort(sortTrans);datosRet.sort(sortTrans);
       renderRec();renderRet();
+      actualizarPendientes();
+    }
+    async function actualizarPendientes(){
+      const rec=await transRef.where('tipotrans','==','deposito').where('estado','==','PENDIENTE').get();
+      document.getElementById('badge-rec').textContent=rec.size;
+      const ret=await transRef.where('tipotrans','==','retiro').where('estado','==','PENDIENTE').get();
+      document.getElementById('badge-ret').textContent=ret.size;
     }
     function abreviar(mail){return mail.split('@')[0];}
     function estadoColor(e){return e==='REALIZADO'?'green':e==='ANULADO'?'red':'orange';}
     function formatearFecha(f){if(!f)return '';if(f.includes('-')){const[y,m,d]=f.split('-');return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${y}`;}const[d,m,y]=f.split('/');return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${y}`;}
+    function parseFecha(f){if(!f)return 0;if(f.includes('-')){const[y,m,d]=f.split('-');return new Date(`${y}-${m}-${d}`).getTime();}const[d,m,y]=f.split('/');return new Date(`${y}-${m}-${d}`).getTime();}
+    function sortTrans(a,b){if(a.estado==='PENDIENTE'&&b.estado!=='PENDIENTE')return -1;if(a.estado!=='PENDIENTE'&&b.estado==='PENDIENTE')return 1;return parseFecha(a.fechasolicitud)-parseFecha(b.fechasolicitud);}
+    function actualizarBotonRet(){const btn=document.getElementById('aprobar-ret');const icon=btn.querySelector('.icon');const txt=btn.querySelector('span:last-child');if(Object.keys(editRefs).length){icon.innerHTML='&#9998;';icon.style.color='blue';txt.textContent='Editar';}else{icon.innerHTML='&#10004;';icon.style.color='green';txt.textContent='Aprobar';}}
     function renderRec(){const tb=document.querySelector('#tabla-recargas tbody');tb.innerHTML='';let i=1;datosRec.forEach(t=>{const cond=t.Condicion||'VISIBLE';if(mostrarRecArch?cond!=='ARCHIVADA':cond==='ARCHIVADA')return;const fecha=formatearFecha(t.fechasolicitud);if(filtrosRec.monto&& !t.Monto.toString().includes(filtrosRec.monto))return;if(filtrosRec.nombre&& !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRec.nombre))return;if(filtrosRec.banco&& (t.bancoreceptor||'')!==filtrosRec.banco)return;if(filtrosRec.ref&& !(t.referencia||'').toString().includes(filtrosRec.ref))return;if(filtrosRec.fecha&& fecha!==filtrosRec.fecha)return;if(filtrosRec.estado&& t.estado!==filtrosRec.estado)return;const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td>${abreviar(t.IDbilletera)}</td><td>${t.bancoreceptor||''}</td><td style='color:#4b0082;'>${t.referencia}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}'></td>`;if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{tr.children[6].style.color=estadoColor(t.estado);}tb.appendChild(tr);i++;});}
-    function renderRet(){const tb=document.querySelector('#tabla-retiros tbody');tb.innerHTML='';let i=1;datosRet.forEach(t=>{const cond=t.Condicion||'VISIBLE';if(mostrarRetArch?cond!=='ARCHIVADA':cond==='ARCHIVADA')return;const fecha=formatearFecha(t.fechasolicitud);if(filtrosRet.monto&& !t.Monto.toString().includes(filtrosRet.monto))return;if(filtrosRet.nombre&& !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRet.nombre))return;if(filtrosRet.banco&& (t.bancoreceptor||'')!==filtrosRet.banco)return;if(filtrosRet.ref&& !(t.referencia||'').toString().includes(filtrosRet.ref))return;if(filtrosRet.fecha&& fecha!==filtrosRet.fecha)return;if(filtrosRet.estado&& t.estado!==filtrosRet.estado)return;const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;' contenteditable='false' inputmode='numeric' oninput="this.textContent=this.textContent.replace(/[^0-9]/g,'');">${t.referencia||''}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}'></td>`;if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{tr.children[6].style.color=estadoColor(t.estado);}const chk=tr.querySelector('input[type=checkbox]');const refTd=tr.children[4];chk.addEventListener('change',e=>{refTd.contentEditable=e.target.checked;if(e.target.checked)refTd.focus();else refTd.textContent=t.referencia||'';});tb.appendChild(tr);i++;});}
+    function renderRet(){const tb=document.querySelector('#tabla-retiros tbody');tb.innerHTML='';let i=1;datosRet.forEach(t=>{const cond=t.Condicion||'VISIBLE';if(mostrarRetArch?cond!=='ARCHIVADA':cond==='ARCHIVADA')return;const fecha=formatearFecha(t.fechasolicitud);if(filtrosRet.monto&& !t.Monto.toString().includes(filtrosRet.monto))return;if(filtrosRet.nombre&& !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRet.nombre))return;if(filtrosRet.banco&& (t.bancoreceptor||'')!==filtrosRet.banco)return;if(filtrosRet.ref&& !(t.referencia||'').toString().includes(filtrosRet.ref))return;if(filtrosRet.fecha&& fecha!==filtrosRet.fecha)return;if(filtrosRet.estado&& t.estado!==filtrosRet.estado)return;const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;' contenteditable='false' inputmode='numeric' oninput="this.textContent=this.textContent.replace(/[^0-9]/g,'');">${t.referencia||''}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}'></td>`;if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{tr.children[6].style.color=estadoColor(t.estado);}const chk=tr.querySelector('input[type=checkbox]');const refTd=tr.children[4];refTd.dataset.original=t.referencia||'';chk.addEventListener('change',e=>{refTd.contentEditable=e.target.checked;if(e.target.checked){refTd.dataset.original=t.referencia||'';refTd.focus();}else{refTd.textContent=t.referencia||'';delete editRefs[t.id];actualizarBotonRet();}});refTd.addEventListener('input',()=>{if(t.estado==='REALIZADO'){const nuevo=refTd.textContent.trim();const orig=refTd.dataset.original||'';if(nuevo!==orig)editRefs[t.id]=nuevo;else delete editRefs[t.id];actualizarBotonRet();}});tb.appendChild(tr);i++;});}
 
     function seleccionados(tb){return Array.from(tb.querySelectorAll('input[type=checkbox]:checked')).map(c=>c.dataset.id);}
 
@@ -215,11 +231,20 @@
 
     document.getElementById('aprobar-rec').addEventListener('click',()=>{
       const tb=document.getElementById('tabla-recargas');
-      const ids=seleccionados(tb);
-      if(!ids.length) return;
-      const inval=ids.filter(id=>datosRec.find(t=>t.id===id).estado==='REALIZADO');
-      if(inval.length){alert('No se pueden aprobar las transacciones REALIZADAS');return;}
-      actualizar(ids,'REALIZADO');
+      const sel=Array.from(tb.querySelectorAll('input[type=checkbox]:checked'));
+      if(!sel.length) return;
+      const ids=[];
+      let hasRealizado=false;
+      let hasAnulado=false;
+      sel.forEach(chk=>{
+        const t=datosRec.find(x=>x.id===chk.dataset.id);
+        if(t.estado==='ANULADO'){hasAnulado=true;chk.checked=false;}
+        else if(t.estado==='REALIZADO'){hasRealizado=true;}
+        else ids.push(chk.dataset.id);
+      });
+      if(hasAnulado) alert('No se pueden Aprobar transacciones ANULADAS');
+      if(hasRealizado){alert('No se pueden aprobar las transacciones REALIZADAS');return;}
+      if(ids.length) actualizar(ids,'REALIZADO');
     });
     document.getElementById('anular-rec').addEventListener('click',async()=>{
       const ids=seleccionados(document.getElementById('tabla-recargas'));
@@ -239,6 +264,13 @@
     document.getElementById('ver-arch-rec').addEventListener('click',()=>{mostrarRecArch=!mostrarRecArch;document.getElementById('ver-arch-rec').classList.toggle('archivo-activo',mostrarRecArch);renderRec();});
 
     document.getElementById('aprobar-ret').addEventListener('click',async()=>{
+      if(Object.keys(editRefs).length){
+        for(const ref of Object.values(editRefs)){if(!/^[0-9]{5}$/.test(ref)){alert('Debes colocar una Referencia válida de los ultimos 5 digitos de la Referencia');return;}}
+        for(const [id,ref] of Object.entries(editRefs)){await actualizar([id],null,null,ref);}
+        alert('Se ha editado correctamente la Referencia');
+        editRefs={};actualizarBotonRet();
+        return;
+      }
       const tb=document.getElementById('tabla-retiros');
       const sel=tb.querySelectorAll('input[type=checkbox]:checked');
       if(!sel.length) return;
@@ -289,7 +321,8 @@
     document.getElementById('filtro-ret-ref').addEventListener('input',e=>{filtrosRet.ref=e.target.value;renderRet();});
     document.getElementById('filtro-ret-fecha').addEventListener('change',e=>{filtrosRet.fecha=e.target.value?formatearFecha(e.target.value):'';renderRet();});
     document.getElementById('filtro-ret-estado').addEventListener('change',e=>{filtrosRet.estado=e.target.value;renderRet();});
-
+    actualizarPendientes();
+    setInterval(actualizarPendientes,10000);
     document.getElementById('volver-btn').addEventListener('click',()=>{history.back();});
     cargarBancos();
     auth.onAuthStateChanged(()=>cargar());
