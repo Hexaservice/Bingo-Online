@@ -8,10 +8,12 @@
   <style>
     body {background: linear-gradient(rgba(255,255,255,0.7),rgba(255,255,255,0.7)), url('https://img.freepik.com/vectores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg'); background-repeat: repeat; text-align:center; font-family: 'Bangers', cursive; padding:20px;}
     .menu-btn{width:120px;height:40px;background:orange;border:4px solid #FFD700;border-radius:10px;color:#fff;text-shadow:2px 2px 4px #000;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:5px;}
+    .back-btn{position:fixed;top:5px;left:5px;font-family:'Bangers',cursive;font-size:1.2rem;text-transform:uppercase;}
     .icon-btn{display:inline-flex;align-items:center;gap:4px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;padding:4px 8px;margin:0 2px;cursor:pointer;}
     table{margin:5px auto;border-collapse:collapse;width:98%;font-size:0.8rem;font-family:Calibri, Arial, sans-serif;background:rgba(255,255,255,0.6);}
-    th,td{border:1px solid #ccc;padding:4px 6px;word-break:break-word;}
-    th{font-weight:bold;position:sticky;top:0;background:rgba(255,255,255,0.8);}
+    th,td{border:1px solid #ccc;padding:4px 6px;word-break:break-word;font-weight:bold;}
+    th{position:sticky;top:0;background:rgba(255,255,255,0.8);}
+    .anulado td:not(:first-child){color:red!important;}
     .switch{position:relative;display:inline-block;width:42px;height:24px;}
     .acciones{margin:5px;display:flex;flex-wrap:wrap;align-items:center;gap:4px;}
     #retiros-section .acciones input{width:90px;}
@@ -26,7 +28,7 @@
   </style>
 </head>
 <body>
-  <button id="volver-btn" class="menu-btn">&#9664; Volver</button>
+  <button id="volver-btn" class="menu-btn back-btn">&#9664; Volver</button>
   <h2>Gestionar transferencias</h2>
   <div id="recargas-section">
     <div class="section-header">
@@ -49,7 +51,7 @@
             <th style="color:#4b0082;">Referencia</th>
             <th style="color:#A52A2A;">Fecha</th>
             <th>Estado</th>
-            <th><input type="checkbox" id="sel-all-rec"></th>
+            <th style="text-align:center;">&#10004;</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -78,7 +80,7 @@
             <th style="color:#4b0082;">Referencia</th>
             <th style="color:#A52A2A;">Fecha</th>
             <th>Estado</th>
-            <th><input type="checkbox" id="sel-all-ret"></th>
+            <th style="text-align:center;">&#10004;</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -108,9 +110,9 @@
       renderRec();renderRet();
     }
     function abreviar(mail){return mail.split('@')[0];}
-    function estadoColor(e){return e==='REALIZADO'?'green':e==='ANULADO'?'orange':e==='ARCHIVADO'?'brown':'orange';}
-    function renderRec(){const tb=document.querySelector('#tabla-recargas tbody');tb.innerHTML='';let i=1;datosRec.forEach(t=>{if(t.estado!=='ARCHIVADO'){const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;'>${t.referencia}</td><td style='color:#A52A2A;'>${t.fechasolicitud}</td><td style='color:${estadoColor(t.estado)}'>${t.estado}</td><td><input type='checkbox' data-id='${t.id}'></td>`;tb.appendChild(tr);i++;}});}
-    function renderRet(){const tb=document.querySelector('#tabla-retiros tbody');tb.innerHTML='';let i=1;datosRet.forEach(t=>{if(t.estado!=='ARCHIVADO'){const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;'>${t.referencia||''}</td><td style='color:#A52A2A;'>${t.fechasolicitud}</td><td style='color:${estadoColor(t.estado)}'>${t.estado}</td><td><input type='checkbox' data-id='${t.id}'></td>`;tb.appendChild(tr);i++;}});}
+    function estadoColor(e){return e==='REALIZADO'?'green':e==='ANULADO'?'red':e==='ARCHIVADO'?'brown':'orange';}
+    function renderRec(){const tb=document.querySelector('#tabla-recargas tbody');tb.innerHTML='';let i=1;datosRec.forEach(t=>{if(t.estado!=='ARCHIVADO'){const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;'>${t.referencia}</td><td style='color:#A52A2A;'>${t.fechasolicitud}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}'></td>`;if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{tr.children[6].style.color=estadoColor(t.estado);}tb.appendChild(tr);i++;}});}
+    function renderRet(){const tb=document.querySelector('#tabla-retiros tbody');tb.innerHTML='';let i=1;datosRet.forEach(t=>{if(t.estado!=='ARCHIVADO'){const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;'>${t.referencia||''}</td><td style='color:#A52A2A;'>${t.fechasolicitud}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}'></td>`;if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{tr.children[6].style.color=estadoColor(t.estado);}tb.appendChild(tr);i++;}});}
 
     function seleccionados(tb){return Array.from(tb.querySelectorAll('input[type=checkbox]:checked')).map(c=>c.dataset.id);}
 
