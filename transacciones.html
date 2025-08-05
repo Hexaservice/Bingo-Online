@@ -6,25 +6,27 @@
   <title>Transacciones</title>
   <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
   <style>
-    body {background: linear-gradient(rgba(255,255,255,0.7),rgba(255,255,255,0.7)), url('https://img.freepik.com/vectores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg'); background-repeat: repeat; text-align:center; font-family: 'Bangers', cursive; padding:20px;}
+    body {background: linear-gradient(rgba(255,255,255,0.7),rgba(255,255,255,0.7)), url('https://img.freepik.com/vectores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg'); background-repeat: repeat; text-align:center; font-family: 'Bangers', cursive; padding:5px;}
     .menu-btn{width:120px;height:40px;background:orange;border:4px solid #FFD700;border-radius:10px;color:#fff;text-shadow:2px 2px 4px #000;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:5px;}
     .back-btn{position:fixed;top:5px;left:5px;font-family:'Bangers',cursive;font-size:1.2rem;text-transform:uppercase;}
     .icon-btn{display:inline-flex;align-items:center;gap:4px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;padding:4px 8px;margin:0 2px;cursor:pointer;}
-    table{margin:5px auto;border-collapse:collapse;width:98%;font-size:0.8rem;font-family:Calibri, Arial, sans-serif;background:rgba(255,255,255,0.6);}
+    table{margin:5px auto;border-collapse:collapse;width:100%;font-size:0.8rem;font-family:Calibri, Arial, sans-serif;background:rgba(255,255,255,0.6);table-layout:fixed;}
     th,td{border:1px solid #ccc;padding:4px 6px;word-break:break-word;font-weight:bold;}
     th{position:sticky;top:0;background:rgba(255,255,255,0.8);}
+    tbody tr{background:rgba(255,255,255,0.95);}
     .anulado td:not(:first-child){color:red!important;}
     .switch{position:relative;display:inline-block;width:42px;height:24px;}
     .acciones{margin:5px;display:flex;flex-wrap:wrap;align-items:center;gap:4px;}
-    #retiros-section .acciones input{width:90px;}
     .section-header{display:flex;justify-content:space-between;align-items:center;padding:2px 5px;background:rgba(255,255,255,0.4);margin-bottom:4px;}
-    #recargas-section h3{margin:0;color:green;text-shadow:2px 2px 3px #000;}
-    #retiros-section h3{margin:0;color:red;text-shadow:2px 2px 3px #000;}
+    #recargas-section h3{margin:0;color:green;text-shadow:0 0 5px #fff,2px 2px 3px #000;font-size:1.4rem;}
+    #retiros-section h3{margin:0;color:red;text-shadow:0 0 5px #fff,2px 2px 3px #000;font-size:1.4rem;}
     .switch input{display:none;}
     .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#ccc;transition:.4s;border-radius:24px;}
     .slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background-color:white;transition:.4s;border-radius:50%;}
     input:checked + .slider{background-color:#4caf50;}
     input:checked + .slider:before{transform:translateX(18px);}
+    @media (orientation:portrait){table{font-size:0.6rem;}}
+    @media (orientation:landscape){table{font-size:0.9rem;}}
   </style>
 </head>
 <body>
@@ -42,15 +44,25 @@
         <button id="archivar-rec" class="icon-btn" title="Archivar"><span class="icon">&#128230;</span><span>Archivar</span></button>
       </div>
       <table id="tabla-recargas">
+        <colgroup>
+          <col style="width:5%">
+          <col style="width:15%">
+          <col style="width:15%">
+          <col style="width:20%">
+          <col style="width:15%">
+          <col style="width:15%">
+          <col style="width:10%">
+          <col style="width:5%">
+        </colgroup>
         <thead>
           <tr>
             <th>N°</th>
-            <th style="color:#4b0082;">Monto</th>
-            <th>Nombre</th>
-            <th>Banco</th>
-            <th style="color:#4b0082;">Referencia</th>
-            <th style="color:#A52A2A;">Fecha</th>
-            <th>Estado</th>
+            <th><input id="filtro-rec-monto" type="text" placeholder="Monto" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'');" style="width:100%;box-sizing:border-box;"></th>
+            <th><input id="filtro-rec-nombre" type="text" placeholder="Nombre" oninput="this.value=this.value.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ ]/g,'');" style="width:100%;box-sizing:border-box;"></th>
+            <th><select id="filtro-rec-banco" style="width:100%;"><option value="">Banco</option></select></th>
+            <th><input id="filtro-rec-ref" type="text" placeholder="Referencia" inputmode="numeric" maxlength="5" oninput="this.value=this.value.replace(/[^0-9]/g,'');" style="width:100%;box-sizing:border-box;"></th>
+            <th><input id="filtro-rec-fecha" type="date" style="width:100%;box-sizing:border-box;"></th>
+            <th><select id="filtro-rec-estado" style="width:100%;"><option value="">Estado</option><option value="PENDIENTE">Pendiente</option><option value="REALIZADO">Realizado</option><option value="ANULADO">Anulado</option></select></th>
             <th style="text-align:center;">&#10004;</th>
           </tr>
         </thead>
@@ -65,21 +77,30 @@
     </div>
     <div id="retiros-content">
       <div class="acciones">
-        <input type="text" id="ref-retiro" placeholder="Referencia" maxlength="5">
         <button id="aprobar-ret" class="icon-btn" title="Aprobar"><span class="icon">&#10004;</span><span>Aprobar</span></button>
         <button id="anular-ret" class="icon-btn" title="Anular"><span class="icon">&#10060;</span><span>Anular</span></button>
         <button id="archivar-ret" class="icon-btn" title="Archivar"><span class="icon">&#128230;</span><span>Archivar</span></button>
       </div>
       <table id="tabla-retiros">
+        <colgroup>
+          <col style="width:5%">
+          <col style="width:15%">
+          <col style="width:15%">
+          <col style="width:20%">
+          <col style="width:15%">
+          <col style="width:15%">
+          <col style="width:10%">
+          <col style="width:5%">
+        </colgroup>
         <thead>
           <tr>
             <th>N°</th>
-            <th style="color:#4b0082;">Monto</th>
-            <th>Nombre</th>
-            <th>Banco receptor</th>
-            <th style="color:#4b0082;">Referencia</th>
-            <th style="color:#A52A2A;">Fecha</th>
-            <th>Estado</th>
+            <th><input id="filtro-ret-monto" type="text" placeholder="Monto" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'');" style="width:100%;box-sizing:border-box;"></th>
+            <th><input id="filtro-ret-nombre" type="text" placeholder="Nombre" oninput="this.value=this.value.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ ]/g,'');" style="width:100%;box-sizing:border-box;"></th>
+            <th><select id="filtro-ret-banco" style="width:100%;"><option value="">Banco</option></select></th>
+            <th><input id="filtro-ret-ref" type="text" placeholder="Referencia" inputmode="numeric" maxlength="5" oninput="this.value=this.value.replace(/[^0-9]/g,'');" style="width:100%;box-sizing:border-box;"></th>
+            <th><input id="filtro-ret-fecha" type="date" style="width:100%;box-sizing:border-box;"></th>
+            <th><select id="filtro-ret-estado" style="width:100%;"><option value="">Estado</option><option value="PENDIENTE">Pendiente</option><option value="REALIZADO">Realizado</option><option value="ANULADO">Anulado</option></select></th>
             <th style="text-align:center;">&#10004;</th>
           </tr>
         </thead>
@@ -95,12 +116,23 @@
     ensureAuth('Colaborador');
     const transRef=db.collection('transacciones');
     const datosRec=[];const datosRet=[];
+    const filtrosRec={monto:'',nombre:'',banco:'',ref:'',fecha:'',estado:''};
+    const filtrosRet={monto:'',nombre:'',banco:'',ref:'',fecha:'',estado:''};
     function fecha(){const d=new Date();return d.toLocaleDateString('es-VE');}
     function hora(){const d=new Date();return d.toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'});}
 
     function toggleView(id,content){document.getElementById(id).addEventListener('change',()=>{content.style.display=document.getElementById(id).checked?'block':'none';});content.style.display='none';}
     toggleView('toggle-recargas',document.getElementById('recargas-content'));
     toggleView('toggle-retiros',document.getElementById('retiros-content'));
+
+    async function cargarBancos(){
+      const selRec=document.getElementById('filtro-rec-banco');
+      const snapRec=await db.collection('Bancos').where('categoria','==','Bingo').where('estado','==','Activo').get();
+      snapRec.forEach(doc=>{const nombre=doc.data().nombre||doc.id;const opt=document.createElement('option');opt.value=nombre;opt.textContent=nombre;selRec.appendChild(opt);});
+      const selRet=document.getElementById('filtro-ret-banco');
+      const snapRet=await db.collection('Bancos').where('categoria','==','Jugadores').where('estado','==','Activo').get();
+      snapRet.forEach(doc=>{const nombre=doc.data().nombre||doc.id;const opt=document.createElement('option');opt.value=nombre;opt.textContent=nombre;selRet.appendChild(opt);});
+    }
 
     async function cargar(){
       const snap=await transRef.get();
@@ -111,8 +143,8 @@
     }
     function abreviar(mail){return mail.split('@')[0];}
     function estadoColor(e){return e==='REALIZADO'?'green':e==='ANULADO'?'red':e==='ARCHIVADO'?'brown':'orange';}
-    function renderRec(){const tb=document.querySelector('#tabla-recargas tbody');tb.innerHTML='';let i=1;datosRec.forEach(t=>{if(t.estado!=='ARCHIVADO'){const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;'>${t.referencia}</td><td style='color:#A52A2A;'>${t.fechasolicitud}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}'></td>`;if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{tr.children[6].style.color=estadoColor(t.estado);}tb.appendChild(tr);i++;}});}
-    function renderRet(){const tb=document.querySelector('#tabla-retiros tbody');tb.innerHTML='';let i=1;datosRet.forEach(t=>{if(t.estado!=='ARCHIVADO'){const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;'>${t.referencia||''}</td><td style='color:#A52A2A;'>${t.fechasolicitud}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}'></td>`;if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{tr.children[6].style.color=estadoColor(t.estado);}tb.appendChild(tr);i++;}});}
+    function renderRec(){const tb=document.querySelector('#tabla-recargas tbody');tb.innerHTML='';let i=1;datosRec.forEach(t=>{if(t.estado==='ARCHIVADO')return;if(filtrosRec.monto&& !t.Monto.toString().includes(filtrosRec.monto))return;if(filtrosRec.nombre&& !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRec.nombre))return;if(filtrosRec.banco&& (t.bancoreceptor||'')!==filtrosRec.banco)return;if(filtrosRec.ref&& !(t.referencia||'').toString().includes(filtrosRec.ref))return;if(filtrosRec.fecha&& t.fechasolicitud!==filtrosRec.fecha)return;if(filtrosRec.estado&& t.estado!==filtrosRec.estado)return;const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td>${abreviar(t.IDbilletera)}</td><td>${t.bancoreceptor||''}</td><td style='color:#4b0082;'>${t.referencia}</td><td style='color:#A52A2A;'>${t.fechasolicitud}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}'></td>`;if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{tr.children[6].style.color=estadoColor(t.estado);}tb.appendChild(tr);i++;});}
+    function renderRet(){const tb=document.querySelector('#tabla-retiros tbody');tb.innerHTML='';let i=1;datosRet.forEach(t=>{if(t.estado==='ARCHIVADO')return;if(filtrosRet.monto&& !t.Monto.toString().includes(filtrosRet.monto))return;if(filtrosRet.nombre&& !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRet.nombre))return;if(filtrosRet.banco&& (t.bancoreceptor||'')!==filtrosRet.banco)return;if(filtrosRet.ref&& !(t.referencia||'').toString().includes(filtrosRet.ref))return;if(filtrosRet.fecha&& t.fechasolicitud!==filtrosRet.fecha)return;if(filtrosRet.estado&& t.estado!==filtrosRet.estado)return;const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;' contenteditable='false'>${t.referencia||''}</td><td style='color:#A52A2A;'>${t.fechasolicitud}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}'></td>`;if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{tr.children[6].style.color=estadoColor(t.estado);}const chk=tr.querySelector('input[type=checkbox]');const refTd=tr.children[4];chk.addEventListener('change',e=>{refTd.contentEditable=e.target.checked;if(!e.target.checked)refTd.textContent=t.referencia||'';});tb.appendChild(tr);i++;});}
 
     function seleccionados(tb){return Array.from(tb.querySelectorAll('input[type=checkbox]:checked')).map(c=>c.dataset.id);}
 
@@ -143,11 +175,38 @@
     document.getElementById('anular-rec').addEventListener('click',()=>{const ids=seleccionados(document.getElementById('tabla-recargas'));if(ids.length){const nota=prompt('Motivo');actualizar(ids,'ANULADO',nota);}});
     document.getElementById('archivar-rec').addEventListener('click',()=>{const ids=seleccionados(document.getElementById('tabla-recargas'));if(ids.length)actualizar(ids,'ARCHIVADO');});
 
-    document.getElementById('aprobar-ret').addEventListener('click',()=>{const ids=seleccionados(document.getElementById('tabla-retiros'));const ref=document.getElementById('ref-retiro').value.trim();if(!ref){alert('Ingrese la referencia');return;}if(ids.length)actualizar(ids,'REALIZADO',null,ref);});
+    document.getElementById('aprobar-ret').addEventListener('click',async()=>{
+      const tb=document.getElementById('tabla-retiros');
+      const sel=tb.querySelectorAll('input[type=checkbox]:checked');
+      if(!sel.length) return;
+      for(const chk of sel){
+        const ref=chk.closest('tr').children[4].textContent.trim();
+        if(!/^[0-9]{5}$/.test(ref)){alert('Debes colocar una Referencia válida de los ultimos 5 digitos de la Referencia');return;}
+      }
+      for(const chk of sel){
+        const ref=chk.closest('tr').children[4].textContent.trim();
+        await actualizar([chk.dataset.id],'REALIZADO',null,ref);
+      }
+    });
     document.getElementById('anular-ret').addEventListener('click',()=>{const ids=seleccionados(document.getElementById('tabla-retiros'));if(ids.length){const nota=prompt('Motivo');actualizar(ids,'ANULADO',nota);}});
     document.getElementById('archivar-ret').addEventListener('click',()=>{const ids=seleccionados(document.getElementById('tabla-retiros'));if(ids.length)actualizar(ids,'ARCHIVADO');});
 
+    document.getElementById('filtro-rec-monto').addEventListener('input',e=>{filtrosRec.monto=e.target.value;renderRec();});
+    document.getElementById('filtro-rec-nombre').addEventListener('input',e=>{filtrosRec.nombre=e.target.value.toLowerCase();renderRec();});
+    document.getElementById('filtro-rec-banco').addEventListener('change',e=>{filtrosRec.banco=e.target.value;renderRec();});
+    document.getElementById('filtro-rec-ref').addEventListener('input',e=>{filtrosRec.ref=e.target.value;renderRec();});
+    document.getElementById('filtro-rec-fecha').addEventListener('change',e=>{filtrosRec.fecha=e.target.value;renderRec();});
+    document.getElementById('filtro-rec-estado').addEventListener('change',e=>{filtrosRec.estado=e.target.value;renderRec();});
+
+    document.getElementById('filtro-ret-monto').addEventListener('input',e=>{filtrosRet.monto=e.target.value;renderRet();});
+    document.getElementById('filtro-ret-nombre').addEventListener('input',e=>{filtrosRet.nombre=e.target.value.toLowerCase();renderRet();});
+    document.getElementById('filtro-ret-banco').addEventListener('change',e=>{filtrosRet.banco=e.target.value;renderRet();});
+    document.getElementById('filtro-ret-ref').addEventListener('input',e=>{filtrosRet.ref=e.target.value;renderRet();});
+    document.getElementById('filtro-ret-fecha').addEventListener('change',e=>{filtrosRet.fecha=e.target.value;renderRet();});
+    document.getElementById('filtro-ret-estado').addEventListener('change',e=>{filtrosRet.estado=e.target.value;renderRet();});
+
     document.getElementById('volver-btn').addEventListener('click',()=>{history.back();});
+    cargarBancos();
     auth.onAuthStateChanged(()=>cargar());
   </script>
 </body>
