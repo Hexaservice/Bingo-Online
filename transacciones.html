@@ -10,6 +10,8 @@
     .menu-btn{width:120px;height:40px;background:orange;border:4px solid #FFD700;border-radius:10px;color:#fff;text-shadow:2px 2px 4px #000;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:5px;}
     .back-btn{position:fixed;top:5px;left:5px;font-family:'Bangers',cursive;font-size:1.2rem;text-transform:uppercase;}
     .icon-btn{display:inline-flex;align-items:center;gap:4px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;padding:4px 8px;margin:0 2px;cursor:pointer;}
+    .icon-btn .icon.check{color:green;}
+    .archivo-activo{background:#654321;color:#fff;}
     table{margin:5px auto;border-collapse:collapse;width:100%;font-size:0.8rem;font-family:Calibri, Arial, sans-serif;background:rgba(255,255,255,0.6);table-layout:fixed;}
     th,td{border:1px solid #ccc;padding:4px 6px;word-break:break-word;font-weight:bold;}
     th{position:sticky;top:0;background:rgba(255,255,255,0.8);}
@@ -46,9 +48,10 @@
     </div>
     <div id="recargas-content">
       <div class="acciones">
-        <button id="aprobar-rec" class="icon-btn" title="Aprobar"><span class="icon">&#10004;</span><span>Aprobar</span></button>
+        <button id="aprobar-rec" class="icon-btn" title="Aprobar"><span class="icon check">&#10004;</span><span>Aprobar</span></button>
         <button id="anular-rec" class="icon-btn" title="Anular"><span class="icon">&#10060;</span><span>Anular</span></button>
         <button id="archivar-rec" class="icon-btn" title="Archivar"><span class="icon">&#128230;</span><span>Archivar</span></button>
+        <button id="ver-arch-rec" class="icon-btn" title="Archivo"><span class="icon">&#128230;</span><span>Archivo</span></button>
       </div>
       <table id="tabla-recargas">
         <colgroup>
@@ -70,7 +73,7 @@
             <th><input id="filtro-rec-ref" type="text" placeholder="Referencia" inputmode="numeric" maxlength="5" oninput="this.value=this.value.replace(/[^0-9]/g,'');" style="width:100%;box-sizing:border-box;"></th>
             <th><input id="filtro-rec-fecha" type="date" style="width:100%;box-sizing:border-box;"></th>
             <th><select id="filtro-rec-estado" style="width:100%;"><option value="">Estado</option><option value="PENDIENTE">Pendiente</option><option value="REALIZADO">Realizado</option><option value="ANULADO">Anulado</option></select></th>
-            <th style="text-align:center;">&#10004;</th>
+            <th style="text-align:center;"><span id="sel-rec" style="cursor:pointer;">&#10004;</span></th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -84,9 +87,10 @@
     </div>
     <div id="retiros-content">
       <div class="acciones">
-        <button id="aprobar-ret" class="icon-btn" title="Aprobar"><span class="icon">&#10004;</span><span>Aprobar</span></button>
+        <button id="aprobar-ret" class="icon-btn" title="Aprobar"><span class="icon check">&#10004;</span><span>Aprobar</span></button>
         <button id="anular-ret" class="icon-btn" title="Anular"><span class="icon">&#10060;</span><span>Anular</span></button>
         <button id="archivar-ret" class="icon-btn" title="Archivar"><span class="icon">&#128230;</span><span>Archivar</span></button>
+        <button id="ver-arch-ret" class="icon-btn" title="Archivo"><span class="icon">&#128230;</span><span>Archivo</span></button>
       </div>
       <table id="tabla-retiros">
         <colgroup>
@@ -108,7 +112,7 @@
             <th><input id="filtro-ret-ref" type="text" placeholder="Referencia" inputmode="numeric" maxlength="5" oninput="this.value=this.value.replace(/[^0-9]/g,'');" style="width:100%;box-sizing:border-box;"></th>
             <th><input id="filtro-ret-fecha" type="date" style="width:100%;box-sizing:border-box;"></th>
             <th><select id="filtro-ret-estado" style="width:100%;"><option value="">Estado</option><option value="PENDIENTE">Pendiente</option><option value="REALIZADO">Realizado</option><option value="ANULADO">Anulado</option></select></th>
-            <th style="text-align:center;">&#10004;</th>
+            <th style="text-align:center;"><span id="sel-ret" style="cursor:pointer;">&#10004;</span></th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -123,10 +127,37 @@
     ensureAuth('Colaborador');
     const transRef=db.collection('transacciones');
     const datosRec=[];const datosRet=[];
+    let mostrarRecArch=false;
+    let mostrarRetArch=false;
     const filtrosRec={monto:'',nombre:'',banco:'',ref:'',fecha:'',estado:''};
     const filtrosRet={monto:'',nombre:'',banco:'',ref:'',fecha:'',estado:''};
     function fecha(){const d=new Date();return d.toLocaleDateString('es-VE');}
     function hora(){const d=new Date();return d.toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'});}
+
+    function solicitarMotivo(){
+      return new Promise(res=>{
+        const overlay=document.createElement('div');
+        Object.assign(overlay.style,{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center'});
+        const box=document.createElement('div');
+        Object.assign(box.style,{background:'#fff',padding:'10px',borderRadius:'8px',display:'flex',flexDirection:'column',gap:'5px'});
+        const sel=document.createElement('select');
+        sel.innerHTML='<option value="">Seleccione</option><option value="Monto de depósito no corresponde">Monto de depósito no corresponde</option><option value="No existe depósito solicitado">No existe depósito solicitado</option><option value="Otro">Otro</option>';
+        const inp=document.createElement('input');
+        inp.type='text';inp.placeholder='Motivo';inp.style.display='none';
+        const btnOk=document.createElement('button');btnOk.textContent='Aceptar';
+        const btnCan=document.createElement('button');btnCan.textContent='Cancelar';
+        sel.addEventListener('change',()=>{inp.style.display=sel.value==='Otro'?'block':'none';});
+        btnOk.addEventListener('click',()=>{
+          let val=sel.value;
+          if(!val){alert('Debes seleccionar un motivo');return;}
+          if(val==='Otro'){val=inp.value.trim();if(!val){alert('Debes colocar un motivo para anulación');return;}}
+          document.body.removeChild(overlay);res(val);
+        });
+        btnCan.addEventListener('click',()=>{document.body.removeChild(overlay);res(null);});
+        box.appendChild(sel);box.appendChild(inp);box.appendChild(btnOk);box.appendChild(btnCan);
+        overlay.appendChild(box);document.body.appendChild(overlay);sel.focus();
+      });
+    }
 
     function toggleView(id,content){document.getElementById(id).addEventListener('change',()=>{content.style.display=document.getElementById(id).checked?'block':'none';});content.style.display='none';}
     toggleView('toggle-recargas',document.getElementById('recargas-content'));
@@ -145,24 +176,27 @@
       const snap=await transRef.get();
       datosRec.length=0;datosRet.length=0;
       snap.forEach(d=>{const dt={id:d.id,...d.data()};
+        dt.Condicion = dt.Condicion || (dt.estado==='ARCHIVADO'?'ARCHIVADA':'VISIBLE');
         if(dt.tipotrans==='deposito')datosRec.push(dt); else datosRet.push(dt);});
       renderRec();renderRet();
     }
     function abreviar(mail){return mail.split('@')[0];}
-    function estadoColor(e){return e==='REALIZADO'?'green':e==='ANULADO'?'red':e==='ARCHIVADO'?'brown':'orange';}
+    function estadoColor(e){return e==='REALIZADO'?'green':e==='ANULADO'?'red':'orange';}
     function formatearFecha(f){if(!f)return '';if(f.includes('-')){const[y,m,d]=f.split('-');return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${y}`;}const[d,m,y]=f.split('/');return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${y}`;}
-    function renderRec(){const tb=document.querySelector('#tabla-recargas tbody');tb.innerHTML='';let i=1;datosRec.forEach(t=>{if(t.estado==='ARCHIVADO')return;const fecha=formatearFecha(t.fechasolicitud);if(filtrosRec.monto&& !t.Monto.toString().includes(filtrosRec.monto))return;if(filtrosRec.nombre&& !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRec.nombre))return;if(filtrosRec.banco&& (t.bancoreceptor||'')!==filtrosRec.banco)return;if(filtrosRec.ref&& !(t.referencia||'').toString().includes(filtrosRec.ref))return;if(filtrosRec.fecha&& fecha!==filtrosRec.fecha)return;if(filtrosRec.estado&& t.estado!==filtrosRec.estado)return;const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td>${abreviar(t.IDbilletera)}</td><td>${t.bancoreceptor||''}</td><td style='color:#4b0082;'>${t.referencia}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}'></td>`;if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{tr.children[6].style.color=estadoColor(t.estado);}tb.appendChild(tr);i++;});}
-    function renderRet(){const tb=document.querySelector('#tabla-retiros tbody');tb.innerHTML='';let i=1;datosRet.forEach(t=>{if(t.estado==='ARCHIVADO')return;const fecha=formatearFecha(t.fechasolicitud);if(filtrosRet.monto&& !t.Monto.toString().includes(filtrosRet.monto))return;if(filtrosRet.nombre&& !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRet.nombre))return;if(filtrosRet.banco&& (t.bancoreceptor||'')!==filtrosRet.banco)return;if(filtrosRet.ref&& !(t.referencia||'').toString().includes(filtrosRet.ref))return;if(filtrosRet.fecha&& fecha!==filtrosRet.fecha)return;if(filtrosRet.estado&& t.estado!==filtrosRet.estado)return;const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;' contenteditable='false' inputmode='numeric' oninput="this.textContent=this.textContent.replace(/[^0-9]/g,'');">${t.referencia||''}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}'></td>`;if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{tr.children[6].style.color=estadoColor(t.estado);}const chk=tr.querySelector('input[type=checkbox]');const refTd=tr.children[4];chk.addEventListener('change',e=>{refTd.contentEditable=e.target.checked;if(e.target.checked)refTd.focus();else refTd.textContent=t.referencia||'';});tb.appendChild(tr);i++;});}
+    function renderRec(){const tb=document.querySelector('#tabla-recargas tbody');tb.innerHTML='';let i=1;datosRec.forEach(t=>{const cond=t.Condicion||'VISIBLE';if(mostrarRecArch?cond!=='ARCHIVADA':cond==='ARCHIVADA')return;const fecha=formatearFecha(t.fechasolicitud);if(filtrosRec.monto&& !t.Monto.toString().includes(filtrosRec.monto))return;if(filtrosRec.nombre&& !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRec.nombre))return;if(filtrosRec.banco&& (t.bancoreceptor||'')!==filtrosRec.banco)return;if(filtrosRec.ref&& !(t.referencia||'').toString().includes(filtrosRec.ref))return;if(filtrosRec.fecha&& fecha!==filtrosRec.fecha)return;if(filtrosRec.estado&& t.estado!==filtrosRec.estado)return;const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td>${abreviar(t.IDbilletera)}</td><td>${t.bancoreceptor||''}</td><td style='color:#4b0082;'>${t.referencia}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}'></td>`;if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{tr.children[6].style.color=estadoColor(t.estado);}tb.appendChild(tr);i++;});}
+    function renderRet(){const tb=document.querySelector('#tabla-retiros tbody');tb.innerHTML='';let i=1;datosRet.forEach(t=>{const cond=t.Condicion||'VISIBLE';if(mostrarRetArch?cond!=='ARCHIVADA':cond==='ARCHIVADA')return;const fecha=formatearFecha(t.fechasolicitud);if(filtrosRet.monto&& !t.Monto.toString().includes(filtrosRet.monto))return;if(filtrosRet.nombre&& !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRet.nombre))return;if(filtrosRet.banco&& (t.bancoreceptor||'')!==filtrosRet.banco)return;if(filtrosRet.ref&& !(t.referencia||'').toString().includes(filtrosRet.ref))return;if(filtrosRet.fecha&& fecha!==filtrosRet.fecha)return;if(filtrosRet.estado&& t.estado!==filtrosRet.estado)return;const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;' contenteditable='false' inputmode='numeric' oninput="this.textContent=this.textContent.replace(/[^0-9]/g,'');">${t.referencia||''}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}'></td>`;if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{tr.children[6].style.color=estadoColor(t.estado);}const chk=tr.querySelector('input[type=checkbox]');const refTd=tr.children[4];chk.addEventListener('change',e=>{refTd.contentEditable=e.target.checked;if(e.target.checked)refTd.focus();else refTd.textContent=t.referencia||'';});tb.appendChild(tr);i++;});}
 
     function seleccionados(tb){return Array.from(tb.querySelectorAll('input[type=checkbox]:checked')).map(c=>c.dataset.id);}
 
-    async function actualizar(ids,estado,nota,ref){
+    async function actualizar(ids,estado,nota,ref,condicion){
       for(const id of ids){
         const doc=await transRef.doc(id).get();
         const data=doc.data();
-        const upd={estado,usuariogestor:auth.currentUser.email,rolusuario:window.currentRole,fechagestion:fecha(),horagestion:hora()};
+        const upd={usuariogestor:auth.currentUser.email,rolusuario:window.currentRole,fechagestion:fecha(),horagestion:hora()};
+        if(estado)upd.estado=estado;
         if(nota)upd.nota=nota;
         if(ref)upd.referencia=ref;
+        if(condicion)upd.Condicion=condicion; else if(!data.Condicion)upd.Condicion='VISIBLE';
         await transRef.doc(id).update(upd);
         if(estado==='REALIZADO'){
           const billeteraRef=db.collection('Billetera').doc(data.IDbilletera);
@@ -179,9 +213,30 @@
       cargar();
     }
 
-    document.getElementById('aprobar-rec').addEventListener('click',()=>{const ids=seleccionados(document.getElementById('tabla-recargas'));if(ids.length)actualizar(ids,'REALIZADO');});
-    document.getElementById('anular-rec').addEventListener('click',()=>{const ids=seleccionados(document.getElementById('tabla-recargas'));if(ids.length){const nota=prompt('Motivo');actualizar(ids,'ANULADO',nota);}});
-    document.getElementById('archivar-rec').addEventListener('click',()=>{const ids=seleccionados(document.getElementById('tabla-recargas'));if(ids.length)actualizar(ids,'ARCHIVADO');});
+    document.getElementById('aprobar-rec').addEventListener('click',()=>{
+      const tb=document.getElementById('tabla-recargas');
+      const ids=seleccionados(tb);
+      if(!ids.length) return;
+      const inval=ids.filter(id=>datosRec.find(t=>t.id===id).estado==='REALIZADO');
+      if(inval.length){alert('No se pueden aprobar las transacciones REALIZADAS');return;}
+      actualizar(ids,'REALIZADO');
+    });
+    document.getElementById('anular-rec').addEventListener('click',async()=>{
+      const ids=seleccionados(document.getElementById('tabla-recargas'));
+      if(!ids.length) return;
+      const registros=ids.map(id=>datosRec.find(t=>t.id===id));
+      const invalid=registros.filter(t=>t.estado!=='PENDIENTE');
+      if(invalid.length){
+        const hasRealizado=invalid.some(t=>t.estado==='REALIZADO');
+        alert(hasRealizado?'No se pueden Anular Transacciones REALIZADAS':'Solo se pueden Anular Transacciones PENDIENTES');
+        return;
+      }
+      const motivo=await solicitarMotivo();
+      if(!motivo) return;
+      actualizar(ids,'ANULADO',motivo);
+    });
+    document.getElementById('archivar-rec').addEventListener('click',()=>{const ids=seleccionados(document.getElementById('tabla-recargas'));if(ids.length)actualizar(ids,null,null,null,'ARCHIVADA');});
+    document.getElementById('ver-arch-rec').addEventListener('click',()=>{mostrarRecArch=!mostrarRecArch;document.getElementById('ver-arch-rec').classList.toggle('archivo-activo',mostrarRecArch);renderRec();});
 
     document.getElementById('aprobar-ret').addEventListener('click',async()=>{
       const tb=document.getElementById('tabla-retiros');
@@ -193,11 +248,33 @@
       }
       for(const chk of sel){
         const ref=chk.closest('tr').children[4].textContent.trim();
-        await actualizar([chk.dataset.id],'REALIZADO',null,ref);
+        const t=datosRet.find(x=>x.id===chk.dataset.id);
+        if(t.estado==='REALIZADO'){alert('No se pueden aprobar las transacciones REALIZADAS');await actualizar([chk.dataset.id],null,null,ref);}
+        else if(t.estado==='PENDIENTE') await actualizar([chk.dataset.id],'REALIZADO',null,ref);
+        else alert('No se pueden aprobar las transacciones REALIZADAS');
       }
     });
-    document.getElementById('anular-ret').addEventListener('click',()=>{const ids=seleccionados(document.getElementById('tabla-retiros'));if(ids.length){const nota=prompt('Motivo');actualizar(ids,'ANULADO',nota);}});
-    document.getElementById('archivar-ret').addEventListener('click',()=>{const ids=seleccionados(document.getElementById('tabla-retiros'));if(ids.length)actualizar(ids,'ARCHIVADO');});
+    document.getElementById('anular-ret').addEventListener('click',async()=>{
+      const ids=seleccionados(document.getElementById('tabla-retiros'));
+      if(!ids.length) return;
+      const registros=ids.map(id=>datosRet.find(t=>t.id===id));
+      const invalid=registros.filter(t=>t.estado!=='PENDIENTE');
+      if(invalid.length){
+        const hasRealizado=invalid.some(t=>t.estado==='REALIZADO');
+        alert(hasRealizado?'No se pueden Anular Transacciones REALIZADAS':'Solo se pueden Anular Transacciones PENDIENTES');
+        return;
+      }
+      const nota=prompt('Motivo');
+      if(nota===null) return;
+      if(!nota.trim()){alert('Debes colocar un motivo para anulación');return;}
+      actualizar(ids,'ANULADO',nota.trim());
+    });
+    document.getElementById('archivar-ret').addEventListener('click',()=>{const ids=seleccionados(document.getElementById('tabla-retiros'));if(ids.length)actualizar(ids,null,null,null,'ARCHIVADA');});
+    document.getElementById('ver-arch-ret').addEventListener('click',()=>{mostrarRetArch=!mostrarRetArch;document.getElementById('ver-arch-ret').classList.toggle('archivo-activo',mostrarRetArch);renderRet();});
+
+    function marcarTodos(id){const tb=document.getElementById(id);const checks=tb.querySelectorAll('tbody input[type=checkbox]');const all=Array.from(checks).every(c=>c.checked);checks.forEach(c=>{c.checked=!all;c.dispatchEvent(new Event('change'));});}
+    document.getElementById('sel-rec').addEventListener('click',()=>marcarTodos('tabla-recargas'));
+    document.getElementById('sel-ret').addEventListener('click',()=>marcarTodos('tabla-retiros'));
 
     document.getElementById('filtro-rec-monto').addEventListener('input',e=>{filtrosRec.monto=e.target.value;renderRec();});
     document.getElementById('filtro-rec-nombre').addEventListener('input',e=>{filtrosRec.nombre=e.target.value.toLowerCase();renderRec();});
