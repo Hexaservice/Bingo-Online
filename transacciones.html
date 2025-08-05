@@ -25,7 +25,12 @@
     .slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background-color:white;transition:.4s;border-radius:50%;}
     input:checked + .slider{background-color:#4caf50;}
     input:checked + .slider:before{transform:translateX(18px);}
-    @media (orientation:portrait){table{font-size:0.6rem;}}
+    @media (orientation:portrait){
+      table{font-size:0.6rem;}
+      #tabla-recargas col:nth-child(2),#tabla-retiros col:nth-child(2){width:9%;}
+      #tabla-recargas col:nth-child(7),#tabla-retiros col:nth-child(7){width:17%;}
+      #tabla-recargas col:nth-child(8),#tabla-retiros col:nth-child(8){width:8%;}
+    }
     @media (orientation:landscape){table{font-size:0.9rem;}}
   </style>
 </head>
@@ -46,12 +51,12 @@
       <table id="tabla-recargas">
         <colgroup>
           <col style="width:5%">
-          <col style="width:15%">
+          <col style="width:10%">
           <col style="width:15%">
           <col style="width:20%">
           <col style="width:15%">
           <col style="width:15%">
-          <col style="width:10%">
+          <col style="width:15%">
           <col style="width:5%">
         </colgroup>
         <thead>
@@ -84,12 +89,12 @@
       <table id="tabla-retiros">
         <colgroup>
           <col style="width:5%">
-          <col style="width:15%">
+          <col style="width:10%">
           <col style="width:15%">
           <col style="width:20%">
           <col style="width:15%">
           <col style="width:15%">
-          <col style="width:10%">
+          <col style="width:15%">
           <col style="width:5%">
         </colgroup>
         <thead>
@@ -144,7 +149,7 @@
     function abreviar(mail){return mail.split('@')[0];}
     function estadoColor(e){return e==='REALIZADO'?'green':e==='ANULADO'?'red':e==='ARCHIVADO'?'brown':'orange';}
     function renderRec(){const tb=document.querySelector('#tabla-recargas tbody');tb.innerHTML='';let i=1;datosRec.forEach(t=>{if(t.estado==='ARCHIVADO')return;if(filtrosRec.monto&& !t.Monto.toString().includes(filtrosRec.monto))return;if(filtrosRec.nombre&& !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRec.nombre))return;if(filtrosRec.banco&& (t.bancoreceptor||'')!==filtrosRec.banco)return;if(filtrosRec.ref&& !(t.referencia||'').toString().includes(filtrosRec.ref))return;if(filtrosRec.fecha&& t.fechasolicitud!==filtrosRec.fecha)return;if(filtrosRec.estado&& t.estado!==filtrosRec.estado)return;const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td>${abreviar(t.IDbilletera)}</td><td>${t.bancoreceptor||''}</td><td style='color:#4b0082;'>${t.referencia}</td><td style='color:#A52A2A;'>${t.fechasolicitud}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}'></td>`;if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{tr.children[6].style.color=estadoColor(t.estado);}tb.appendChild(tr);i++;});}
-    function renderRet(){const tb=document.querySelector('#tabla-retiros tbody');tb.innerHTML='';let i=1;datosRet.forEach(t=>{if(t.estado==='ARCHIVADO')return;if(filtrosRet.monto&& !t.Monto.toString().includes(filtrosRet.monto))return;if(filtrosRet.nombre&& !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRet.nombre))return;if(filtrosRet.banco&& (t.bancoreceptor||'')!==filtrosRet.banco)return;if(filtrosRet.ref&& !(t.referencia||'').toString().includes(filtrosRet.ref))return;if(filtrosRet.fecha&& t.fechasolicitud!==filtrosRet.fecha)return;if(filtrosRet.estado&& t.estado!==filtrosRet.estado)return;const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;' contenteditable='false'>${t.referencia||''}</td><td style='color:#A52A2A;'>${t.fechasolicitud}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}'></td>`;if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{tr.children[6].style.color=estadoColor(t.estado);}const chk=tr.querySelector('input[type=checkbox]');const refTd=tr.children[4];chk.addEventListener('change',e=>{refTd.contentEditable=e.target.checked;if(!e.target.checked)refTd.textContent=t.referencia||'';});tb.appendChild(tr);i++;});}
+    function renderRet(){const tb=document.querySelector('#tabla-retiros tbody');tb.innerHTML='';let i=1;datosRet.forEach(t=>{if(t.estado==='ARCHIVADO')return;if(filtrosRet.monto&& !t.Monto.toString().includes(filtrosRet.monto))return;if(filtrosRet.nombre&& !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRet.nombre))return;if(filtrosRet.banco&& (t.bancoreceptor||'')!==filtrosRet.banco)return;if(filtrosRet.ref&& !(t.referencia||'').toString().includes(filtrosRet.ref))return;if(filtrosRet.fecha&& t.fechasolicitud!==filtrosRet.fecha)return;if(filtrosRet.estado&& t.estado!==filtrosRet.estado)return;const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;' contenteditable='false' inputmode='numeric' oninput="this.textContent=this.textContent.replace(/[^0-9]/g,'');">${t.referencia||''}</td><td style='color:#A52A2A;'>${t.fechasolicitud}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}'></td>`;if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{tr.children[6].style.color=estadoColor(t.estado);}const chk=tr.querySelector('input[type=checkbox]');const refTd=tr.children[4];chk.addEventListener('change',e=>{refTd.contentEditable=e.target.checked;if(e.target.checked)refTd.focus();else refTd.textContent=t.referencia||'';});tb.appendChild(tr);i++;});}
 
     function seleccionados(tb){return Array.from(tb.querySelectorAll('input[type=checkbox]:checked')).map(c=>c.dataset.id);}
 
