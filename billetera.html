@@ -67,13 +67,14 @@
       font-size:0.8rem;
       word-break:break-word;
     }
-    #tabla-transacciones{width:98%;background:#fff;font-family:Calibri, Arial, sans-serif;margin:5px auto;}
-    #tabla-transacciones th,#tabla-transacciones td{font-size:0.7rem;padding:2px 4px;font-weight:bold;}
-    #tabla-transacciones th:nth-child(2),#tabla-transacciones td:nth-child(2){width:80px;}
-    #tabla-transacciones th:nth-child(3),#tabla-transacciones td:nth-child(3){width:70px;}
-    #tabla-transacciones th:nth-child(4),#tabla-transacciones td:nth-child(4){width:90px;}
-    #tabla-transacciones th:nth-child(5),#tabla-transacciones td:nth-child(5){width:100px;}
-    #tabla-transacciones select,#tabla-transacciones input{font-size:0.7rem;width:90px;}
+    #tabla-transacciones{width:100%;background:#fff;font-family:Calibri, Arial, sans-serif;margin:5px 0;}
+    #tabla-transacciones th,#tabla-transacciones td{font-size:0.9rem;padding:4px 6px;font-weight:bold;}
+    #tabla-transacciones th:nth-child(1),#tabla-transacciones td:nth-child(1){width:40px;}
+    #tabla-transacciones th:nth-child(2),#tabla-transacciones td:nth-child(2){width:120px;}
+    #tabla-transacciones th:nth-child(3),#tabla-transacciones td:nth-child(3){width:100px;}
+    #tabla-transacciones th:nth-child(4),#tabla-transacciones td:nth-child(4){width:140px;}
+    #tabla-transacciones th:nth-child(5),#tabla-transacciones td:nth-child(5){width:120px;}
+    #tabla-transacciones select,#tabla-transacciones input{font-size:0.9rem;width:100px;}
     #transacciones-content{overflow-x:auto;}
     #transacciones-section .switch{margin-top:4px;}
     #tabla-bancos th,#tabla-bancos td{
@@ -84,13 +85,20 @@
     }
     #banco-retiro{font-weight:bold;color:#00008B;text-shadow:0 0 4px #fff;}
     @media (max-width:480px) and (orientation:portrait){
-      #tabla-transacciones{margin:3px auto;}
-      #tabla-transacciones th,#tabla-transacciones td{font-size:0.6rem;padding:1px 2px;}
-      #tabla-transacciones th:nth-child(2),#tabla-transacciones td:nth-child(2){width:60px;}
-      #tabla-transacciones th:nth-child(3),#tabla-transacciones td:nth-child(3){width:50px;}
-      #tabla-transacciones th:nth-child(4),#tabla-transacciones td:nth-child(4){width:70px;}
-      #tabla-transacciones th:nth-child(5),#tabla-transacciones td:nth-child(5){width:80px;}
-      #tabla-transacciones select,#tabla-transacciones input{width:70px;font-size:0.6rem;}
+      body{padding:2px;}
+      #tabla-transacciones{margin:2px 0;width:100%;}
+      #tabla-transacciones th,#tabla-transacciones td{font-size:0.8rem;padding:1px 2px;}
+      #tabla-transacciones th:nth-child(1),#tabla-transacciones td:nth-child(1){width:30px;}
+      #tabla-transacciones th:nth-child(2),#tabla-transacciones td:nth-child(2){width:70px;}
+      #tabla-transacciones th:nth-child(3),#tabla-transacciones td:nth-child(3){width:60px;}
+      #tabla-transacciones th:nth-child(4),#tabla-transacciones td:nth-child(4){width:80px;}
+      #tabla-transacciones th:nth-child(5),#tabla-transacciones td:nth-child(5){width:90px;}
+      #tabla-transacciones select,#tabla-transacciones input{width:80px;font-size:0.8rem;}
+    }
+
+    @media (orientation:landscape){
+      #tabla-transacciones th,#tabla-transacciones td{font-size:0.9rem;}
+      #tabla-transacciones th:nth-child(1),#tabla-transacciones td:nth-child(1){width:40px;}
     }
     .tabs {
       margin-top:20px;
@@ -297,8 +305,8 @@
             <th>
               <select id="filtro-tipo">
                 <option value="">TIPO</option>
-                <option value="deposito">Deposito</option>
-                <option value="retiro">Retiro</option>
+                <option value="deposito">DEPOSITO</option>
+                <option value="retiro">RETIRO</option>
               </select>
             </th>
             <th><input id="filtro-monto" type="number" placeholder="MONTO"></th>
@@ -433,11 +441,26 @@
       return d.toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'});
     }
 
+    function formatearFecha(str){
+      if(!str) return '';
+      if(str.includes('/')){
+        const [d,m,a]=str.split('/');
+        return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${a.padStart(4,'0')}`;
+      }
+      const [a,m,d]=str.split('-');
+      return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${a}`;
+    }
+
     async function cargarTransacciones(){
       const user=auth.currentUser;
       const snap=await db.collection('transacciones').where('IDbilletera','==',user.email).get();
       transacciones.length=0;
-      snap.forEach(doc=>transacciones.push({id:doc.id,...doc.data()}));
+      snap.forEach(doc=>{
+        const data=doc.data();
+        data.fechasolicitud=formatearFecha(data.fechasolicitud);
+        data.fechagestion=formatearFecha(data.fechagestion);
+        transacciones.push({id:doc.id,...data});
+      });
       transacciones.sort((a,b)=>{
         const fa=a.fechagestion||a.fechasolicitud;
         const fb=b.fechagestion||b.fechasolicitud;
@@ -461,7 +484,7 @@
         if(t.estado==='ARCHIVADO') return;
         if(tipo && t.tipotrans!==tipo) return;
         if(monto && parseFloat(t.Monto)!=parseFloat(monto)) return;
-        const f=t.estado==='PENDIENTE'?t.fechasolicitud:t.fechagestion;
+        const f=formatearFecha(t.estado==='PENDIENTE'?t.fechasolicitud:t.fechagestion);
         if(fecha && f!==fecha) return;
         if(estado && t.estado!==estado) return;
         const tr=document.createElement('tr');
