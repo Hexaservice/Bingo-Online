@@ -14,6 +14,10 @@
     .archivo-activo{background:#654321;color:#fff;}
     table{margin:5px auto;border-collapse:collapse;width:100%;font-size:0.8rem;font-family:Calibri, Arial, sans-serif;background:rgba(255,255,255,0.6);table-layout:fixed;}
     th,td{border:1px solid #ccc;padding:2px;white-space:nowrap;font-weight:bold;}
+    #tabla-recargas th:nth-child(3),#tabla-recargas td:nth-child(3),
+    #tabla-recargas th:nth-child(4),#tabla-recargas td:nth-child(4),
+    #tabla-retiros th:nth-child(3),#tabla-retiros td:nth-child(3),
+    #tabla-retiros th:nth-child(4),#tabla-retiros td:nth-child(4){white-space:normal;word-break:break-word;}
     th{position:sticky;top:0;background:rgba(255,255,255,0.8);z-index:1;}
     tbody tr{background:rgba(255,255,255,0.95);}
     .anulado td:not(:first-child){color:red!important;}
@@ -31,13 +35,13 @@
     .badge{display:none;align-items:center;justify-content:center;min-width:25px;height:25px;background:red;color:#fff;border-radius:50%;font-size:0.9rem;animation:pulse 1s infinite;}
     @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.1);}100%{transform:scale(1);}}
     @media (orientation:portrait){
-      table{font-size:0.6rem;}
+      table{font-size:0.6rem;width:100vw;margin:5px 0;}
       #recargas-content,#retiros-content{max-height:70vh;overflow:auto;}
       #tabla-recargas col:nth-child(2),#tabla-retiros col:nth-child(2){width:9%;}
       #tabla-recargas col:nth-child(4),#tabla-retiros col:nth-child(4){width:17%;}
       #tabla-recargas col:nth-child(5),#tabla-retiros col:nth-child(5){width:11%;}
       #tabla-recargas col:nth-child(7),#tabla-retiros col:nth-child(7){width:19%;}
-      #tabla-recargas col:nth-child(8),#tabla-retiros col:nth-child(8){width:9%;}
+      #tabla-recargas col:nth-child(8),#tabla-retiros col:nth-child(8){width:12%;}
       #volver-btn{width:40px;}
       #volver-btn .label{display:none;}
     }
@@ -73,13 +77,13 @@
           <col style="width:15%">
           <col style="width:15%">
           <col style="width:15%">
-          <col style="width:5%">
+          <col style="width:8%">
         </colgroup>
         <thead>
           <tr>
             <th>N°</th>
             <th><input id="filtro-rec-monto" type="text" placeholder="Monto" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'');" style="width:100%;box-sizing:border-box;"></th>
-            <th><input id="filtro-rec-nombre" type="text" placeholder="Nombre" oninput="this.value=this.value.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ ]/g,'');" style="width:100%;box-sizing:border-box;"></th>
+            <th><input id="filtro-rec-nombre" type="text" placeholder="Gmail" oninput="this.value=this.value.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ ]/g,'');" style="width:100%;box-sizing:border-box;"></th>
             <th><select id="filtro-rec-banco" style="width:100%;"><option value="">Banco</option></select></th>
             <th><input id="filtro-rec-ref" type="text" placeholder="Referencia" inputmode="numeric" maxlength="5" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,5);" style="width:100%;box-sizing:border-box;"></th>
             <th><input id="filtro-rec-fecha" type="date" style="width:100%;box-sizing:border-box;"></th>
@@ -115,13 +119,13 @@
           <col style="width:15%">
           <col style="width:15%">
           <col style="width:15%">
-          <col style="width:5%">
+          <col style="width:8%">
         </colgroup>
         <thead>
           <tr>
             <th>N°</th>
             <th><input id="filtro-ret-monto" type="text" placeholder="Monto" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'');" style="width:100%;box-sizing:border-box;"></th>
-            <th><input id="filtro-ret-nombre" type="text" placeholder="Nombre" oninput="this.value=this.value.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ ]/g,'');" style="width:100%;box-sizing:border-box;"></th>
+            <th><input id="filtro-ret-nombre" type="text" placeholder="Gmail" oninput="this.value=this.value.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ ]/g,'');" style="width:100%;box-sizing:border-box;"></th>
             <th><select id="filtro-ret-banco" style="width:100%;"><option value="">Banco</option></select></th>
             <th><input id="filtro-ret-ref" type="text" placeholder="Referencia" inputmode="numeric" maxlength="5" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,5);" style="width:100%;box-sizing:border-box;"></th>
             <th><input id="filtro-ret-fecha" type="date" style="width:100%;box-sizing:border-box;"></th>
@@ -155,6 +159,9 @@
         Object.assign(overlay.style,{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center'});
         const box=document.createElement('div');
         Object.assign(box.style,{background:'#fff',padding:'10px',borderRadius:'8px',display:'flex',flexDirection:'column',gap:'5px'});
+        const aviso=document.createElement('div');
+        aviso.textContent='Una vez ANULADO el registro no se puede revertir esta acción';
+        aviso.style.fontWeight='bold';
         const sel=document.createElement('select');
         sel.innerHTML='<option value="">Seleccione</option><option value="Monto de depósito no corresponde">Monto de depósito no corresponde</option><option value="No existe depósito solicitado">No existe depósito solicitado</option><option value="Otro">Otro</option>';
         const inp=document.createElement('input');
@@ -169,7 +176,7 @@
           document.body.removeChild(overlay);res(val);
         });
         btnCan.addEventListener('click',()=>{document.body.removeChild(overlay);res(null);});
-        box.appendChild(sel);box.appendChild(inp);box.appendChild(btnOk);box.appendChild(btnCan);
+        box.appendChild(aviso);box.appendChild(sel);box.appendChild(inp);box.appendChild(btnOk);box.appendChild(btnCan);
         overlay.appendChild(box);document.body.appendChild(overlay);sel.focus();
       });
     }
@@ -210,12 +217,24 @@
     }
     function abreviar(mail){return mail.split('@')[0];}
     function estadoColor(e){return e==='APROBADO'?'green':e==='ANULADO'?'red':'orange';}
+    async function mostrarInfoGmail(mail){
+      const overlay=document.createElement('div');
+      Object.assign(overlay.style,{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center'});
+      const box=document.createElement('div');
+      Object.assign(box.style,{background:'#fff',padding:'10px',borderRadius:'8px',display:'flex',flexDirection:'column',gap:'5px',minWidth:'200px'});
+      box.textContent='Cargando...';
+      overlay.appendChild(box);document.body.appendChild(overlay);
+      const [uDoc,bDoc]=await Promise.all([db.collection('users').doc(mail).get(),db.collection('Billetera').doc(mail).get()]);
+      const u=uDoc.data()||{};const b=bDoc.data()||{};
+      box.innerHTML=`<div><strong>Nombre:</strong> ${u.name||''}</div><div><strong>Alias:</strong> ${u.alias||''}</div><div><strong>Cédula:</strong> ${b.cedula||''}</div><div><strong>Pago Movil:</strong> ${b.pagomovil||''}</div><div><strong>Créditos:</strong> ${b.creditos||0}</div>`;
+      const btn=document.createElement('button');btn.textContent='Cerrar';btn.addEventListener('click',()=>document.body.removeChild(overlay));box.appendChild(btn);
+    }
     function formatearFecha(f){if(!f)return '';if(f.includes('-')){const[y,m,d]=f.split('-');return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${y}`;}const[d,m,y]=f.split('/');return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${y}`;}
     function parseFecha(f){if(!f)return 0;if(f.includes('-')){const[y,m,d]=f.split('-');return new Date(`${y}-${m}-${d}`).getTime();}const[d,m,y]=f.split('/');return new Date(`${y}-${m}-${d}`).getTime();}
     function sortTrans(a,b){if(a.estado==='PENDIENTE'&&b.estado!=='PENDIENTE')return -1;if(a.estado!=='PENDIENTE'&&b.estado==='PENDIENTE')return 1;return parseFecha(a.fechasolicitud)-parseFecha(b.fechasolicitud);}
     function actualizarBotonRet(){const btn=document.getElementById('aprobar-ret');const icon=btn.querySelector('.icon');const txt=btn.querySelector('span:last-child');if(Object.keys(editRefs).length){icon.innerHTML='&#9998;';icon.style.color='blue';txt.textContent='Editar';}else{icon.innerHTML='&#10004;';icon.style.color='green';txt.textContent='Aprobar';}}
-    function renderRec(){const tb=document.querySelector('#tabla-recargas tbody');tb.innerHTML='';let i=1;datosRec.forEach(t=>{const cond=t.Condicion||'VISIBLE';if(mostrarRecArch?cond!=='ARCHIVADA':cond==='ARCHIVADA')return;const fecha=formatearFecha(t.fechasolicitud);if(filtrosRec.monto&& !t.Monto.toString().includes(filtrosRec.monto))return;if(filtrosRec.nombre&& !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRec.nombre))return;if(filtrosRec.banco&& (t.bancoreceptor||'')!==filtrosRec.banco)return;if(filtrosRec.ref&& !(t.referencia||'').toString().includes(filtrosRec.ref))return;if(filtrosRec.fecha&& fecha!==filtrosRec.fecha)return;if(filtrosRec.estado&& t.estado!==filtrosRec.estado)return;const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td>${abreviar(t.IDbilletera)}</td><td>${t.bancoreceptor||''}</td><td style='color:#4b0082;'>${t.referencia}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}'></td>`;if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{tr.children[6].style.color=estadoColor(t.estado);}tb.appendChild(tr);i++;});}
-    function renderRet(){const tb=document.querySelector('#tabla-retiros tbody');tb.innerHTML='';let i=1;datosRet.forEach(t=>{const cond=t.Condicion||'VISIBLE';if(mostrarRetArch?cond!=='ARCHIVADA':cond==='ARCHIVADA')return;const fecha=formatearFecha(t.fechasolicitud);if(filtrosRet.monto&& !t.Monto.toString().includes(filtrosRet.monto))return;if(filtrosRet.nombre&& !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRet.nombre))return;if(filtrosRet.banco&& (t.bancoreceptor||'')!==filtrosRet.banco)return;if(filtrosRet.ref&& !(t.referencia||'').toString().includes(filtrosRet.ref))return;if(filtrosRet.fecha&& fecha!==filtrosRet.fecha)return;if(filtrosRet.estado&& t.estado!==filtrosRet.estado)return;const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;' contenteditable='false' inputmode='numeric' oninput="this.textContent=this.textContent.replace(/[^0-9]/g,'').slice(0,5);">${t.referencia||''}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}'></td>`;if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{tr.children[6].style.color=estadoColor(t.estado);}const chk=tr.querySelector('input[type=checkbox]');const refTd=tr.children[4];refTd.dataset.original=t.referencia||'';chk.addEventListener('change',()=>{actualizarEditable();});refTd.addEventListener('input',()=>{refTd.textContent=refTd.textContent.replace(/[^0-9]/g,'').slice(0,5);if(t.estado==='APROBADO'){const nuevo=refTd.textContent.trim();const orig=refTd.dataset.original||'';if(nuevo!==orig)editRefs[t.id]=nuevo;else delete editRefs[t.id];actualizarBotonRet();}});tb.appendChild(tr);i++;});}
+    function renderRec(){const tb=document.querySelector('#tabla-recargas tbody');tb.innerHTML='';let i=1;datosRec.forEach(t=>{const cond=t.Condicion||'VISIBLE';if(mostrarRecArch?cond!=='ARCHIVADA':cond==='ARCHIVADA')return;const fecha=formatearFecha(t.fechasolicitud);if(filtrosRec.monto&& !t.Monto.toString().includes(filtrosRec.monto))return;if(filtrosRec.nombre&& !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRec.nombre))return;if(filtrosRec.banco&& (t.bancoreceptor||'')!==filtrosRec.banco)return;if(filtrosRec.ref&& !(t.referencia||'').toString().includes(filtrosRec.ref))return;if(filtrosRec.fecha&& fecha!==filtrosRec.fecha)return;if(filtrosRec.estado&& t.estado!==filtrosRec.estado)return;const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td>${t.bancoreceptor||''}</td><td style='color:#4b0082;'>${t.referencia}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}'></td>`;if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{tr.children[6].style.color=estadoColor(t.estado);}const mailTd=tr.children[2];mailTd.style.cursor='pointer';mailTd.addEventListener('click',()=>mostrarInfoGmail(t.IDbilletera));tb.appendChild(tr);i++;});}
+    function renderRet(){const tb=document.querySelector('#tabla-retiros tbody');tb.innerHTML='';let i=1;datosRet.forEach(t=>{const cond=t.Condicion||'VISIBLE';if(mostrarRetArch?cond!=='ARCHIVADA':cond==='ARCHIVADA')return;const fecha=formatearFecha(t.fechasolicitud);if(filtrosRet.monto&& !t.Monto.toString().includes(filtrosRet.monto))return;if(filtrosRet.nombre&& !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRet.nombre))return;if(filtrosRet.banco&& (t.bancoreceptor||'')!==filtrosRet.banco)return;if(filtrosRet.ref&& !(t.referencia||'').toString().includes(filtrosRet.ref))return;if(filtrosRet.fecha&& fecha!==filtrosRet.fecha)return;if(filtrosRet.estado&& t.estado!==filtrosRet.estado)return;const tr=document.createElement('tr');tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;' contenteditable='false' inputmode='numeric' oninput="this.textContent=this.textContent.replace(/[^0-9]/g,'').slice(0,5);">${t.referencia||''}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{tr.children[6].style.color=estadoColor(t.estado);}const chk=tr.querySelector('input[type=checkbox]');const refTd=tr.children[4];refTd.dataset.original=t.referencia||'';chk.addEventListener('change',()=>{actualizarEditable();});refTd.addEventListener('input',()=>{refTd.textContent=refTd.textContent.replace(/[^0-9]/g,'').slice(0,5);if(t.estado==='APROBADO'){const nuevo=refTd.textContent.trim();const orig=refTd.dataset.original||'';if(nuevo!==orig)editRefs[t.id]=nuevo;else delete editRefs[t.id];actualizarBotonRet();}});const mailTd=tr.children[2];mailTd.style.cursor='pointer';mailTd.addEventListener('click',()=>mostrarInfoGmail(t.IDbilletera));tb.appendChild(tr);i++;});}
 
     function actualizarEditable(){
       const checks=Array.from(document.querySelectorAll('#tabla-retiros tbody input[type=checkbox]'));
@@ -224,7 +243,8 @@
         const refTd=c.closest('tr').children[4];
         refTd.contentEditable=false;
         refTd.textContent=refTd.dataset.original;
-        if(selected.length===1 && c===selected[0]){
+        const estado=c.dataset.estado;
+        if(selected.length===1 && c===selected[0] && (estado==='PENDIENTE' || estado==='APROBADO')){
           refTd.contentEditable=true;
           refTd.focus();
         }else{
