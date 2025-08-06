@@ -68,7 +68,7 @@
       word-break:break-word;
     }
     #tabla-transacciones{width:98%;background:#fff;font-family:Calibri, Arial, sans-serif;margin:5px auto;}
-    #tabla-transacciones th,#tabla-transacciones td{font-size:0.7rem;padding:2px 4px;}
+    #tabla-transacciones th,#tabla-transacciones td{font-size:0.7rem;padding:2px 4px;font-weight:bold;}
     #tabla-transacciones th:nth-child(2),#tabla-transacciones td:nth-child(2){width:80px;}
     #tabla-transacciones th:nth-child(3),#tabla-transacciones td:nth-child(3){width:70px;}
     #tabla-transacciones th:nth-child(4),#tabla-transacciones td:nth-child(4){width:90px;}
@@ -81,6 +81,16 @@
       color:#00008B;
       text-shadow:0 0 4px #fff;
       text-align:center;
+    }
+    #banco-retiro{font-weight:bold;color:#00008B;text-shadow:0 0 4px #fff;}
+    @media (max-width:480px) and (orientation:portrait){
+      #tabla-transacciones{margin:3px auto;}
+      #tabla-transacciones th,#tabla-transacciones td{font-size:0.6rem;padding:1px 2px;}
+      #tabla-transacciones th:nth-child(2),#tabla-transacciones td:nth-child(2){width:60px;}
+      #tabla-transacciones th:nth-child(3),#tabla-transacciones td:nth-child(3){width:50px;}
+      #tabla-transacciones th:nth-child(4),#tabla-transacciones td:nth-child(4){width:70px;}
+      #tabla-transacciones th:nth-child(5),#tabla-transacciones td:nth-child(5){width:80px;}
+      #tabla-transacciones select,#tabla-transacciones input{width:70px;font-size:0.6rem;}
     }
     .tabs {
       margin-top:20px;
@@ -413,7 +423,10 @@
 
     function fechaActual(){
       const d=new Date();
-      return d.toLocaleDateString('es-VE');
+      const dia=String(d.getDate()).padStart(2,'0');
+      const mes=String(d.getMonth()+1).padStart(2,'0');
+      const anio=d.getFullYear();
+      return `${dia}/${mes}/${anio}`;
     }
     function horaActual(){
       const d=new Date();
@@ -425,13 +438,21 @@
       const snap=await db.collection('transacciones').where('IDbilletera','==',user.email).get();
       transacciones.length=0;
       snap.forEach(doc=>transacciones.push({id:doc.id,...doc.data()}));
+      transacciones.sort((a,b)=>{
+        const fa=a.fechagestion||a.fechasolicitud;
+        const fb=b.fechagestion||b.fechasolicitud;
+        const da=new Date(fa.split('/').reverse().join('-'));
+        const db=new Date(fb.split('/').reverse().join('-'));
+        return db-da;
+      });
       filtrarTransacciones();
     }
 
     function filtrarTransacciones(){
       const tipo=document.getElementById('filtro-tipo').value;
       const monto=document.getElementById('filtro-monto').value.trim();
-      const fecha=document.getElementById('filtro-fecha').value;
+      const fechaInput=document.getElementById('filtro-fecha').value;
+      const fecha=fechaInput?fechaInput.split('-').reverse().join('/'):'';
       const estado=document.getElementById('filtro-estado').value;
       const tbody=document.querySelector('#tabla-transacciones tbody');
       tbody.innerHTML='';
@@ -444,7 +465,7 @@
         if(fecha && f!==fecha) return;
         if(estado && t.estado!==estado) return;
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${n}</td><td style="color:${t.tipotrans==='deposito'?'green':'red'}">${t.tipotrans.toUpperCase()}</td><td style="color:${t.tipotrans==='deposito'?'green':'red'}">${t.Monto}</td><td style="color:${t.estado==='PENDIENTE'?'orange':'green'}">${f}</td><td style="color:${t.estado==='APROBADO'?'green':t.estado==='ANULADO'?'orange':'black'}">${t.estado}</td>`;
+        tr.innerHTML=`<td>${n}</td><td style="color:${t.tipotrans==='deposito'?'green':'red'}">${t.tipotrans.toUpperCase()}</td><td style="color:${t.tipotrans==='deposito'?'green':'red'}">${t.Monto}</td><td>${f}</td><td style="color:${t.estado==='PENDIENTE'?'orange':t.estado==='ANULADO'?'red':t.estado==='APROBADO'?'green':'black'}">${t.estado}</td>`;
         if(t.estado==='ANULADO' && t.nota){tr.addEventListener('click',()=>alert(t.nota));}
         tbody.appendChild(tr);n++;});
     }
@@ -456,13 +477,18 @@
 
     document.getElementById('btn-depositar').addEventListener('click', async () => {
       const user = auth.currentUser;
+      const banco=document.getElementById('banco-deposito').value;
+      if(!banco){alert('Seleccione el banco donde transferiste');document.getElementById('banco-deposito').focus();return;}
+      const montoStr=document.getElementById('monto-deposito').value.trim();
+      const monto=parseFloat(montoStr);
+      if(!montoStr || isNaN(monto) || monto<=0){alert('Ingrese un monto válido');document.getElementById('monto-deposito').focus();return;}
       const ref=document.getElementById('referencia').value.trim();
-      if(!/^[0-9]{1,5}$/.test(ref)){ alert('Coloca solo los últimos 5 dígitos de la referencia'); return; }
+      if(!/^[0-9]{5}$/.test(ref)){alert('Ingrese la referencia de 5 dígitos');document.getElementById('referencia').focus();return;}
       const data = {
         tipotrans:'deposito',
-        bancoreceptor: document.getElementById('banco-deposito').value,
-        Monto: parseFloat(document.getElementById('monto-deposito').value) || 0,
-        referencia: ref,
+        bancoreceptor:banco,
+        Monto:monto,
+        referencia:ref,
         comentario: document.getElementById('comentario-deposito').value.trim(),
         estado:'PENDIENTE',
         IDbilletera: user.email,
@@ -474,8 +500,6 @@
         horagestion:'',
         nota:''
       };
-      if(!data.bancoreceptor){ alert('Seleccione el banco'); return; }
-      if(data.Monto<=0){ alert('Monto inválido'); return; }
       await db.collection('transacciones').add(data);
       alert('Bien, recibimos tu solicitud, una vez verificado el pago se recargará tu billetera');
       cargarTransacciones();
@@ -483,7 +507,9 @@
 
     document.getElementById('btn-retirar').addEventListener('click', async () => {
       const user = auth.currentUser;
-      const monto = parseFloat(document.getElementById('monto-retiro').value) || 0;
+      const montoStr=document.getElementById('monto-retiro').value.trim();
+      const monto=parseFloat(montoStr);
+      if(!montoStr || isNaN(monto) || monto<=0){alert('Ingrese un monto válido');document.getElementById('monto-retiro').focus();return;}
       const creditos = parseFloat(document.getElementById('creditos-valor').textContent) || 0;
       if(monto>creditos){ alert('El monto supera los créditos disponibles'); return; }
       const docB=await db.collection('Billetera').doc(user.email).get();
