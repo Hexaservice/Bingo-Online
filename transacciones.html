@@ -35,10 +35,14 @@
     .badge{display:none;align-items:center;justify-content:center;min-width:25px;height:25px;background:red;color:#fff;border-radius:50%;font-size:0.9rem;animation:pulse 1s infinite;}
     @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.1);}100%{transform:scale(1);}}
     @media (orientation:portrait){
-      table{font-size:0.6rem;width:100vw;margin:5px 0;}
+      body{padding:2px;}
+      table{font-size:0.6rem;width:100vw;margin:2px 0;}
+      .acciones{margin:2px;}
+      .section-header{margin-bottom:2px;}
       #recargas-content,#retiros-content{max-height:70vh;overflow:auto;}
-      #tabla-recargas col:nth-child(2),#tabla-retiros col:nth-child(2){width:9%;}
-      #tabla-recargas col:nth-child(4),#tabla-retiros col:nth-child(4){width:17%;}
+      #tabla-recargas col:nth-child(2),#tabla-retiros col:nth-child(2){width:calc(9% - 4px);}
+      #tabla-recargas col:nth-child(4),#tabla-retiros col:nth-child(4){width:calc(17% - 10px);}
+      #tabla-recargas th:nth-child(4),#tabla-recargas td:nth-child(4),#tabla-retiros th:nth-child(4),#tabla-retiros td:nth-child(4){padding:0 1px;}
       #tabla-recargas col:nth-child(5),#tabla-retiros col:nth-child(5){width:11%;}
       #tabla-recargas col:nth-child(7),#tabla-retiros col:nth-child(7){width:19%;}
       #tabla-recargas col:nth-child(8),#tabla-retiros col:nth-child(8){width:12%;}
@@ -221,12 +225,19 @@
       const overlay=document.createElement('div');
       Object.assign(overlay.style,{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center'});
       const box=document.createElement('div');
-      Object.assign(box.style,{background:'#fff',padding:'10px',borderRadius:'8px',display:'flex',flexDirection:'column',gap:'5px',minWidth:'200px'});
+      Object.assign(box.style,{background:'#fff',padding:'15px',borderRadius:'8px',display:'flex',flexDirection:'column',gap:'8px',minWidth:'260px',fontFamily:'Calibri, Arial, sans-serif',fontSize:'1.1rem',fontWeight:'bold'});
       box.textContent='Cargando...';
       overlay.appendChild(box);document.body.appendChild(overlay);
       const [uDoc,bDoc]=await Promise.all([db.collection('users').doc(mail).get(),db.collection('Billetera').doc(mail).get()]);
       const u=uDoc.data()||{};const b=bDoc.data()||{};
-      box.innerHTML=`<div><strong>Nombre:</strong> ${u.name||''}</div><div><strong>Alias:</strong> ${u.alias||''}</div><div><strong>Cédula:</strong> ${b.cedula||''}</div><div><strong>Pago Movil:</strong> ${b.pagomovil||''}</div><div><strong>Créditos:</strong> ${b.creditos||0}</div>`;
+      box.innerHTML = `
+        <div><span style="color:black;">Nombre:</span> <span style="color:#555;">${u.name||''}</span></div>
+        <div><span style="color:black;">Alias:</span> <span style="color:#006400;">${u.alias||''}</span></div>
+        <div><span style="color:black;">Cédula:</span> <span style="color:#FF8C00;">${b.cedula||''}</span></div>
+        <div><span style="color:black;">Pago Movil:</span> <span style="color:#0000FF;">${b.pagomovil||''}</span></div>
+        <div><span style="color:black;">Créditos:</span> <span style="color:#800080;">${b.creditos||0}</span></div>
+        <div><span style="color:black;">Cartones gratis:</span> <span style="color:#008000;">${b.CartonesGratis||0}</span></div>
+      `;
       const btn=document.createElement('button');btn.textContent='Cerrar';btn.addEventListener('click',()=>document.body.removeChild(overlay));box.appendChild(btn);
     }
     function formatearFecha(f){if(!f)return '';if(f.includes('-')){const[y,m,d]=f.split('-');return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${y}`;}const[d,m,y]=f.split('/');return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${y}`;}
