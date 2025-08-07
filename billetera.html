@@ -304,7 +304,9 @@
     </div>
     <div id="retirar" class="tab-content">
       <label id="banco-retiro"></label>
-      <input type="number" id="monto-retiro" placeholder="Monto">
+      <input type="number" id="monto-retiro" placeholder="Monto" step="0.01">
+      <label id="label-descuento"></label>
+      <input type="number" id="monto-retiro-neto" placeholder="Monto a recibir" readonly>
       <textarea id="comentario-retiro" placeholder="Comentario (opcional)"></textarea>
       <button id="btn-retirar">Retirar</button>
     </div>
@@ -353,6 +355,7 @@
   <script>
     ensureAuth();
     const transacciones=[];
+    let porcentajeRetiro=0;
 
     function cargarBancosBilletera(){
       db.collection('Bancos').where('categoria','==','Jugadores').where('estado','==','Activo').onSnapshot(snap=>{
@@ -400,6 +403,12 @@
       if(!user) return;
       cargarBancosBilletera();
       cargarBancosBingo();
+      const paramDoc = await db.collection('Variablesglobales').doc('Parametros').get();
+      if(paramDoc.exists){
+        porcentajeRetiro = parseFloat(paramDoc.data().porcentajeretiro) || 0;
+        document.getElementById('label-descuento').textContent = `Descuento Bancario de ${porcentajeRetiro} % por retiro pago móvil`;
+        actualizarMontoNeto();
+      }
       const billeteraRef = db.collection('Billetera').doc(user.email);
       const doc = await billeteraRef.get();
       if(doc.exists){
@@ -546,8 +555,17 @@
       }else if(tipo==='retiro'){
         document.getElementById('monto-retiro').value='';
         document.getElementById('comentario-retiro').value='';
+        document.getElementById('monto-retiro-neto').value='';
       }
     }
+
+    function actualizarMontoNeto(){
+      const monto=parseFloat(document.getElementById('monto-retiro').value)||0;
+      const neto=monto - (monto*porcentajeRetiro/100);
+      document.getElementById('monto-retiro-neto').value=neto>0?neto.toFixed(2):'';
+    }
+
+    document.getElementById('monto-retiro').addEventListener('input',actualizarMontoNeto);
 
     document.getElementById('btn-depositar').addEventListener('click', async () => {
       if(!await validarDatosBancarios()) return;
@@ -589,11 +607,13 @@
       if(!montoStr || isNaN(monto) || monto<=0){alert('Ingrese un monto válido');document.getElementById('monto-retiro').focus();return;}
       const creditos = parseFloat(document.getElementById('creditos-valor').textContent) || 0;
       if(monto>creditos){ alert('El monto supera los créditos disponibles'); return; }
+      const montoFinal = monto - (monto*porcentajeRetiro/100);
+      document.getElementById('monto-retiro-neto').value = montoFinal>0 ? montoFinal.toFixed(2) : '';
       const docB=await db.collection('Billetera').doc(user.email).get();
       const data = {
         tipotrans:'retiro',
         bancoreceptor: docB.exists?(docB.data().banco||''):'' ,
-        Monto: monto,
+        Monto: montoFinal,
         referencia:'',
         comentario: document.getElementById('comentario-retiro').value.trim(),
         estado:'PENDIENTE',
