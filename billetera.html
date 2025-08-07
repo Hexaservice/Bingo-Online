@@ -537,6 +537,18 @@
       return false;
     }
 
+    function limpiarCamposTransaccion(tipo){
+      if(tipo==='deposito'){
+        document.getElementById('banco-deposito').selectedIndex=0;
+        document.getElementById('monto-deposito').value='';
+        document.getElementById('referencia').value='';
+        document.getElementById('comentario-deposito').value='';
+      }else if(tipo==='retiro'){
+        document.getElementById('monto-retiro').value='';
+        document.getElementById('comentario-retiro').value='';
+      }
+    }
+
     document.getElementById('btn-depositar').addEventListener('click', async () => {
       if(!await validarDatosBancarios()) return;
       const user = auth.currentUser;
@@ -565,6 +577,7 @@
       };
       await db.collection('transacciones').add(data);
       alert('Bien, recibimos tu solicitud, una vez verificado el pago se recargará tu billetera');
+      limpiarCamposTransaccion('deposito');
       cargarTransacciones();
     });
 
@@ -595,6 +608,7 @@
       };
       await db.collection('transacciones').add(data);
       alert('Solicitud enviada, una vez validada se transferirá a tu pago móvil');
+      limpiarCamposTransaccion('retiro');
       cargarTransacciones();
     });
 
