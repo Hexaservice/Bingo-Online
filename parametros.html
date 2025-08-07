@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parámetros - Bingo Online</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)),
+                  url('https://img.freepik.com/vectores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg');
+      background-repeat: repeat;
+      background-size: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      text-align: center;
+      font-family: 'Bangers', cursive;
+    }
+    .menu-btn {
+      width: 250px;
+      height: 60px;
+      font-family: 'Bangers', cursive;
+      font-size: 1.4rem;
+      background: rgba(0, 170, 255, 0.8);
+      color: white;
+      border: 4px solid #FFD700;
+      border-radius: 10px;
+      text-shadow: 2px 2px 4px #000;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+      margin: 5px;
+    }
+    .menu-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+    }
+    .back-btn {
+      position: fixed;
+      top: 5px;
+      left: 5px;
+      width: 120px;
+      height: 40px;
+      background: orange;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:5px;
+    }
+    #session-info {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      align-items: center;
+      font-size: 0.7rem;
+    }
+    #user-pic {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+    }
+    #logout-link {
+      font-family: Calibri, Arial, sans-serif;
+      margin-left: 5px;
+      font-size: 0.7rem;
+      color: #007bff;
+      text-decoration: underline;
+    }
+    #parametros-form {
+      width: 90%;
+      max-width: 500px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 0.9rem;
+    }
+    #parametros-form input {
+      width: 100%;
+      padding: 5px;
+      margin: 3px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <button id="volver-btn" class="menu-btn back-btn">&#9664; Volver</button>
+  <div id="session-info" style="display:none;">
+    <img id="user-pic" referrerpolicy="no-referrer" crossorigin="anonymous" src="" alt="Usuario" />
+    <a href="#" id="logout-link">Cerrar sesión</a>
+  </div>
+  <h2>Parámetros Globales</h2>
+  <div id="parametros-form">
+    <input type="text" id="aplicacion" placeholder="Aplicacion" />
+    <input type="text" id="cliente" placeholder="Cliente" />
+    <input type="text" id="agencia" placeholder="Agencia" />
+    <input type="text" id="telefonoA" placeholder="TelefonoA" />
+    <input type="text" id="emailA" placeholder="EmailA" />
+    <input type="text" id="nombreAgencia" placeholder="Nombre de la Agencia" />
+    <input type="text" id="direccion" placeholder="Direccion" />
+    <input type="text" id="pais" placeholder="Pais" />
+    <input type="number" id="porcentaje" placeholder="porcentaje" />
+    <input type="number" id="porcentajesu" placeholder="porcentajesu" />
+    <button id="editar-btn" class="menu-btn">Editar</button>
+    <button id="guardar-btn" class="menu-btn" style="display:none;">Guardar</button>
+  </div>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    ensureAuth('Superadmin');
+    async function solicitarPassword(){
+      const pwd = prompt('Ingresa tu contraseña');
+      if(!pwd){ window.location.href='super.html'; return; }
+      try{
+        const doc = await db.collection('Variablesglobales').doc('Parametros').get();
+        if(doc.exists && doc.data().contrasenasu === pwd){
+          cargarFormulario(doc.data());
+          document.getElementById('parametros-form').style.display = 'flex';
+          document.getElementById('session-info').style.display = 'flex';
+        }else{
+          alert('Contraseña incorrecta');
+          window.location.href='super.html';
+        }
+      }catch(e){
+        console.error(e);
+        alert('Error al verificar contraseña');
+        window.location.href='super.html';
+      }
+    }
+    function cargarFormulario(data){
+      document.getElementById('aplicacion').value = data.Aplicacion || '';
+      document.getElementById('cliente').value = data.Cliente || '';
+      document.getElementById('agencia').value = data.Agencia || '';
+      document.getElementById('telefonoA').value = data.TelefonoA || '';
+      document.getElementById('emailA').value = data.EmailA || '';
+      document.getElementById('nombreAgencia').value = data.NombreAgencia || '';
+      document.getElementById('direccion').value = data.Direccion || '';
+      document.getElementById('pais').value = data.Pais || '';
+      document.getElementById('porcentaje').value = data.porcentaje || '';
+      document.getElementById('porcentajesu').value = data.porcentajesu || '';
+      toggleEdicion(true);
+    }
+    function toggleEdicion(disabled){
+      document.querySelectorAll('#parametros-form input').forEach(inp=>inp.disabled = disabled);
+      document.getElementById('editar-btn').style.display = disabled ? 'block':'none';
+      document.getElementById('guardar-btn').style.display = disabled ? 'none':'block';
+    }
+    document.getElementById('editar-btn').addEventListener('click', ()=>{ toggleEdicion(false); });
+    document.getElementById('guardar-btn').addEventListener('click', async ()=>{
+      const data={
+        Aplicacion: document.getElementById('aplicacion').value.trim(),
+        Cliente: document.getElementById('cliente').value.trim(),
+        Agencia: document.getElementById('agencia').value.trim(),
+        TelefonoA: document.getElementById('telefonoA').value.trim(),
+        EmailA: document.getElementById('emailA').value.trim(),
+        NombreAgencia: document.getElementById('nombreAgencia').value.trim(),
+        Direccion: document.getElementById('direccion').value.trim(),
+        Pais: document.getElementById('pais').value.trim(),
+        porcentaje: parseFloat(document.getElementById('porcentaje').value)||0,
+        porcentajesu: parseFloat(document.getElementById('porcentajesu').value)||0
+      };
+      await db.collection('Variablesglobales').doc('Parametros').set(data,{merge:true});
+      alert('Parámetros guardados');
+      toggleEdicion(true);
+    });
+    document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='super.html';});
+    auth.onAuthStateChanged(user=>{
+      if(user){
+        const pic=document.getElementById('user-pic');
+        if(pic) pic.src=user.photoURL;
+        const logout=document.getElementById('logout-link');
+        if(logout){logout.addEventListener('click',e=>{e.preventDefault();logout();});}
+      }
+    });
+    solicitarPassword();
+  </script>
+</body>
+</html>
