@@ -518,7 +518,27 @@
     document.getElementById('filtro-fecha').addEventListener('change',filtrarTransacciones);
     document.getElementById('filtro-estado').addEventListener('change',filtrarTransacciones);
 
+    async function validarDatosBancarios(){
+      const user=auth.currentUser;
+      const doc=await db.collection('Billetera').doc(user.email).get();
+      const d=doc.data()||{};
+      if(d.banco && d.cuenta && d.cedula && d.pagomovil && d.tipoCuenta){
+        return true;
+      }
+      alert('Antes de realizar un Deposito o Retiro debes tener todos tus datos bancarios Registrados');
+      const toggle=document.getElementById('toggle-datos');
+      toggle.checked=true;
+      document.getElementById('datos-content').style.display='block';
+      if(!d.banco){document.getElementById('banco').focus();}
+      else if(!d.cuenta){document.getElementById('cuenta').focus();}
+      else if(!d.cedula){document.getElementById('cedula').focus();}
+      else if(!d.pagomovil){document.getElementById('pagomovil').focus();}
+      else if(!d.tipoCuenta){document.querySelector('input[name="tipo-cuenta"]').focus();}
+      return false;
+    }
+
     document.getElementById('btn-depositar').addEventListener('click', async () => {
+      if(!await validarDatosBancarios()) return;
       const user = auth.currentUser;
       const banco=document.getElementById('banco-deposito').value;
       if(!banco){alert('Seleccione el banco donde transferiste');document.getElementById('banco-deposito').focus();return;}
@@ -549,6 +569,7 @@
     });
 
     document.getElementById('btn-retirar').addEventListener('click', async () => {
+      if(!await validarDatosBancarios()) return;
       const user = auth.currentUser;
       const montoStr=document.getElementById('monto-retiro').value.trim();
       const monto=parseFloat(montoStr);
