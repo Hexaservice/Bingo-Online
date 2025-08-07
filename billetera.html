@@ -44,6 +44,7 @@
       align-items:center;
       justify-content:center;
       gap:5px;
+      z-index:1000;
     }
     #creditos-container{margin:10px auto;}
     #creditos-title,#creditos-valor{font-family:"Bangers",cursive;color:#fff;}
@@ -69,12 +70,13 @@
     }
     #tabla-transacciones{width:100%;background:#fff;font-family:Calibri, Arial, sans-serif;margin:5px 0;}
     #tabla-transacciones th,#tabla-transacciones td{font-size:0.9rem;padding:4px 6px;font-weight:bold;}
-    #tabla-transacciones th:nth-child(1),#tabla-transacciones td:nth-child(1){width:40px;}
+    #tabla-transacciones th:nth-child(1),#tabla-transacciones td:nth-child(1){width:60px;font-size:0.8rem;}
     #tabla-transacciones th:nth-child(2),#tabla-transacciones td:nth-child(2){width:120px;}
-    #tabla-transacciones th:nth-child(3),#tabla-transacciones td:nth-child(3){width:100px;}
+    #tabla-transacciones th:nth-child(3),#tabla-transacciones td:nth-child(3){width:80px;}
     #tabla-transacciones th:nth-child(4),#tabla-transacciones td:nth-child(4){width:140px;}
     #tabla-transacciones th:nth-child(5),#tabla-transacciones td:nth-child(5){width:120px;}
     #tabla-transacciones select,#tabla-transacciones input{font-size:0.9rem;width:100px;}
+    #tabla-transacciones th:nth-child(3) input{width:80px;}
     #transacciones-content{overflow-x:auto;}
     #transacciones-section .switch{margin-top:4px;}
     #tabla-bancos th,#tabla-bancos td{
@@ -88,17 +90,18 @@
       body{padding:2px;}
       #tabla-transacciones{margin:2px 0;width:100%;}
       #tabla-transacciones th,#tabla-transacciones td{font-size:0.8rem;padding:1px 2px;}
-      #tabla-transacciones th:nth-child(1),#tabla-transacciones td:nth-child(1){width:30px;}
+      #tabla-transacciones th:nth-child(1),#tabla-transacciones td:nth-child(1){width:50px;font-size:0.7rem;}
       #tabla-transacciones th:nth-child(2),#tabla-transacciones td:nth-child(2){width:70px;}
-      #tabla-transacciones th:nth-child(3),#tabla-transacciones td:nth-child(3){width:60px;}
+      #tabla-transacciones th:nth-child(3),#tabla-transacciones td:nth-child(3){width:40px;}
       #tabla-transacciones th:nth-child(4),#tabla-transacciones td:nth-child(4){width:80px;}
       #tabla-transacciones th:nth-child(5),#tabla-transacciones td:nth-child(5){width:90px;}
       #tabla-transacciones select,#tabla-transacciones input{width:80px;font-size:0.8rem;}
+      #tabla-transacciones th:nth-child(3) input{width:40px;}
     }
 
     @media (orientation:landscape){
       #tabla-transacciones th,#tabla-transacciones td{font-size:0.9rem;}
-      #tabla-transacciones th:nth-child(1),#tabla-transacciones td:nth-child(1){width:40px;}
+      #tabla-transacciones th:nth-child(1),#tabla-transacciones td:nth-child(1){width:60px;font-size:0.8rem;}
     }
     .tabs {
       margin-top:20px;
@@ -124,6 +127,17 @@
     #mis-datos input, #mis-datos select {
       width:260px;
     }
+    #banco,#cuenta,#cedula,#pagomovil{font-weight:bold;}
+    #banco{color:#00008B;}
+    #cuenta{color:#006400;}
+    #cedula{color:#4B0082;}
+    #pagomovil{color:#FF8C00;}
+    .campo{display:flex;flex-direction:column;align-items:flex-start;width:260px;}
+    .titulo-campo{display:none;font-size:0.6rem;font-weight:bold;margin-bottom:2px;}
+    #label-banco{color:#00008B;}
+    #label-cuenta{color:#006400;}
+    #label-cedula{color:#4B0082;}
+    #label-pagomovil{color:#FF8C00;}
     #session-info {
       position: fixed;
       top: 10px;
@@ -155,7 +169,8 @@
       margin:5px auto;
     }
     #datos-pm{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;}
-    #datos-pm input{flex:1 0 120px;max-width:150px;}
+    #datos-pm .campo{flex:1 0 120px;max-width:150px;width:auto;}
+    #datos-pm .campo input{width:100%;}
     #tipo-cuenta{display:flex;justify-content:center;gap:5px;}
     #tipo-cuenta label{display:flex;align-items:center;gap:3px;}
     #tipo-cuenta input{width:auto;margin:0;}
@@ -245,17 +260,29 @@
       </label>
     </div>
     <div id="datos-content">
-      <select id="banco">
-        <option value="" disabled selected>Banco</option>
-      </select>
-      <input type="number" id="cuenta" placeholder="N° Cuenta Bancaria" inputmode="numeric" pattern="\d*" oninput="this.value=this.value.replace(/\D/g,'');">
+      <div class="campo">
+        <label id="label-banco" class="titulo-campo" for="banco">Nombre del banco</label>
+        <select id="banco">
+          <option value="" disabled selected>Banco</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label id="label-cuenta" class="titulo-campo" for="cuenta">Número de cuenta</label>
+        <input type="number" id="cuenta" placeholder="N° Cuenta Bancaria" inputmode="numeric" pattern="\d*" oninput="this.value=this.value.replace(/\D/g,'');">
+      </div>
       <div id="tipo-cuenta">
         <label><input type="radio" name="tipo-cuenta" value="Ahorro"> Ahorro</label>
         <label><input type="radio" name="tipo-cuenta" value="Corriente"> Corriente</label>
       </div>
       <div id="datos-pm">
-        <input type="number" id="cedula" placeholder="Cédula" inputmode="numeric" pattern="\d*" oninput="this.value=this.value.replace(/\D/g,'');">
-        <input type="number" id="pagomovil" placeholder="Número Pago móvil" inputmode="numeric" pattern="\d*" oninput="this.value=this.value.replace(/\D/g,'');">
+        <div class="campo">
+          <label id="label-cedula" class="titulo-campo" for="cedula">Cédula</label>
+          <input type="number" id="cedula" placeholder="Cédula" inputmode="numeric" pattern="\d*" oninput="this.value=this.value.replace(/\D/g,'');">
+        </div>
+        <div class="campo">
+          <label id="label-pagomovil" class="titulo-campo" for="pagomovil">Número Pago móvil</label>
+          <input type="number" id="pagomovil" placeholder="Número Pago móvil" inputmode="numeric" pattern="\d*" oninput="this.value=this.value.replace(/\D/g,'');">
+        </div>
       </div>
       <button id="guardar-datos">Guardar Datos</button>
     </div>
@@ -559,6 +586,21 @@
 
     document.getElementById('volver-btn').addEventListener('click',()=>{
       window.location.href='player.html';
+    });
+
+    const camposLabels=[
+      {campo:'banco',label:'label-banco'},
+      {campo:'cuenta',label:'label-cuenta'},
+      {campo:'cedula',label:'label-cedula'},
+      {campo:'pagomovil',label:'label-pagomovil'}
+    ];
+    camposLabels.forEach(({campo,label})=>{
+      const c=document.getElementById(campo);
+      const l=document.getElementById(label);
+      function actualizar(){l.style.display=c.value?'block':'none';}
+      c.addEventListener('input',actualizar);
+      c.addEventListener('change',actualizar);
+      actualizar();
     });
 
     const toggle=document.getElementById('toggle-datos');
