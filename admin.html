@@ -132,9 +132,7 @@
   <button id="salir-super-btn" class="menu-btn back-btn" style="display:none;">Salir</button>
   <div id="main-menu">
     <button id="gestionar-sorteos-btn" class="menu-btn">Gestionar Sorteos</button>
-    <button id="publicar-resultados-btn" class="menu-btn">Publicar Resultados</button>
-    <button id="gestionar-usuarios-btn" class="menu-btn">Gestionar Usuarios</button>
-    <button id="monitoreo-btn" class="menu-btn">Monitoreo en Tiempo Real</button>
+    <button id="publicar-resultados-btn" class="menu-btn">Cantar Sorteo</button>
   </div>
   <div id="publicar-resultados-screen" class="view" style="display:none;">
     <button id="resultados-admin-back" class="menu-btn back-btn">&#9664; Volver</button>
@@ -144,19 +142,7 @@
       <option value="demo">Sorteo de Prueba</option>
     </select>
     <input type="text" id="numeros-sorteados" placeholder="Números (1-75 separados por coma)" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;" />
-    <button id="publicar-resultados-btn2" class="menu-btn" style="width:180px;">Publicar Resultados</button>
-  </div>
-
-  <div id="gestionar-usuarios-screen" class="view" style="display:none;">
-    <button id="usuarios-back" class="menu-btn back-btn">&#9664; Volver</button>
-    <h3>Gestionar Usuarios</h3>
-    <table id="tabla-usuarios" style="width:90%;font-size:0.8rem;"></table>
-  </div>
-
-  <div id="monitoreo-screen" class="view" style="display:none;">
-    <button id="monitoreo-back" class="menu-btn back-btn">Detener Monitoreo</button>
-    <h3>Monitoreo en Tiempo Real</h3>
-    <div id="monitoreo-contenido"></div>
+    <button id="publicar-resultados-btn2" class="menu-btn" style="width:180px;">Cantar Sorteo</button>
   </div>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
@@ -181,11 +167,7 @@
     snap.forEach(doc=>{const opt=document.createElement('option');opt.value=doc.id;opt.textContent=doc.data().nombre;select.appendChild(opt);});}
   document.getElementById('gestionar-sorteos-btn').addEventListener('click',()=>{window.location.href='gestionsorteos.html';});
   document.getElementById('publicar-resultados-btn').addEventListener('click',()=>{hideViews();document.getElementById('publicar-resultados-screen').style.display='block';cargarSorteosActivos();});
-  document.getElementById('gestionar-usuarios-btn').addEventListener('click',()=>{hideViews();document.getElementById('gestionar-usuarios-screen').style.display='block';});
-  document.getElementById('monitoreo-btn').addEventListener('click',()=>{hideViews();document.getElementById('monitoreo-screen').style.display='block';});
   document.getElementById('resultados-admin-back').addEventListener('click',()=>{hideViews();document.getElementById('main-menu').style.display='block';});
-  document.getElementById('usuarios-back').addEventListener('click',()=>{hideViews();document.getElementById('main-menu').style.display='block';});
-  document.getElementById('monitoreo-back').addEventListener('click',()=>{hideViews();document.getElementById('main-menu').style.display='block';});
   document.getElementById('publicar-resultados-btn2').addEventListener('click',async()=>{const id=document.getElementById('sorteo-activo-select').value;const nums=document.getElementById('numeros-sorteados').value.split(',').map(n=>parseInt(n.trim())).filter(n=>n>=1&&n<=75);if(!id||nums.length===0){alert('Datos inválidos');return;}await db.collection('sorteos').doc(id).update({resultados:nums,estado:'Finalizado'});alert('Resultados publicados');});
   document.getElementById('config-btn').addEventListener('click',()=>{window.location.href='configuraciones.html';});
   </script>
