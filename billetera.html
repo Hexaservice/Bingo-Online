@@ -328,7 +328,14 @@
     <div id="retirar" class="tab-content">
       <label id="banco-retiro"></label>
       <input type="number" id="monto-retiro" placeholder="Monto" step="0.01">
-      <label id="label-descuento"></label>
+      <div id="descuentos-retiro">
+        <div id="descuento-bancario" style="font-weight:bold;">
+          Descuento Bancario <span id="porcentaje-retiro" style="color:#00008B;"></span>% por retiro bancario
+        </div>
+        <div id="descuento-admin" style="font-weight:bold;">
+          Descuento del <span id="porcentaje-admin" style="color:#00008B;"></span>% por gestión administrativa
+        </div>
+      </div>
       <input type="number" id="monto-retiro-neto" placeholder="Monto a recibir" readonly>
       <textarea id="comentario-retiro" placeholder="Comentario (opcional)"></textarea>
       <button id="btn-retirar">Retirar</button>
@@ -380,7 +387,7 @@
   <script>
     ensureAuth();
     const transacciones=[];
-    let porcentajeRetiro=0;
+    let porcentajeRetiro=0, porcentajeAdministra=0;
 
     function cargarBancosBilletera(){
       db.collection('Bancos').where('categoria','==','Jugadores').where('estado','==','Activo').onSnapshot(snap=>{
@@ -431,7 +438,9 @@
       const paramDoc = await db.collection('Variablesglobales').doc('Parametros').get();
       if(paramDoc.exists){
         porcentajeRetiro = parseFloat(paramDoc.data().porcentajeretiro) || 0;
-        document.getElementById('label-descuento').textContent = `Descuento Bancario de ${porcentajeRetiro} % por retiro pago móvil`;
+        porcentajeAdministra = parseFloat(paramDoc.data().porcentajeadministra) || 0;
+        document.getElementById('porcentaje-retiro').textContent = porcentajeRetiro;
+        document.getElementById('porcentaje-admin').textContent = porcentajeAdministra;
         actualizarMontoNeto();
       }
       const billeteraRef = db.collection('Billetera').doc(user.email);
@@ -507,14 +516,12 @@
 
     function aHora24(str){
       if(!str) return '00:00';
-      str=str.toLowerCase();
-      const m=str.match(/(\d{1,2}):(\d{2})(?:\s*(a|p)\.?m\.?)?/);
+      str=str.toLowerCase().replace(/\./g,'').replace(/\s+/g,'');
+      const m=str.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?(a|p)?m?/);
       if(!m) return str;
-      let h=parseInt(m[1],10);const min=m[2];const ap=m[3];
-      if(ap){
-        if(ap==='p'&&h<12)h+=12;
-        if(ap==='a'&&h===12)h=0;
-      }
+      let h=parseInt(m[1],10);const min=m[2];const ap=m[4];
+      if(ap==='p'&&h<12)h+=12;
+      if(ap==='a'&&h===12)h=0;
       return `${String(h).padStart(2,'0')}:${min}`;
     }
 
@@ -525,13 +532,8 @@
 
     function formatearHora(str){
       if(!str) return '';
-      str=str.toLowerCase();
-      const m=str.match(/(\d{1,2}):(\d{2})(?:\s*(a|p)\.?m\.?)?/);
-      if(!m) return str;
-      let h=parseInt(m[1],10);const min=m[2];const ap=m[3];
-      if(ap){
-        return `${h}:${min} ${ap}m`;
-      }
+      const [h24,min] = aHora24(str).split(':');
+      let h=parseInt(h24,10);
       const ampm=h>=12?'pm':'am';
       h=h%12; if(h===0) h=12;
       return `${h}:${min} ${ampm}`;
@@ -642,7 +644,7 @@
 
     function actualizarMontoNeto(){
       const monto=parseFloat(document.getElementById('monto-retiro').value)||0;
-      const neto=monto - (monto*porcentajeRetiro/100);
+      const neto=monto - (monto*porcentajeRetiro/100) - (monto*porcentajeAdministra/100);
       document.getElementById('monto-retiro-neto').value=neto>0?neto.toFixed(2):'';
     }
 
@@ -688,7 +690,7 @@
       if(!montoStr || isNaN(monto) || monto<=0){alert('Ingrese un monto válido');document.getElementById('monto-retiro').focus();return;}
       const creditos = parseFloat(document.getElementById('creditos-valor').textContent) || 0;
       if(monto>creditos){ alert('El monto supera los créditos disponibles'); return; }
-      const montoFinal = monto - (monto*porcentajeRetiro/100);
+      const montoFinal = monto - (monto*porcentajeRetiro/100) - (monto*porcentajeAdministra/100);
       document.getElementById('monto-retiro-neto').value = montoFinal>0 ? montoFinal.toFixed(2) : '';
       const docB=await db.collection('Billetera').doc(user.email).get();
       const data = {
