@@ -15,7 +15,8 @@
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: center;
+          justify-content: flex-start;
+          padding-top: 20px;
           min-height: 100vh;
           text-align: center;
       }
@@ -38,26 +39,59 @@
           justify-content:center;
           gap:5px;
       }
-      input, select {font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;}
-      .menu-btn { width:150px; }
+      input, select {font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:5px auto;}
+      .menu-btn { width:120px; }
       #login-footer { margin-top:20px; }
+      h3, h4 { margin:5px 0; }
+      #session-info {
+          position: fixed;
+          top: 10px;
+          right: 10px;
+          display: flex;
+          align-items: center;
+          font-size: 0.7rem;
+      }
+      #user-pic {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+      }
+      #logout-link {
+          font-family: Calibri, Arial, sans-serif;
+          margin-left: 5px;
+          font-size: 0.7rem;
+          color: #007bff;
+          text-decoration: underline;
+      }
+      #perfil-nombre, #perfil-apellido, #perfil-alias {font-weight:bold;}
+      #perfil-nombre, #perfil-apellido {color:#00008B;}
+      #perfil-alias {color:#FF8C00;}
+      #guardar-perfil-btn {
+          font-family: 'Bangers', cursive;
+          font-size: 1.2rem;
+          background: #0a8800;
+          color: white;
+          border: 3px solid #FFD700;
+          border-radius: 8px;
+          text-shadow: 2px 2px 4px #000;
+          width: 200px;
+          cursor: pointer;
+      }
       #fecha-hora, #derechos { font-size:0.7rem; text-align:center; color:#000; }
       #derechos { font-size:0.6rem; }
   </style>
 </head>
 <body>
+  <div id="session-info" style="display:none;">
+    <img id="user-pic" referrerpolicy="no-referrer" crossorigin="anonymous" src="" alt="Usuario" />
+    <a href="#" id="logout-link">Cerrar sesión</a>
+  </div>
   <button id="volver-btn" class="menu-btn back-btn">&#9664; Volver</button>
   <h3>Perfil del Jugador</h3>
   <h4>Tus Datos Personales</h4>
   <input type="text" id="perfil-nombre" placeholder="Nombre" />
   <input type="text" id="perfil-apellido" placeholder="Apellido" />
   <input type="text" id="perfil-alias" placeholder="Alias" />
-  <h4>Tus Datos Bancarios</h4>
-  <select id="perfil-banco">
-    <option value="" selected disabled>Selecciona Banco</option>
-  </select>
-  <input type="text" id="perfil-pagomovil" placeholder="Número Pago móvil" />
-  <input type="text" id="perfil-cedula" placeholder="Número de Cédula" />
   <button id="guardar-perfil-btn" class="menu-btn">Guardar</button>
 
   <div id="login-footer">
@@ -80,25 +114,8 @@
   actualizarFechaHora();
   setInterval(actualizarFechaHora,60000);
 
-  function cargarBancosPerfil(){
-    db.collection('Bancos').onSnapshot(snap=>{
-      const sel=document.getElementById('perfil-banco');
-      const actual=sel.value;
-      sel.innerHTML='<option value="" selected disabled>Selecciona Banco</option>';
-      snap.forEach(doc=>{
-        const nombre=doc.data().nombre||doc.id;
-        const opt=document.createElement('option');
-        opt.value=nombre;
-        opt.textContent=nombre;
-        sel.appendChild(opt);
-      });
-      if(actual) sel.value=actual;
-    });
-  }
-
   document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='player.html';});
   document.getElementById('guardar-perfil-btn').addEventListener('click',guardarPerfil);
-  cargarBancosPerfil();
 
   async function guardarPerfil(){
     const user = auth.currentUser;
@@ -106,17 +123,10 @@
       name: document.getElementById('perfil-nombre').value.trim(),
       apellido: document.getElementById('perfil-apellido').value.trim(),
       alias: document.getElementById('perfil-alias').value.trim(),
-      banco: document.getElementById('perfil-banco').value,
-      pagomovil: document.getElementById('perfil-pagomovil').value.trim(),
-      cedula: document.getElementById('perfil-cedula').value.trim(),
       email: user.email,
       photoURL: user.photoURL,
       role: 'Jugador'
     };
-    if(!data.banco || !data.pagomovil || !data.cedula){
-      alert('Completa los campos obligatorios');
-      return;
-    }
     await db.collection('users').doc(user.email).set(data,{merge:true});
     alert('Datos guardados correctamente');
   }
@@ -127,13 +137,9 @@
       if(doc.exists){
         const d=doc.data();
         document.getElementById('perfil-nombre').value=d.name||user.displayName||'';
-        document.getElementById('perfil-alias').value=d.alias||'';
         document.getElementById('perfil-apellido').value=d.apellido||'';
-        document.getElementById('perfil-banco').value=d.banco||'';
-        document.getElementById('perfil-pagomovil').value=d.pagomovil||'';
-        document.getElementById('perfil-cedula').value=d.cedula||'';
+        document.getElementById('perfil-alias').value=d.alias||'';
       }
-      cargarBancosPerfil();
     } else { window.location.href='index.html'; }
   });
   </script>

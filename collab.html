@@ -107,8 +107,6 @@
   <button id="salir-super-btn" class="menu-btn back-btn" style="display:none;">Salir</button>
   <div id="main-menu">
     <button id="ver-recargas-btn" class="menu-btn">Gestionar transferencias</button>
-    <button id="aprobar-retiros-btn" class="menu-btn">Aprobar Retiros</button>
-    <button class="menu-btn">Gestión Jugadores</button>
   </div>
 
   <div id="verificar-recargas-screen" class="view" style="display:none;">
@@ -120,14 +118,6 @@
     <button id="verificar-recarga-btn" class="menu-btn">Verificar</button>
   </div>
 
-  <div id="aprobar-retiros-screen" class="view" style="display:none;">
-    <button id="retiros-back" class="menu-btn back-btn">&#9664; Volver</button>
-    <h3 style="color:orange;text-shadow:1px 1px 2px black;">Solicitudes Retiros Actuales: <span id="retiros-pendientes">0</span> Retiros</h3>
-    <table id="tabla-retiros" style="width:90%;font-size:0.8rem;"></table>
-    <button id="cargar-retiro-btn" class="menu-btn">Cargar solicitud</button>
-    <div id="detalle-retiro" style="margin-top:10px;text-align:left;font-size:0.9rem;"></div>
-    <button id="enviar-retiro-btn" class="menu-btn">Enviar</button>
-  </div>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
@@ -174,34 +164,10 @@
     recargaActual=null;
     await cargarRecargas();
     document.getElementById('detalle-recarga').innerHTML=''; }
-  let retiroActual=null;
-  async function cargarRetiros(){
-    const tabla=document.getElementById('tabla-retiros');
-    tabla.innerHTML="<tr><th>N° Retiro</th><th>Nombre</th><th>Monto</th><th>Banco Destino</th><th>Fecha</th><th>Estatus</th></tr>";
-    const snap=await db.collection('retiros').orderBy('timestamp','desc').get();
-    let pendientes=0;
-    snap.forEach(doc=>{const d=doc.data(); const tr=document.createElement('tr'); tr.dataset.id=doc.id; tr.innerHTML=`<td>${doc.id}</td><td>${d.nombre||''} ${d.apellido||''}</td><td>${d.monto||''}</td><td>${d.banco_destino||''}</td><td>${d.fecha||''}</td><td>${d.estatus}</td>`; tabla.appendChild(tr); if(d.estatus==='PENDIENTE') pendientes++;});
-    document.getElementById('retiros-pendientes').textContent=pendientes; }
-  async function cargarRetiroSeleccion(){
-    const snap=await db.collection('retiros').where('estatus','==','PENDIENTE').limit(1).get();
-    if(snap.empty){alert('No hay retiros pendientes');return;}
-    const doc=snap.docs[0];
-    retiroActual=doc.id; const d=doc.data();
-    document.getElementById('detalle-retiro').innerHTML=`Banco origen: ${d.banco_origen||''}<br>Banco destino: ${d.banco_destino||''}<br>Monto: ${d.monto}<br>Referencia de pago: ${d.referencia||''}<br>Comentario: ${d.comentario||''}`; }
-  async function enviarRetiro(){
-    if(!retiroActual) return;
-    await db.collection('retiros').doc(retiroActual).update({estatus:'RETIRADO',colaborador:auth.currentUser.email,gestion:firebase.firestore.FieldValue.serverTimestamp()});
-    alert('Envio completado exitosamente');
-    retiroActual=null; await cargarRetiros(); document.getElementById('detalle-retiro').innerHTML=''; }
-
   document.getElementById('ver-recargas-btn').addEventListener('click',()=>{window.location.href='transacciones.html';});
-  document.getElementById('aprobar-retiros-btn').addEventListener('click',()=>{hideViews();document.getElementById('aprobar-retiros-screen').style.display='block';cargarRetiros();});
   document.getElementById('ver-recargas-back').addEventListener('click',()=>{hideViews();document.getElementById('main-menu').style.display='block';});
-  document.getElementById('retiros-back').addEventListener('click',()=>{hideViews();document.getElementById('main-menu').style.display='block';});
   document.getElementById('cargar-recarga-btn').addEventListener('click',cargarRecargaSeleccion);
   document.getElementById('verificar-recarga-btn').addEventListener('click',verificarRecarga);
-  document.getElementById('cargar-retiro-btn').addEventListener('click',cargarRetiroSeleccion);
-  document.getElementById('enviar-retiro-btn').addEventListener('click',enviarRetiro);
   </script>
 </body>
 </html>
