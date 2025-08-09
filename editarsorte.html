@@ -171,7 +171,7 @@
       if(idx<forms.length){
         const div=forms[idx];
         div.querySelector('.nombre-forma').value=data.nombre||'';
-        div.querySelector('.porcentaje-forma').value=data.porcentaje||0;
+        div.querySelector('.porcentaje-forma').value = data.porcentaje>0 ? data.porcentaje : '';
         div.querySelector('.cartones-forma').value=data.cartonesGratis||'';
         div.querySelector('.imagen-forma').value=data.premioImagen||'';
         data.posiciones.forEach(p=>{
@@ -205,7 +205,7 @@
     if(!valorVal){alert('Coloca un valor para el cart\u00f3n');valorInput.focus();return;}
     const cierre=parseInt(cierreVal);
     const valor=parseFloat(valorVal);
-    const formas=[];let total=0;
+    const formas=[];let total=0;let conPorcentaje=0;
     const divs=document.querySelectorAll('.forma-item');
     for(let i=0;i<divs.length;i++){
       const div=divs[i];
@@ -241,9 +241,9 @@
         premioImagen:img,
         posiciones:pos
       });
-      if(!isNaN(por)&&por>0) total+=por;
+      if(!isNaN(por)&&por>0){ total+=por; conPorcentaje++; }
     }
-    if(total!==100){alert('La suma de porcentajes debe ser exactamente 100%');return;}
+    if(conPorcentaje>0 && total!==100){alert('La suma de porcentajes debe ser exactamente 100%');return;}
     try{
       await db.collection('sorteos').doc(sorteoId).update({nombre,tipo,fecha,hora,cierreMinutos:cierre,valorCarton:valor,estado});
       const snap = await db.collection('formas').where('sorteoId','==',sorteoId).get();
