@@ -159,29 +159,30 @@
   </div>
   <table id="tabla-sorteos">
     <thead>
-      <tr>
-        <th>N°</th>
-        <th><input type="text" id="filtro-nombre" placeholder="Nombre de sorteo" style="width:100%;box-sizing:border-box;"></th>
-        <th>
-          <div class="fecha-container">
-            <input type="date" id="filtro-fecha" style="width:100%;">
-            <span class="fecha-placeholder">Fecha</span>
-          </div>
-        </th>
-        <th>
-          <select id="filtro-estado" style="width:100%;">
-            <option value="">Estado</option>
-            <option value="Activo">Activo</option>
-            <option value="Inactivo">Inactivo</option>
-            <option value="Finalizado">Finalizado</option>
-            <option value="Archivado">Archivado</option>
-          </select>
-        </th>
-        <th style="text-align:center;">&#10004;</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+        <tr>
+          <th>N°</th>
+          <th><input type="text" id="filtro-nombre" placeholder="Nombre de sorteo" style="width:100%;box-sizing:border-box;"></th>
+          <th>
+            <div class="fecha-container">
+              <input type="date" id="filtro-fecha" style="width:100%;">
+              <span class="fecha-placeholder">Fecha</span>
+            </div>
+          </th>
+          <th>
+            <select id="filtro-estado" style="width:100%;">
+              <option value="">Estado</option>
+              <option value="Activo">Activo</option>
+              <option value="Inactivo">Inactivo</option>
+              <option value="Finalizado">Finalizado</option>
+              <option value="Archivado">Archivado</option>
+            </select>
+          </th>
+          <th>Premios</th>
+          <th style="text-align:center;">&#10004;</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
@@ -192,9 +193,23 @@
   const tbody=document.querySelector('#tabla-sorteos tbody');
 
   async function cargarDatos(){
-    const snap=await db.collection('sorteos').get();
+    const [sorteosSnap, formasSnap] = await Promise.all([
+      db.collection('sorteos').get(),
+      db.collection('formas').get()
+    ]);
+    const mapaFormas={};
+    formasSnap.forEach(f=>{
+      const d=f.data();
+      const sid=d.sorteoId;
+      if(!mapaFormas[sid]) mapaFormas[sid]=[];
+      mapaFormas[sid].push(d);
+    });
     datos.length=0;
-    snap.forEach(doc=>datos.push({id:doc.id,...doc.data()}));
+    sorteosSnap.forEach(doc=>{
+      const info={id:doc.id,...doc.data()};
+      info.formas=mapaFormas[doc.id]||[];
+      datos.push(info);
+    });
     datos.sort((a,b)=>{const fa=a.fecha||'';const fb=b.fecha||'';return fa>fb?-1:fa<fb?1:0;});
     filtrar();
   }
@@ -205,8 +220,14 @@
     lista.forEach(d=>{
       let fecha=d.fecha||'';
       if(fecha.includes('-')) fecha=fecha.split('-').reverse().join('/');
+      const premios=(d.formas||[]).map(f=>{
+        if(f.porcentaje) return `${f.nombre}: ${f.porcentaje}%`;
+        if(f.cartonesGratis) return `${f.nombre}: ${f.cartonesGratis} cartones`;
+        if(f.premioImagen) return `${f.nombre}: imagen`;
+        return '';
+      }).filter(Boolean).join('<br>');
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${idx++}</td><td>${d.nombre}</td><td>${fecha}</td><td>${d.estado}</td><td style="text-align:center;"><input type="checkbox" data-id="${d.id}"></td>`;
+      tr.innerHTML=`<td>${idx++}</td><td>${d.nombre}</td><td>${fecha}</td><td>${d.estado}</td><td>${premios}</td><td style="text-align:center;"><input type="checkbox" data-id="${d.id}"></td>`;
       const color=d.estado==='Activo'?'green':
                    d.estado==='Inactivo'?'red':
                    d.estado==='Archivado'?'brown':
