@@ -172,7 +172,7 @@
     if(!valorVal){alert('Coloca un valor para el cart\u00f3n');valorInput.focus();return;}
     const cierre=parseInt(cierreVal);
     const valor=parseFloat(valorVal);
-    const formas=[];let total=0;
+    const formas=[];let total=0;let conPorcentaje=0;
     const divs=document.querySelectorAll('.forma-item');
     for(let i=0;i<divs.length;i++){
       const div=divs[i];
@@ -200,17 +200,13 @@
         div.querySelector('.carton').scrollIntoView({behavior:'smooth'});
         return;
       }
-      formas.push({
-        idx:i+1,
-        nombre:nom,
-        porcentaje:!isNaN(por)?por:0,
-        cartonesGratis:!isNaN(cart)?cart:0,
-        premioImagen:img,
-        posiciones:pos
-      });
-      if(!isNaN(por)&&por>0) total+=por;
+      const obj={idx:i+1,nombre:nom,posiciones:pos};
+      if(!isNaN(por)&&por>0){obj.porcentaje=por;total+=por;conPorcentaje++;}
+      if(!isNaN(cart)&&cart>0){obj.cartonesGratis=cart;}
+      if(img){obj.premioImagen=img;}
+      formas.push(obj);
     }
-    if(total!==100){alert('La suma de porcentajes debe ser exactamente 100%');return;}
+    if(conPorcentaje>0 && total!==100){alert('La suma de porcentajes debe ser exactamente 100%');return;}
     try{
       const sorteoRef=await db.collection('sorteos').add({nombre,tipo,fecha,hora,cierreMinutos:cierre,valorCarton:valor,estado});
       const batch=db.batch();
