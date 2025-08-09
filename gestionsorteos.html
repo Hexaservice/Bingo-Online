@@ -142,6 +142,31 @@
       color: #007bff;
       text-decoration: underline;
     }
+    .modal {
+      display:none;
+      position:fixed;
+      top:0;
+      left:0;
+      right:0;
+      bottom:0;
+      background:rgba(0,0,0,0.5);
+      align-items:center;
+      justify-content:center;
+    }
+    .modal-box {
+      background:white;
+      padding:20px;
+      border-radius:8px;
+      max-width:300px;
+      text-align:left;
+      font-family: Calibri, Arial, sans-serif;
+    }
+    .modal-box .forma-nombre { color:orange; }
+    .modal-box .porcentaje { color:darkgreen; }
+    .modal-box .cartones { color:purple; }
+    .modal-box .imagen { color:blue; }
+    .modal-box .forma-detalle { margin-bottom:8px; }
+    .modal-box button { margin-top:10px; }
   </style>
 </head>
 <body>
@@ -177,12 +202,17 @@
               <option value="Archivado">Archivado</option>
             </select>
           </th>
-          <th>Premios</th>
           <th style="text-align:center;">&#10004;</th>
         </tr>
         </thead>
         <tbody></tbody>
       </table>
+      <div id="modal-premios" class="modal">
+        <div class="modal-box">
+          <div id="modal-premios-content"></div>
+          <button id="modal-premios-cerrar">Aceptar</button>
+        </div>
+      </div>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
@@ -220,14 +250,11 @@
     lista.forEach(d=>{
       let fecha=d.fecha||'';
       if(fecha.includes('-')) fecha=fecha.split('-').reverse().join('/');
-      const premios=(d.formas||[]).map(f=>{
-        if(f.porcentaje) return `${f.nombre}: ${f.porcentaje}%`;
-        if(f.cartonesGratis) return `${f.nombre}: ${f.cartonesGratis} cartones`;
-        if(f.premioImagen) return `${f.nombre}: imagen`;
-        return '';
-      }).filter(Boolean).join('<br>');
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${idx++}</td><td>${d.nombre}</td><td>${fecha}</td><td>${d.estado}</td><td>${premios}</td><td style="text-align:center;"><input type="checkbox" data-id="${d.id}"></td>`;
+      tr.innerHTML=`<td>${idx++}</td><td class="nombre">${d.nombre}</td><td>${fecha}</td><td>${d.estado}</td><td style="text-align:center;"><input type="checkbox" data-id="${d.id}"></td>`;
+      const nombreCell=tr.querySelector('.nombre');
+      nombreCell.style.cursor='pointer';
+      nombreCell.addEventListener('click',()=>mostrarPremios(d.formas));
       const color=d.estado==='Activo'?'green':
                    d.estado==='Inactivo'?'red':
                    d.estado==='Archivado'?'brown':
@@ -285,6 +312,34 @@
     chks.forEach(c=>batch.update(db.collection('sorteos').doc(c.dataset.id),{estado:'Archivado'}));
     await batch.commit();
     cargarDatos();
+  });
+
+  function mostrarPremios(formas){
+    const modal=document.getElementById('modal-premios');
+    const cont=document.getElementById('modal-premios-content');
+    cont.innerHTML='';
+    const ordenadas=(formas||[]).slice().sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
+    if(ordenadas.length===0){
+      cont.textContent='Sin premios';
+    } else {
+      ordenadas.forEach((f,i)=>{
+        const item=document.createElement('div');
+        item.className='forma-detalle';
+        const porcentaje=f.porcentaje||0;
+        const cartones=f.cartonesGratis||0;
+        const imagen=f.premioImagen||'N/A';
+        item.innerHTML=`<div class="forma-nombre">${f.nombre||('Forma '+(i+1))}:</div>`+
+                       `<div class="porcentaje">Porcentaje premio: ${porcentaje}%</div>`+
+                       `<div class="cartones">Cartones gratis: ${cartones}</div>`+
+                       `<div class="imagen">Imagen: ${imagen}</div>`;
+        cont.appendChild(item);
+      });
+    }
+    modal.style.display='flex';
+  }
+
+  document.getElementById('modal-premios-cerrar').addEventListener('click',()=>{
+    document.getElementById('modal-premios').style.display='none';
   });
 
   document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='admin.html';});
