@@ -169,12 +169,13 @@
     </thead>
     <tbody id="bingo-board"></tbody>
   </table>
-  <label style="display:block;margin:10px 0;"><input type="checkbox" id="guardar-carton"> Guardar cartón</label>
+  <label style="display:block;margin:10px 0;"><input type="checkbox" id="guardar-carton"> Guardar como plantilla</label>
   <div id="nombre-carton-div" style="display:none;">
-    <input type="text" id="nombre-carton" placeholder="Nombre de cartón" style="font-size:1rem;padding:5px;text-align:center;">
-    <button id="guardar-carton-btn">Guardar Cartón</button>
+    <input type="text" id="nombre-carton" placeholder="Nombre de plantilla" style="font-size:1rem;padding:5px;text-align:center;">
   </div>
-  <button id="cartones-guardados-btn" class="menu-btn" style="width:180px;margin-top:10px;">Mis Cartones</button>
+  <select id="plantilla-select" style="width:180px;margin-top:10px;font-size:1rem;padding:5px;text-align:center;">
+    <option value="">Mis Plantillas</option>
+  </select>
   <button id="jugar-carton-btn" class="menu-btn" style="margin-top:10px;">Jugar Cartón</button>
 
   <div id="login-footer">
@@ -228,20 +229,54 @@
   function limpiarcarton(){
     document.querySelectorAll('select[data-col]').forEach(s=>{s.value='';s.style.border='none';});
   }
+  function setBoard(carton){
+    document.querySelectorAll('select[data-row]').forEach(sel=>{
+      const r=parseInt(sel.dataset.row);
+      const c=parseInt(sel.dataset.col);
+      sel.value=carton[r][c]||'';
+    });
+  }
   async function enviarDatos(){
     const alias=document.getElementById('alias-jugador').value.trim();
-    if(alias===''){ alert('Por favor, ingresa tu Alias antes de enviar el cartón.'); return; }
+    const user=auth.currentUser;
+    if(alias===''||!user){ alert('Por favor, ingresa tu Alias antes de enviar el cartón.'); return; }
     if(!validateBoard()){ alert('Corrige los errores antes de enviar. Asegúrate de seleccionar todos los valores y no repetir valores en las columnas.'); return; }
     let carton=[[],[],[],[],[]];
     document.querySelectorAll('select[data-row]').forEach(sel=>{ carton[parseInt(sel.dataset.row)][parseInt(sel.dataset.col)]=sel.value||''; });
-    const hoy=new Date();
-    const dd=String(hoy.getDate()).padStart(2,'0');
-    const mm=String(hoy.getMonth()+1).padStart(2,'0');
-    const yyyy=hoy.getFullYear();
-    const metadata={ alias:alias, fecha:`${dd}/${mm}/${yyyy}`, timestamp:Date.now() };
-    await db.collection('jugadas').add({metadata, carton});
+    const dataJuego={
+      userEmail:user.email,
+      alias:alias,
+      sorteoId:document.getElementById('select-sorteo').value,
+      carton:carton,
+      timestamp:Date.now()
+    };
+    await db.collection('CartonJuego').add(dataJuego);
+    if(document.getElementById('guardar-carton').checked){
+      const nombre=document.getElementById('nombre-carton').value.trim();
+      await db.collection('CartonPlantilla').add({...dataJuego,nombre});
+      await cargarPlantillas();
+    }
     alert('Jugada de Cartón enviada correctamente.');
     limpiarcarton();
+  }
+
+  let plantillas={};
+  async function cargarPlantillas(){
+    const user=auth.currentUser;
+    if(!user) return;
+    const sel=document.getElementById('plantilla-select');
+    sel.innerHTML='<option value="">Mis Plantillas</option>';
+    plantillas={};
+    const snap=await db.collection('CartonPlantilla').where('userEmail','==',user.email).get();
+    let idx=1;
+    snap.forEach(doc=>{
+      const d=doc.data();
+      plantillas[doc.id]=d.carton;
+      const opt=document.createElement('option');
+      opt.value=doc.id;
+      opt.textContent=d.nombre||`Plantilla ${idx++}`;
+      sel.appendChild(opt);
+    });
   }
 
   function actualizarFechaHora(){
@@ -275,6 +310,10 @@
   document.getElementById('guardar-carton').addEventListener('change',e=>{
     document.getElementById('nombre-carton-div').style.display=e.target.checked?'block':'none';
   });
+  document.getElementById('plantilla-select').addEventListener('change',e=>{
+    const cart=plantillas[e.target.value];
+    if(cart) setBoard(cart);
+  });
   document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='player.html';});
 
   auth.onAuthStateChanged(async user=>{
@@ -289,6 +328,7 @@
       else { await billeteraRef.set({creditos:0}); document.getElementById('creditos-label').textContent='0'; }
     } else { window.location.href='index.html'; }
     cargarSorteosActivos();
+    await cargarPlantillas();
   });
 
   createBoard();
