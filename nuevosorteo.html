@@ -59,55 +59,68 @@
       border:1px solid #ccc;
       width:250px;
       display:block;
-      margin:10px auto;
+      margin:3px auto;
       color:black;
     }
-    .carton {
-      margin: 10px auto;
-      border-collapse: collapse;
-      background: rgba(255, 255, 255, 0.9);
-      border-radius: 15px;
-      border: 15px solid #004d00;
-      padding: 5px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    .row{display:flex;justify-content:center;gap:5px;width:250px;margin:3px auto;}
+    .row input{flex:1;width:100%;}
+    .toggle-group{display:flex;justify-content:center;gap:5px;margin:3px 0;}
+    .toggle-group button{flex:1;max-width:120px;padding:5px 10px;border-radius:20px;border:1px solid #ccc;background:#ddd;font-family:'Bangers',cursive;font-size:0.9rem;cursor:pointer;text-shadow:1px 1px 2px #000;color:#000;}
+    .toggle-group button.active{background:#ff8c00;color:#fff;}
+    .tabs{width:95%;max-width:350px;margin-top:10px;}
+    .tab-buttons{display:flex;justify-content:center;}
+    .tab-buttons button{flex:1;padding:6px 0;margin:0 2px;font-family:'Bangers',cursive;font-size:0.9rem;border:1px solid #333;border-bottom:none;border-radius:10px 10px 0 0;color:white;cursor:pointer;text-shadow:2px 2px 4px #000;background:#007bff;}
+    .tab-buttons button.active{filter:brightness(1.2);position:relative;top:1px;}
+    .tab-content{display:none;border:1px solid #333;border-radius:0 10px 10px 10px;padding:5px;}
+    .tab-content.active{display:block;}
+    .carton{
+      margin:5px auto;
+      border-collapse:collapse;
+      background:#fff url('https://i.imgur.com/0XKQJ5N.png') center/cover no-repeat;
+      border-radius:20px;
+      padding:5px;
+      box-shadow:0 0 15px rgba(0,0,0,0.6);
     }
-    .carton td {
-      border:2px solid black;
-      width:40px;
-      height:40px;
-      text-align:center;
-      font-weight:bold;
-      cursor:pointer;
-    }
-    .carton td.selected {
-      background-color: orange;
-      color:white;
-    }
-    .carton td.free {
-      background-color:#ffcc00;
-    }
-    .forma-item { margin-bottom:20px; }
+    .carton th,.carton td{border:2px solid black;width:40px;height:40px;text-align:center;font-weight:bold;}
+    .carton td{cursor:pointer;}
+    .carton td.selected{background-color:orange;color:white;}
+    .carton td.free{background-color:#ffcc00;}
+    .carton th{background:#f2f2f2;position:relative;perspective:600px;cursor:pointer;}
+    .carton th .flip{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform 0.6s;}
+    .carton th.flipped .flip{transform:rotateY(180deg);}
+    .carton th .front,.carton th .back{position:absolute;width:100%;height:100%;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;font-size:1.2rem;}
+    .carton th .back{transform:rotateY(180deg);}
+    .imagen-wrapper{display:flex;justify-content:center;align-items:center;gap:5px;width:250px;margin:3px auto;}
+    .imagen-wrapper input{flex:1;}
+    .ver-imagen{display:none;margin-top:3px;font-size:0.9rem;color:#007bff;text-decoration:underline;cursor:pointer;}
+    .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);justify-content:center;align-items:center;}
+    .modal img{max-width:90%;max-height:90%;}
+    .modal span{position:absolute;top:10px;right:20px;font-size:2rem;color:#fff;cursor:pointer;}
   </style>
 </head>
 <body>
   <button id="volver-btn" class="menu-btn back-btn">&#9664; Volver</button>
   <h2>Nuevo Sorteo</h2>
   <input id="nombre-sorteo" maxlength="70" placeholder="Nombre de sorteo">
-  <select id="tipo-sorteo">
-    <option value="">-- Tipo de sorteo --</option>
-    <option value="Sorteo Diario">Sorteo Diario</option>
-    <option value="Sorteo Especial">Sorteo Especial</option>
-  </select>
-  <input id="fecha-sorteo" type="date">
-  <input id="hora-sorteo" type="time">
-  <input id="cierre-minutos" type="number" placeholder="Minutos antes de cerrar jugadas">
-  <input id="valor-carton" type="number" placeholder="Valor del Cartón">
-  <select id="estado-sorteo">
-    <option value="Inactivo">Inactivo</option>
-    <option value="Activo">Activo</option>
-    <option value="Archivado">Archivado</option>
-  </select>
+  <div id="tipo-sorteo-group" class="toggle-group">
+    <button data-value="Sorteo Especial">Especial</button>
+    <button data-value="Sorteo Diario">Diario</button>
+  </div>
+  <div class="row">
+    <input id="fecha-sorteo" type="date">
+    <input id="hora-sorteo" type="time">
+  </div>
+  <div class="row">
+    <input id="cierre-minutos" type="number" placeholder="Minutos antes de cerrar jugadas">
+    <input id="valor-carton" type="number" placeholder="Valor del Cartón">
+  </div>
+  <div id="estado-group" class="toggle-group">
+    <button data-value="Activo">Activo</button>
+    <button data-value="Inactivo" class="active">Inactivo</button>
+    <button data-value="Archivado">Archivado</button>
+  </div>
   <div id="forms-container"></div>
+  <div id="image-modal" class="modal"><span id="close-modal">&times;</span><img id="modal-img" src="" alt="premio"></div>
   <button id="guardar-sorteo-btn" class="menu-btn">Guardar Sorteo</button>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
@@ -115,7 +128,21 @@
   <script src="auth.js"></script>
   <script>
   ensureAuth('Administrador');
-  function crearTabla(tbody){
+  const IMGUR_CLIENT_ID='REEMPLAZA_CON_TU_CLIENT_ID';
+
+  function crearTabla(table){
+    const letters=['B','I','N','G','O'];
+    const thead=document.createElement('thead');
+    const htr=document.createElement('tr');
+    letters.forEach(l=>{
+      const th=document.createElement('th');
+      th.innerHTML=`<div class="flip"><span class="front">${l}</span><span class="back"><img src="https://i.imgur.com/twjhNtZ.png" alt="logo" style="width:30px;height:30px;"></span></div>`;
+      th.addEventListener('click',()=>{th.classList.toggle('flipped');});
+      htr.appendChild(th);
+    });
+    thead.appendChild(htr);
+    table.appendChild(thead);
+    const tbody=document.createElement('tbody');
     for(let r=0;r<5;r++){
       const tr=document.createElement('tr');
       for(let c=0;c<5;c++){
@@ -131,59 +158,143 @@
       }
       tbody.appendChild(tr);
     }
+    table.appendChild(tbody);
   }
+
   function crearFormas(){
     const cont=document.getElementById('forms-container');
+    const tabs=document.createElement('div');
+    tabs.className='tabs';
+    const btns=document.createElement('div');
+    btns.className='tab-buttons';
+    tabs.appendChild(btns);
+    cont.appendChild(tabs);
     for(let i=1;i<=5;i++){
+      const btn=document.createElement('button');
+      btn.textContent=`Forma${i}`;
+      btn.dataset.tab=`forma${i}`;
+      if(i===1) btn.classList.add('active');
+      btns.appendChild(btn);
+
       const div=document.createElement('div');
-      div.className='forma-item';
-      div.innerHTML=`<h3>Forma ${i}</h3>
-      <input class="nombre-forma" placeholder="Nombre de forma">
-      <input type="number" class="porcentaje-forma" placeholder="% Premio">
-      <input type="number" class="cartones-forma" placeholder="Cartones gratis">
-      <input class="imagen-forma" placeholder="Imagen del premio">
-      <table class="carton" data-idx="${i}"><tbody></tbody></table>`;
-      cont.appendChild(div);
-      const tbody=div.querySelector('tbody');
-      crearTabla(tbody);
+      div.id=`forma${i}`;
+      div.className=`tab-content forma-item${i===1?' active':''}`;
+      div.innerHTML=`<input class="nombre-forma" placeholder="Nombre de forma">\
+      <div class="row"><input type="number" class="porcentaje-forma" placeholder="% Premio">\
+      <input type="number" class="cartones-forma" placeholder="Cartones gratis"></div>\
+      <div class="imagen-wrapper">\
+        <input type="file" accept="image/*" class="imagen-forma">\
+        <button type="button" class="subir-imagen">Subir</button></div>\
+      <a class="ver-imagen">Ver imagen</a>\
+      <input type="hidden" class="imagen-url">\
+      <table class="carton" data-idx="${i}"></table>`;
+      tabs.appendChild(div);
+      const table=div.querySelector('table');
+      crearTabla(table);
     }
+
+    tabs.querySelectorAll('.tab-buttons button').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        tabs.querySelectorAll('.tab-buttons button').forEach(b=>b.classList.remove('active'));
+        tabs.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+        btn.classList.add('active');
+        tabs.querySelector(`#${btn.dataset.tab}`).classList.add('active');
+      });
+    });
+
+    tabs.querySelectorAll('.subir-imagen').forEach(btn=>{
+      btn.addEventListener('click',async()=>{
+        const wrapper=btn.closest('.imagen-wrapper').parentElement;
+        const fileInput=wrapper.querySelector('.imagen-forma');
+        const urlInput=wrapper.querySelector('.imagen-url');
+        const ver=wrapper.querySelector('.ver-imagen');
+        if(!fileInput.files[0]){alert('Selecciona una imagen');return;}
+        try{
+          const url=await subirImagen(fileInput.files[0]);
+          urlInput.value=url;
+          ver.style.display='block';
+          ver.dataset.url=url;
+          fileInput.value='';
+        }catch(e){console.error(e);alert('Error al subir imagen');}
+      });
+    });
+
+    tabs.querySelectorAll('.ver-imagen').forEach(link=>{
+      link.addEventListener('click',e=>{
+        e.preventDefault();
+        const url=link.dataset.url;
+        if(!url) return;
+        document.getElementById('modal-img').src=url;
+        document.getElementById('image-modal').style.display='flex';
+      });
+    });
   }
+
+  async function subirImagen(file){
+    const formData=new FormData();
+    formData.append('image',file);
+    const res=await fetch('https://api.imgur.com/3/image',{method:'POST',headers:{Authorization:'Client-ID '+IMGUR_CLIENT_ID},body:formData});
+    const data=await res.json();
+    if(!data.success) throw new Error('upload fail');
+    return data.data.link;
+  }
+
   crearFormas();
+
+  document.getElementById('close-modal').addEventListener('click',()=>{
+    document.getElementById('image-modal').style.display='none';
+  });
+
   document.getElementById('volver-btn').addEventListener('click',()=>{window.history.back();});
+
+  document.querySelectorAll('#tipo-sorteo-group button').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('#tipo-sorteo-group button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+  document.querySelectorAll('#estado-group button').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('#estado-group button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
   document.getElementById('guardar-sorteo-btn').addEventListener('click',async()=>{
     const nombreInput=document.getElementById('nombre-sorteo');
-    const tipoInput=document.getElementById('tipo-sorteo');
     const fechaInput=document.getElementById('fecha-sorteo');
     const horaInput=document.getElementById('hora-sorteo');
     const cierreInput=document.getElementById('cierre-minutos');
     const valorInput=document.getElementById('valor-carton');
     const nombre=nombreInput.value.trim();
-    const tipo=tipoInput.value;
+    const tipoBtn=document.querySelector('#tipo-sorteo-group button.active');
+    const estadoBtn=document.querySelector('#estado-group button.active');
+    const tipo=tipoBtn?tipoBtn.dataset.value:'';
+    const estado=estadoBtn?estadoBtn.dataset.value:'';
     const fecha=fechaInput.value;
     const hora=horaInput.value;
     const cierreVal=cierreInput.value;
     const valorVal=valorInput.value;
-    const estado=document.getElementById('estado-sorteo').value;
     if(!nombre){alert('Asigna un nombre al Sorteo');nombreInput.focus();return;}
-    if(!tipo){alert('Elije un tipo de sorteo');tipoInput.focus();return;}
+    if(!tipo){alert('Elije un tipo de sorteo');return;}
     if(!fecha){alert('Elige una fecha para el Sorteo');fechaInput.focus();return;}
     if(!hora){alert('Debes elegir una hora para el Sorteo');horaInput.focus();return;}
     if(!cierreVal){alert('Elije una cantidad de minutos para cierre previo de Jugadas');cierreInput.focus();return;}
-    if(!valorVal){alert('Coloca un valor para el cart\u00f3n');valorInput.focus();return;}
+    if(!valorVal){alert('Coloca un valor para el cartón');valorInput.focus();return;}
     const cierre=parseInt(cierreVal);
     const valor=parseFloat(valorVal);
     const formas=[];let total=0;let conPorcentaje=0;
-    const divs=document.querySelectorAll('.forma-item');
+    const divs=document.querySelectorAll('.tab-content');
     for(let i=0;i<divs.length;i++){
       const div=divs[i];
       const nomInput=div.querySelector('.nombre-forma');
       const porInput=div.querySelector('.porcentaje-forma');
       const cartInput=div.querySelector('.cartones-forma');
-      const imgInput=div.querySelector('.imagen-forma');
+      const urlInput=div.querySelector('.imagen-url');
       const nom=nomInput.value.trim();
       const por=parseFloat(porInput.value);
       const cart=parseInt(cartInput.value);
-      const img=imgInput.value.trim();
+      const img=urlInput.value.trim();
       const pos=[];
       div.querySelectorAll('td.selected').forEach(td=>{
         const r=parseInt(td.dataset.row); const c=parseInt(td.dataset.col);
