@@ -340,7 +340,7 @@
     }
     if(conPorcentaje>0 && total!==100){alert('La suma de porcentajes debe ser exactamente 100%');return;}
     try{
-      const sorteoRef=await db.collection('sorteos').add({nombre,tipo,fecha,hora,cierreMinutos:cierre,valorCarton:valor,estado});
+      const sorteoRef=await db.collection('sorteos').add({nombre,tipo,fecha,hora,cierreMinutos:cierre,valorCarton:valor,estado,condicion:'VISIBLE'});
       const batch=db.batch();
       formas.forEach(f=>{const ref=db.collection('formas').doc();batch.set(ref,{sorteoId:sorteoRef.id,...f});});
       await batch.commit();
