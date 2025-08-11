@@ -1,0 +1,41 @@
+name: GPT-PR (tools)
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: "Describe la tarea (ej: 'Agregar sección Uso en README')"
+        required: true
+        type: string
+      files:
+        description: "Rutas coma-separadas para contexto (ej: README.md,src/x.ts)"
+        required: false
+        type: string
+      base:
+        description: "Rama base"
+        required: false
+        default: "main"
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm i openai
+      - name: Ejecutar con herramientas
+        env:
+          OPENAI_API_KEY:   ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_TOKEN:     ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY:${{ github.repository }}
+          INPUT_TASK:       ${{ inputs.task }}
+          INPUT_FILES:      ${{ inputs.files }}
+          INPUT_BASE:       ${{ inputs.base }}
+        run: node ./scripts/gpt-pr-tools.mjs
