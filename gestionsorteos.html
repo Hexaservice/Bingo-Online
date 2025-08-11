@@ -90,6 +90,7 @@
       color: brown;
       text-shadow: 1px 1px 1px #000;
     }
+    .archivo-activo{background:#654321;color:#fff;}
 
     .fecha-container { position:relative; }
     .fecha-placeholder {
@@ -180,7 +181,8 @@
     <button id="nuevo-btn" class="mini-btn"><span class="icon">&#9728;</span> <span class="txt">Nuevo</span></button>
     <button id="editar-btn" class="mini-btn"><span class="icon">&#9998;</span> <span class="txt">Editar</span></button>
     <button id="inactivar-btn" class="mini-btn"><span class="icon">&#128683;</span> <span class="txt">Inactivar</span></button>
-    <button id="archivar-btn" class="mini-btn"><span class="icon">&#128230;</span> <span class="txt">Archivar</span></button>
+    <button id="archivar-btn" class="mini-btn"><span class="icon">&#128194;</span> <span class="txt">Archivar</span></button>
+    <button id="archivo-btn" class="mini-btn"><span class="icon">&#128230;</span> <span class="txt">Archivo</span></button>
   </div>
   <table id="tabla-sorteos">
     <thead>
@@ -199,10 +201,9 @@
               <option value="Activo">Activo</option>
               <option value="Inactivo">Inactivo</option>
               <option value="Finalizado">Finalizado</option>
-              <option value="Archivado">Archivado</option>
             </select>
           </th>
-          <th style="text-align:center;">&#10004;</th>
+          <th style="text-align:center;"><span id="sel-sorteo" style="cursor:pointer;">&#10004;</span></th>
         </tr>
         </thead>
         <tbody></tbody>
@@ -213,6 +214,12 @@
           <button id="modal-premios-cerrar">Aceptar</button>
         </div>
       </div>
+      <div id="modal-info" class="modal">
+        <div class="modal-box">
+          <div id="modal-info-content"></div>
+          <button id="modal-info-cerrar">Aceptar</button>
+        </div>
+      </div>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
@@ -221,6 +228,7 @@
   ensureAuth('Administrador');
   const datos=[];
   const tbody=document.querySelector('#tabla-sorteos tbody');
+  let mostrarArch=false;
 
   async function cargarDatos(){
     const [sorteosSnap, formasSnap] = await Promise.all([
@@ -237,6 +245,7 @@
     datos.length=0;
     sorteosSnap.forEach(doc=>{
       const info={id:doc.id,...doc.data()};
+      info.condicion=info.condicion||'VISIBLE';
       info.formas=mapaFormas[doc.id]||[];
       datos.push(info);
     });
@@ -251,13 +260,15 @@
       let fecha=d.fecha||'';
       if(fecha.includes('-')) fecha=fecha.split('-').reverse().join('/');
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${idx++}</td><td class="nombre">${d.nombre}</td><td>${fecha}</td><td>${d.estado}</td><td style="text-align:center;"><input type="checkbox" data-id="${d.id}"></td>`;
+      tr.innerHTML=`<td>${idx++}</td><td class="nombre">${d.nombre}</td><td class="fecha">${fecha}</td><td>${d.estado}</td><td style="text-align:center;"><input type="checkbox" data-id="${d.id}" data-estado="${d.estado}"></td>`;
       const nombreCell=tr.querySelector('.nombre');
       nombreCell.style.cursor='pointer';
       nombreCell.addEventListener('click',()=>mostrarPremios(d.formas));
+      const fechaCell=tr.querySelector('.fecha');
+      fechaCell.style.cursor='pointer';
+      fechaCell.addEventListener('click',()=>mostrarInfo(d));
       const color=d.estado==='Activo'?'green':
                    d.estado==='Inactivo'?'red':
-                   d.estado==='Archivado'?'brown':
                    d.estado==='Finalizado'?'black':'';
       if(color){
         tr.children[1].style.color=color;
@@ -272,7 +283,7 @@
     const nom=document.getElementById('filtro-nombre').value.trim().toLowerCase();
     const fecha=document.getElementById('filtro-fecha').value;
     const est=document.getElementById('filtro-estado').value;
-    let lista=datos;
+    let lista=datos.filter(s=>mostrarArch?s.condicion==='ARCHIVADO':s.condicion!=='ARCHIVADO');
     if(nom) lista=lista.filter(s=>s.nombre.toLowerCase().includes(nom));
     if(fecha) lista=lista.filter(s=>s.fecha===fecha);
     if(est) lista=lista.filter(s=>s.estado===est);
@@ -289,6 +300,18 @@
   fechaInput.addEventListener('change',()=>{toggleFechaPh();filtrar();});
   document.getElementById('filtro-estado').addEventListener('change',filtrar);
   toggleFechaPh();
+
+  document.getElementById('sel-sorteo').addEventListener('click',()=>{
+    const checks=document.querySelectorAll('#tabla-sorteos tbody input[type=checkbox]');
+    const all=Array.from(checks).every(c=>c.checked);
+    checks.forEach(c=>c.checked=!all);
+  });
+
+  document.getElementById('archivo-btn').addEventListener('click',()=>{
+    mostrarArch=!mostrarArch;
+    document.getElementById('archivo-btn').classList.toggle('archivo-activo',mostrarArch);
+    filtrar();
+  });
 
   document.getElementById('nuevo-btn').addEventListener('click',()=>{window.location.href='nuevosorteo.html';});
   document.getElementById('editar-btn').addEventListener('click',()=>{
@@ -307,9 +330,16 @@
   });
   document.getElementById('archivar-btn').addEventListener('click',async ()=>{
     const chks=document.querySelectorAll('#tabla-sorteos input[type=checkbox]:checked');
-    if(chks.length===0){alert('Debes seleccionar al menos un sorteo para poder ponerlo archivarlo');return;}
+    if(chks.length===0){alert('Debes seleccionar al menos un sorteo para poder archivarlo');return;}
+    const ids=[];let tieneActivo=false;
+    chks.forEach(c=>{
+      if(c.dataset.estado==='Activo'){tieneActivo=true;c.checked=false;}
+      else ids.push(c.dataset.id);
+    });
+    if(tieneActivo){alert('No pueden archivarse Sorteos Activos');}
+    if(!ids.length) return;
     const batch=db.batch();
-    chks.forEach(c=>batch.update(db.collection('sorteos').doc(c.dataset.id),{estado:'Archivado'}));
+    ids.forEach(id=>batch.update(db.collection('sorteos').doc(id),{condicion:'ARCHIVADO'}));
     await batch.commit();
     cargarDatos();
   });
@@ -318,7 +348,11 @@
     const modal=document.getElementById('modal-premios');
     const cont=document.getElementById('modal-premios-content');
     cont.innerHTML='';
-    const ordenadas=(formas||[]).slice().sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
+    const ordenadas=(formas||[]).slice().sort((a,b)=>{
+      const na=a.idx||parseInt((a.nombre||'').match(/\d+/));
+      const nb=b.idx||parseInt((b.nombre||'').match(/\d+/));
+      return (na||0)-(nb||0);
+    });
     if(ordenadas.length===0){
       cont.textContent='Sin premios';
     } else {
@@ -338,8 +372,22 @@
     modal.style.display='flex';
   }
 
+  function mostrarInfo(d){
+    const modal=document.getElementById('modal-info');
+    const cont=document.getElementById('modal-info-content');
+    cont.innerHTML=`<div style="font-weight:bold;color:darkgreen;">Tipo de Sorteo: ${d.tipo||''}</div>`+
+                   `<div style="font-weight:bold;color:darkblue;">Valor Cartón: ${d.valorCarton||''}</div>`+
+                   `<div style="font-weight:bold;color:darkorange;">Hora Sorteo: ${d.hora||''}</div>`+
+                   `<div style="font-weight:bold;color:darkorange;">Minutos cierre: ${d.cierreMinutos||''}</div>`;
+    modal.style.display='flex';
+  }
+
   document.getElementById('modal-premios-cerrar').addEventListener('click',()=>{
     document.getElementById('modal-premios').style.display='none';
+  });
+
+  document.getElementById('modal-info-cerrar').addEventListener('click',()=>{
+    document.getElementById('modal-info').style.display='none';
   });
 
   document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='admin.html';});
