@@ -111,9 +111,12 @@
     .carton td.free{background-color:#ffcc00;display:flex;align-items:center;justify-content:center;}
     .carton td.free img{width:80%;height:80%;object-fit:contain;}
     .carton-back{position:absolute;top:10px;left:10px;right:10px;bottom:10px;backface-visibility:hidden;-webkit-backface-visibility:hidden;transform:rotateY(180deg);display:flex;align-items:center;justify-content:center;background:linear-gradient(#808080,#ffffff);border-radius:16px;pointer-events:none;}
-    .carton-back img{width:80%;height:80%;object-fit:contain;opacity:1;}
-    .imagen-wrapper{display:flex;justify-content:center;align-items:center;gap:5px;}
-    .imagen-wrapper input{flex:none;width:120px;font-size:0.8rem;}
+    .carton-back .back-info{display:flex;flex-direction:column;align-items:center;text-align:center;gap:5px;width:100%;}
+    .back-nombre{font-family:'Bangers',cursive;font-size:1.5rem;color:purple;text-shadow:0 0 5px #fff;font-weight:bold;animation:pulse 1s infinite;}
+    .back-tipo{font-family:'Bangers',cursive;font-size:1.3rem;text-shadow:0 0 5px #fff;font-weight:bold;animation:pulse 1s infinite;}
+    .back-fecha-hora{display:flex;gap:20px;font-family:'Bangers',cursive;font-size:1.2rem;color:blue;text-shadow:0 0 5px #fff;font-weight:bold;}
+    .imagen-wrapper{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;}
+    .imagen-wrapper input{flex:1;min-width:120px;font-size:0.8rem;}
     .imagen-wrapper button{padding:3px 6px;font-size:0.8rem;}
     .imagen-wrapper .ver-foto-btn{width:30px;height:30px;border:1px solid #ccc;border-radius:5px;display:flex;align-items:center;justify-content:center;background:#fff;}
     .imagen-wrapper .ver-foto-btn img{width:100%;height:100%;object-fit:contain;}
@@ -132,6 +135,11 @@
     .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);justify-content:center;align-items:center;}
     .modal img{max-width:90%;max-height:90%;}
     .modal span{position:absolute;top:10px;right:20px;font-size:2rem;color:#fff;cursor:pointer;}
+    @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.1);}100%{transform:scale(1);}}
+    @media (orientation:landscape){
+      .row,.premio-row,.imagen-wrapper,.toggle-group,.tabs{width:90% !important;margin-left:auto;margin-right:auto;}
+      .premio-row{grid-template-columns:2fr 1fr 2fr 1fr;}
+    }
     @media (max-width:600px){
       body{align-items:stretch;padding:5px 20px;}
       .menu-btn,input,select,.row,.toggle-group,.imagen-wrapper,.tabs{width:100%;max-width:none;margin-left:0;margin-right:0;}
@@ -309,8 +317,49 @@
     }
   });
 
+  function formatearHora(hora){
+    if(!hora) return '';
+    const [hh,mm]=hora.split(':');
+    let h=parseInt(hh,10);
+    const ampm=h>=12?'PM':'AM';
+    h=h%12; if(h===0) h=12;
+    return `${h}:${mm} ${ampm}`;
+  }
+
+  function updateCartonBack(wrapper){
+    const tab=wrapper.closest('.tab-content');
+    const nombre=tab.querySelector('.nombre-forma').value.trim();
+    const tipoBtn=document.querySelector('#tipo-sorteo-group button.active');
+    const tipoVal=tipoBtn?tipoBtn.dataset.value:'';
+    const tipo=tipoVal==='Sorteo Especial'?'ESPECIAL':(tipoVal==='Sorteo Diario'?'DIARIO':'');
+    const fecha=document.getElementById('fecha-sorteo').value;
+    const hora=document.getElementById('hora-sorteo').value;
+    const nombreDiv=wrapper.querySelector('.back-nombre');
+    const tipoDiv=wrapper.querySelector('.back-tipo');
+    const fechaSpan=wrapper.querySelector('.back-fecha');
+    const horaSpan=wrapper.querySelector('.back-hora');
+    nombreDiv.textContent=nombre;
+    nombreDiv.style.display=nombre? 'block':'none';
+    if(tipo){
+      tipoDiv.textContent=tipo;
+      tipoDiv.style.display='block';
+      tipoDiv.style.color=tipo==='ESPECIAL'?'orange':'green';
+    }else{
+      tipoDiv.style.display='none';
+    }
+    const fhDiv=wrapper.querySelector('.back-fecha-hora');
+    if(fecha||hora){
+      fhDiv.style.display='flex';
+      fechaSpan.textContent=fecha?`FECHA: ${fecha}`:'';
+      horaSpan.textContent=hora?`HORA: ${formatearHora(hora)}`:'';
+    }else{
+      fhDiv.style.display='none';
+    }
+  }
+
   function flipCard(wrapper){
     const flipped=wrapper.classList.contains('flipped');
+    if(!flipped) updateCartonBack(wrapper);
     const start=flipped?180:0;
     const end=flipped?0:180;
     wrapper.animate([
@@ -376,8 +425,11 @@
     const totalPorcentaje=porcentajes.reduce((a,b)=>a+b,0);
     const restanteVal=100-totalPorcentaje;
     const restante=Math.max(0,Math.round(restanteVal));
-    document.querySelectorAll('.porcentaje-restante').forEach(span=>{span.textContent=restante+'%';});
-    document.querySelectorAll('.porcentaje-forma').forEach(inp=>{inp.style.color=totalPorcentaje>=100?'red':'green';});
+    document.querySelectorAll('.porcentaje-restante').forEach(span=>{
+      span.textContent=restante+'%';
+      span.style.color=totalPorcentaje>=100?'red':'#006400';
+    });
+    document.querySelectorAll('.porcentaje-forma').forEach(inp=>{inp.style.color='green';});
     const cartones=Array.from(document.querySelectorAll('.cartones-forma')).map(i=>parseInt(i.value)||0);
     const totalCartones=cartones.reduce((a,b)=>a+b,0);
     document.querySelectorAll('.cartones-total').forEach(span=>{span.textContent=totalCartones;});
@@ -412,7 +464,7 @@
         <button type=\"button\" class=\"subir-imagen\">Subir<\/button><\/div>\
       <a class=\"ver-imagen\">Ver imagen<\/a>\
       <input type=\"hidden\" class=\"imagen-url\">\
-      <div class=\"carton-box\"><div class=\"carton-wrapper\"><table class=\"carton\" data-idx=\"${i}\"><\/table><div class=\"carton-back\"><img src=\"${LOGO_URL}\" alt=\"logo\"><\/div><\/div><\/div>`;
+      <div class=\"carton-box\"><div class=\"carton-wrapper\"><table class=\"carton\" data-idx=\"${i}\"><\/table><div class=\"carton-back\"><div class=\"back-info\"><div class=\"back-nombre\"><\/div><div class=\"back-tipo\"><\/div><div class=\"back-fecha-hora\"><span class=\"back-fecha\"><\/span><span class=\"back-hora\"><\/span><\/div><\/div><\/div><\/div><\/div>`;
       tabs.appendChild(div);
       const wrapper=div.querySelector('.carton-wrapper');
       const table=wrapper.querySelector('table');
