@@ -22,6 +22,21 @@ Debe disponer de un archivo `serviceAccountKey.json` con las credenciales de Fir
 
 Este script creará las entradas en la colección `users` y actualizará los roles en caso de que ya existan.
 
+## Subida de imágenes
+
+Para almacenar las imágenes de los sorteos se utiliza **Firebase Cloud Storage**. El servicio de subida (`uploadServer.js`) guarda los archivos en el bucket configurado y devuelve la URL pública.
+
+Antes de ejecutarlo asegúrese de:
+
+- Definir la variable de entorno `GOOGLE_APPLICATION_CREDENTIALS` apuntando al archivo de claves del servicio.
+- Definir la variable `FIREBASE_STORAGE_BUCKET` con el nombre del bucket de Storage del proyecto.
+
+Luego inicie el servicio con:
+
+```bash
+npm start
+```
+
 ## Despliegue estático
 
 El archivo `index.html` contiene toda la lógica de la aplicación. Sólo es necesario servirlo desde cualquier servidor web estático. El inicio de sesión se realiza con cuentas de Google y se redirige automáticamente al menú correspondiente según el rol almacenado en Firestore.
