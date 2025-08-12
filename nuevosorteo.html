@@ -86,16 +86,16 @@
     .tab-buttons button.active[data-tab="forma5"], .forma-item5{background:linear-gradient(#ffcc99,#ffffff);}
     .forma-label{position:absolute;left:-35px;top:50%;transform:translateY(-50%);writing-mode:vertical-rl;text-orientation:upright;font-weight:bold;font-size:0.8rem;}
     .carton-box{display:flex;justify-content:center;margin:5px auto;perspective:1000px;}
-    .carton-wrapper{position:relative;border-radius:20px;transition:transform 0.6s;transform-style:preserve-3d;box-shadow:0 0 15px rgba(0,0,0,0.8);overflow:hidden;padding:7px;background:linear-gradient(#ffffff,#cccccc);}
-    .carton-wrapper.flipped{transform:rotateY(180deg);}
-    .carton{margin:0;border-collapse:collapse;background:linear-gradient(#ffffff,#cccccc);border-radius:13px;backface-visibility:hidden;table-layout:fixed;box-sizing:border-box;}
+    .carton-wrapper{position:relative;border-radius:20px;transform-style:preserve-3d;box-shadow:0 0 15px rgba(0,0,0,0.8);overflow:hidden;padding:7px;background:linear-gradient(#ffffff,#cccccc);}
+    .carton-wrapper.hide-front .carton{visibility:hidden;}
+    .carton{margin:0;border-collapse:separate;border-spacing:0;background:linear-gradient(#ffffff,#cccccc);border-radius:13px;backface-visibility:hidden;table-layout:fixed;box-sizing:border-box;overflow:hidden;}
     .carton th,.carton td{background:transparent;border:2px solid black;width:50px;height:50px;aspect-ratio:1/1;text-align:center;font-weight:bold;padding:0;margin:0;box-sizing:border-box;}
     .carton th{font-size:2rem;cursor:pointer;color:#ff6600;background:linear-gradient(#cccccc,#ffffff);text-shadow:2px 2px 0 #000;}
     .carton td{cursor:pointer;}
     .carton td.selected{background-color:orange;color:white;}
     .carton td.free{background-color:#ffcc00;}
-    .carton-back{position:absolute;top:7px;left:7px;right:7px;bottom:7px;backface-visibility:hidden;transform:rotateY(180deg);display:flex;align-items:center;justify-content:center;background:linear-gradient(#ffffff,#cccccc);border-radius:13px;}
-    .carton-back img{width:100%;height:100%;opacity:0.3;object-fit:cover;border-radius:13px;}
+    .carton-back{position:absolute;top:7px;left:7px;right:7px;bottom:7px;backface-visibility:hidden;transform:rotateY(180deg);display:flex;align-items:center;justify-content:center;background:linear-gradient(#cccccc,#ffffff);border-radius:13px;}
+    .carton-back img{width:80%;height:80%;object-fit:contain;opacity:1;}
     .carton th:first-child{border-top-left-radius:13px;}
     .carton th:last-child{border-top-right-radius:13px;}
     .carton tbody tr:last-child td:first-child{border-bottom-left-radius:13px;}
@@ -173,6 +173,22 @@
   ensureAuth('Administrador');
   const IMGUR_CLIENT_ID='REEMPLAZA_CON_TU_CLIENT_ID';
 
+  function flipCard(wrapper){
+    const flipped=wrapper.classList.contains('flipped');
+    if(flipped) wrapper.classList.remove('hide-front');
+    const start=flipped?180:0;
+    const end=flipped?0:180;
+    wrapper.animate([
+      {transform:`rotateY(${start}deg) scale(1)`},
+      {transform:`rotateY(${(start+end)/2}deg) scale(1.2)`},
+      {transform:`rotateY(${end}deg) scale(1)`}
+    ],{duration:600,easing:'ease-in-out'}).onfinish=()=>{
+      wrapper.style.transform=`rotateY(${end}deg)`;
+      wrapper.classList.toggle('flipped');
+      if(!flipped) wrapper.classList.add('hide-front');
+    };
+  }
+
   function crearTabla(table){
     const letters=['B','I','N','G','O'];
     const thead=document.createElement('thead');
@@ -182,7 +198,7 @@
       th.textContent=l;
       th.addEventListener('click',()=>{
         const wrapper=table.closest('.carton-wrapper');
-        if(wrapper) wrapper.classList.toggle('flipped');
+        if(wrapper) flipCard(wrapper);
       });
       htr.appendChild(th);
     });
@@ -199,7 +215,7 @@
           td.textContent='\u2605';
           td.addEventListener('click',()=>{
             const wrapper=table.closest('.carton-wrapper');
-            if(wrapper) wrapper.classList.toggle('flipped');
+            if(wrapper) flipCard(wrapper);
           });
         }else{
           td.addEventListener('click',()=>{
@@ -246,7 +262,7 @@
       const table=wrapper.querySelector('table');
       crearTabla(table);
       wrapper.querySelector('.carton-back').addEventListener('click',()=>{
-        wrapper.classList.toggle('flipped');
+        flipCard(wrapper);
       });
     }
 
