@@ -61,13 +61,16 @@
       display:block;
       margin:3px auto;
       color:black;
+      box-sizing:border-box;
     }
-    .row{display:flex;justify-content:center;gap:5px;width:250px;margin:3px auto;}
+    .row{display:flex;justify-content:center;gap:5px;width:calc(100% - 12px);margin:3px 6px;}
     .row input{flex:1;width:100%;}
-    .premio-row{display:flex;justify-content:center;align-items:center;width:100%;gap:5px;margin:3px auto;font-weight:bold;}
+    .premio-row{display:flex;justify-content:center;align-items:center;width:calc(100% - 12px);gap:5px;margin:3px 6px;font-weight:bold;}
     .premio-row input{flex:0 0 35%;width:auto;margin:0;font-weight:bold;}
     .premio-row span{flex:0 0 15%;text-align:center;font-weight:bold;}
     .porcentaje-forma{color:green;}
+    .porcentaje-restante{color:#006400;}
+    .cartones-total{color:purple;}
     #nombre-sorteo{font-weight:bold;color:purple;}
     .toggle-group{display:flex;justify-content:center;gap:5px;margin:3px 0;}
     .toggle-group button{flex:1;max-width:120px;padding:5px 10px;border-radius:20px;border:1px solid #ccc;font-family:'Bangers',cursive;font-size:1rem;cursor:pointer;background:#808080;color:#fff;text-shadow:1px 1px 2px #333;}
@@ -83,7 +86,11 @@
     .tab-buttons button.active{filter:brightness(1.1);position:relative;top:1px;text-shadow:1px 1px 2px #000;}
     .tab-content{display:none;border:1px solid #333;border-radius:0 0 20px 20px;padding:10px;position:relative;overflow:hidden;gap:5px;}
     .tab-content.active{display:flex;flex-direction:column;align-items:center;}
-    .tab-content input,.tab-content .row,.tab-content .imagen-wrapper,.tab-content .ver-imagen{margin:0;}
+    .tab-content>input,
+    .tab-content .row,
+    .tab-content .premio-row,
+    .tab-content .imagen-wrapper,
+    .tab-content .ver-imagen{width:calc(100% - 12px);margin:3px 6px;}
     .tab-buttons button.active[data-tab="forma1"], .forma-item1{background:linear-gradient(#90ee90,#ffffff);}
     .tab-buttons button.active[data-tab="forma2"], .forma-item2{background:linear-gradient(#fffacd,#ffffff);}
     .tab-buttons button.active[data-tab="forma3"], .forma-item3{background:linear-gradient(#add8e6,#ffffff);}
@@ -103,7 +110,7 @@
     .carton td.free img{width:80%;height:80%;object-fit:contain;}
     .carton-back{position:absolute;top:10px;left:10px;right:10px;bottom:10px;backface-visibility:hidden;-webkit-backface-visibility:hidden;transform:rotateY(180deg);display:flex;align-items:center;justify-content:center;background:linear-gradient(#808080,#ffffff);border-radius:16px;visibility:hidden;}
     .carton-back img{width:80%;height:80%;object-fit:contain;opacity:1;}
-    .imagen-wrapper{display:flex;justify-content:center;align-items:center;gap:5px;width:250px;margin:3px auto;}
+    .imagen-wrapper{display:flex;justify-content:center;align-items:center;gap:5px;width:calc(100% - 12px);margin:3px 6px;}
     .imagen-wrapper input{flex:none;width:120px;font-size:0.8rem;}
     .imagen-wrapper button{padding:3px 6px;font-size:0.8rem;}
     .imagen-wrapper .ver-foto-btn{width:30px;height:30px;border:1px solid #ccc;border-radius:5px;display:flex;align-items:center;justify-content:center;background:#fff;}
@@ -366,7 +373,7 @@
     const porcentajes=Array.from(document.querySelectorAll('.porcentaje-forma')).map(i=>parseFloat(i.value)||0);
     const totalPorcentaje=porcentajes.reduce((a,b)=>a+b,0);
     const restanteVal=100-totalPorcentaje;
-    const restante=(restanteVal<0?0:restanteVal).toFixed(2);
+    const restante=Math.max(0,Math.round(restanteVal));
     document.querySelectorAll('.porcentaje-restante').forEach(span=>{span.textContent=restante+'%';});
     document.querySelectorAll('.porcentaje-forma').forEach(inp=>{inp.style.color=totalPorcentaje>=100?'red':'green';});
     const cartones=Array.from(document.querySelectorAll('.cartones-forma')).map(i=>parseInt(i.value)||0);
