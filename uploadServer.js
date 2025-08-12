@@ -2,31 +2,19 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const admin = require('firebase-admin');
 
-// Inicializa Firebase Admin sin silenciar errores
+// Inicializa Firebase Admin especificando el bucket de Storage
 if (!admin.apps.length) {
-  admin.initializeApp();
+  admin.initializeApp({
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET
+  });
 }
 
 const app = express();
 app.use(cors());
 
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
-}
-app.use('/uploads', express.static(uploadDir));
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, Date.now() + ext);
-  }
-});
-const upload = multer({ storage });
+const upload = multer({ storage: multer.memoryStorage() });
 
 async function verificarToken(req, res, next) {
   const authHeader = req.headers.authorization || '';
@@ -40,10 +28,20 @@ async function verificarToken(req, res, next) {
   }
 }
 
-app.post('/upload', verificarToken, upload.single('file'), (req, res) => {
+app.post('/upload', verificarToken, upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Archivo requerido' });
-  const url = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-  res.json({ url });
+  try {
+    const bucket = admin.storage().bucket();
+    const fileName = `${Date.now()}${path.extname(req.file.originalname)}`;
+    const file = bucket.file(fileName);
+    await file.save(req.file.buffer, { contentType: req.file.mimetype });
+    await file.makePublic();
+    const url = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+    res.json({ url });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Error al subir archivo' });
+  }
 });
 
 const PORT = process.env.PORT || 3000;
