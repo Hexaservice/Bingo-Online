@@ -64,6 +64,11 @@
     }
     .row{display:flex;justify-content:center;gap:5px;width:250px;margin:3px auto;}
     .row input{flex:1;width:100%;}
+    .premio-row{display:flex;justify-content:center;align-items:center;width:100%;gap:5px;margin:3px auto;font-weight:bold;}
+    .premio-row input{flex:0 0 35%;width:auto;margin:0;font-weight:bold;}
+    .premio-row span{flex:0 0 15%;text-align:center;font-weight:bold;}
+    .porcentaje-forma{color:green;}
+    #nombre-sorteo{font-weight:bold;color:purple;}
     .toggle-group{display:flex;justify-content:center;gap:5px;margin:3px 0;}
     .toggle-group button{flex:1;max-width:120px;padding:5px 10px;border-radius:20px;border:1px solid #ccc;font-family:'Bangers',cursive;font-size:1rem;cursor:pointer;background:#808080;color:#fff;text-shadow:1px 1px 2px #333;}
     .toggle-group button.active{filter:brightness(1.2);text-shadow:1px 1px 2px #000;}
@@ -94,12 +99,15 @@
     .carton th{font-size:2rem;cursor:pointer;color:#ff6600;background:linear-gradient(#cccccc,#ffffff);text-shadow:2px 2px 0 #000;}
     .carton td{cursor:pointer;}
     .carton td.selected{background-color:orange;color:white;}
-    .carton td.free{background-color:#ffcc00;}
+    .carton td.free{background-color:#ffcc00;display:flex;align-items:center;justify-content:center;}
+    .carton td.free img{width:80%;height:80%;object-fit:contain;}
     .carton-back{position:absolute;top:10px;left:10px;right:10px;bottom:10px;backface-visibility:hidden;-webkit-backface-visibility:hidden;transform:rotateY(180deg);display:flex;align-items:center;justify-content:center;background:linear-gradient(#808080,#ffffff);border-radius:16px;visibility:hidden;}
     .carton-back img{width:80%;height:80%;object-fit:contain;opacity:1;}
     .imagen-wrapper{display:flex;justify-content:center;align-items:center;gap:5px;width:250px;margin:3px auto;}
     .imagen-wrapper input{flex:none;width:120px;font-size:0.8rem;}
     .imagen-wrapper button{padding:3px 6px;font-size:0.8rem;}
+    .imagen-wrapper .ver-foto-btn{width:30px;height:30px;border:1px solid #ccc;border-radius:5px;display:flex;align-items:center;justify-content:center;background:#fff;}
+    .imagen-wrapper .ver-foto-btn img{width:100%;height:100%;object-fit:contain;}
     .ver-imagen{display:none;margin-top:3px;font-size:0.9rem;color:#007bff;text-decoration:underline;cursor:pointer;}
     .input-wrapper{display:flex;align-items:center;}
     .label-left{font-weight:bold;font-size:0.8rem;margin-right:3px;text-shadow:0 0 3px #fff;}
@@ -242,14 +250,28 @@
           ver.style.display='block';
           ver.dataset.url=f.imagen;
         }
-        div.querySelectorAll('td').forEach(td=>{td.classList.remove('selected');td.textContent='';});
-        f.posiciones&&f.posiciones.forEach(p=>{
-          const td=div.querySelector(`td[data-row="${p.r}"][data-col="${p.c}"]`);
-          if(td){td.classList.add('selected');td.textContent='\u2605';}
+          div.querySelectorAll('td').forEach(td=>{
+            td.classList.remove('selected');
+            td.textContent='';
+            if(td.dataset.row==='2' && td.dataset.col==='2'){
+              td.classList.add('free','selected');
+              const img=document.createElement('img');
+              img.src=LOGO_URL;
+              img.alt='logo';
+              img.style.width='100%';
+              img.style.height='100%';
+              img.style.objectFit='contain';
+              td.appendChild(img);
+            }
+          });
+          f.posiciones&&f.posiciones.forEach(p=>{
+            const td=div.querySelector(`td[data-row="${p.r}"][data-col="${p.c}"]`);
+            if(td){td.classList.add('selected');td.textContent='\u2605';}
+          });
         });
-      });
-    }catch(e){console.error('loadState',e);}
-  }
+        actualizarTotales();
+      }catch(e){console.error('loadState',e);}
+    }
 
   function setupSaveListeners(){
     document.getElementById('nombre-sorteo').addEventListener('input',saveState);
@@ -257,7 +279,10 @@
     document.getElementById('hora-sorteo').addEventListener('input',saveState);
     document.getElementById('cierre-minutos').addEventListener('input',saveState);
     document.getElementById('valor-carton').addEventListener('input',saveState);
-    document.querySelectorAll('.tab-content .nombre-forma,.tab-content .porcentaje-forma,.tab-content .cartones-forma,.tab-content .imagen-url').forEach(i=>i.addEventListener('input',saveState));
+    document.querySelectorAll('.tab-content .nombre-forma,.tab-content .porcentaje-forma,.tab-content .cartones-forma,.tab-content .imagen-url').forEach(i=>i.addEventListener('input',e=>{
+      saveState();
+      if(e.target.classList.contains('porcentaje-forma')||e.target.classList.contains('cartones-forma')) actualizarTotales();
+    }));
   }
 
   function selectTab(idx){
@@ -312,7 +337,13 @@
         td.dataset.row=r;td.dataset.col=c;
         if(r===2&&c===2){
           td.classList.add('free','selected');
-          td.textContent='\u2605';
+          const img=document.createElement('img');
+          img.src=LOGO_URL;
+          img.alt='logo';
+          img.style.width='100%';
+          img.style.height='100%';
+          img.style.objectFit='contain';
+          td.appendChild(img);
           td.addEventListener('click',()=>{
             const wrapper=table.closest('.carton-wrapper');
             if(wrapper) flipCard(wrapper);
@@ -329,6 +360,18 @@
       tbody.appendChild(tr);
     }
     table.appendChild(tbody);
+  }
+
+  function actualizarTotales(){
+    const porcentajes=Array.from(document.querySelectorAll('.porcentaje-forma')).map(i=>parseFloat(i.value)||0);
+    const totalPorcentaje=porcentajes.reduce((a,b)=>a+b,0);
+    const restanteVal=100-totalPorcentaje;
+    const restante=(restanteVal<0?0:restanteVal).toFixed(2);
+    document.querySelectorAll('.porcentaje-restante').forEach(span=>{span.textContent=restante+'%';});
+    document.querySelectorAll('.porcentaje-forma').forEach(inp=>{inp.style.color=totalPorcentaje>=100?'red':'green';});
+    const cartones=Array.from(document.querySelectorAll('.cartones-forma')).map(i=>parseInt(i.value)||0);
+    const totalCartones=cartones.reduce((a,b)=>a+b,0);
+    document.querySelectorAll('.cartones-total').forEach(span=>{span.textContent=totalCartones;});
   }
 
   function crearFormas(){
@@ -349,15 +392,18 @@
       const div=document.createElement('div');
       div.id=`forma${i}`;
       div.className=`tab-content forma-item${i}${i===1?' active':''}`;
-      div.innerHTML=`<div class="forma-label">Forma ${i}</div><input class="nombre-forma" placeholder="Nombre de forma">\
-      <div class="row"><input type="number" class="porcentaje-forma" placeholder="% Premio">\
-      <input type="number" class="cartones-forma" placeholder="Cartones gratis"></div>\
-      <div class="imagen-wrapper">\
-        <input type="file" accept="image/*" class="imagen-forma">\
-        <button type="button" class="subir-imagen">Subir</button></div>\
-      <a class="ver-imagen">Ver imagen</a>\
-      <input type="hidden" class="imagen-url">\
-      <div class="carton-box"><div class="carton-wrapper"><table class="carton" data-idx="${i}"></table><div class="carton-back"><img src="${LOGO_URL}" alt="logo"></div></div></div>`;
+      div.innerHTML=`<div class=\"forma-label\">Forma ${i}</div><input class=\"nombre-forma\" placeholder=\"Nombre de forma\">\
+      <div class=\"premio-row\"><input type=\"number\" class=\"porcentaje-forma\" placeholder=\"% Premio\">\
+      <span class=\"porcentaje-restante\">100%<\/span>\
+      <input type=\"number\" class=\"cartones-forma\" placeholder=\"Cartones Gratis\">\
+      <span class=\"cartones-total\">0<\/span><\/div>\
+      <div class=\"imagen-wrapper\">\
+        <button type=\"button\" class=\"ver-foto-btn\"><img src=\"https://img.icons8.com/ios-glyphs/30/image.png\" alt=\"foto\"><\/button>\
+        <input type=\"file\" accept=\"image/*\" class=\"imagen-forma\">\
+        <button type=\"button\" class=\"subir-imagen\">Subir<\/button><\/div>\
+      <a class=\"ver-imagen\">Ver imagen<\/a>\
+      <input type=\"hidden\" class=\"imagen-url\">\
+      <div class=\"carton-box\"><div class=\"carton-wrapper\"><table class=\"carton\" data-idx=\"${i}\"><\/table><div class=\"carton-back\"><img src=\"${LOGO_URL}\" alt=\"logo\"><\/div><\/div><\/div>`;
       tabs.appendChild(div);
       const wrapper=div.querySelector('.carton-wrapper');
       const table=wrapper.querySelector('table');
@@ -431,6 +477,7 @@
   }
 
   crearFormas();
+  actualizarTotales();
 
   document.getElementById('close-modal').addEventListener('click',()=>{
     document.getElementById('image-modal').style.display='none';
