@@ -86,20 +86,17 @@
     .tab-buttons button.active[data-tab="forma5"], .forma-item5{background:linear-gradient(#ffcc99,#ffffff);}
     .forma-label{position:absolute;left:-35px;top:50%;transform:translateY(-50%);writing-mode:vertical-rl;text-orientation:upright;font-weight:bold;font-size:0.8rem;}
     .carton-box{display:flex;justify-content:center;margin:5px auto;perspective:1000px;}
-    .carton-wrapper{position:relative;border-radius:20px;transform-style:preserve-3d;box-shadow:0 0 15px rgba(0,0,0,0.8);overflow:hidden;padding:7px;background:linear-gradient(#ffffff,#cccccc);}
-    .carton-wrapper.flipped .carton{pointer-events:none;}
-    .carton{margin:0;border-collapse:collapse;background:linear-gradient(#ffffff,#cccccc);border-radius:13px;backface-visibility:hidden;-webkit-backface-visibility:hidden;table-layout:fixed;box-sizing:border-box;overflow:hidden;}
+    .carton-wrapper{position:relative;border-radius:23px;transform-style:preserve-3d;box-shadow:0 0 15px rgba(0,0,0,0.8);overflow:hidden;padding:10px;background:linear-gradient(#ffffff,#cccccc);}
+    .carton-wrapper.flipped .carton{visibility:hidden;pointer-events:none;}
+    .carton-wrapper.flipped .carton-back{visibility:visible;}
+    .carton{margin:0;border-collapse:separate;border-spacing:0;background:linear-gradient(#ffffff,#cccccc);border-radius:16px;border:2px solid black;backface-visibility:hidden;-webkit-backface-visibility:hidden;table-layout:fixed;box-sizing:border-box;overflow:hidden;}
     .carton th,.carton td{background:transparent;border:2px solid black;width:50px;height:50px;aspect-ratio:1/1;text-align:center;font-weight:bold;padding:0;margin:0;box-sizing:border-box;backface-visibility:hidden;-webkit-backface-visibility:hidden;}
     .carton th{font-size:2rem;cursor:pointer;color:#ff6600;background:linear-gradient(#cccccc,#ffffff);text-shadow:2px 2px 0 #000;}
     .carton td{cursor:pointer;}
     .carton td.selected{background-color:orange;color:white;}
     .carton td.free{background-color:#ffcc00;}
-    .carton-back{position:absolute;top:7px;left:7px;right:7px;bottom:7px;backface-visibility:hidden;-webkit-backface-visibility:hidden;transform:rotateY(180deg);display:flex;align-items:center;justify-content:center;background:linear-gradient(#cccccc,#ffffff);border-radius:13px;}
+    .carton-back{position:absolute;top:10px;left:10px;right:10px;bottom:10px;backface-visibility:hidden;-webkit-backface-visibility:hidden;transform:rotateY(180deg);display:flex;align-items:center;justify-content:center;background:linear-gradient(#808080,#ffffff);border-radius:16px;visibility:hidden;}
     .carton-back img{width:80%;height:80%;object-fit:contain;opacity:1;}
-    .carton th:first-child{border-top-left-radius:13px;}
-    .carton th:last-child{border-top-right-radius:13px;}
-    .carton tbody tr:last-child td:first-child{border-bottom-left-radius:13px;}
-    .carton tbody tr:last-child td:last-child{border-bottom-right-radius:13px;}
     .imagen-wrapper{display:flex;justify-content:center;align-items:center;gap:5px;width:250px;margin:3px auto;}
     .imagen-wrapper input{flex:none;width:120px;font-size:0.8rem;}
     .imagen-wrapper button{padding:3px 6px;font-size:0.8rem;}
@@ -176,6 +173,108 @@
   const preloadLogo=new Image();
   preloadLogo.src=LOGO_URL;
 
+  function setCookie(name,value){document.cookie=`${name}=${encodeURIComponent(value)};path=/;max-age=31536000`;}
+  function getCookie(name){const m=document.cookie.match(new RegExp('(?:^|; )'+name+'=([^;]*)'));return m?decodeURIComponent(m[1]):null;}
+  let cookieKey='';
+
+  function saveState(){
+    if(!cookieKey) return;
+    const nombre=document.getElementById('nombre-sorteo').value.trim();
+    const fecha=document.getElementById('fecha-sorteo').value;
+    const hora=document.getElementById('hora-sorteo').value;
+    const cierre=document.getElementById('cierre-minutos').value;
+    const valor=document.getElementById('valor-carton').value;
+    const tipoBtn=document.querySelector('#tipo-sorteo-group button.active');
+    const estadoBtn=document.querySelector('#estado-group button.active');
+    const data={
+      nombre,tipo:tipoBtn?tipoBtn.dataset.value:'',fecha,hora,cierre,valor,
+      estado:estadoBtn?estadoBtn.dataset.value:'',
+      formas:[]
+    };
+    document.querySelectorAll('.tab-content').forEach(div=>{
+      const f={
+        nombre:div.querySelector('.nombre-forma').value.trim(),
+        porcentaje:div.querySelector('.porcentaje-forma').value,
+        cartones:div.querySelector('.cartones-forma').value,
+        imagen:div.querySelector('.imagen-url').value,
+        posiciones:[]
+      };
+      div.querySelectorAll('td.selected').forEach(td=>{
+        const r=parseInt(td.dataset.row);const c=parseInt(td.dataset.col);
+        if(!(r===2&&c===2)) f.posiciones.push({r,c});
+      });
+      data.formas.push(f);
+    });
+    setCookie(cookieKey,JSON.stringify(data));
+  }
+
+  function loadState(){
+    if(!cookieKey) return;
+    const raw=getCookie(cookieKey);
+    if(!raw) return;
+    try{
+      const data=JSON.parse(raw);
+      document.getElementById('nombre-sorteo').value=data.nombre||'';
+      document.getElementById('fecha-sorteo').value=data.fecha||'';
+      document.getElementById('hora-sorteo').value=data.hora||'';
+      document.getElementById('cierre-minutos').value=data.cierre||'';
+      document.getElementById('valor-carton').value=data.valor||'';
+      if(data.tipo){
+        document.querySelectorAll('#tipo-sorteo-group button').forEach(b=>b.classList.remove('active'));
+        const tb=document.querySelector(`#tipo-sorteo-group button[data-value="${data.tipo}"]`);
+        if(tb) tb.classList.add('active');
+      }
+      if(data.estado){
+        document.querySelectorAll('#estado-group button').forEach(b=>b.classList.remove('active'));
+        const eb=document.querySelector(`#estado-group button[data-value="${data.estado}"]`);
+        if(eb) eb.classList.add('active');
+      }
+      const divs=document.querySelectorAll('.tab-content');
+      data.formas&&data.formas.forEach((f,i)=>{
+        const div=divs[i];
+        if(!div) return;
+        div.querySelector('.nombre-forma').value=f.nombre||'';
+        div.querySelector('.porcentaje-forma').value=f.porcentaje||'';
+        div.querySelector('.cartones-forma').value=f.cartones||'';
+        div.querySelector('.imagen-url').value=f.imagen||'';
+        if(f.imagen){
+          const ver=div.querySelector('.ver-imagen');
+          ver.style.display='block';
+          ver.dataset.url=f.imagen;
+        }
+        div.querySelectorAll('td').forEach(td=>{td.classList.remove('selected');td.textContent='';});
+        f.posiciones&&f.posiciones.forEach(p=>{
+          const td=div.querySelector(`td[data-row="${p.r}"][data-col="${p.c}"]`);
+          if(td){td.classList.add('selected');td.textContent='\u2605';}
+        });
+      });
+    }catch(e){console.error('loadState',e);}
+  }
+
+  function setupSaveListeners(){
+    document.getElementById('nombre-sorteo').addEventListener('input',saveState);
+    document.getElementById('fecha-sorteo').addEventListener('input',saveState);
+    document.getElementById('hora-sorteo').addEventListener('input',saveState);
+    document.getElementById('cierre-minutos').addEventListener('input',saveState);
+    document.getElementById('valor-carton').addEventListener('input',saveState);
+    document.querySelectorAll('.tab-content .nombre-forma,.tab-content .porcentaje-forma,.tab-content .cartones-forma,.tab-content .imagen-url').forEach(i=>i.addEventListener('input',saveState));
+  }
+
+  function selectTab(idx){
+    const tabs=document.querySelector('.tabs');
+    if(!tabs) return;
+    const btn=tabs.querySelector(`.tab-buttons button[data-tab="forma${idx}"]`);
+    if(btn) btn.click();
+  }
+
+  firebase.auth().onAuthStateChanged(u=>{
+    if(u){
+      cookieKey='nuevosorteo_'+u.email.replace(/[^\w]/g,'_');
+      loadState();
+      setupSaveListeners();
+    }
+  });
+
   function flipCard(wrapper){
     const flipped=wrapper.classList.contains('flipped');
     const start=flipped?180:0;
@@ -222,6 +321,7 @@
           td.addEventListener('click',()=>{
             td.classList.toggle('selected');
             td.textContent = td.classList.contains('selected') ? '\u2605' : '';
+            saveState();
           });
         }
         tr.appendChild(td);
@@ -299,15 +399,16 @@
         const urlInput=wrapper.querySelector('.imagen-url');
         const ver=wrapper.querySelector('.ver-imagen');
         if(!fileInput.files[0]){alert('Selecciona una imagen');return;}
-        try{
-          const url=await subirImagen(fileInput.files[0]);
-          urlInput.value=url;
-          ver.style.display='block';
-          ver.dataset.url=url;
-          fileInput.value='';
-        }catch(e){console.error(e);alert('Error al subir imagen');}
+          try{
+            const url=await subirImagen(fileInput.files[0]);
+            urlInput.value=url;
+            ver.style.display='block';
+            ver.dataset.url=url;
+            fileInput.value='';
+            saveState();
+          }catch(e){console.error(e);alert('Error al subir imagen');}
+        });
       });
-    });
 
     tabs.querySelectorAll('.ver-imagen').forEach(link=>{
       link.addEventListener('click',e=>{
@@ -337,18 +438,20 @@
 
   document.getElementById('volver-btn').addEventListener('click',()=>{window.history.back();});
 
-  document.querySelectorAll('#tipo-sorteo-group button').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      document.querySelectorAll('#tipo-sorteo-group button').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
+    document.querySelectorAll('#tipo-sorteo-group button').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        document.querySelectorAll('#tipo-sorteo-group button').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        saveState();
+      });
     });
-  });
-  document.querySelectorAll('#estado-group button').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      document.querySelectorAll('#estado-group button').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
+    document.querySelectorAll('#estado-group button').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        document.querySelectorAll('#estado-group button').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        saveState();
+      });
     });
-  });
 
   document.getElementById('guardar-sorteo-btn').addEventListener('click',async()=>{
     const nombreInput=document.getElementById('nombre-sorteo');
@@ -392,17 +495,19 @@
         const r=parseInt(td.dataset.row); const c=parseInt(td.dataset.col);
         if(!(r===2&&c===2)) pos.push({r,c});
       });
-      if(!nom){alert(`Asigna un nombre a la forma ${i+1}`);nomInput.focus();return;}
-      if((isNaN(por)||por<=0) && (isNaN(cart)||cart<=0) && !img){
-        alert(`Asigna un premio a la forma ${i+1}`);
-        porInput.focus();
-        return;
-      }
-      if(pos.length===0){
-        alert(`Debes elegir al menos una posicion en el carton para la forma ${i+1}`);
-        div.querySelector('.carton').scrollIntoView({behavior:'smooth'});
-        return;
-      }
+        if(!nom){selectTab(i+1);alert(`Asigna un nombre a la forma ${i+1}`);nomInput.focus();return;}
+        if((isNaN(por)||por<=0) && (isNaN(cart)||cart<=0) && !img){
+          selectTab(i+1);
+          alert(`Asigna un premio a la forma ${i+1}`);
+          porInput.focus();
+          return;
+        }
+        if(pos.length===0){
+          selectTab(i+1);
+          alert(`Debes elegir al menos una posicion en el carton para la forma ${i+1}`);
+          div.querySelector('.carton').scrollIntoView({behavior:'smooth'});
+          return;
+        }
       const obj={idx:i+1,nombre:nom,posiciones:pos};
       if(!isNaN(por)&&por>0){obj.porcentaje=por;total+=por;conPorcentaje++;}
       if(!isNaN(cart)&&cart>0){obj.cartonesGratis=cart;}
@@ -414,11 +519,12 @@
       const sorteoRef=await db.collection('sorteos').add({nombre,tipo,fecha,hora,cierreMinutos:cierre,valorCarton:valor,estado,condicion});
       const batch=db.batch();
       formas.forEach(f=>{const ref=db.collection('formas').doc();batch.set(ref,{sorteoId:sorteoRef.id,...f});});
-      await batch.commit();
-      alert('Sorteo guardado');
-      window.location.href='admin.html';
-    }catch(e){console.error(e);alert('Error al guardar');}
-  });
+        await batch.commit();
+        alert('Sorteo guardado');
+        if(cookieKey) setCookie(cookieKey,'',0);
+        window.location.href='admin.html';
+      }catch(e){console.error(e);alert('Error al guardar');}
+    });
   </script>
 </body>
 </html>
