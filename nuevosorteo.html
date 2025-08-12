@@ -88,13 +88,13 @@
     .carton-box{display:flex;justify-content:center;margin:5px auto;perspective:1000px;}
     .carton-wrapper{position:relative;border-radius:20px;transform-style:preserve-3d;box-shadow:0 0 15px rgba(0,0,0,0.8);overflow:hidden;padding:7px;background:linear-gradient(#ffffff,#cccccc);}
     .carton-wrapper.flipped .carton{pointer-events:none;}
-    .carton{margin:0;border-collapse:collapse;background:linear-gradient(#ffffff,#cccccc);border-radius:13px;backface-visibility:hidden;table-layout:fixed;box-sizing:border-box;overflow:hidden;}
-    .carton th,.carton td{background:transparent;border:2px solid black;width:50px;height:50px;aspect-ratio:1/1;text-align:center;font-weight:bold;padding:0;margin:0;box-sizing:border-box;}
+    .carton{margin:0;border-collapse:collapse;background:linear-gradient(#ffffff,#cccccc);border-radius:13px;backface-visibility:hidden;-webkit-backface-visibility:hidden;table-layout:fixed;box-sizing:border-box;overflow:hidden;}
+    .carton th,.carton td{background:transparent;border:2px solid black;width:50px;height:50px;aspect-ratio:1/1;text-align:center;font-weight:bold;padding:0;margin:0;box-sizing:border-box;backface-visibility:hidden;-webkit-backface-visibility:hidden;}
     .carton th{font-size:2rem;cursor:pointer;color:#ff6600;background:linear-gradient(#cccccc,#ffffff);text-shadow:2px 2px 0 #000;}
     .carton td{cursor:pointer;}
     .carton td.selected{background-color:orange;color:white;}
     .carton td.free{background-color:#ffcc00;}
-    .carton-back{position:absolute;top:7px;left:7px;right:7px;bottom:7px;backface-visibility:hidden;transform:rotateY(180deg);display:flex;align-items:center;justify-content:center;background:linear-gradient(#cccccc,#ffffff);border-radius:13px;}
+    .carton-back{position:absolute;top:7px;left:7px;right:7px;bottom:7px;backface-visibility:hidden;-webkit-backface-visibility:hidden;transform:rotateY(180deg);display:flex;align-items:center;justify-content:center;background:linear-gradient(#cccccc,#ffffff);border-radius:13px;}
     .carton-back img{width:80%;height:80%;object-fit:contain;opacity:1;}
     .carton th:first-child{border-top-left-radius:13px;}
     .carton th:last-child{border-top-right-radius:13px;}
@@ -272,7 +272,23 @@
         tabs.querySelectorAll('.tab-buttons button').forEach(b=>b.classList.remove('active'));
         tabs.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
         btn.classList.add('active');
-        tabs.querySelector(`#${btn.dataset.tab}`).classList.add('active');
+        const contenido=tabs.querySelector(`#${btn.dataset.tab}`);
+        contenido.classList.add('active');
+        const wrapper=contenido.querySelector('.carton-wrapper');
+        if(wrapper.classList.contains('flipped')) flipCard(wrapper);
+        const base=wrapper.style.transform||'rotateY(0deg)';
+        wrapper.animate([
+          {transform:`${base} translateX(0)`},
+          {transform:`${base} translateX(20px)`},
+          {transform:`${base} translateX(-20px)`},
+          {transform:`${base} translateX(0)`}
+        ],{duration:400,easing:'ease-in-out'});
+        btn.animate([
+          {transform:'translateX(0)'},
+          {transform:'translateX(5px)'},
+          {transform:'translateX(-5px)'},
+          {transform:'translateX(0)'}
+        ],{duration:400,easing:'ease-in-out'});
       });
     });
 
