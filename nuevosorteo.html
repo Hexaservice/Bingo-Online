@@ -195,7 +195,7 @@
   <script src="auth.js"></script>
   <script>
   ensureAuth('Administrador');
-  const IMGUR_CLIENT_ID='REEMPLAZA_CON_TU_CLIENT_ID';
+  const UPLOAD_ENDPOINT='/upload';
   const LOGO_URL='https://i.imgur.com/twjhNtZ.png';
   const preloadLogo=new Image();
   preloadLogo.src=LOGO_URL;
@@ -268,6 +268,7 @@
           const ver=div.querySelector('.ver-imagen');
           ver.style.display='block';
           ver.dataset.url=f.imagen;
+          ver.href=f.imagen;
         }
           div.querySelectorAll('td').forEach(td=>{
             td.classList.remove('selected');
@@ -517,6 +518,7 @@
             urlInput.value=url;
             ver.style.display='block';
             ver.dataset.url=url;
+            ver.href=url;
             fileInput.value='';
             saveState();
           }catch(e){console.error(e);alert('Error al subir imagen');}
@@ -536,11 +538,12 @@
 
   async function subirImagen(file){
     const formData=new FormData();
-    formData.append('image',file);
-    const res=await fetch('https://api.imgur.com/3/image',{method:'POST',headers:{Authorization:'Client-ID '+IMGUR_CLIENT_ID},body:formData});
+    formData.append('file',file);
+    const token=await auth.currentUser.getIdToken();
+    const res=await fetch(UPLOAD_ENDPOINT,{method:'POST',headers:{Authorization:'Bearer '+token},body:formData});
+    if(!res.ok) throw new Error('upload fail');
     const data=await res.json();
-    if(!data.success) throw new Error('upload fail');
-    return data.data.link;
+    return data.url;
   }
 
   crearFormas();
