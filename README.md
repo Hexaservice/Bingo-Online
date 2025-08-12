@@ -37,6 +37,12 @@ Luego inicie el servicio con:
 npm start
 ```
 
+El formulario de nuevo sorteo obtiene la URL de este servicio desde la
+variable `UPLOAD_ENDPOINT` exportada en `config.js`. Por defecto apunta a
+`http://localhost:3000/upload`. Para entornos distintos a localhost puede
+definirse la variable de entorno `UPLOAD_ENDPOINT` o asignarse
+`window.UPLOAD_ENDPOINT` antes de cargar los scripts.
+
 ## Despliegue estático
 
 El archivo `index.html` contiene toda la lógica de la aplicación. Sólo es necesario servirlo desde cualquier servidor web estático. El inicio de sesión se realiza con cuentas de Google y se redirige automáticamente al menú correspondiente según el rol almacenado en Firestore.
