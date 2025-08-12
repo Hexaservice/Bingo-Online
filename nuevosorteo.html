@@ -110,8 +110,10 @@
     .carton td.selected{background-color:orange;color:white;}
     .carton td.free{background-color:#ffcc00;display:flex;align-items:center;justify-content:center;}
     .carton td.free img{width:80%;height:80%;object-fit:contain;}
-    .carton-back{position:absolute;top:10px;left:10px;right:10px;bottom:10px;backface-visibility:hidden;-webkit-backface-visibility:hidden;transform:rotateY(180deg);display:flex;align-items:center;justify-content:center;background:linear-gradient(#808080,#ffffff);border-radius:16px;pointer-events:none;}
-    .carton-back .back-info{display:flex;flex-direction:column;align-items:center;text-align:center;gap:5px;width:100%;}
+    .carton-back{position:absolute;top:10px;left:10px;right:10px;bottom:10px;border-radius:16px;pointer-events:none;}
+    .carton-back .back-content{position:absolute;inset:0;transform:rotateY(180deg);backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;align-items:center;justify-content:center;background:linear-gradient(#808080,#ffffff);border-radius:16px;}
+    .carton-back .back-content img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0.3;}
+    .carton-back .back-info{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:5px;width:100%;}
     .back-nombre{font-family:'Bangers',cursive;font-size:1.5rem;color:purple;text-shadow:0 0 5px #fff;font-weight:bold;animation:pulse 1s infinite;}
     .back-tipo{font-family:'Bangers',cursive;font-size:1.3rem;text-shadow:0 0 5px #fff;font-weight:bold;animation:pulse 1s infinite;}
     .back-fecha-hora{display:flex;gap:20px;font-family:'Bangers',cursive;font-size:1.2rem;color:blue;text-shadow:0 0 5px #fff;font-weight:bold;}
@@ -334,10 +336,11 @@
     const tipo=tipoVal==='Sorteo Especial'?'ESPECIAL':(tipoVal==='Sorteo Diario'?'DIARIO':'');
     const fecha=document.getElementById('fecha-sorteo').value;
     const hora=document.getElementById('hora-sorteo').value;
-    const nombreDiv=wrapper.querySelector('.back-nombre');
-    const tipoDiv=wrapper.querySelector('.back-tipo');
-    const fechaSpan=wrapper.querySelector('.back-fecha');
-    const horaSpan=wrapper.querySelector('.back-hora');
+    const content=wrapper.querySelector('.back-content');
+    const nombreDiv=content.querySelector('.back-nombre');
+    const tipoDiv=content.querySelector('.back-tipo');
+    const fechaSpan=content.querySelector('.back-fecha');
+    const horaSpan=content.querySelector('.back-hora');
     nombreDiv.textContent=nombre;
     nombreDiv.style.display=nombre? 'block':'none';
     if(tipo){
@@ -347,7 +350,7 @@
     }else{
       tipoDiv.style.display='none';
     }
-    const fhDiv=wrapper.querySelector('.back-fecha-hora');
+    const fhDiv=content.querySelector('.back-fecha-hora');
     if(fecha||hora){
       fhDiv.style.display='flex';
       fechaSpan.textContent=fecha?`FECHA: ${fecha}`:'';
@@ -464,7 +467,7 @@
         <button type=\"button\" class=\"subir-imagen\">Subir<\/button><\/div>\
       <a class=\"ver-imagen\">Ver imagen<\/a>\
       <input type=\"hidden\" class=\"imagen-url\">\
-      <div class=\"carton-box\"><div class=\"carton-wrapper\"><table class=\"carton\" data-idx=\"${i}\"><\/table><div class=\"carton-back\"><div class=\"back-info\"><div class=\"back-nombre\"><\/div><div class=\"back-tipo\"><\/div><div class=\"back-fecha-hora\"><span class=\"back-fecha\"><\/span><span class=\"back-hora\"><\/span><\/div><\/div><\/div><\/div><\/div>`;
+        <div class=\"carton-box\"><div class=\"carton-wrapper\"><table class=\"carton\" data-idx=\"${i}\"><\/table><div class=\"carton-back\"><div class=\"back-content\"><img src=\"${LOGO_URL}\" alt=\"logo\"><div class=\"back-info\"><div class=\"back-nombre\"><\/div><div class=\"back-tipo\"><\/div><div class=\"back-fecha-hora\"><span class=\"back-fecha\"><\/span><span class=\"back-hora\"><\/span><\/div><\/div><\/div><\/div><\/div><\/div>`;
       tabs.appendChild(div);
       const wrapper=div.querySelector('.carton-wrapper');
       const table=wrapper.querySelector('table');
