@@ -521,7 +521,7 @@
             ver.href=url;
             fileInput.value='';
             saveState();
-          }catch(e){console.error(e);alert('Error al subir imagen');}
+          }catch(e){console.error(e);alert('Error al subir imagen: '+e.message);}
         });
       });
 
@@ -541,8 +541,8 @@
     formData.append('file',file);
     const token=await auth.currentUser.getIdToken();
     const res=await fetch(UPLOAD_ENDPOINT,{method:'POST',headers:{Authorization:'Bearer '+token},body:formData});
-    if(!res.ok) throw new Error('upload fail');
     const data=await res.json();
+    if(!res.ok) throw new Error(data.message || data.error || 'Error al subir imagen');
     return data.url;
   }
 

@@ -49,7 +49,7 @@ app.post('/upload', verificarToken, upload.single('file'), async (req, res) => {
     res.json({ url });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: 'Error al subir archivo' });
+    res.status(500).json({ error: 'Error al subir archivo', message: e.message });
   }
 });
 
