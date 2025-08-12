@@ -230,6 +230,23 @@
   const tbody=document.querySelector('#tabla-sorteos tbody');
   let mostrarArch=false;
 
+  function actualizarArchivarBtn(){
+    const btn=document.getElementById('archivar-btn');
+    const icon=btn.querySelector('.icon');
+    const txt=btn.querySelector('.txt');
+    if(mostrarArch){
+      txt.textContent='Desarchivar';
+      icon.innerHTML='&#128193;';
+      icon.style.color='blue';
+      txt.style.color='blue';
+    }else{
+      txt.textContent='Archivar';
+      icon.innerHTML='&#128194;';
+      icon.style.color='brown';
+      txt.style.color='brown';
+    }
+  }
+
   async function cargarDatos(){
     const [sorteosSnap, formasSnap] = await Promise.all([
       db.collection('sorteos').get(),
@@ -310,6 +327,7 @@
   document.getElementById('archivo-btn').addEventListener('click',()=>{
     mostrarArch=!mostrarArch;
     document.getElementById('archivo-btn').classList.toggle('archivo-activo',mostrarArch);
+    actualizarArchivarBtn();
     filtrar();
   });
 
@@ -330,19 +348,36 @@
   });
   document.getElementById('archivar-btn').addEventListener('click',async ()=>{
     const chks=document.querySelectorAll('#tabla-sorteos input[type=checkbox]:checked');
-    if(chks.length===0){alert('Debes seleccionar al menos un sorteo para poder archivarlo');return;}
-    const ids=[];let tieneActivo=false;
-    chks.forEach(c=>{
-      if(c.dataset.estado==='Activo'){tieneActivo=true;c.checked=false;}
-      else ids.push(c.dataset.id);
-    });
-    if(tieneActivo){alert('No pueden archivarse Sorteos Activos');}
-    if(!ids.length) return;
-    const batch=db.batch();
-    ids.forEach(id=>batch.update(db.collection('sorteos').doc(id),{condicion:'ARCHIVADO'}));
-    await batch.commit();
+    if(chks.length===0){alert('Debes seleccionar al menos un sorteo');return;}
+    if(mostrarArch){
+      const ids=[];
+      chks.forEach(c=>ids.push(c.dataset.id));
+      const batch=db.batch();
+      ids.forEach(id=>batch.update(db.collection('sorteos').doc(id),{condicion:'VISIBLE'}));
+      await batch.commit();
+    }else{
+      const ids=[];let tieneActivo=false;
+      chks.forEach(c=>{
+        if(c.dataset.estado==='Activo'){tieneActivo=true;c.checked=false;}
+        else ids.push(c.dataset.id);
+      });
+      if(tieneActivo){alert('No pueden archivarse Sorteos Activos');}
+      if(!ids.length) return;
+      const batch=db.batch();
+      ids.forEach(id=>batch.update(db.collection('sorteos').doc(id),{condicion:'ARCHIVADO'}));
+      await batch.commit();
+    }
     cargarDatos();
   });
+
+  function formatoHora12(h){
+    if(!h) return '';
+    const [hh,mm]=h.split(':');
+    let hnum=parseInt(hh,10);
+    const ampm=hnum>=12?'PM':'AM';
+    hnum=hnum%12; if(hnum===0) hnum=12;
+    return `${hnum}:${mm} ${ampm}`;
+  }
 
   function mostrarPremios(formas){
     const modal=document.getElementById('modal-premios');
@@ -377,7 +412,7 @@
     const cont=document.getElementById('modal-info-content');
     cont.innerHTML=`<div style="font-weight:bold;color:darkgreen;">Tipo de Sorteo: ${d.tipo||''}</div>`+
                    `<div style="font-weight:bold;color:darkblue;">Valor Cartón: ${d.valorCarton||''}</div>`+
-                   `<div style="font-weight:bold;color:darkorange;">Hora Sorteo: ${d.hora||''}</div>`+
+                   `<div style="font-weight:bold;color:darkorange;">Hora Sorteo: ${formatoHora12(d.hora)}</div>`+
                    `<div style="font-weight:bold;color:darkorange;">Minutos cierre: ${d.cierreMinutos||''}</div>`;
     modal.style.display='flex';
   }
@@ -391,6 +426,7 @@
   });
 
   document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='admin.html';});
+  actualizarArchivarBtn();
   cargarDatos();
   </script>
 </body>

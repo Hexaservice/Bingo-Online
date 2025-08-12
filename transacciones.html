@@ -164,6 +164,34 @@
     let editRefs={};
     let mostrarRecArch=false;
     let mostrarRetArch=false;
+    function actualizarArchivarRecBtn(){
+      const btn=document.getElementById('archivar-rec');
+      const icon=btn.querySelector('.icon');
+      const txt=btn.querySelector('span:last-child');
+      if(mostrarRecArch){
+        txt.textContent='Desarchivar';
+        icon.innerHTML='&#128193;';
+        icon.style.color='blue';
+      }else{
+        txt.textContent='Archivar';
+        icon.innerHTML='&#128194;';
+        icon.style.color='';
+      }
+    }
+    function actualizarArchivarRetBtn(){
+      const btn=document.getElementById('archivar-ret');
+      const icon=btn.querySelector('.icon');
+      const txt=btn.querySelector('span:last-child');
+      if(mostrarRetArch){
+        txt.textContent='Desarchivar';
+        icon.innerHTML='&#128193;';
+        icon.style.color='blue';
+      }else{
+        txt.textContent='Archivar';
+        icon.innerHTML='&#128194;';
+        icon.style.color='';
+      }
+    }
     const filtrosRec={monto:'',nombre:'',banco:'',ref:'',fecha:'',estado:''};
     const filtrosRet={monto:'',nombre:'',banco:'',ref:'',fecha:'',estado:''};
     function fecha(){const d=new Date();return d.toLocaleDateString('es-VE');}
@@ -336,8 +364,25 @@
       if(!motivo) return;
       actualizar(ids,'ANULADO',motivo);
     });
-    document.getElementById('archivar-rec').addEventListener('click',()=>{const checks=document.querySelectorAll('#tabla-recargas tbody input[type=checkbox]:checked');if(!checks.length)return;const ids=[];let pendiente=false;checks.forEach(ch=>{if(ch.dataset.estado==='PENDIENTE'){pendiente=true;ch.checked=false;}else ids.push(ch.dataset.id);});if(pendiente)alert('Las transacciones PENDIENTES no pueden archivarse');if(ids.length)actualizar(ids,null,null,null,'ARCHIVADA');});
-    document.getElementById('ver-arch-rec').addEventListener('click',()=>{mostrarRecArch=!mostrarRecArch;document.getElementById('ver-arch-rec').classList.toggle('archivo-activo',mostrarRecArch);renderRec();});
+    document.getElementById('archivar-rec').addEventListener('click',()=>{
+      const checks=document.querySelectorAll('#tabla-recargas tbody input[type=checkbox]:checked');
+      if(!checks.length)return;
+      const ids=[];let pendiente=false;
+      checks.forEach(ch=>{
+        if(ch.dataset.estado==='PENDIENTE'){pendiente=true;ch.checked=false;}
+        else ids.push(ch.dataset.id);
+      });
+      if(pendiente)alert('Las transacciones PENDIENTES no pueden archivarse');
+      if(!ids.length)return;
+      if(mostrarRecArch)actualizar(ids,null,null,null,'VISIBLE');
+      else actualizar(ids,null,null,null,'ARCHIVADA');
+    });
+    document.getElementById('ver-arch-rec').addEventListener('click',()=>{
+      mostrarRecArch=!mostrarRecArch;
+      document.getElementById('ver-arch-rec').classList.toggle('archivo-activo',mostrarRecArch);
+      actualizarArchivarRecBtn();
+      renderRec();
+    });
 
     document.getElementById('aprobar-ret').addEventListener('click',async()=>{
       if(Object.keys(editRefs).length){
@@ -395,8 +440,25 @@
       if(!nota.trim()){alert('Debes colocar un motivo para anulación');return;}
       actualizar(ids,'ANULADO',nota.trim());
     });
-    document.getElementById('archivar-ret').addEventListener('click',()=>{const checks=document.querySelectorAll('#tabla-retiros tbody input[type=checkbox]:checked');if(!checks.length)return;const ids=[];let pendiente=false;checks.forEach(ch=>{if(ch.dataset.estado==='PENDIENTE'){pendiente=true;ch.checked=false;}else ids.push(ch.dataset.id);});if(pendiente)alert('Las transacciones PENDIENTES no pueden archivarse');if(ids.length)actualizar(ids,null,null,null,'ARCHIVADA');});
-    document.getElementById('ver-arch-ret').addEventListener('click',()=>{mostrarRetArch=!mostrarRetArch;document.getElementById('ver-arch-ret').classList.toggle('archivo-activo',mostrarRetArch);renderRet();});
+    document.getElementById('archivar-ret').addEventListener('click',()=>{
+      const checks=document.querySelectorAll('#tabla-retiros tbody input[type=checkbox]:checked');
+      if(!checks.length)return;
+      const ids=[];let pendiente=false;
+      checks.forEach(ch=>{
+        if(ch.dataset.estado==='PENDIENTE'){pendiente=true;ch.checked=false;}
+        else ids.push(ch.dataset.id);
+      });
+      if(pendiente)alert('Las transacciones PENDIENTES no pueden archivarse');
+      if(!ids.length)return;
+      if(mostrarRetArch)actualizar(ids,null,null,null,'VISIBLE');
+      else actualizar(ids,null,null,null,'ARCHIVADA');
+    });
+    document.getElementById('ver-arch-ret').addEventListener('click',()=>{
+      mostrarRetArch=!mostrarRetArch;
+      document.getElementById('ver-arch-ret').classList.toggle('archivo-activo',mostrarRetArch);
+      actualizarArchivarRetBtn();
+      renderRet();
+    });
 
     function marcarTodos(id){const tb=document.getElementById(id);const checks=tb.querySelectorAll('tbody input[type=checkbox]');const all=Array.from(checks).every(c=>c.checked);checks.forEach(c=>{c.checked=!all;c.dispatchEvent(new Event('change'));});}
     document.getElementById('sel-rec').addEventListener('click',()=>marcarTodos('tabla-recargas'));
@@ -418,6 +480,8 @@
     actualizarPendientes();
     setInterval(actualizarPendientes,10000);
     document.getElementById('volver-btn').addEventListener('click',()=>{history.back();});
+    actualizarArchivarRecBtn();
+    actualizarArchivarRetBtn();
     cargarBancos();
     auth.onAuthStateChanged(()=>cargar());
   </script>
