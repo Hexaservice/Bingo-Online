@@ -5,13 +5,9 @@ const path = require('path');
 const fs = require('fs');
 const admin = require('firebase-admin');
 
-// Inicializa Firebase Admin si es posible
-try {
-  if (!admin.apps.length) {
-    admin.initializeApp();
-  }
-} catch (e) {
-  console.warn('Firebase admin no inicializado:', e.message);
+// Inicializa Firebase Admin sin silenciar errores
+if (!admin.apps.length) {
+  admin.initializeApp();
 }
 
 const app = express();
