@@ -87,8 +87,8 @@
     .forma-label{position:absolute;left:-35px;top:50%;transform:translateY(-50%);writing-mode:vertical-rl;text-orientation:upright;font-weight:bold;font-size:0.8rem;}
     .carton-box{display:flex;justify-content:center;margin:5px auto;perspective:1000px;}
     .carton-wrapper{position:relative;border-radius:20px;transform-style:preserve-3d;box-shadow:0 0 15px rgba(0,0,0,0.8);overflow:hidden;padding:7px;background:linear-gradient(#ffffff,#cccccc);}
-    .carton-wrapper.hide-front .carton{visibility:hidden;}
-    .carton{margin:0;border-collapse:separate;border-spacing:0;background:linear-gradient(#ffffff,#cccccc);border-radius:13px;backface-visibility:hidden;table-layout:fixed;box-sizing:border-box;overflow:hidden;}
+    .carton-wrapper.flipped .carton{pointer-events:none;}
+    .carton{margin:0;border-collapse:collapse;background:linear-gradient(#ffffff,#cccccc);border-radius:13px;backface-visibility:hidden;table-layout:fixed;box-sizing:border-box;overflow:hidden;}
     .carton th,.carton td{background:transparent;border:2px solid black;width:50px;height:50px;aspect-ratio:1/1;text-align:center;font-weight:bold;padding:0;margin:0;box-sizing:border-box;}
     .carton th{font-size:2rem;cursor:pointer;color:#ff6600;background:linear-gradient(#cccccc,#ffffff);text-shadow:2px 2px 0 #000;}
     .carton td{cursor:pointer;}
@@ -172,10 +172,12 @@
   <script>
   ensureAuth('Administrador');
   const IMGUR_CLIENT_ID='REEMPLAZA_CON_TU_CLIENT_ID';
+  const LOGO_URL='https://i.imgur.com/twjhNtZ.png';
+  const preloadLogo=new Image();
+  preloadLogo.src=LOGO_URL;
 
   function flipCard(wrapper){
     const flipped=wrapper.classList.contains('flipped');
-    if(flipped) wrapper.classList.remove('hide-front');
     const start=flipped?180:0;
     const end=flipped?0:180;
     wrapper.animate([
@@ -185,7 +187,6 @@
     ],{duration:600,easing:'ease-in-out'}).onfinish=()=>{
       wrapper.style.transform=`rotateY(${end}deg)`;
       wrapper.classList.toggle('flipped');
-      if(!flipped) wrapper.classList.add('hide-front');
     };
   }
 
@@ -256,13 +257,13 @@
         <button type="button" class="subir-imagen">Subir</button></div>\
       <a class="ver-imagen">Ver imagen</a>\
       <input type="hidden" class="imagen-url">\
-      <div class="carton-box"><div class="carton-wrapper"><table class="carton" data-idx="${i}"></table><div class="carton-back"><img src="https://i.imgur.com/twjhNtZ.png" alt="logo"></div></div></div>`;
+      <div class="carton-box"><div class="carton-wrapper"><table class="carton" data-idx="${i}"></table><div class="carton-back"><img src="${LOGO_URL}" alt="logo"></div></div></div>`;
       tabs.appendChild(div);
       const wrapper=div.querySelector('.carton-wrapper');
       const table=wrapper.querySelector('table');
       crearTabla(table);
-      wrapper.querySelector('.carton-back').addEventListener('click',()=>{
-        flipCard(wrapper);
+      wrapper.addEventListener('click',()=>{
+        if(wrapper.classList.contains('flipped')) flipCard(wrapper);
       });
     }
 
