@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nuevo Sorteo</title>
-  <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
     body {
       background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)),
@@ -86,7 +86,7 @@
     .tab-buttons{display:flex;justify-content:center;}
     .tab-buttons button{flex:1;padding:6px 0;margin:0 2px;font-family:'Bangers',cursive;font-size:1rem;border:1px solid #333;border-bottom:none;border-radius:10px 10px 0 0;color:white;cursor:pointer;background:#808080;text-shadow:1px 1px 2px #333;}
     .tab-buttons button.active{filter:brightness(1.1);position:relative;top:1px;text-shadow:1px 1px 2px #000;}
-    .tab-content{display:none;border:1px solid #333;border-radius:0 0 20px 20px;padding:10px;position:relative;overflow:hidden;gap:5px;}
+    .tab-content{display:none;border:1px solid #333;border-radius:0 0 20px 20px;padding:10px;position:relative;overflow:hidden;gap:5px;perspective:1000px;}
     .tab-content.active{display:flex;flex-direction:column;align-items:center;}
     .tab-content>input,
     .tab-content .row,
@@ -99,20 +99,21 @@
     .tab-buttons button.active[data-tab="forma4"], .forma-item4{background:linear-gradient(#d8b0ff,#ffffff);}
     .tab-buttons button.active[data-tab="forma5"], .forma-item5{background:linear-gradient(#ffcc99,#ffffff);}
     .forma-label{position:absolute;left:-35px;top:50%;transform:translateY(-50%);writing-mode:vertical-rl;text-orientation:upright;font-weight:bold;font-size:0.8rem;}
-    .carton-box{display:flex;justify-content:center;margin:8px auto;perspective:1000px;}
-    .carton-wrapper{position:relative;border-radius:23px;transform-style:preserve-3d;box-shadow:0 0 15px rgba(0,0,0,0.8);overflow:hidden;padding:10px;background:linear-gradient(#ffffff,#cccccc);}
+    .carton-wrapper{position:relative;transform-style:preserve-3d;transition:transform 0.6s;border-radius:16px;padding:6px;background:linear-gradient(green,yellow);box-shadow:0 0 15px rgba(0,0,0,0.5);margin:8px auto;}
     .carton-wrapper.flipped .carton{pointer-events:none;}
     .carton-wrapper.flipped .carton-back{pointer-events:auto;}
-    .carton{margin:0;border-collapse:separate;border-spacing:0;background:linear-gradient(#ffffff,#cccccc);border-radius:16px;border:2px solid gray;backface-visibility:hidden;-webkit-backface-visibility:hidden;table-layout:fixed;box-sizing:border-box;overflow:hidden;}
-    .carton th,.carton td{background:transparent;border:2px solid gray;width:50px;height:50px;aspect-ratio:1/1;text-align:center;font-weight:bold;padding:0;margin:0;box-sizing:border-box;backface-visibility:hidden;-webkit-backface-visibility:hidden;}
-    .carton th{font-size:2rem;cursor:pointer;color:#ff6600;background:linear-gradient(#cccccc,#ffffff);text-shadow:2px 2px 0 #000;}
-    .carton td{cursor:pointer;}
-    .carton td.selected{background-color:orange;color:white;}
-    .carton td.free{background-color:#ffcc00;display:flex;align-items:center;justify-content:center;}
+    .carton{margin:0;border-collapse:separate;border-spacing:0;background:linear-gradient(#ffffff,#cccccc);border-radius:10px;backface-visibility:hidden;-webkit-backface-visibility:hidden;table-layout:fixed;box-sizing:border-box;}
+    .carton th,.carton td{background:transparent;border:2px solid gray;width:60px;height:60px;aspect-ratio:1/1;text-align:center;font-weight:bold;padding:0;margin:0;box-sizing:border-box;backface-visibility:hidden;-webkit-backface-visibility:hidden;font-family:'Poppins',sans-serif;}
+    .carton th{font-size:2.5rem;color:#ff6600;background:radial-gradient(circle,#ffffff,#ffffff 60%,#00aa00);text-shadow:2px 2px 0 #000;}
+    .carton td{cursor:pointer;font-size:1.8rem;text-shadow:0 0 3px green;}
+    .carton td.selected .star{color:orange;}
+    .carton td.free{background:radial-gradient(circle,#ffff00,#ffffff);display:flex;align-items:center;justify-content:center;}
     .carton td.free img{width:80%;height:80%;object-fit:contain;}
-    .carton-back{position:absolute;top:10px;left:10px;right:10px;bottom:10px;border-radius:16px;pointer-events:none;}
-    .carton-back .back-content{position:absolute;inset:0;transform:rotateY(180deg);backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;align-items:center;justify-content:center;background:linear-gradient(#808080,#ffffff);border-radius:16px;}
-    .carton-back .back-content img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0.3;}
+    .carton td .star{display:inline-block;animation:spinStar 10s linear infinite;}
+    @keyframes spinStar{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+    .carton-back{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:10px;backface-visibility:hidden;transform:rotateY(180deg);background:linear-gradient(orange,white);display:flex;align-items:center;justify-content:center;}
+    .carton-back .back-content{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+    .carton-back .back-content img{width:80%;height:80%;object-fit:contain;}
     .carton-back .back-info{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:5px;width:100%;}
     .back-nombre{font-family:'Bangers',cursive;font-size:1.5rem;color:purple;text-shadow:0 0 5px #fff;font-weight:bold;animation:pulse 1s infinite;}
     .back-tipo{font-family:'Bangers',cursive;font-size:1.3rem;text-shadow:0 0 5px #fff;font-weight:bold;animation:pulse 1s infinite;}
@@ -272,7 +273,7 @@
         }
           div.querySelectorAll('td').forEach(td=>{
             td.classList.remove('selected');
-            td.textContent='';
+            td.innerHTML='';
             if(td.dataset.row==='2' && td.dataset.col==='2'){
               td.classList.add('free','selected');
               const img=document.createElement('img');
@@ -286,7 +287,7 @@
           });
           f.posiciones&&f.posiciones.forEach(p=>{
             const td=div.querySelector(`td[data-row="${p.r}"][data-col="${p.c}"]`);
-            if(td){td.classList.add('selected');td.textContent='\u2605';}
+            if(td){td.classList.add('selected');td.innerHTML='<span class="star">\u2605</span>';}
           });
         });
         actualizarTotales();
@@ -386,10 +387,6 @@
     letters.forEach(l=>{
       const th=document.createElement('th');
       th.textContent=l;
-      th.addEventListener('click',()=>{
-        const wrapper=table.closest('.carton-wrapper');
-        if(wrapper) flipCard(wrapper);
-      });
       htr.appendChild(th);
     });
     thead.appendChild(htr);
@@ -415,8 +412,8 @@
           });
         }else{
           td.addEventListener('click',()=>{
-            td.classList.toggle('selected');
-            td.textContent = td.classList.contains('selected') ? '\u2605' : '';
+          td.classList.toggle('selected');
+          td.innerHTML = td.classList.contains('selected') ? '<span class="star">\u2605</span>' : '';
             saveState();
           });
         }
@@ -471,7 +468,7 @@
         <button type=\"button\" class=\"subir-imagen\">Subir<\/button><\/div>\
       <a class=\"ver-imagen\">Ver imagen<\/a>\
       <input type=\"hidden\" class=\"imagen-url\">\
-        <div class=\"carton-box\"><div class=\"carton-wrapper\"><table class=\"carton\" data-idx=\"${i}\"><\/table><div class=\"carton-back\"><div class=\"back-content\"><img src=\"${LOGO_URL}\" alt=\"logo\"><div class=\"back-info\"><div class=\"back-nombre\"><\/div><div class=\"back-tipo\"><\/div><div class=\"back-fecha-hora\"><span class=\"back-fecha\"><\/span><span class=\"back-hora\"><\/span><\/div><\/div><\/div><\/div><\/div><\/div>`;
+        <div class=\"carton-wrapper\"><table class=\"carton\" data-idx=\"${i}\"><\/table><div class=\"carton-back\"><div class=\"back-content\"><img src=\"${LOGO_URL}\" alt=\"logo\"><div class=\"back-info\"><div class=\"back-nombre\"><\/div><div class=\"back-tipo\"><\/div><div class=\"back-fecha-hora\"><span class=\"back-fecha\"><\/span><span class=\"back-hora\"><\/span><\/div><\/div><\/div><\/div><\/div>`;
       tabs.appendChild(div);
       const wrapper=div.querySelector('.carton-wrapper');
       const table=wrapper.querySelector('table');
