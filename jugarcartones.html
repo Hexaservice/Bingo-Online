@@ -18,7 +18,7 @@
       justify-content: flex-start;
       min-height: 100vh;
       text-align: center;
-      padding-top: 10px;
+      padding-top: 5px;
     }
     h1#titulo{
       font-family:'Bangers',cursive;
@@ -74,8 +74,12 @@
     .datos-sorteo div{font-weight:bold;font-size:1.2rem;}
     #valor-carton span,#cartones-jugando span{font-size:1.5rem;}
     #valor-carton-valor,#premio-valor{animation:pulse 1s infinite;display:inline-block;}
-    #valor-carton{color:green;}
-    #cartones-jugando{color:purple;}
+    #cartones-jugando-valor,#carton-num{animation:float 1s infinite;display:inline-block;}
+    #valor-carton{color:green;display:flex;align-items:center;gap:5px;}
+    #cartones-jugando{color:purple;display:flex;align-items:center;gap:5px;}
+    #stats-row{display:flex;justify-content:center;align-items:center;gap:20px;}
+    .billete-icon{font-size:1.5rem;}
+    .carton-icon{width:24px;height:24px;}
     #premio-repartir{color:white;font-family:'Bangers',cursive;font-size:1.8rem;text-shadow:0 0 10px #004400;}
     .wallet-row{display:flex;align-items:center;gap:5px;margin:3px 0;font-size:1rem;font-weight:bold;}
     #creditos-label,#gratis-label{font-family:'Bangers',cursive;font-size:1.5rem;text-shadow:0 0 5px green;display:inline-block;animation:pulse 1s infinite;}
@@ -90,7 +94,7 @@
       text-shadow:2px 2px 4px #000;
       cursor:pointer;
     }
-    #ir-billetera-btn{width:40px;height:40px;font-size:1.2rem;display:flex;align-items:center;justify-content:center;margin-left:15px;}
+    #ir-billetera-btn{width:40px;height:40px;font-size:1.2rem;display:flex;align-items:center;justify-content:center;position:absolute;bottom:5px;right:5px;margin-left:0;}
     #jugar-carton-btn{width:200px;height:40px;font-size:1.2rem;display:flex;align-items:center;justify-content:center;margin:10px auto;}
     .carton-box{display:flex;justify-content:center;margin:8px auto;perspective:1000px;}
     .carton-wrapper{position:relative;transform-style:preserve-3d;transition:transform 0.6s;border-radius:16px;padding:6px;background:linear-gradient(green,yellow);box-shadow:0 0 15px rgba(0,0,0,0.5);}
@@ -106,17 +110,19 @@
     .carton-back{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:10px;backface-visibility:hidden;transform:rotateY(180deg);background:linear-gradient(gray,white);display:flex;align-items:center;justify-content:center;}
     .carton-back img{width:80%;height:80%;opacity:0.3;object-fit:contain;}
     .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);justify-content:center;align-items:center;}
-    .modal-content{background:#fff;padding:10px;border-radius:10px;display:grid;grid-template-columns:repeat(5,60px);gap:5px;}
-    .modal-content div{width:60px;height:60px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:1.8rem;color:#000;cursor:pointer;text-shadow:0 0 3px green;font-family:'Bangers',cursive;}
+    .modal-content{background:#fff;padding:10px;border-radius:10px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;width:max-content;}
+    .modal-content div{display:block;font-weight:bold;font-size:1rem;color:#000;cursor:pointer;font-family:'Poppins',sans-serif;white-space:nowrap;}
     @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.2);}100%{transform:scale(1);}}
+    @keyframes float{0%{transform:translateY(0);}50%{transform:translateY(-5px);}100%{transform:translateY(0);}}
     #player-container{position:relative;border:2px solid green;border-radius:10px;background:linear-gradient(gray,white);padding:10px;margin-top:10px;}
     #alias-row{display:flex;align-items:center;justify-content:center;gap:5px;}
     #alias-jugador{font-size:1.2rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:180px;color:orange;}
-    #editar-alias{background:none;border:none;color:blue;font-size:1.2rem;cursor:pointer;}
-    #guardar-carton-btn{font-family:'Bangers',cursive;font-size:1.2rem;background:#0a8800;color:white;border:3px solid #FFD700;border-radius:8px;text-shadow:2px 2px 4px #000;width:40px;cursor:pointer;margin-left:5px;display:none;}
+    #editar-alias{background:none;border:none;color:orange;font-size:1.5rem;cursor:pointer;text-shadow:0 0 4px #fff;}
+    #guardar-carton-btn{background:none;border:none;font-size:1.4rem;cursor:pointer;margin-left:5px;display:none;}
     #nombre-carton{display:none;padding:5px;border-radius:5px;border:1px solid #ccc;}
-    #mis-cartones-btn{font-family:'Bangers',cursive;font-size:1.2rem;background:orange;color:white;border:3px solid #FFD700;border-radius:8px;text-shadow:2px 2px 4px #000;width:200px;cursor:pointer;margin:10px auto;display:block;}
-    #carton-num{font-family:'Bangers',cursive;animation:pulse 1s infinite;text-shadow:0 0 5px green;}
+    .guardar-row{justify-content:center;}
+    #mis-cartones-icon{width:24px;height:24px;cursor:pointer;margin-left:5px;}
+    #carton-num{font-family:'Bangers',cursive;text-shadow:0 0 5px green;}
     #login-footer{margin-top:20px;}
     #fecha-hora,#derechos{font-size:0.7rem;text-align:center;color:#000;}
     #derechos{font-size:0.6rem;}
@@ -137,8 +143,10 @@
     </div>
     <div class="datos-sorteo">
       <div id="premio-repartir">Premio a Repartir: <span id="premio-valor">0</span></div>
-      <div id="valor-carton">Valor de Cartón: <span id="valor-carton-valor">0</span></div>
-      <div id="cartones-jugando">Cartones Jugando: <span id="cartones-jugando-valor">0</span></div>
+      <div id="stats-row">
+        <div id="valor-carton"><span class="billete-icon">💵</span> Cartón: <span id="valor-carton-valor">0</span></div>
+        <div id="cartones-jugando"><img src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" class="carton-icon" alt="Cartón"> Jugando: <span id="cartones-jugando-valor">0</span></div>
+      </div>
     </div>
   </section>
   <section id="alias-section">
@@ -147,8 +155,9 @@
         <input type="text" id="alias-jugador" readonly placeholder="Alias">
         <button id="editar-alias" onclick="window.location.href='perfil.html'">&#9998;</button>
       </div>
-      <div class="wallet-row"><strong>Créditos disponibles:</strong> <span id="creditos-label">0</span><button id="ir-billetera-btn" class="action-btn" onclick="window.location.href='billetera.html'" title="Recargar Billetera">💰</button></div>
+      <div class="wallet-row"><strong>Créditos disponibles:</strong> <span id="creditos-label">0</span></div>
       <div class="wallet-row"><strong>Cartones gratis:</strong> <span id="gratis-label">0</span></div>
+      <button id="ir-billetera-btn" class="action-btn" onclick="window.location.href='billetera.html'" title="Recargar Billetera">👛</button>
     </div>
     <div class="carton-box">
       <div class="carton-wrapper" id="carton-wrapper">
@@ -161,8 +170,7 @@
         <div class="carton-back"><img src="https://i.imgur.com/twjhNtZ.png" alt="logo"></div>
       </div>
     </div>
-    <div class="wallet-row"><label><input type="checkbox" id="guardar-check"><span id="guardar-titulo"> Guardar cartón</span></label><input type="text" id="nombre-carton" placeholder="Nombra el Cartón"><button id="guardar-carton-btn" title="Guardar cartón">💾</button></div>
-    <button id="mis-cartones-btn">Mis Cartones</button>
+    <div class="wallet-row guardar-row"><label><input type="checkbox" id="guardar-check"><span id="guardar-titulo"> Guardar cartón</span></label><input type="text" id="nombre-carton" placeholder="Nombra el Cartón"><button id="guardar-carton-btn" title="Guardar cartón">💾</button><img id="mis-cartones-icon" class="carton-icon" src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" alt="Mis Cartones" title="Mis Cartones"></div>
     <button id="jugar-carton-btn" class="action-btn">JUGAR CARTÓN</button>
   </section>
   <div id="login-footer">
@@ -173,7 +181,7 @@
     <div id="number-grid" class="modal-content" onclick="event.stopPropagation();"></div>
   </div>
   <div id="cartones-modal" class="modal" onclick="this.style.display='none'">
-    <div id="cartones-list" class="modal-content" style="grid-template-columns:1fr;gap:10px;" onclick="event.stopPropagation();"></div>
+      <div id="cartones-list" class="modal-content" onclick="event.stopPropagation();"></div>
   </div>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
@@ -442,9 +450,9 @@
   function abrirCartonesModal(){
     const list=document.getElementById('cartones-list');
     list.innerHTML='';
-    Object.entries(cartonesGuardados).forEach(([id,data])=>{
+    Object.entries(cartonesGuardados).forEach(([id,data],index)=>{
       const div=document.createElement('div');
-      div.textContent=data.nombre||'Cartón';
+      div.textContent=`${index+1}- ${data.nombre||'Cartón'}`;
       div.addEventListener('click',()=>{setBoardFromPosiciones(data.posiciones);document.getElementById('cartones-modal').style.display='none';});
       list.appendChild(div);
     });
@@ -466,7 +474,7 @@
   document.getElementById('select-sorteo').addEventListener('change',actualizarInfoSorteo);
   document.getElementById('jugar-carton-btn').addEventListener('click',enviarDatos);
   document.getElementById('guardar-carton-btn').addEventListener('click',guardarCarton);
-  document.getElementById('mis-cartones-btn').addEventListener('click',abrirCartonesModal);
+  document.getElementById('mis-cartones-icon').addEventListener('click',abrirCartonesModal);
   document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='player.html';});
   document.getElementById('guardar-check').addEventListener('change',e=>{
     const show=e.target.checked;
