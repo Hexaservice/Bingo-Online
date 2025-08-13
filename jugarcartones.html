@@ -18,13 +18,13 @@
       justify-content: flex-start;
       min-height: 100vh;
       text-align: center;
-      padding-top: 50px;
+      padding-top: 10px;
     }
     h1#titulo{
       font-family:'Bangers',cursive;
       color:white;
-      text-shadow:2px 2px 4px orange;
-      margin-bottom:10px;
+      text-shadow:0 0 10px darkorange;
+      margin:5px 0 10px 0;
       font-size:2rem;
     }
     .menu-btn{
@@ -70,13 +70,18 @@
       background:#fff;
     }
     .sorteo-info{display:flex;align-items:center;justify-content:center;gap:10px;}
-    .datos-sorteo{display:flex;gap:10px;justify-content:center;margin-top:5px;flex-wrap:wrap;}
-    .datos-sorteo div{font-weight:bold;font-size:0.9rem;}
+    .datos-sorteo{display:flex;gap:10px;justify-content:center;margin-top:5px;flex-wrap:wrap;font-family:'Bangers',cursive;}
+    .datos-sorteo div{font-weight:bold;font-size:1.2rem;}
+    #valor-carton span,#cartones-jugando span{font-size:1.5rem;}
     #valor-carton{color:green;}
     #cartones-jugando{color:purple;}
-    #premio-repartir{color:orange;}
-    #wallet-section{display:flex;align-items:center;gap:10px;justify-content:center;margin:10px 0;flex-wrap:wrap;}
-    #wallet-section div{font-size:0.9rem;}
+    #premio-repartir{color:orange;font-family:'Bangers',cursive;text-shadow:0 0 5px green;}
+    #premio-valor{animation:pulse 1s infinite;display:inline-block;}
+    #wallet-section{display:flex;flex-direction:column;align-items:center;gap:5px;justify-content:center;margin:10px 0;}
+    #wallet-section div{font-size:1rem;font-weight:bold;}
+    #creditos-label,#gratis-label{font-family:'Bangers',cursive;font-size:1.5rem;text-shadow:0 0 5px green;display:inline-block;animation:pulse 1s infinite;}
+    #gratis-label{color:#4b0082;text-shadow:0 0 5px #fff;}
+    #creditos-label{color:#333;text-shadow:0 0 5px green;}
     .action-btn{
       font-family:'Bangers',cursive;
       background:linear-gradient(#0a8800,#ffffff);
@@ -86,18 +91,33 @@
       text-shadow:2px 2px 4px #000;
       cursor:pointer;
     }
-    #ir-billetera-btn{width:60px;height:60px;font-size:1.5rem;display:flex;align-items:center;justify-content:center;}
-    #jugar-carton-btn{width:200px;height:60px;font-size:1.2rem;display:flex;align-items:center;justify-content:center;margin-top:10px;}
+    #ir-billetera-btn{width:180px;height:40px;font-size:1.1rem;display:flex;align-items:center;justify-content:center;}
+    #jugar-carton-btn{width:200px;height:40px;font-size:1.2rem;display:flex;align-items:center;justify-content:center;margin-top:10px;}
     .carton-box{display:flex;justify-content:center;margin:8px auto;perspective:1000px;}
-    .carton{margin:0;border-collapse:separate;border-spacing:0;background:linear-gradient(#ffffff,#cccccc);border-radius:16px;border:2px solid gray;table-layout:fixed;}
-    .carton th,.carton td{background:transparent;border:2px solid gray;width:60px;height:60px;aspect-ratio:1/1;text-align:center;font-weight:bold;padding:0;margin:0;box-sizing:border-box;}
-    .carton th{font-size:2rem;color:#ff6600;background:linear-gradient(#cccccc,#ffffff);text-shadow:2px 2px 0 #000;}
-    .carton td{cursor:pointer;}
-    .carton td.free{background-color:#ffcc00;display:flex;align-items:center;justify-content:center;}
+    .carton-wrapper{position:relative;transform-style:preserve-3d;transition:transform 0.6s;border-radius:16px;padding:6px;background:linear-gradient(green,yellow);box-shadow:0 0 15px rgba(0,0,0,0.5);}
+    .carton-wrapper.flipped{transform:rotateY(180deg);}
+    .carton-wrapper.flipped .carton{pointer-events:none;}
+    .carton-wrapper.flipped .carton-back{pointer-events:auto;}
+    .carton{margin:0;border-collapse:separate;border-spacing:0;background:linear-gradient(#ffffff,#cccccc);border-radius:10px;table-layout:fixed;backface-visibility:hidden;}
+    .carton th,.carton td{background:transparent;border:2px solid gray;width:60px;height:60px;aspect-ratio:1/1;text-align:center;font-weight:bold;padding:0 3px;margin:0;box-sizing:border-box;}
+    .carton th{font-size:2.5rem;color:#ff6600;background:radial-gradient(circle,#ffffff,#ffffff 60%,#00aa00);text-shadow:2px 2px 0 #000;}
+    .carton td{cursor:pointer;font-size:1.8rem;text-shadow:0 0 3px green;}
+    .carton td.free{background:radial-gradient(circle,#ffffff,#ffff00);display:flex;align-items:center;justify-content:center;}
     .carton td.error{border:2px solid red;}
+    .carton-back{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:10px;backface-visibility:hidden;transform:rotateY(180deg);background:linear-gradient(gray,white);display:flex;align-items:center;justify-content:center;}
+    .carton-back img{width:80%;height:80%;opacity:0.3;object-fit:contain;}
     .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);justify-content:center;align-items:center;}
     .modal-content{background:#fff;padding:10px;border-radius:10px;display:grid;grid-template-columns:repeat(5,60px);gap:5px;}
-    .modal-content div{width:60px;height:60px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:1.5rem;color:blue;cursor:pointer;}
+    .modal-content div{width:60px;height:60px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:1.8rem;color:#000;cursor:pointer;text-shadow:0 0 3px green;font-family:'Bangers',cursive;}
+    @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.2);}100%{transform:scale(1);}}
+    #player-container{position:relative;border:2px solid green;border-radius:10px;background:linear-gradient(gray,white);padding:10px;margin-top:10px;}
+    #player-title{position:absolute;top:2px;right:5px;font-size:0.6rem;color:green;font-weight:bold;}
+    #alias-row{display:flex;align-items:center;justify-content:center;gap:5px;}
+    #alias-jugador{font-size:1.2rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:180px;color:orange;}
+    #editar-alias{background:none;border:none;color:blue;font-size:1.2rem;cursor:pointer;}
+    #guardar-carton-btn{font-family:'Bangers',cursive;font-size:1.2rem;background:#0a8800;color:white;border:3px solid #FFD700;border-radius:8px;text-shadow:2px 2px 4px #000;width:200px;cursor:pointer;margin:10px auto;display:block;}
+    #mis-cartones-btn{font-family:'Bangers',cursive;font-size:1.2rem;background:orange;color:white;border:3px solid #FFD700;border-radius:8px;text-shadow:2px 2px 4px #000;width:200px;cursor:pointer;margin:10px auto;display:block;}
+    #carton-num{font-family:'Bangers',cursive;animation:pulse 1s infinite;text-shadow:0 0 5px green;}
     #login-footer{margin-top:20px;}
     #fecha-hora,#derechos{font-size:0.7rem;text-align:center;color:#000;}
     #derechos{font-size:0.6rem;}
@@ -117,34 +137,37 @@
       </div>
     </div>
     <div class="datos-sorteo">
-      <div id="valor-carton"></div>
-      <div id="cartones-jugando"></div>
-      <div id="premio-repartir"></div>
+      <div id="valor-carton">Valor de Cartón: <span id="valor-carton-valor">0</span></div>
+      <div id="cartones-jugando">Cartones Jugando: <span id="cartones-jugando-valor">0</span></div>
+      <div id="premio-repartir">Premio a Repartir: <span id="premio-valor">0</span></div>
     </div>
   </section>
   <section id="wallet-section">
-    <div>Créditos disponibles: <span id="creditos-label">0</span></div>
-    <div>Cartones gratis: <span id="gratis-label">0</span></div>
-    <button id="ir-billetera-btn" class="action-btn" onclick="window.location.href='billetera.html'"><span class="icon">&#128179;</span></button>
+    <div><strong>Créditos disponibles:</strong> <span id="creditos-label">0</span></div>
+    <div><strong>Cartones gratis:</strong> <span id="gratis-label">0</span></div>
+    <button id="ir-billetera-btn" class="action-btn" onclick="window.location.href='billetera.html'">Recargar Billetera</button>
   </section>
   <section id="alias-section">
-    <input type="text" id="alias-jugador" readonly placeholder="Alias" style="font-size:1.2rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:180px;display:block;margin:10px auto;color:orange;">
-    <div style="font-size:0.6rem;margin-top:-8px;">Si deseas cambiar tu alias dirigite a Perfil &gt; Alias</div>
+    <div id="player-container">
+      <span id="player-title">Mis datos</span>
+      <div id="alias-row">
+        <input type="text" id="alias-jugador" readonly placeholder="Alias">
+        <button id="editar-alias" onclick="window.location.href='perfil.html'">&#9998;</button>
+      </div>
+    </div>
     <div class="carton-box">
-      <table class="carton">
-        <thead>
-          <tr><th>B</th><th>I</th><th>N</th><th>G</th><th>O</th></tr>
-        </thead>
-        <tbody id="bingo-board"></tbody>
-      </table>
+      <div class="carton-wrapper" id="carton-wrapper">
+        <table class="carton">
+          <thead>
+            <tr><th>B</th><th>I</th><th>N</th><th>G</th><th>O</th></tr>
+          </thead>
+          <tbody id="bingo-board"></tbody>
+        </table>
+        <div class="carton-back"><img src="https://i.imgur.com/twjhNtZ.png" alt="logo"></div>
+      </div>
     </div>
-    <label style="display:block;margin:10px 0;"><input type="checkbox" id="guardar-carton"> Guardar cartón</label>
-    <div id="nombre-carton-div" style="display:none;">
-      <input type="text" id="nombre-carton" placeholder="Nombre de cartón" style="font-size:1rem;padding:5px;text-align:center;">
-    </div>
-    <select id="plantilla-select" style="width:180px;margin-top:10px;font-size:1rem;padding:5px;text-align:center;">
-      <option value="">Mis Cartones</option>
-    </select>
+    <button id="guardar-carton-btn">Guardar Cartón</button>
+    <button id="mis-cartones-btn">Mis Cartones</button>
     <button id="jugar-carton-btn" class="action-btn">JUGAR CARTÓN</button>
   </section>
   <div id="login-footer">
@@ -153,6 +176,9 @@
   </div>
   <div id="number-modal" class="modal" onclick="this.style.display='none'">
     <div id="number-grid" class="modal-content" onclick="event.stopPropagation();"></div>
+  </div>
+  <div id="cartones-modal" class="modal" onclick="this.style.display='none'">
+    <div id="cartones-list" class="modal-content" style="grid-template-columns:1fr;gap:10px;" onclick="event.stopPropagation();"></div>
   </div>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
@@ -166,6 +192,22 @@
   let currentCell=null;
   let sorteoInterval=null;
   let currentSorteo=null;
+  let cartonesGuardados={};
+
+  function flipCard(){
+    const wrapper=document.getElementById('carton-wrapper');
+    const flipped=wrapper.classList.contains('flipped');
+    const start=flipped?180:0;
+    const end=flipped?0:180;
+    wrapper.animate([
+      {transform:`rotateY(${start}deg) scale(1)`},
+      {transform:`rotateY(${(start+end)/2}deg) scale(1.1)`},
+      {transform:`rotateY(${end}deg) scale(1)`}
+    ],{duration:600,easing:'ease-in-out'}).onfinish=()=>{
+      wrapper.style.transform=`rotateY(${end}deg)`;
+      wrapper.classList.toggle('flipped');
+    };
+  }
 
   function createBoard(){
     for(let r=0;r<5;r++){
@@ -179,6 +221,7 @@
           span.id='carton-num';
           span.textContent='0';
           td.appendChild(span);
+          td.addEventListener('click',flipCard);
         }else{
           td.addEventListener('click',()=>openModal(td));
         }
@@ -236,6 +279,9 @@
       td.textContent='';
       td.classList.remove('error');
     });
+    const wrapper=document.getElementById('carton-wrapper');
+    wrapper.classList.remove('flipped');
+    wrapper.style.transform='';
   }
 
   function setBoard(carton){
@@ -259,11 +305,15 @@
     const valor=data.valorCarton||0;
     const jug=data.cartonesjugando||0;
     const premio=data.totalPremios||0;
-    document.getElementById('valor-carton').textContent=`Valor de Cartón: ${valor}`;
-    document.getElementById('cartones-jugando').textContent=`Cartones Jugando: ${jug}`;
-    document.getElementById('premio-repartir').textContent=`Premio a Repartir: ${premio}`;
+    document.getElementById('valor-carton-valor').textContent=valor;
+    document.getElementById('cartones-jugando-valor').textContent=jug;
+    document.getElementById('premio-valor').textContent=premio;
     const numEl=document.getElementById('carton-num');
-    if(numEl) numEl.textContent=jug+1;
+    if(numEl){
+      let base=(jug+1).toString();
+      while(base.length<4){base+='0';}
+      numEl.textContent=base;
+    }
   }
 
   function iniciarIntervalo(){
@@ -279,8 +329,8 @@
     const opt=document.getElementById('select-sorteo').selectedOptions[0];
     if(!opt) return;
     currentSorteo=opt.value;
-    document.getElementById('fecha-sorteo').textContent=`Fecha: ${formatearFecha(opt.dataset.fecha)}`;
-    document.getElementById('hora-sorteo').textContent=`Hora: ${formatearHora(opt.dataset.hora)}`;
+    document.getElementById('fecha-sorteo').innerHTML=`<b>Fecha:</b> ${formatearFecha(opt.dataset.fecha)}`;
+    document.getElementById('hora-sorteo').innerHTML=`<b>Hora:</b> ${formatearHora(opt.dataset.hora)}`;
     iniciarIntervalo();
   }
 
@@ -326,9 +376,11 @@
       gratis--;
       jugarGratis=true;
       await billeteraRef.update({cartonesGratis:gratis});
+      document.getElementById('gratis-label').textContent=gratis;
     }else if(creditos>=valor){
       creditos-=valor;
       await billeteraRef.update({creditos});
+      document.getElementById('creditos-label').textContent=creditos;
       const porcentajeVal=valor*porcentaje/100;
       const porcentajeSuVal=valor*porcentajesu/100;
       const paraPremio=valor-porcentajeVal-porcentajeSuVal;
@@ -347,51 +399,64 @@
         cartonesjugando: firebase.firestore.FieldValue.increment(1)
       });
     }
-    const carton=[[],[],[],[],[]];
+    const posiciones=[];
     document.querySelectorAll('#bingo-board td').forEach(td=>{
       const r=parseInt(td.dataset.row);
       const c=parseInt(td.dataset.col);
-      carton[r][c]=td.dataset.value||'';
+      if(!(r===2&&c===2)) posiciones.push({r,c,valor:td.dataset.value||''});
     });
     await db.collection('CartonJugado').add({
-      userEmail:user.email,
+      userId:user.uid,
       alias:alias,
       sorteoId:currentSorteo,
-      carton:carton,
+      posiciones:posiciones,
       fecha:new Date().toLocaleDateString('es-ES'),
       hora:new Date().toLocaleTimeString('es-ES')
     });
-    if(document.getElementById('guardar-carton').checked){
-      const nombre=document.getElementById('nombre-carton').value.trim();
-      await db.collection('CartonesPlantilla').add({
-        userEmail:user.email,
-        alias:alias,
-        carton:carton,
-        nombre:nombre
-      });
-      await cargarPlantillas();
-    }
     alert('Jugada de Cartón enviada correctamente.');
     limpiarcarton();
   }
 
-  let plantillas={};
-  async function cargarPlantillas(){
+  async function guardarCarton(){
+    if(!validateBoard()){alert('Corrige los errores antes de guardar.');return;}
+    const nombre=prompt('Nombre del cartón');
+    if(!nombre) return;
+    const user=auth.currentUser;
+    const alias=document.getElementById('alias-jugador').value.trim();
+    const posiciones=[];
+    document.querySelectorAll('#bingo-board td').forEach(td=>{
+      const r=parseInt(td.dataset.row);const c=parseInt(td.dataset.col);
+      if(!(r===2&&c===2)) posiciones.push({r,c,valor:td.dataset.value||''});
+    });
+    await db.collection('CartonGuardado').add({userId:user.uid,alias,nombre,posiciones});
+    await cargarCartonesGuardados();
+    alert('Cartón guardado');
+  }
+
+  async function cargarCartonesGuardados(){
     const user=auth.currentUser;
     if(!user) return;
-    const sel=document.getElementById('plantilla-select');
-    sel.innerHTML='<option value="">Mis Cartones</option>';
-    plantillas={};
-    const snap=await db.collection('CartonesPlantilla').where('userEmail','==',user.email).get();
-    let idx=1;
-    snap.forEach(doc=>{
-      const d=doc.data();
-      plantillas[doc.id]=d.carton;
-      const opt=document.createElement('option');
-      opt.value=doc.id;
-      opt.textContent=d.nombre||`Cartón ${idx++}`;
-      sel.appendChild(opt);
+    cartonesGuardados={};
+    const snap=await db.collection('CartonGuardado').where('userId','==',user.uid).get();
+    snap.forEach(doc=>{cartonesGuardados[doc.id]=doc.data();});
+  }
+
+  function abrirCartonesModal(){
+    const list=document.getElementById('cartones-list');
+    list.innerHTML='';
+    Object.entries(cartonesGuardados).forEach(([id,data])=>{
+      const div=document.createElement('div');
+      div.textContent=data.nombre||'Cartón';
+      div.addEventListener('click',()=>{setBoardFromPosiciones(data.posiciones);document.getElementById('cartones-modal').style.display='none';});
+      list.appendChild(div);
     });
+    document.getElementById('cartones-modal').style.display='flex';
+  }
+
+  function setBoardFromPosiciones(pos){
+    const carton=[[],[],[],[],[]];
+    pos.forEach(p=>{carton[p.r][p.c]=p.valor;});
+    setBoard(carton);
   }
 
   function actualizarFechaHora(){
@@ -402,13 +467,8 @@
 
   document.getElementById('select-sorteo').addEventListener('change',actualizarInfoSorteo);
   document.getElementById('jugar-carton-btn').addEventListener('click',enviarDatos);
-  document.getElementById('guardar-carton').addEventListener('change',e=>{
-    document.getElementById('nombre-carton-div').style.display=e.target.checked?'block':'none';
-  });
-  document.getElementById('plantilla-select').addEventListener('change',e=>{
-    const cart=plantillas[e.target.value];
-    if(cart) setBoard(cart);
-  });
+  document.getElementById('guardar-carton-btn').addEventListener('click',guardarCarton);
+  document.getElementById('mis-cartones-btn').addEventListener('click',abrirCartonesModal);
   document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='player.html';});
 
   auth.onAuthStateChanged(async user=>{
@@ -431,7 +491,7 @@
       window.location.href='index.html';
     }
     cargarSorteosActivos();
-    await cargarPlantillas();
+    await cargarCartonesGuardados();
   });
 
   createBoard();
