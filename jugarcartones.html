@@ -60,7 +60,7 @@
       #volver-btn{width:40px;}
       #volver-btn .label{display:none;}
     }
-    #sorteo-btn{
+    #sorteo-select{
       width:240px;
       font-size:1.1rem;
       padding:5px 10px;
@@ -72,8 +72,8 @@
       white-space:nowrap;
       overflow:hidden;
     }
-    #sorteo-btn.diario{background:linear-gradient(#00aa00,#ffffff);}
-    #sorteo-btn.especial{background:linear-gradient(#ff8800,#ffffff);}
+    #sorteo-select.diario{background:linear-gradient(#00aa00,#ffffff);}
+    #sorteo-select.especial{background:linear-gradient(#ff8800,#ffffff);}
     .sorteo-diario{color:green;}
     .sorteo-especial{color:orange;}
     .sorteo-info{display:flex;align-items:center;justify-content:center;gap:10px;}
@@ -127,9 +127,6 @@
     .carton-back img{width:80%;height:80%;opacity:0.3;object-fit:contain;}
     .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);justify-content:center;align-items:center;z-index:1000;}
     .modal-content{background:#fff;padding:10px;border-radius:10px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;width:max-content;}
-    #sorteos-title{color:purple;font-family:'Poppins',sans-serif;margin-bottom:5px;}
-    #sorteos-list{display:flex;flex-direction:column;gap:5px;width:100%;}
-    .sorteo-item{padding:5px;border-radius:5px;cursor:pointer;font-family:'Poppins',sans-serif;border:none;background:transparent;}
     #number-modal-title{font-size:0.8rem;text-align:center;width:100%;text-shadow:0 0 5px blue;margin-bottom:5px;font-family:'Poppins',sans-serif;}
     #number-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;justify-items:center;}
     #number-grid div{width:60px;height:60px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;text-shadow:0 0 5px green;cursor:pointer;}
@@ -169,7 +166,9 @@
   <h1 id="titulo">JUGAR CARTÓN</h1>
   <section id="sorteo-section">
     <div class="sorteo-info">
-      <button id="sorteo-btn">Selecciona Sorteo</button>
+      <select id="sorteo-select">
+        <option value="">Selecciona Sorteo</option>
+      </select>
       <div id="fecha-hora-sorteo">
         <div id="fecha-sorteo"></div>
         <div id="hora-sorteo"></div>
@@ -231,12 +230,6 @@
           <button id="cargar-guardado-btn" class="action-btn" style="margin-top:10px;">Cargar cartón</button>
       </div>
   </div>
-  <div id="sorteos-modal" class="modal" onclick="this.style.display='none'">
-      <div id="sorteos-modal-content" class="modal-content" onclick="event.stopPropagation();">
-          <h2 id="sorteos-title">Elige Sorteo</h2>
-          <div id="sorteos-list"></div>
-      </div>
-  </div>
   <div id="jugados-modal" class="modal" onclick="this.style.display='none'">
       <div id="jugados-content" class="modal-content" onclick="event.stopPropagation();">
           <span id="jugados-close" class="close-icon">✖</span>
@@ -262,9 +255,6 @@ let sorteosActivos=[];
 let seleccionadoJugado=null;
 let seleccionadoGuardado=null;
 let consultando=false;
-const sorteosModal=document.getElementById('sorteos-modal');
-sorteosModal.close=()=>{sorteosModal.style.display='none';};
-sorteosModal.showModal=()=>{sorteosModal.style.display='flex';};
 let cookieKey='';
 let formasSorteo=[];
 let formaActiva=0;
@@ -526,17 +516,16 @@ function toggleForma(idx){
   function seleccionarSorteo(s){
     resetForma();
     currentSorteo=s.id;
-    const btn=document.getElementById('sorteo-btn');
-    // Muestra el nombre del sorteo elegido en el botón principal
-    btn.textContent=s.nombre;
+    const select=document.getElementById('sorteo-select');
+    // Selecciona el sorteo elegido en el menú desplegable
+    select.value=s.id;
     // Guarda información del sorteo para futuros usos
-    btn.dataset.sorteoId=s.id;
-    btn.dataset.sorteoNombre=s.nombre;
-    btn.dataset.sorteoTipo=s.tipo;
-    btn.classList.remove('diario','especial');
-    if(s.tipo==='Sorteo Diario'){ btn.classList.add('diario'); }
-    else if(s.tipo==='Sorteo Especial'){ btn.classList.add('especial'); }
-    btn.style.fontSize = s.nombre.length>20?'0.8rem':'1.1rem';
+    select.dataset.sorteoId=s.id;
+    select.dataset.sorteoNombre=s.nombre;
+    select.dataset.sorteoTipo=s.tipo;
+    select.classList.remove('diario','especial');
+    if(s.tipo==='Sorteo Diario'){ select.classList.add('diario'); }
+    else if(s.tipo==='Sorteo Especial'){ select.classList.add('especial'); }
     document.getElementById('fecha-sorteo').innerHTML=`<span class="cal-icon">📅</span> ${formatearFecha(s.fecha)}`;
     document.getElementById('hora-sorteo').innerHTML=`<span class="clock-icon">⏰</span> ${formatearHora(s.hora)}`;
     iniciarIntervalo();
@@ -546,24 +535,19 @@ function toggleForma(idx){
 
 
   async function cargarSorteosActivos(){
-    const list=document.getElementById('sorteos-list');
-    list.innerHTML='';
+    const select=document.getElementById('sorteo-select');
+    select.innerHTML='<option value="">Selecciona Sorteo</option>';
     sorteosActivos=[];
     try{
       const snap=await db.collection('sorteos').where('estado','==','Activo').get();
       snap.forEach(doc=>{
         const d=doc.data();
-        sorteosActivos.push({id:doc.id,nombre:d.nombre,fecha:d.fecha,hora:d.hora,tipo:d.tipo});
-        const item=document.createElement('button');
-        item.className='sorteo-item';
-        item.type='button';
-        item.textContent=d.nombre;
-        item.addEventListener('click',e=>{
-          e.preventDefault();
-          seleccionarSorteo({id:doc.id,nombre:d.nombre,fecha:d.fecha,hora:d.hora,tipo:d.tipo});
-          sorteosModal.close();
-        });
-        list.appendChild(item);
+        const info={id:doc.id,nombre:d.nombre,fecha:d.fecha,hora:d.hora,tipo:d.tipo};
+        sorteosActivos.push(info);
+        const opt=document.createElement('option');
+        opt.value=info.id;
+        opt.textContent=info.nombre;
+        select.appendChild(opt);
       });
     }catch(e){ console.warn('No se pudieron cargar sorteos'); }
   }
@@ -835,15 +819,6 @@ function toggleForma(idx){
   });
 
   auth.onAuthStateChanged(async user=>{
-    async function abrirSorteosModal(){
-      const list=document.getElementById('sorteos-list');
-      if(list.children.length===0){
-        await cargarSorteosActivos();
-      }
-      if(list.children.length>0){
-        sorteosModal.showModal();
-      }
-    }
     if(user){
       const doc=await db.collection('users').doc(user.email).get();
       if(doc.exists){
@@ -866,7 +841,10 @@ function toggleForma(idx){
     }
     await cargarSorteosActivos();
     await cargarCartonesGuardados();
-    document.getElementById('sorteo-btn').addEventListener('click',abrirSorteosModal);
+    document.getElementById('sorteo-select').addEventListener('change',e=>{
+      const sel=sorteosActivos.find(s=>s.id===e.target.value);
+      if(sel) seleccionarSorteo(sel);
+    });
   });
 
   createBoard();
