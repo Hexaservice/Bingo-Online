@@ -129,7 +129,8 @@
     .modal-content{background:#fff;padding:10px;border-radius:10px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;width:max-content;}
     #sorteos-title{color:purple;font-family:'Poppins',sans-serif;margin-bottom:5px;}
     #sorteos-list{display:flex;flex-direction:column;gap:5px;width:100%;}
-    .sorteo-item{display:flex;flex-direction:column;padding:5px;border:1px solid #ccc;border-radius:5px;cursor:pointer;font-family:'Poppins',sans-serif;}
+    .sorteo-item{display:flex;justify-content:space-between;align-items:center;padding:5px;border:1px solid #ccc;border-radius:5px;cursor:pointer;font-family:'Poppins',sans-serif;}
+    .sorteo-item-info{display:flex;flex-direction:column;}
     .sorteo-nombre{font-weight:bold;font-size:1rem;color:#000;}
     .sorteo-detalles{font-size:0.8rem;display:flex;align-items:center;gap:3px;}
     .sorteo-detalles .fecha{color:purple;}
@@ -241,6 +242,7 @@
       <div id="sorteos-modal-content" class="modal-content" onclick="event.stopPropagation();">
           <h2 id="sorteos-title">Elige Sorteo</h2>
           <div id="sorteos-list"></div>
+          <button id="seleccionar-sorteo-btn" class="action-btn" style="margin-top:10px;">Seleccionar Sorteo</button>
       </div>
   </div>
   <div id="jugados-modal" class="modal" onclick="this.style.display='none'">
@@ -554,7 +556,8 @@ function toggleForma(idx){
       const snap=await db.collection('sorteos').where('estado','==','Activo').get();
       snap.forEach((doc,i)=>{
         const d=doc.data();
-        sorteosActivos.push({id:doc.id,nombre:d.nombre,fecha:d.fecha,hora:d.hora,tipo:d.tipo,premios:d.totalPremios});
+        const premioVal=Math.floor(d.totalPremios||0);
+        sorteosActivos.push({id:doc.id,nombre:d.nombre,fecha:d.fecha,hora:d.hora,tipo:d.tipo,premios:premioVal});
         const label=document.createElement('label');
         label.className='sorteo-item';
 
@@ -565,9 +568,14 @@ function toggleForma(idx){
         input.dataset.nombre=d.nombre;
         input.dataset.fecha=d.fecha;
         input.dataset.hora=d.hora;
-        input.dataset.premios=d.totalPremios||0;
+        input.dataset.premios=premioVal;
         input.dataset.tipo=d.tipo;
 
+        const info=document.createElement('div');
+        info.className='sorteo-item-info';
+        const nombre=document.createElement('div');
+        nombre.className='sorteo-nombre';
+        nombre.textContent=d.nombre;
         const datos=document.createElement('div');
         datos.className='sorteo-detalles';
         const cal=document.createElement('span');
@@ -584,10 +592,11 @@ function toggleForma(idx){
         hora.textContent=formatearHora(d.hora);
         const premio=document.createElement('span');
         premio.className='premios';
-        premio.textContent=`💰 ${d.totalPremios||0}`;
+        premio.textContent=`💰 ${premioVal}`;
         datos.append(cal,fecha,reloj,hora,premio);
+        info.append(nombre,datos);
 
-        label.append(input,datos);
+        label.append(info,input);
         list.appendChild(label);
       });
     }catch(e){ console.warn('No se pudieron cargar sorteos'); }
@@ -840,14 +849,13 @@ function toggleForma(idx){
     document.getElementById('fecha-hora').textContent=ahora.toLocaleString('es-ES',opciones);
   }
 
-  document.getElementById('sorteos-list').addEventListener('change',e=>{
-    if(e.target.name==='sorteoSeleccion'){
-      const {value,dataset}=e.target;
-      const s={id:value,nombre:dataset.nombre,fecha:dataset.fecha,hora:dataset.hora,tipo:dataset.tipo,premios:dataset.premios};
-      seleccionarSorteo(s);
-      document.getElementById('sorteo-btn').textContent=`${formatearFecha(s.fecha)} ${formatearHora(s.hora)}`;
-      sorteosModal.close();
-    }
+  document.getElementById('seleccionar-sorteo-btn').addEventListener('click',()=>{
+    const chk=document.querySelector('#sorteos-list input[name="sorteoSeleccion"]:checked');
+    if(!chk){ alert('Selecciona un sorteo'); return; }
+    const {value,dataset}=chk;
+    const s={id:value,nombre:dataset.nombre,fecha:dataset.fecha,hora:dataset.hora,tipo:dataset.tipo,premios:dataset.premios};
+    seleccionarSorteo(s);
+    sorteosModal.close();
   });
   document.getElementById('jugar-carton-btn').addEventListener('click',enviarDatos);
   document.getElementById('guardar-carton-btn').addEventListener('click',guardarCarton);
