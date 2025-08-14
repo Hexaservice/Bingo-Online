@@ -472,26 +472,50 @@ function toggleForma(idx){
   async function actualizarDatosSorteo(){
     if(!currentSorteo) return;
     const sorteoRef=db.collection('sorteos').doc(currentSorteo);
-    const doc=await sorteoRef.get();
-    if(!doc.exists) return;
-    const data=doc.data();
-  const valor=data.valorCarton||0;
-  const jug=data.cartonesjugando||0;
-  const premio=data.totalPremios||0;
-  premioActual=premio;
-  document.getElementById('valor-carton-valor').textContent=valor;
-  document.getElementById('cartones-jugando-valor').textContent=jug;
-  const pv=document.getElementById('premio-valor');
-  if(formaActiva>0){
-    const f=formasSorteo.find(x=>x.idx===formaActiva);
-    const por=parseFloat(f&&f.porcentaje)||0;
-    pv.textContent=Math.round(premioActual*por/100);
-  }else{
-    pv.textContent=Math.round(premioActual);
-  }
-  const numEl=document.getElementById('carton-num');
-    if(numEl && !consultando){
-      numEl.textContent=(jug+1).toString().padStart(4,'0');
+    try{
+      const doc=await sorteoRef.get();
+      if(!doc.exists){
+        console.warn('El documento del sorteo no existe:',currentSorteo);
+        return;
+      }
+      const data=doc.data();
+      const valor=data.valorCarton;
+      const jug=data.cartonesjugando;
+      const premio=data.totalPremios;
+      if(valor===undefined){
+        console.warn('Campo valorCarton no definido en el sorteo',currentSorteo);
+        document.getElementById('valor-carton-valor').textContent='N/D';
+      }else{
+        document.getElementById('valor-carton-valor').textContent=valor;
+      }
+      if(jug===undefined){
+        console.warn('Campo cartonesjugando no definido en el sorteo',currentSorteo);
+        document.getElementById('cartones-jugando-valor').textContent='N/D';
+      }else{
+        document.getElementById('cartones-jugando-valor').textContent=jug;
+      }
+      if(premio===undefined){
+        console.warn('Campo totalPremios no definido en el sorteo',currentSorteo);
+        premioActual=0;
+      }else{
+        premioActual=premio;
+      }
+      const pv=document.getElementById('premio-valor');
+      if(premio===undefined){
+        pv.textContent='N/D';
+      }else if(formaActiva>0){
+        const f=formasSorteo.find(x=>x.idx===formaActiva);
+        const por=parseFloat(f&&f.porcentaje)||0;
+        pv.textContent=Math.round(premioActual*por/100);
+      }else{
+        pv.textContent=Math.round(premioActual);
+      }
+      const numEl=document.getElementById('carton-num');
+      if(numEl && !consultando){
+        numEl.textContent=jug===undefined?'----':(jug+1).toString().padStart(4,'0');
+      }
+    }catch(error){
+      console.error('Error al obtener datos del sorteo:',error);
     }
   }
 
