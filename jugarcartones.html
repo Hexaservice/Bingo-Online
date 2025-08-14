@@ -129,14 +129,7 @@
     .modal-content{background:#fff;padding:10px;border-radius:10px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;width:max-content;}
     #sorteos-title{color:purple;font-family:'Poppins',sans-serif;margin-bottom:5px;}
     #sorteos-list{display:flex;flex-direction:column;gap:5px;width:100%;}
-    .sorteo-item{display:flex;justify-content:space-between;align-items:center;padding:5px;border:1px solid #ccc;border-radius:5px;cursor:pointer;font-family:'Poppins',sans-serif;}
-    .sorteo-item-info{display:flex;flex-direction:column;}
-    .sorteo-nombre{font-weight:bold;font-size:1rem;color:#000;}
-    .sorteo-detalles{font-size:0.8rem;display:flex;align-items:center;gap:3px;}
-    .sorteo-detalles .fecha{color:purple;}
-    .sorteo-detalles .hora{color:green;}
-    .sorteo-icon{font-size:0.8rem;}
-    .sorteo-tipo{font-size:0.7rem;}
+    .sorteo-item{padding:5px;border:1px solid #ccc;border-radius:5px;cursor:pointer;font-family:'Poppins',sans-serif;}
     #number-modal-title{font-size:0.8rem;text-align:center;width:100%;text-shadow:0 0 5px blue;margin-bottom:5px;font-family:'Poppins',sans-serif;}
     #number-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;justify-items:center;}
     #number-grid div{width:60px;height:60px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;text-shadow:0 0 5px green;cursor:pointer;}
@@ -242,7 +235,6 @@
       <div id="sorteos-modal-content" class="modal-content" onclick="event.stopPropagation();">
           <h2 id="sorteos-title">Elige Sorteo</h2>
           <div id="sorteos-list"></div>
-          <button id="seleccionar-sorteo-btn" class="action-btn" style="margin-top:10px;">Seleccionar Sorteo</button>
       </div>
   </div>
   <div id="jugados-modal" class="modal" onclick="this.style.display='none'">
@@ -265,7 +257,6 @@ const board=document.getElementById('bingo-board');
 let currentCell=null;
 let sorteoInterval=null;
 let currentSorteo=null;
-let sorteoSeleccionado=null;
 let cartonesGuardados={};
 let sorteosActivos=[];
 let seleccionadoJugado=null;
@@ -560,54 +551,19 @@ function toggleForma(idx){
     sorteosActivos=[];
     try{
       const snap=await db.collection('sorteos').where('estado','==','Activo').get();
-      snap.forEach((doc,i)=>{
+      let index=1;
+      snap.forEach(doc=>{
         const d=doc.data();
-        const premioVal=Math.floor(d.totalPremios||0);
-        sorteosActivos.push({id:doc.id,nombre:d.nombre,fecha:d.fecha,hora:d.hora,tipo:d.tipo,premios:premioVal});
-        const label=document.createElement('label');
-        label.className='sorteo-item';
-
-        const input=document.createElement('input');
-        input.type='radio';
-        input.name='sorteoSeleccion';
-        input.value=doc.id;
-        input.dataset.nombre=d.nombre;
-        input.dataset.fecha=d.fecha;
-        input.dataset.hora=d.hora;
-        input.dataset.premios=premioVal;
-        input.dataset.tipo=d.tipo;
-
-        input.addEventListener('change',()=>{
-          sorteoSeleccionado={id:doc.id,nombre:d.nombre,fecha:d.fecha,hora:d.hora,tipo:d.tipo};
+        sorteosActivos.push({id:doc.id,nombre:d.nombre,fecha:d.fecha,hora:d.hora,tipo:d.tipo});
+        const item=document.createElement('div');
+        item.className='sorteo-item';
+        item.textContent=`${index}. ${d.nombre}`;
+        item.addEventListener('click',()=>{
+          seleccionarSorteo({id:doc.id,nombre:d.nombre,fecha:d.fecha,hora:d.hora,tipo:d.tipo});
+          sorteosModal.close();
         });
-
-        const info=document.createElement('div');
-        info.className='sorteo-item-info';
-        const nombre=document.createElement('div');
-        nombre.className='sorteo-nombre';
-        nombre.textContent=d.nombre;
-        const datos=document.createElement('div');
-        datos.className='sorteo-detalles';
-        const cal=document.createElement('span');
-        cal.className='sorteo-icon';
-        cal.textContent='📅';
-        const fecha=document.createElement('span');
-        fecha.className='fecha';
-        fecha.textContent=formatearFecha(d.fecha);
-        const reloj=document.createElement('span');
-        reloj.className='sorteo-icon';
-        reloj.textContent='🕒';
-        const hora=document.createElement('span');
-        hora.className='hora';
-        hora.textContent=formatearHora(d.hora);
-        const premio=document.createElement('span');
-        premio.className='premios';
-        premio.textContent=`💰 ${premioVal}`;
-        datos.append(cal,fecha,reloj,hora,premio);
-        info.append(nombre,datos);
-
-        label.append(info,input);
-        list.appendChild(label);
+        list.appendChild(item);
+        index++;
       });
     }catch(e){ console.warn('No se pudieron cargar sorteos'); }
   }
@@ -859,11 +815,6 @@ function toggleForma(idx){
     document.getElementById('fecha-hora').textContent=ahora.toLocaleString('es-ES',opciones);
   }
 
-  document.getElementById('seleccionar-sorteo-btn').addEventListener('click',()=>{
-    if(!sorteoSeleccionado){ alert('Selecciona un sorteo'); return; }
-    seleccionarSorteo(sorteoSeleccionado);
-    sorteosModal.close();
-  });
   document.getElementById('jugar-carton-btn').addEventListener('click',enviarDatos);
   document.getElementById('guardar-carton-btn').addEventListener('click',guardarCarton);
   document.getElementById('mis-cartones-icon').addEventListener('click',abrirCartonesModal);
@@ -886,10 +837,10 @@ function toggleForma(idx){
   auth.onAuthStateChanged(async user=>{
     async function abrirSorteosModal(){
       const list=document.getElementById('sorteos-list');
-      if(!list.querySelector('input[type="radio"]')){
+      if(list.children.length===0){
         await cargarSorteosActivos();
       }
-      if(list.querySelector('input[type="radio"]')){
+      if(list.children.length>0){
         sorteosModal.showModal();
       }
     }
