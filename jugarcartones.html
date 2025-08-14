@@ -118,6 +118,7 @@
     .carton{margin:0;border-collapse:separate;border-spacing:0;background:linear-gradient(#ffffff,#cccccc);border-radius:10px;table-layout:fixed;backface-visibility:hidden;}
     .carton th,.carton td{background:transparent;border:2px solid gray;width:60px;height:60px;aspect-ratio:1/1;text-align:center;font-weight:bold;padding:0 3px;margin:0;box-sizing:border-box;}
     .carton th{font-size:2.5rem;color:#ff6600;background:radial-gradient(circle,#ffffff,#ffffff 60%,#00aa00);text-shadow:2px 2px 0 #000;}
+    .forma-header{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;font-family:'Bangers',cursive;font-size:0.8rem;line-height:1;text-shadow:1px 1px 0 #000;}
     .carton td{cursor:pointer;font-size:1.8rem;text-shadow:0 0 3px green;}
     .carton td.free{background:radial-gradient(circle,#ffffff,#ffff00);display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:#4B0082;}
     .carton td.error{border:2px solid red;}
@@ -287,7 +288,11 @@ async function cargarFormasSorteo(){
 
 function resetForma(){
   formaActiva=0;
-  document.querySelectorAll('.carton th').forEach((th,i)=>{th.textContent='BINGO'[i];});
+  document.querySelectorAll('.carton th').forEach((th,i)=>{
+    th.innerHTML='BINGO'[i];
+    th.style.background='radial-gradient(circle,#ffffff,#ffffff 60%,#00aa00)';
+    th.style.textShadow='2px 2px 0 #000';
+  });
   document.querySelectorAll('#bingo-board td').forEach(td=>{td.style.background='';});
   document.getElementById('premio-label').textContent='Premio a Repartir:';
   document.getElementById('premio-valor').style.textShadow='0 0 10px #004400';
@@ -305,7 +310,9 @@ function toggleForma(idx){
   if(!forma) return;
   formaActiva=idx;
   const th=document.querySelectorAll('.carton th')[idx-1];
-  th.textContent=`Forma ${idx}`;
+  th.innerHTML=`<div class="forma-header">Forma<br>${idx}</div>`;
+  th.style.background=`radial-gradient(circle,#ffffff,#ffffff 60%,${formGlows[idx-1]})`;
+  th.style.textShadow='1px 1px 0 #000';
   forma.posiciones&&forma.posiciones.forEach(p=>{
     const td=document.querySelector(`#bingo-board td[data-row="${p.r}"][data-col="${p.c}"]`);
     if(td) td.style.background=formColors[idx-1];
