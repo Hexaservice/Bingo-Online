@@ -129,7 +129,7 @@
     .modal-content{background:#fff;padding:10px;border-radius:10px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;width:max-content;}
     #sorteos-title{color:purple;font-family:'Poppins',sans-serif;margin-bottom:5px;}
     #sorteos-list{display:flex;flex-direction:column;gap:5px;width:100%;}
-    .sorteo-item{padding:5px;border:1px solid #ccc;border-radius:5px;cursor:pointer;font-family:'Poppins',sans-serif;}
+    .sorteo-item{padding:5px;border-radius:5px;cursor:pointer;font-family:'Poppins',sans-serif;border:none;background:transparent;}
     #number-modal-title{font-size:0.8rem;text-align:center;width:100%;text-shadow:0 0 5px blue;margin-bottom:5px;font-family:'Poppins',sans-serif;}
     #number-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;justify-items:center;}
     #number-grid div{width:60px;height:60px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;text-shadow:0 0 5px green;cursor:pointer;}
@@ -551,19 +551,17 @@ function toggleForma(idx){
     sorteosActivos=[];
     try{
       const snap=await db.collection('sorteos').where('estado','==','Activo').get();
-      let index=1;
       snap.forEach(doc=>{
         const d=doc.data();
         sorteosActivos.push({id:doc.id,nombre:d.nombre,fecha:d.fecha,hora:d.hora,tipo:d.tipo});
-        const item=document.createElement('div');
+        const item=document.createElement('button');
         item.className='sorteo-item';
-        item.textContent=`${index}. ${d.nombre}`;
+        item.textContent=d.nombre;
         item.addEventListener('click',()=>{
           seleccionarSorteo({id:doc.id,nombre:d.nombre,fecha:d.fecha,hora:d.hora,tipo:d.tipo});
           sorteosModal.close();
         });
         list.appendChild(item);
-        index++;
       });
     }catch(e){ console.warn('No se pudieron cargar sorteos'); }
   }
