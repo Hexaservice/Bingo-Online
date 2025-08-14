@@ -88,7 +88,8 @@
     .billete-icon{font-size:1.5rem;}
     .carton-icon{width:24px;height:24px;}
     #premio-repartir{color:white;font-family:'Bangers',cursive;font-size:1.8rem;text-shadow:0 0 10px #004400;position:relative;}
-    #forma-nombre{position:absolute;top:100%;left:50%;transform:translateX(-50%);font-size:0.8rem;display:none;text-shadow:0 0 5px #004400;}
+    #n-header{position:relative;}
+    #forma-nombre{position:absolute;bottom:-1.2em;left:50%;transform:translateX(-50%);font-size:0.8rem;display:none;text-shadow:0 0 5px #004400;white-space:nowrap;}
     .wallet-row{display:flex;align-items:center;gap:5px;margin:3px 0;font-size:1rem;font-weight:bold;}
     #creditos-label,#gratis-label{font-family:'Bangers',cursive;font-size:1.5rem;text-shadow:0 0 5px green;display:inline-block;animation:pulse 1s infinite;}
     #gratis-label{color:#4b0082;text-shadow:0 0 5px #fff;}
@@ -126,7 +127,15 @@
     .carton-back img{width:80%;height:80%;opacity:0.3;object-fit:contain;}
     .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);justify-content:center;align-items:center;z-index:1000;}
     .modal-content{background:#fff;padding:10px;border-radius:10px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;width:max-content;}
-    #sorteos-list div{display:block;font-weight:bold;font-size:1rem;color:#000;cursor:pointer;font-family:'Poppins',sans-serif;white-space:nowrap;}
+    #sorteos-title{color:purple;font-family:'Poppins',sans-serif;margin-bottom:5px;}
+    #sorteos-list{display:flex;flex-direction:column;gap:5px;width:100%;}
+    .sorteo-item{display:flex;flex-direction:column;padding:5px;border:1px solid #ccc;border-radius:5px;cursor:pointer;font-family:'Poppins',sans-serif;}
+    .sorteo-nombre{font-weight:bold;font-size:1rem;color:#000;}
+    .sorteo-detalles{font-size:0.8rem;display:flex;align-items:center;gap:3px;}
+    .sorteo-detalles .fecha{color:purple;}
+    .sorteo-detalles .hora{color:green;}
+    .sorteo-icon{font-size:0.8rem;}
+    .sorteo-tipo{font-size:0.7rem;}
     #number-modal-title{font-size:0.8rem;text-align:center;width:100%;text-shadow:0 0 5px blue;margin-bottom:5px;font-family:'Poppins',sans-serif;}
     #number-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;justify-items:center;}
     #number-grid div{width:60px;height:60px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;text-shadow:0 0 5px green;cursor:pointer;}
@@ -173,7 +182,7 @@
       </div>
     </div>
     <div class="datos-sorteo">
-      <div id="premio-repartir"><span id="premio-label">Premio a Repartir:</span> <span id="premio-valor">0</span><div id="forma-nombre"></div></div>
+      <div id="premio-repartir"><span id="premio-label">Premio a Repartir:</span> <span id="premio-valor">0</span></div>
       <div id="stats-row">
         <div id="valor-carton"><span class="billete-icon">💵</span> Cartón: <span id="valor-carton-valor">0</span></div>
         <div id="cartones-jugando"><img src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" class="carton-icon" alt="Cartón"> Jugando: <span id="cartones-jugando-valor">0</span></div>
@@ -200,7 +209,7 @@
       <div class="carton-wrapper" id="carton-wrapper">
         <table class="carton">
           <thead>
-            <tr><th>B</th><th>I</th><th>N</th><th>G</th><th>O</th></tr>
+            <tr><th>B</th><th>I</th><th id="n-header">N<div id="forma-nombre"></div></th><th>G</th><th>O</th></tr>
           </thead>
           <tbody id="bingo-board"></tbody>
         </table>
@@ -229,7 +238,10 @@
       </div>
   </div>
   <div id="sorteos-modal" class="modal" onclick="this.style.display='none'">
-      <div id="sorteos-list" class="modal-content" onclick="event.stopPropagation();"></div>
+      <div id="sorteos-modal-content" class="modal-content" onclick="event.stopPropagation();">
+          <h2 id="sorteos-title">Elige Sorteo</h2>
+          <div id="sorteos-list"></div>
+      </div>
   </div>
   <div id="jugados-modal" class="modal" onclick="this.style.display='none'">
       <div id="jugados-content" class="modal-content" onclick="event.stopPropagation();">
@@ -330,7 +342,7 @@ function toggleForma(idx){
   const pl=document.getElementById('premio-label');
   const nombre=document.getElementById('forma-nombre');
   const porcentaje=parseFloat(forma.porcentaje)||0;
-  pl.textContent='PREMIO DE FORMA';
+  pl.textContent='PREMIO DE FORMA:';
   pr.style.textShadow=`0 0 10px ${formGlows[idx-1]}`;
   pv.style.textShadow=`0 0 10px ${formGlows[idx-1]}`;
   nombre.textContent=forma.nombre||'';
@@ -534,11 +546,39 @@ function toggleForma(idx){
     const list=document.getElementById('sorteos-list');
     list.innerHTML='';
     sorteosActivos.forEach((s,i)=>{
-      const div=document.createElement('div');
-      div.textContent=`${i+1}- ${s.nombre}`;
-      div.className=s.tipo==='Sorteo Diario'?'sorteo-diario':'sorteo-especial';
-      div.addEventListener('click',()=>{seleccionarSorteo(s);document.getElementById('sorteos-modal').style.display='none';});
-      list.appendChild(div);
+      const item=document.createElement('div');
+      item.className='sorteo-item';
+
+      const nombre=document.createElement('div');
+      nombre.className='sorteo-nombre';
+      nombre.textContent=`${i+1}. ${s.nombre}`;
+      item.appendChild(nombre);
+
+      const detalles=document.createElement('div');
+      detalles.className='sorteo-detalles';
+      const cal=document.createElement('span');
+      cal.className='sorteo-icon';
+      cal.textContent='📅';
+      const fecha=document.createElement('span');
+      fecha.className='fecha';
+      fecha.textContent=formatearFecha(s.fecha);
+      const reloj=document.createElement('span');
+      reloj.className='sorteo-icon';
+      reloj.textContent='🕒';
+      const hora=document.createElement('span');
+      hora.className='hora';
+      hora.textContent=formatearHora(s.hora);
+      detalles.append(cal,fecha,reloj,hora);
+      item.appendChild(detalles);
+
+      const tipo=document.createElement('div');
+      tipo.className='sorteo-tipo';
+      tipo.textContent=s.tipo==='Sorteo Especial'?'ESPECIAL':'DIARIO';
+      tipo.style.color=s.tipo==='Sorteo Especial'?'orange':'green';
+      item.appendChild(tipo);
+
+      item.addEventListener('click',()=>{seleccionarSorteo(s);document.getElementById('sorteos-modal').style.display='none';});
+      list.appendChild(item);
     });
     document.getElementById('sorteos-modal').style.display='flex';
   }
