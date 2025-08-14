@@ -60,15 +60,22 @@
       #volver-btn{width:40px;}
       #volver-btn .label{display:none;}
     }
-    #select-sorteo{
-      width:220px;
+    #sorteo-btn{
+      width:240px;
       font-size:1.1rem;
       padding:5px 10px;
       text-align:center;
-      border:1px solid #333;
+      border:2px solid gray;
       border-radius:5px;
-      background:#fff;
+      background:linear-gradient(#dddddd,#ffffff);
+      cursor:pointer;
+      white-space:nowrap;
+      overflow:hidden;
     }
+    #sorteo-btn.diario{background:linear-gradient(#00aa00,#ffffff);}
+    #sorteo-btn.especial{background:linear-gradient(#ff8800,#ffffff);}
+    .sorteo-diario{color:green;}
+    .sorteo-especial{color:orange;}
     .sorteo-info{display:flex;align-items:center;justify-content:center;gap:10px;}
     .datos-sorteo{display:flex;flex-direction:column;align-items:center;gap:10px;justify-content:center;margin-top:5px;flex-wrap:wrap;font-family:'Bangers',cursive;}
     .datos-sorteo div{font-weight:bold;font-size:1.2rem;}
@@ -94,6 +101,7 @@
       text-shadow:2px 2px 4px #000;
       cursor:pointer;
     }
+    #ver-jugados-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;position:absolute;bottom:5px;right:50px;background:linear-gradient(purple,#ffffff);border:3px solid #FFD700;border-radius:8px;cursor:pointer;}
     #ir-billetera-btn{width:40px;height:40px;font-size:1.2rem;display:flex;align-items:center;justify-content:center;position:absolute;bottom:5px;right:5px;margin-left:0;}
     #jugar-carton-btn{width:200px;height:40px;font-size:1.2rem;display:flex;align-items:center;justify-content:center;margin:10px auto;}
     .carton-box{display:flex;justify-content:center;margin:8px auto;perspective:1000px;}
@@ -112,12 +120,22 @@
     .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);justify-content:center;align-items:center;}
     .modal-content{background:#fff;padding:10px;border-radius:10px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;width:max-content;}
     .modal-content div{display:block;font-weight:bold;font-size:1rem;color:#000;cursor:pointer;font-family:'Poppins',sans-serif;white-space:nowrap;}
+    #jugados-content{width:90%;height:90%;overflow:auto;align-items:center;}
+    #jugados-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;overflow-y:auto;flex-grow:1;padding:10px;}
+    .mini-carton-box{display:flex;flex-direction:column;align-items:center;cursor:pointer;}
+    .mini-carton-box.selected{outline:3px solid blue;}
+    .mini-index{font-weight:bold;margin-bottom:2px;}
+    .mini-num{font-size:0.8rem;font-weight:bold;color:purple;margin-top:2px;text-align:center;}
+    .mini-carton-wrapper{background:linear-gradient(green,yellow);padding:3px;border-radius:10px;box-shadow:0 0 5px rgba(0,0,0,0.5);}
+    .mini-carton{border-collapse:separate;border-spacing:0;background:linear-gradient(#ffffff,#cccccc);border-radius:8px;}
+    .mini-carton th,.mini-carton td{border:1px solid gray;width:30px;height:30px;text-align:center;font-weight:bold;font-size:0.8rem;}
+    .mini-carton th{font-size:1rem;color:#ff6600;background:radial-gradient(circle,#ffffff,#ffffff 60%,#00aa00);text-shadow:1px 1px 0 #000;}
     @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.2);}100%{transform:scale(1);}}
     @keyframes float{0%{transform:translateY(0);}50%{transform:translateY(-5px);}100%{transform:translateY(0);}}
     #player-container{position:relative;border:2px solid green;border-radius:10px;background:linear-gradient(gray,white);padding:10px;margin-top:10px;}
     #alias-row{display:flex;align-items:center;justify-content:center;gap:5px;}
-    #alias-jugador{font-size:1.2rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:180px;color:orange;}
-    #editar-alias{background:none;border:none;color:orange;font-size:1.5rem;cursor:pointer;text-shadow:0 0 4px #fff;}
+    #alias-jugador{font-size:1.2rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:220px;color:orange;}
+    #editar-alias{background:none;border:3px solid orange;color:orange;font-size:1.5rem;cursor:pointer;border-radius:5px;}
     #guardar-carton-btn{background:none;border:none;font-size:1.4rem;cursor:pointer;margin-left:5px;display:none;}
     #nombre-carton{display:none;padding:5px;border-radius:5px;border:1px solid #ccc;}
     .guardar-row{justify-content:center;}
@@ -133,9 +151,7 @@
   <h1 id="titulo">JUGAR CARTÓN</h1>
   <section id="sorteo-section">
     <div class="sorteo-info">
-      <select id="select-sorteo">
-        <option value="" disabled selected>Selecciona Sorteo</option>
-      </select>
+      <button id="sorteo-btn">Selecciona Sorteo</button>
       <div id="fecha-hora-sorteo">
         <div id="fecha-sorteo"></div>
         <div id="hora-sorteo"></div>
@@ -157,6 +173,7 @@
       </div>
       <div class="wallet-row"><strong>Créditos disponibles:</strong> <span id="creditos-label">0</span></div>
       <div class="wallet-row"><strong>Cartones gratis:</strong> <span id="gratis-label">0</span></div>
+      <button id="ver-jugados-btn" class="action-btn" title="Cartones jugados"><img src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" class="carton-icon" alt="cartón"></button>
       <button id="ir-billetera-btn" class="action-btn" onclick="window.location.href='billetera.html'" title="Recargar Billetera">👛</button>
     </div>
     <div class="carton-box">
@@ -183,6 +200,15 @@
   <div id="cartones-modal" class="modal" onclick="this.style.display='none'">
       <div id="cartones-list" class="modal-content" onclick="event.stopPropagation();"></div>
   </div>
+  <div id="sorteos-modal" class="modal" onclick="this.style.display='none'">
+      <div id="sorteos-list" class="modal-content" onclick="event.stopPropagation();"></div>
+  </div>
+  <div id="jugados-modal" class="modal" onclick="this.style.display='none'">
+      <div id="jugados-content" class="modal-content" onclick="event.stopPropagation();">
+          <div id="jugados-grid"></div>
+          <button id="cargar-jugado-btn" class="action-btn" style="margin-top:10px;">Cargar cartón</button>
+      </div>
+  </div>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
@@ -191,11 +217,13 @@
   ensureAuth();
 
   const ranges=[[1,15],[16,30],[31,45],[46,60],[61,75]];
-  const board=document.getElementById('bingo-board');
-  let currentCell=null;
-  let sorteoInterval=null;
-  let currentSorteo=null;
-  let cartonesGuardados={};
+const board=document.getElementById('bingo-board');
+let currentCell=null;
+let sorteoInterval=null;
+let currentSorteo=null;
+let cartonesGuardados={};
+let sorteosActivos=[];
+let seleccionadoJugado=null;
 
   function flipCard(){
     const wrapper=document.getElementById('carton-wrapper');
@@ -327,31 +355,41 @@
   function formatearFecha(f){ if(!f) return ''; const [y,m,d]=f.split('-'); return `${d}/${m}/${y}`; }
   function formatearHora(h){ if(!h) return ''; const [hh,mm]=h.split(':'); let n=parseInt(hh); const ampm=n>=12?'pm':'am'; n=n%12||12; return `${n}:${mm} ${ampm}`; }
 
-  function actualizarInfoSorteo(){
-    const opt=document.getElementById('select-sorteo').selectedOptions[0];
-    if(!opt) return;
-    currentSorteo=opt.value;
-    document.getElementById('fecha-sorteo').innerHTML=`<b>Fecha:</b> ${formatearFecha(opt.dataset.fecha)}`;
-    document.getElementById('hora-sorteo').innerHTML=`<b>Hora:</b> ${formatearHora(opt.dataset.hora)}`;
+  function seleccionarSorteo(s){
+    currentSorteo=s.id;
+    const btn=document.getElementById('sorteo-btn');
+    btn.textContent=s.nombre;
+    btn.classList.remove('diario','especial');
+    if(s.tipo==='Diario'){ btn.classList.add('diario'); }
+    else{ btn.classList.add('especial'); }
+    btn.style.fontSize = s.nombre.length>20?'0.8rem':'1.1rem';
+    document.getElementById('fecha-sorteo').innerHTML=`<span class="cal-icon">📅</span> ${formatearFecha(s.fecha)}`;
+    document.getElementById('hora-sorteo').innerHTML=`<span class="clock-icon">⏰</span> ${formatearHora(s.hora)}`;
     iniciarIntervalo();
   }
 
+  function abrirSorteosModal(){
+    const list=document.getElementById('sorteos-list');
+    list.innerHTML='';
+    sorteosActivos.forEach((s,i)=>{
+      const div=document.createElement('div');
+      div.textContent=`${i+1}- ${s.nombre}`;
+      div.className=s.tipo==='Diario'?'sorteo-diario':'sorteo-especial';
+      div.addEventListener('click',()=>{seleccionarSorteo(s);document.getElementById('sorteos-modal').style.display='none';});
+      list.appendChild(div);
+    });
+    document.getElementById('sorteos-modal').style.display='flex';
+  }
+
   async function cargarSorteosActivos(){
-    const sel=document.getElementById('select-sorteo');
+    sorteosActivos=[];
     try{
-      sel.innerHTML='<option value="" disabled selected>Selecciona Sorteo</option>';
       const snap=await db.collection('sorteos').where('estado','==','Activo').get();
       snap.forEach(doc=>{
         const d=doc.data();
-        const opt=document.createElement('option');
-        opt.value=doc.id;
-        opt.textContent=d.nombre;
-        opt.dataset.fecha=d.fecha;
-        opt.dataset.hora=d.hora;
-        sel.appendChild(opt);
+        sorteosActivos.push({id:doc.id,nombre:d.nombre,fecha:d.fecha,hora:d.hora,tipo:d.tipo});
       });
     }catch(e){ console.warn('No se pudieron cargar sorteos'); }
-    actualizarInfoSorteo();
   }
 
   async function enviarDatos(){
@@ -366,11 +404,13 @@
     let creditos=billeteraDoc.data().creditos||0;
     let gratis=billeteraDoc.data().CartonesGratis||0;
 
-    const sorteoRef=db.collection('sorteos').doc(currentSorteo);
-    const sorteoDoc=await sorteoRef.get();
-    const sorteoData=sorteoDoc.data();
-    const valor=Number(sorteoData.valorCarton||0);
-    const vars=await db.collection('Variablesglobales').doc('Parametros').get();
+  const sorteoRef=db.collection('sorteos').doc(currentSorteo);
+  const sorteoDoc=await sorteoRef.get();
+  const sorteoData=sorteoDoc.data();
+  const valor=Number(sorteoData.valorCarton||0);
+  const jugActual=sorteoData.cartonesjugando||0;
+  const cartonNum=jugActual+1;
+  const vars=await db.collection('Variablesglobales').doc('Parametros').get();
     const porcentaje=Number(vars.data().porcentaje||0);
     const porcentajesu=Number(vars.data().porcentajesu||0);
     let jugarGratis=false;
@@ -407,14 +447,15 @@
       const c=parseInt(td.dataset.col);
       if(!(r===2&&c===2)) posiciones.push({r,c,valor:td.dataset.value||''});
     });
-    await db.collection('CartonJugado').add({
-      userId:user.uid,
-      alias:alias,
-      sorteoId:currentSorteo,
-      posiciones:posiciones,
-      fecha:new Date().toLocaleDateString('es-ES'),
-      hora:new Date().toLocaleTimeString('es-ES')
-    });
+      await db.collection('CartonJugado').add({
+        userId:user.uid,
+        alias:alias,
+        sorteoId:currentSorteo,
+        cartonNum:cartonNum,
+        posiciones:posiciones,
+        fecha:new Date().toLocaleDateString('es-ES'),
+        hora:new Date().toLocaleTimeString('es-ES')
+      });
     alert('Jugada de Cartón enviada correctamente.');
     limpiarcarton();
   }
@@ -459,6 +500,76 @@
     document.getElementById('cartones-modal').style.display='flex';
   }
 
+  async function abrirJugadosModal(){
+    if(!currentSorteo){ alert('Selecciona un sorteo primero'); return; }
+    const user=auth.currentUser;
+    if(!user) return;
+    const grid=document.getElementById('jugados-grid');
+    grid.innerHTML='';
+    seleccionadoJugado=null;
+    const snap=await db.collection('CartonJugado').where('userId','==',user.uid).where('sorteoId','==',currentSorteo).get();
+    let idx=0;
+    snap.forEach(doc=>{
+      const data=doc.data();
+      const box=document.createElement('div');
+      box.className='mini-carton-box';
+      box.addEventListener('click',()=>{
+        document.querySelectorAll('.mini-carton-box').forEach(b=>b.classList.remove('selected'));
+        box.classList.add('selected');
+        seleccionadoJugado=data.posiciones;
+        document.getElementById('cargar-jugado-btn').disabled=false;
+      });
+      const num=document.createElement('div');
+      num.className='mini-index';
+      num.textContent=++idx;
+      box.appendChild(num);
+      const wrap=document.createElement('div');
+      wrap.className='mini-carton-wrapper';
+      wrap.appendChild(crearMiniCarton(data.posiciones));
+      box.appendChild(wrap);
+      const bnum=document.createElement('div');
+      const cn=data.cartonNum!==undefined?data.cartonNum.toString().padStart(4,'0'):'----';
+      bnum.className='mini-num';
+      bnum.textContent=`Carton: ${cn}`;
+      box.appendChild(bnum);
+      grid.appendChild(box);
+    });
+    document.getElementById('cargar-jugado-btn').disabled=true;
+    document.getElementById('jugados-modal').style.display='flex';
+  }
+
+  function crearMiniCarton(posiciones){
+    const table=document.createElement('table');
+    table.className='mini-carton';
+    const head=document.createElement('thead');
+    const trh=document.createElement('tr');
+    ['B','I','N','G','O'].forEach(l=>{const th=document.createElement('th');th.textContent=l;trh.appendChild(th);});
+    head.appendChild(trh);table.appendChild(head);
+    const tbody=document.createElement('tbody');
+    for(let r=0;r<5;r++){
+      const tr=document.createElement('tr');
+      for(let c=0;c<5;c++){
+        const td=document.createElement('td');
+        if(r===2&&c===2){td.innerHTML='<span style="color:orange;">★</span>';}else{
+          const found=posiciones.find(p=>p.r===r&&p.c===c);
+          if(found) td.textContent=found.valor;
+        }
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    return table;
+  }
+
+  function cargarCartonJugado(){
+    if(!seleccionadoJugado) return;
+    if(confirm('¿Desea cargar el cartón seleccionado? Se sobreescribirán los datos actuales.')){
+      setBoardFromPosiciones(seleccionadoJugado);
+      document.getElementById('jugados-modal').style.display='none';
+    }
+  }
+
   function setBoardFromPosiciones(pos){
     const carton=[[],[],[],[],[]];
     pos.forEach(p=>{carton[p.r][p.c]=p.valor;});
@@ -471,10 +582,12 @@
     document.getElementById('fecha-hora').textContent=ahora.toLocaleString('es-ES',opciones);
   }
 
-  document.getElementById('select-sorteo').addEventListener('change',actualizarInfoSorteo);
+  document.getElementById('sorteo-btn').addEventListener('click',abrirSorteosModal);
   document.getElementById('jugar-carton-btn').addEventListener('click',enviarDatos);
   document.getElementById('guardar-carton-btn').addEventListener('click',guardarCarton);
   document.getElementById('mis-cartones-icon').addEventListener('click',abrirCartonesModal);
+  document.getElementById('ver-jugados-btn').addEventListener('click',abrirJugadosModal);
+  document.getElementById('cargar-jugado-btn').addEventListener('click',cargarCartonJugado);
   document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='player.html';});
   document.getElementById('guardar-check').addEventListener('change',e=>{
     const show=e.target.checked;
