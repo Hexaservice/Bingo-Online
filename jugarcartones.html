@@ -103,9 +103,9 @@
     }
     #jugados-btn-container{position:absolute;bottom:5px;right:50px;}
     #ver-jugados-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:linear-gradient(purple,#ffffff);border:3px solid #FFD700;border-radius:8px;cursor:pointer;position:relative;}
-    #jugados-count{position:absolute;top:-8px;right:-8px;background:purple;color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-family:'Bangers',cursive;}
+    #jugados-count{position:absolute;top:-8px;right:-8px;background:purple;color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-family:'Bangers',cursive;z-index:10;}
     #limpiar-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;position:absolute;bottom:5px;right:95px;background:linear-gradient(gray,#ffffff);border:3px solid #FFD700;border-radius:8px;cursor:pointer;}
-    #azar-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;position:absolute;bottom:5px;right:140px;background:linear-gradient(yellow,#ffffff);border:3px solid #FFD700;border-radius:8px;cursor:pointer;}
+    #azar-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;position:absolute;bottom:5px;right:140px;background:linear-gradient(#ffffff,#dddddd);border:3px solid #FFD700;border-radius:8px;cursor:pointer;}
     #ir-billetera-btn{width:40px;height:40px;font-size:1.2rem;display:flex;align-items:center;justify-content:center;position:absolute;bottom:5px;right:5px;margin-left:0;}
     #jugar-carton-btn{width:200px;height:40px;font-size:1.2rem;display:flex;align-items:center;justify-content:center;margin:10px auto;}
     .carton-box{display:flex;justify-content:center;margin:8px auto;perspective:1000px;}
@@ -128,13 +128,14 @@
     #number-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;justify-items:center;}
     #number-grid div{width:60px;height:60px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;text-shadow:0 0 5px green;cursor:pointer;}
     #jugados-content{width:90%;max-height:80vh;overflow:auto;align-items:center;position:relative;}
-    #jugados-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;overflow-y:auto;max-height:60vh;justify-items:center;}
+    #jugados-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;overflow-y:auto;max-height:60vh;justify-items:center;}
     .close-icon{position:absolute;top:5px;right:5px;cursor:pointer;font-size:1.2rem;}
-    .mini-carton-box{display:flex;flex-direction:column;align-items:center;cursor:pointer;}
+    .mini-carton-box{position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;aspect-ratio:1/1;width:100%;}
     .mini-carton-box.selected{outline:3px solid blue;}
-    .mini-index{font-weight:bold;margin-bottom:2px;}
-    .mini-num{font-size:0.8rem;font-weight:bold;color:purple;margin-top:2px;text-align:center;}
-    .mini-carton-wrapper{background:linear-gradient(green,yellow);padding:3px;border-radius:10px;box-shadow:0 0 5px rgba(0,0,0,0.5);}
+    .mini-index,.mini-num{position:absolute;left:4px;padding:1px 3px;background:rgba(255,255,255,0.8);border-radius:3px;font-weight:bold;font-size:0.7rem;}
+    .mini-index{top:4px;}
+    .mini-num{bottom:4px;color:purple;text-align:left;}
+    .mini-carton-wrapper{background:linear-gradient(green,yellow);padding:3px;border-radius:10px;box-shadow:0 0 5px rgba(0,0,0,0.5);transform:scale(0.7);}
     .mini-carton{border-collapse:separate;border-spacing:0;background:linear-gradient(#ffffff,#cccccc);border-radius:8px;}
     .mini-carton th,.mini-carton td{border:1px solid gray;width:30px;height:30px;text-align:center;font-weight:bold;font-size:0.8rem;aspect-ratio:1/1;}
     .mini-carton th{font-size:1rem;color:#ff6600;background:radial-gradient(circle,#ffffff,#ffffff 60%,#00aa00);text-shadow:1px 1px 0 #000;}
@@ -143,7 +144,7 @@
     #player-container{position:relative;border:2px solid green;border-radius:10px;background:linear-gradient(gray,white);padding:10px;margin-top:10px;}
     #alias-row{display:flex;align-items:center;justify-content:center;gap:5px;}
     #alias-jugador{font-size:1.2rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:220px;color:orange;}
-    #editar-alias{background:none;border:3px solid orange;color:orange;font-size:1.5rem;cursor:pointer;border-radius:5px;}
+    #editar-alias{background:none;border:none;color:#4B0082;font-size:1.5rem;cursor:pointer;border-radius:5px;text-shadow:0 0 4px #fff,0 0 8px #fff;}
     #guardar-carton-btn{background:none;border:none;font-size:1.4rem;cursor:pointer;margin-left:5px;display:none;}
     #nombre-carton{display:none;padding:5px;border-radius:5px;border:1px solid #ccc;}
     .guardar-row{justify-content:center;}
@@ -179,10 +180,10 @@
         <input type="text" id="alias-jugador" readonly placeholder="Alias">
         <button id="editar-alias" onclick="window.location.href='perfil.html'">&#9998;</button>
       </div>
-      <div class="wallet-row"><strong><img src="https://cdn-icons-png.flaticon.com/32/1170/1170576.png" class="carton-icon" alt="Bolsa de dinero"> Créditos:</strong> <span id="creditos-label">0</span></div>
-      <div class="wallet-row"><strong><img src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" class="carton-icon" alt="Cartón"> gratis:</strong> <span id="gratis-label">0</span></div>
-      <button id="azar-btn" class="action-btn" title="Cargar jugadas al azar"><img src="https://cdn-icons-png.flaticon.com/32/825/825731.png" class="carton-icon" alt="Azar"></button>
-      <button id="limpiar-btn" class="action-btn" title="Limpiar cartón"><img src="https://cdn-icons-png.flaticon.com/32/3593/3593656.png" class="carton-icon" alt="Limpiar"></button>
+        <div class="wallet-row"><strong><img src="https://api.iconify.design/mdi/sack-dollar.svg" class="carton-icon" alt="Créditos"> Créditos:</strong> <span id="creditos-label">0</span></div>
+        <div class="wallet-row"><strong><img src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" class="carton-icon" alt="Cartón"> gratis:</strong> <span id="gratis-label">0</span></div>
+        <button id="azar-btn" class="action-btn" title="Cargar jugadas al azar"><img src="https://api.iconify.design/mdi/dice-5.svg" class="carton-icon" alt="Azar"></button>
+        <button id="limpiar-btn" class="action-btn" title="Limpiar cartón"><img src="https://api.iconify.design/mdi/broom.svg" class="carton-icon" alt="Limpiar"></button>
       <div id="jugados-btn-container">
         <button id="ver-jugados-btn" class="action-btn" title="Cartones jugados"><img src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" class="carton-icon" alt="cartón"></button>
         <span id="jugados-count">0</span>
