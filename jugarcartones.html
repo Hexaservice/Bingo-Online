@@ -128,8 +128,8 @@
     #number-modal-title{font-size:0.8rem;text-align:center;width:100%;text-shadow:0 0 5px blue;margin-bottom:5px;font-family:'Poppins',sans-serif;}
     #number-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;justify-items:center;}
     #number-grid div{width:60px;height:60px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;text-shadow:0 0 5px green;cursor:pointer;}
-    #jugados-content{width:90%;max-height:80vh;overflow:auto;align-items:center;position:relative;}
-    #jugados-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:5px;overflow-y:auto;max-height:60vh;justify-items:center;}
+    #jugados-content{width:100%;max-height:80vh;overflow:auto;align-items:center;position:relative;}
+    #jugados-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;overflow-y:auto;max-height:60vh;justify-items:center;}
     .close-icon{position:absolute;top:5px;right:5px;cursor:pointer;font-size:1.2rem;}
     .mini-carton-box{position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;aspect-ratio:1/1;width:100%;}
     .mini-carton-box.selected{outline:3px solid blue;}
@@ -331,23 +331,25 @@ function loadFromCookie(){
     saveToCookie();
   }
 
-  function validateBoard(){
-    let cols=[[],[],[],[],[]];
-    let ok=true;
-    document.querySelectorAll('#bingo-board td').forEach(td=>{
-      const col=parseInt(td.dataset.col);
-      if(td.classList.contains('free')) return;
-      const val=td.dataset.value||'';
-      if(val===''||cols[col].includes(val)){
-        td.classList.add('error');
-        ok=false;
-      }else{
-        td.classList.remove('error');
-        cols[col].push(val);
-      }
-    });
-    return ok;
-  }
+    function validateBoard(checkEmpty=false){
+      let cols=[[],[],[],[],[]];
+      let ok=true;
+      document.querySelectorAll('#bingo-board td').forEach(td=>{
+        const col=parseInt(td.dataset.col);
+        if(td.classList.contains('free')) return;
+        const val=td.dataset.value||'';
+        const duplicate=val!=='' && cols[col].includes(val);
+        const empty=val==='';
+        if(duplicate || (checkEmpty && empty)){
+          td.classList.add('error');
+          ok=false;
+        }else{
+          td.classList.remove('error');
+          if(val!=='') cols[col].push(val);
+        }
+      });
+      return ok;
+    }
 
   function limpiarcarton(){
     document.querySelectorAll('#bingo-board td').forEach(td=>{
@@ -409,7 +411,7 @@ function loadFromCookie(){
     const premio=data.totalPremios||0;
     document.getElementById('valor-carton-valor').textContent=valor;
     document.getElementById('cartones-jugando-valor').textContent=jug;
-    document.getElementById('premio-valor').textContent=premio;
+      document.getElementById('premio-valor').textContent=Math.round(premio);
     const numEl=document.getElementById('carton-num');
     if(numEl && !consultando){
       numEl.textContent=(jug+1).toString().padStart(4,'0');
@@ -476,7 +478,7 @@ function loadFromCookie(){
     const alias=document.getElementById('alias-jugador').value.trim();
     const user=auth.currentUser;
     if(alias===''||!user){ alert('Por favor, ingresa tu Alias.'); return; }
-    if(!validateBoard()){ alert('Corrige los errores antes de enviar.'); return; }
+      if(!validateBoard(true)){ alert('Corrige los errores antes de enviar.'); return; }
     if(!currentSorteo){ alert('Selecciona un sorteo.'); return; }
     if(consultando){
       alert('Este cartón ya está jugando y no se puede jugar nuevamente.');
@@ -561,7 +563,7 @@ function loadFromCookie(){
       alert('Debes colocar un nombre para guardar tu cartón');
       return;
     }
-    if(!validateBoard()){alert('Corrige los errores antes de guardar.');return;}
+      if(!validateBoard(true)){alert('Corrige los errores antes de guardar.');return;}
     if(consultando){alert('Este cartón ya está jugando y no se puede jugar nuevamente.');limpiarcarton();return;}
     const user=auth.currentUser;
     const alias=document.getElementById('alias-jugador').value.trim();
