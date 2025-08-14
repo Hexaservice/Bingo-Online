@@ -87,7 +87,8 @@
     #stats-row{display:flex;justify-content:center;align-items:center;gap:20px;}
     .billete-icon{font-size:1.5rem;}
     .carton-icon{width:24px;height:24px;}
-    #premio-repartir{color:white;font-family:'Bangers',cursive;font-size:1.8rem;text-shadow:0 0 10px #004400;}
+    #premio-repartir{color:white;font-family:'Bangers',cursive;font-size:1.8rem;text-shadow:0 0 10px #004400;position:relative;}
+    #forma-nombre{position:absolute;top:100%;left:50%;transform:translateX(-50%);font-size:0.8rem;display:none;text-shadow:0 0 5px #004400;}
     .wallet-row{display:flex;align-items:center;gap:5px;margin:3px 0;font-size:1rem;font-weight:bold;}
     #creditos-label,#gratis-label{font-family:'Bangers',cursive;font-size:1.5rem;text-shadow:0 0 5px green;display:inline-block;animation:pulse 1s infinite;}
     #gratis-label{color:#4b0082;text-shadow:0 0 5px #fff;}
@@ -169,7 +170,7 @@
       </div>
     </div>
     <div class="datos-sorteo">
-      <div id="premio-repartir">Premio a Repartir: <span id="premio-valor">0</span></div>
+      <div id="premio-repartir"><span id="premio-label">Premio a Repartir:</span> <span id="premio-valor">0</span><div id="forma-nombre"></div></div>
       <div id="stats-row">
         <div id="valor-carton"><span class="billete-icon">💵</span> Cartón: <span id="valor-carton-valor">0</span></div>
         <div id="cartones-jugando"><img src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" class="carton-icon" alt="Cartón"> Jugando: <span id="cartones-jugando-valor">0</span></div>
@@ -247,6 +248,11 @@ let sorteosActivos=[];
 let seleccionadoJugado=null;
 let consultando=false;
 let cookieKey='';
+let formasSorteo=[];
+let formaActiva=0;
+let premioActual=0;
+const formColors=['#90ee90','#fffacd','#add8e6','#d8b0ff','#ffcc99'];
+const formGlows=['#006400','#b8860b','#00008b','#4b0082','#8b4513'];
 
 function setCookie(name,value){document.cookie=`${name}=${encodeURIComponent(value)};path=/;max-age=31536000`;}
 function getCookie(name){const m=document.cookie.match(new RegExp('(?:^|; )'+name+'=([^;]*)'));return m?decodeURIComponent(m[1]):null;}
@@ -268,6 +274,54 @@ function loadFromCookie(){
     const data=JSON.parse(raw);
     if(data.posiciones) setBoardFromPosiciones(data.posiciones);
   }catch(e){}
+}
+
+async function cargarFormasSorteo(){
+  formasSorteo=[];
+  if(!currentSorteo) return;
+  try{
+    const snap=await db.collection('formas').where('sorteoId','==',currentSorteo).get();
+    snap.forEach(doc=>formasSorteo.push(doc.data()));
+  }catch(e){console.warn('No se pudieron cargar las formas');}
+}
+
+function resetForma(){
+  formaActiva=0;
+  document.querySelectorAll('.carton th').forEach((th,i)=>{th.textContent='BINGO'[i];});
+  document.querySelectorAll('#bingo-board td').forEach(td=>{td.style.background='';});
+  document.getElementById('premio-label').textContent='Premio a Repartir:';
+  document.getElementById('premio-valor').style.textShadow='0 0 10px #004400';
+  const pr=document.getElementById('premio-repartir');
+  pr.style.textShadow='0 0 10px #004400';
+  document.getElementById('forma-nombre').style.display='none';
+  actualizarDatosSorteo();
+}
+
+function toggleForma(idx){
+  if(!currentSorteo) return;
+  if(formaActiva===idx){resetForma();return;}
+  resetForma();
+  const forma=formasSorteo.find(f=>f.idx===idx);
+  if(!forma) return;
+  formaActiva=idx;
+  const th=document.querySelectorAll('.carton th')[idx-1];
+  th.textContent=`Forma ${idx}`;
+  forma.posiciones&&forma.posiciones.forEach(p=>{
+    const td=document.querySelector(`#bingo-board td[data-row="${p.r}"][data-col="${p.c}"]`);
+    if(td) td.style.background=formColors[idx-1];
+  });
+  const pr=document.getElementById('premio-repartir');
+  const pv=document.getElementById('premio-valor');
+  const pl=document.getElementById('premio-label');
+  const nombre=document.getElementById('forma-nombre');
+  const porcentaje=parseFloat(forma.porcentaje)||0;
+  pl.textContent='PREMIO DE FORMA';
+  pr.style.textShadow=`0 0 10px ${formGlows[idx-1]}`;
+  pv.style.textShadow=`0 0 10px ${formGlows[idx-1]}`;
+  nombre.textContent=forma.nombre||'';
+  nombre.style.display='block';
+  nombre.style.textShadow=`0 0 5px ${formGlows[idx-1]}`;
+  pv.textContent=Math.round(premioActual*porcentaje/100);
 }
 
   function flipCard(){
@@ -366,7 +420,7 @@ function loadFromCookie(){
     numEl.style.animation='';
     consultando=false;
     seleccionadoJugado=null;
-    actualizarDatosSorteo();
+    resetForma();
     saveToCookie();
   }
 
@@ -407,13 +461,21 @@ function loadFromCookie(){
     const doc=await sorteoRef.get();
     if(!doc.exists) return;
     const data=doc.data();
-    const valor=data.valorCarton||0;
-    const jug=data.cartonesjugando||0;
-    const premio=data.totalPremios||0;
-    document.getElementById('valor-carton-valor').textContent=valor;
-    document.getElementById('cartones-jugando-valor').textContent=jug;
-      document.getElementById('premio-valor').textContent=Math.round(premio);
-    const numEl=document.getElementById('carton-num');
+  const valor=data.valorCarton||0;
+  const jug=data.cartonesjugando||0;
+  const premio=data.totalPremios||0;
+  premioActual=premio;
+  document.getElementById('valor-carton-valor').textContent=valor;
+  document.getElementById('cartones-jugando-valor').textContent=jug;
+  const pv=document.getElementById('premio-valor');
+  if(formaActiva>0){
+    const f=formasSorteo.find(x=>x.idx===formaActiva);
+    const por=parseFloat(f&&f.porcentaje)||0;
+    pv.textContent=Math.round(premioActual*por/100);
+  }else{
+    pv.textContent=Math.round(premioActual);
+  }
+  const numEl=document.getElementById('carton-num');
     if(numEl && !consultando){
       numEl.textContent=(jug+1).toString().padStart(4,'0');
     }
@@ -438,6 +500,7 @@ function loadFromCookie(){
   function formatearHora(h){ if(!h) return ''; const [hh,mm]=h.split(':'); let n=parseInt(hh); const ampm=n>=12?'pm':'am'; n=n%12||12; return `${n}:${mm} ${ampm}`; }
 
   function seleccionarSorteo(s){
+    resetForma();
     currentSorteo=s.id;
     const btn=document.getElementById('sorteo-btn');
     btn.textContent=s.nombre;
@@ -449,6 +512,7 @@ function loadFromCookie(){
     document.getElementById('hora-sorteo').innerHTML=`<span class="clock-icon">⏰</span> ${formatearHora(s.hora)}`;
     iniciarIntervalo();
     actualizarCartonesJugador();
+    cargarFormasSorteo();
   }
 
   function abrirSorteosModal(){
@@ -737,6 +801,9 @@ function loadFromCookie(){
   });
 
   createBoard();
+  document.querySelectorAll('.carton th').forEach((th,i)=>{
+    th.addEventListener('click',()=>toggleForma(i+1));
+  });
   actualizarFechaHora();
   setInterval(actualizarFechaHora,60000);
   </script>
