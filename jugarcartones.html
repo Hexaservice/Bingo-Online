@@ -101,7 +101,11 @@
       text-shadow:2px 2px 4px #000;
       cursor:pointer;
     }
-    #ver-jugados-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;position:absolute;bottom:5px;right:50px;background:linear-gradient(purple,#ffffff);border:3px solid #FFD700;border-radius:8px;cursor:pointer;}
+    #jugados-btn-container{position:absolute;bottom:5px;right:50px;}
+    #ver-jugados-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:linear-gradient(purple,#ffffff);border:3px solid #FFD700;border-radius:8px;cursor:pointer;position:relative;}
+    #jugados-count{position:absolute;top:-8px;right:-8px;background:purple;color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-family:'Bangers',cursive;}
+    #limpiar-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;position:absolute;bottom:5px;right:95px;background:linear-gradient(gray,#ffffff);border:3px solid #FFD700;border-radius:8px;cursor:pointer;}
+    #azar-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;position:absolute;bottom:5px;right:140px;background:linear-gradient(yellow,#ffffff);border:3px solid #FFD700;border-radius:8px;cursor:pointer;}
     #ir-billetera-btn{width:40px;height:40px;font-size:1.2rem;display:flex;align-items:center;justify-content:center;position:absolute;bottom:5px;right:5px;margin-left:0;}
     #jugar-carton-btn{width:200px;height:40px;font-size:1.2rem;display:flex;align-items:center;justify-content:center;margin:10px auto;}
     .carton-box{display:flex;justify-content:center;margin:8px auto;perspective:1000px;}
@@ -128,7 +132,7 @@
     .mini-num{font-size:0.8rem;font-weight:bold;color:purple;margin-top:2px;text-align:center;}
     .mini-carton-wrapper{background:linear-gradient(green,yellow);padding:3px;border-radius:10px;box-shadow:0 0 5px rgba(0,0,0,0.5);}
     .mini-carton{border-collapse:separate;border-spacing:0;background:linear-gradient(#ffffff,#cccccc);border-radius:8px;}
-    .mini-carton th,.mini-carton td{border:1px solid gray;width:30px;height:30px;text-align:center;font-weight:bold;font-size:0.8rem;}
+    .mini-carton th,.mini-carton td{border:1px solid gray;width:30px;height:30px;text-align:center;font-weight:bold;font-size:0.8rem;aspect-ratio:1/1;}
     .mini-carton th{font-size:1rem;color:#ff6600;background:radial-gradient(circle,#ffffff,#ffffff 60%,#00aa00);text-shadow:1px 1px 0 #000;}
     @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.2);}100%{transform:scale(1);}}
     @keyframes float{0%{transform:translateY(0);}50%{transform:translateY(-5px);}100%{transform:translateY(0);}}
@@ -173,9 +177,13 @@
         <button id="editar-alias" onclick="window.location.href='perfil.html'">&#9998;</button>
       </div>
       <div class="wallet-row"><strong>Créditos disponibles:</strong> <span id="creditos-label">0</span></div>
-      <div class="wallet-row"><strong>Cartones gratis:</strong> <span id="gratis-label">0</span></div>
-      <span id="jugados-count">0</span>
-      <button id="ver-jugados-btn" class="action-btn" title="Cartones jugados"><img src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" class="carton-icon" alt="cartón"></button>
+      <div class="wallet-row"><strong><img src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" class="carton-icon" alt="Cartón"> gratis:</strong> <span id="gratis-label">0</span></div>
+      <button id="azar-btn" class="action-btn" title="Cargar jugadas al azar"><img src="https://cdn-icons-png.flaticon.com/32/3610/3610925.png" class="carton-icon" alt="Azar"></button>
+      <button id="limpiar-btn" class="action-btn" title="Limpiar cartón"><img src="https://cdn-icons-png.flaticon.com/32/1189/1189183.png" class="carton-icon" alt="Limpiar"></button>
+      <div id="jugados-btn-container">
+        <button id="ver-jugados-btn" class="action-btn" title="Cartones jugados"><img src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" class="carton-icon" alt="cartón"></button>
+        <span id="jugados-count">0</span>
+      </div>
       <button id="ir-billetera-btn" class="action-btn" onclick="window.location.href='billetera.html'" title="Recargar Billetera">👛</button>
     </div>
     <div class="carton-box">
@@ -227,6 +235,30 @@ let currentSorteo=null;
 let cartonesGuardados={};
 let sorteosActivos=[];
 let seleccionadoJugado=null;
+let consultando=false;
+let cookieKey='';
+
+function setCookie(name,value){document.cookie=`${name}=${encodeURIComponent(value)};path=/;max-age=31536000`;}
+function getCookie(name){const m=document.cookie.match(new RegExp('(?:^|; )'+name+'=([^;]*)'));return m?decodeURIComponent(m[1]):null;}
+function saveToCookie(){
+  if(!cookieKey||consultando) return;
+  const posiciones=[];
+  document.querySelectorAll('#bingo-board td').forEach(td=>{
+    if(td.classList.contains('free')) return;
+    const val=td.dataset.value;
+    if(val) posiciones.push({r:parseInt(td.dataset.row),c:parseInt(td.dataset.col),valor:val});
+  });
+  setCookie(cookieKey,JSON.stringify({posiciones}));
+}
+function loadFromCookie(){
+  if(!cookieKey) return;
+  const raw=getCookie(cookieKey);
+  if(!raw) return;
+  try{
+    const data=JSON.parse(raw);
+    if(data.posiciones) setBoardFromPosiciones(data.posiciones);
+  }catch(e){}
+}
 
   function flipCard(){
     const wrapper=document.getElementById('carton-wrapper');
@@ -287,6 +319,7 @@ let seleccionadoJugado=null;
     currentCell.dataset.value=num;
     document.getElementById('number-modal').style.display='none';
     validateBoard();
+    saveToCookie();
   }
 
   function validateBoard(){
@@ -317,6 +350,12 @@ let seleccionadoJugado=null;
     const wrapper=document.getElementById('carton-wrapper');
     wrapper.classList.remove('flipped');
     wrapper.style.transform='';
+    const numEl=document.getElementById('carton-num');
+    numEl.style.animation='';
+    consultando=false;
+    seleccionadoJugado=null;
+    actualizarDatosSorteo();
+    saveToCookie();
   }
 
   function setBoard(carton){
@@ -329,6 +368,25 @@ let seleccionadoJugado=null;
       td.textContent=val;
     });
     validateBoard();
+  }
+
+  function cargarAzar(){
+    limpiarcarton();
+    for(let c=0;c<5;c++){
+      const [start,end]=ranges[c];
+      const nums=[];
+      for(let n=start;n<=end;n++) nums.push(n);
+      for(let i=nums.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[nums[i],nums[j]]=[nums[j],nums[i]];}
+      for(let r=0;r<5;r++){
+        if(r===2&&c===2) continue;
+        const td=document.querySelector(`#bingo-board td[data-row="${r}"][data-col="${c}"]`);
+        const val=nums.pop();
+        td.dataset.value=val;
+        td.textContent=val;
+      }
+    }
+    validateBoard();
+    saveToCookie();
   }
 
   async function actualizarDatosSorteo(){
@@ -344,7 +402,7 @@ let seleccionadoJugado=null;
     document.getElementById('cartones-jugando-valor').textContent=jug;
     document.getElementById('premio-valor').textContent=premio;
     const numEl=document.getElementById('carton-num');
-    if(numEl){
+    if(numEl && !consultando){
       numEl.textContent=(jug+1).toString().padStart(4,'0');
     }
   }
@@ -411,6 +469,11 @@ let seleccionadoJugado=null;
     if(alias===''||!user){ alert('Por favor, ingresa tu Alias.'); return; }
     if(!validateBoard()){ alert('Corrige los errores antes de enviar.'); return; }
     if(!currentSorteo){ alert('Selecciona un sorteo.'); return; }
+    if(consultando){
+      alert('Este cartón ya está jugando y no se puede jugar nuevamente.');
+      limpiarcarton();
+      return;
+    }
 
     const billeteraRef=db.collection('Billetera').doc(user.email);
     const billeteraDoc=await billeteraRef.get();
@@ -490,6 +553,7 @@ let seleccionadoJugado=null;
       return;
     }
     if(!validateBoard()){alert('Corrige los errores antes de guardar.');return;}
+    if(consultando){alert('Este cartón ya está jugando y no se puede jugar nuevamente.');limpiarcarton();return;}
     const user=auth.currentUser;
     const alias=document.getElementById('alias-jugador').value.trim();
     const posiciones=[];
@@ -516,7 +580,7 @@ let seleccionadoJugado=null;
     Object.entries(cartonesGuardados).forEach(([id,data],index)=>{
       const div=document.createElement('div');
       div.textContent=`${index+1}- ${data.nombre||'Cartón'}`;
-      div.addEventListener('click',()=>{setBoardFromPosiciones(data.posiciones);document.getElementById('cartones-modal').style.display='none';});
+      div.addEventListener('click',()=>{setBoardFromPosiciones(data.posiciones);document.getElementById('cartones-modal').style.display='none';saveToCookie();});
       list.appendChild(div);
     });
     document.getElementById('cartones-modal').style.display='flex';
@@ -545,7 +609,7 @@ let seleccionadoJugado=null;
       box.addEventListener('click',()=>{
         document.querySelectorAll('.mini-carton-box').forEach(b=>b.classList.remove('selected'));
         box.classList.add('selected');
-        seleccionadoJugado=data.posiciones;
+        seleccionadoJugado={posiciones:data.posiciones,cartonNum:data.cartonNum};
         document.getElementById('cargar-jugado-btn').disabled=false;
       });
       const num=document.createElement('div');
@@ -594,7 +658,13 @@ let seleccionadoJugado=null;
   function cargarCartonJugado(){
     if(!seleccionadoJugado) return;
     if(confirm('¿Desea cargar el cartón seleccionado? Se sobreescribirán los datos actuales.')){
-      setBoardFromPosiciones(seleccionadoJugado);
+      setBoardFromPosiciones(seleccionadoJugado.posiciones);
+      const numEl=document.getElementById('carton-num');
+      if(seleccionadoJugado.cartonNum!==undefined){
+        numEl.textContent=seleccionadoJugado.cartonNum.toString().padStart(4,'0');
+      }
+      numEl.style.animation='none';
+      consultando=true;
       document.getElementById('jugados-modal').style.display='none';
     }
   }
@@ -617,6 +687,8 @@ let seleccionadoJugado=null;
   document.getElementById('mis-cartones-icon').addEventListener('click',abrirCartonesModal);
   document.getElementById('ver-jugados-btn').addEventListener('click',abrirJugadosModal);
   document.getElementById('cargar-jugado-btn').addEventListener('click',cargarCartonJugado);
+  document.getElementById('limpiar-btn').addEventListener('click',()=>{if(confirm('¿Deseas limpiar todas las jugadas del carton?')) limpiarcarton();});
+  document.getElementById('azar-btn').addEventListener('click',()=>{if(confirm('¿Quieres cargar jugadas al azar?')) cargarAzar();});
   document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='player.html';});
   document.getElementById('guardar-check').addEventListener('change',e=>{
     const show=e.target.checked;
@@ -642,6 +714,8 @@ let seleccionadoJugado=null;
         document.getElementById('creditos-label').textContent='0';
         document.getElementById('gratis-label').textContent='0';
       }
+      cookieKey='jugarcarton_'+user.email.replace(/[^\w]/g,'_');
+      loadFromCookie();
     }else{
       window.location.href='index.html';
     }
