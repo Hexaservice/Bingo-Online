@@ -123,9 +123,13 @@
     .carton-back img{width:80%;height:80%;opacity:0.3;object-fit:contain;}
     .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);justify-content:center;align-items:center;}
     .modal-content{background:#fff;padding:10px;border-radius:10px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;width:max-content;}
-    .modal-content div{display:block;font-weight:bold;font-size:1rem;color:#000;cursor:pointer;font-family:'Poppins',sans-serif;white-space:nowrap;}
-    #jugados-content{width:90%;height:90%;overflow:auto;align-items:center;}
-    #jugados-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;overflow-y:auto;flex-grow:1;padding:10px;}
+    #cartones-list div,#sorteos-list div{display:block;font-weight:bold;font-size:1rem;color:#000;cursor:pointer;font-family:'Poppins',sans-serif;white-space:nowrap;}
+    #number-modal-title{font-size:0.8rem;text-align:center;width:100%;text-shadow:0 0 5px blue;margin-bottom:5px;font-family:'Poppins',sans-serif;}
+    #number-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;justify-items:center;}
+    #number-grid div{width:60px;height:60px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;text-shadow:0 0 5px green;cursor:pointer;}
+    #jugados-content{width:90%;max-height:80vh;overflow:auto;align-items:center;position:relative;}
+    #jugados-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;overflow-y:auto;max-height:60vh;justify-items:center;}
+    .close-icon{position:absolute;top:5px;right:5px;cursor:pointer;font-size:1.2rem;}
     .mini-carton-box{display:flex;flex-direction:column;align-items:center;cursor:pointer;}
     .mini-carton-box.selected{outline:3px solid blue;}
     .mini-index{font-weight:bold;margin-bottom:2px;}
@@ -145,7 +149,6 @@
     .guardar-row{justify-content:center;}
     #mis-cartones-icon{width:24px;height:24px;cursor:pointer;margin-left:5px;}
     #carton-num{font-family:'Bangers',cursive;text-shadow:0 0 5px green;}
-    #jugados-count{font-family:'Bangers',cursive;color:purple;text-shadow:0 0 5px #fff;display:inline-block;margin-right:5px;}
     #login-footer{margin-top:20px;}
     #fecha-hora,#derechos{font-size:0.7rem;text-align:center;color:#000;}
     #derechos{font-size:0.6rem;}
@@ -176,10 +179,10 @@
         <input type="text" id="alias-jugador" readonly placeholder="Alias">
         <button id="editar-alias" onclick="window.location.href='perfil.html'">&#9998;</button>
       </div>
-      <div class="wallet-row"><strong>Créditos disponibles:</strong> <span id="creditos-label">0</span></div>
+      <div class="wallet-row"><strong><img src="https://cdn-icons-png.flaticon.com/32/1170/1170576.png" class="carton-icon" alt="Bolsa de dinero"> Créditos:</strong> <span id="creditos-label">0</span></div>
       <div class="wallet-row"><strong><img src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" class="carton-icon" alt="Cartón"> gratis:</strong> <span id="gratis-label">0</span></div>
-      <button id="azar-btn" class="action-btn" title="Cargar jugadas al azar"><img src="https://cdn-icons-png.flaticon.com/32/3610/3610925.png" class="carton-icon" alt="Azar"></button>
-      <button id="limpiar-btn" class="action-btn" title="Limpiar cartón"><img src="https://cdn-icons-png.flaticon.com/32/1189/1189183.png" class="carton-icon" alt="Limpiar"></button>
+      <button id="azar-btn" class="action-btn" title="Cargar jugadas al azar"><img src="https://cdn-icons-png.flaticon.com/32/825/825731.png" class="carton-icon" alt="Azar"></button>
+      <button id="limpiar-btn" class="action-btn" title="Limpiar cartón"><img src="https://cdn-icons-png.flaticon.com/32/3593/3593656.png" class="carton-icon" alt="Limpiar"></button>
       <div id="jugados-btn-container">
         <button id="ver-jugados-btn" class="action-btn" title="Cartones jugados"><img src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" class="carton-icon" alt="cartón"></button>
         <span id="jugados-count">0</span>
@@ -205,7 +208,10 @@
     <div id="derechos">Todos los derechos reservados ® Hexaservice 2025</div>
   </div>
   <div id="number-modal" class="modal" onclick="this.style.display='none'">
-    <div id="number-grid" class="modal-content" onclick="event.stopPropagation();"></div>
+    <div id="number-modal-content" class="modal-content" onclick="event.stopPropagation();">
+      <div id="number-modal-title">Elige tu jugada</div>
+      <div id="number-grid"></div>
+    </div>
   </div>
   <div id="cartones-modal" class="modal" onclick="this.style.display='none'">
       <div id="cartones-list" class="modal-content" onclick="event.stopPropagation();"></div>
@@ -215,6 +221,7 @@
   </div>
   <div id="jugados-modal" class="modal" onclick="this.style.display='none'">
       <div id="jugados-content" class="modal-content" onclick="event.stopPropagation();">
+          <span id="jugados-close" class="close-icon">✖</span>
           <h2 id="jugados-nombre-sorteo"></h2>
           <div id="jugados-grid"></div>
           <button id="cargar-jugado-btn" class="action-btn" style="margin-top:10px;">Cargar cartón</button>
@@ -687,6 +694,7 @@ function loadFromCookie(){
   document.getElementById('mis-cartones-icon').addEventListener('click',abrirCartonesModal);
   document.getElementById('ver-jugados-btn').addEventListener('click',abrirJugadosModal);
   document.getElementById('cargar-jugado-btn').addEventListener('click',cargarCartonJugado);
+  document.getElementById('jugados-close').addEventListener('click',()=>{document.getElementById('jugados-modal').style.display='none';});
   document.getElementById('limpiar-btn').addEventListener('click',()=>{if(confirm('¿Deseas limpiar todas las jugadas del carton?')) limpiarcarton();});
   document.getElementById('azar-btn').addEventListener('click',()=>{if(confirm('¿Quieres cargar jugadas al azar?')) cargarAzar();});
   document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='player.html';});
