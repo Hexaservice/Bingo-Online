@@ -542,9 +542,12 @@ function toggleForma(idx){
     cargarFormasSorteo();
   }
 
-  function abrirSorteosModal(){
+  async function abrirSorteosModal(){
     const list=document.getElementById('sorteos-list');
     list.innerHTML='';
+    if(sorteosActivos.length===0){
+      await cargarSorteosActivos();
+    }
     sorteosActivos.forEach((s,i)=>{
       const item=document.createElement('div');
       item.className='sorteo-item';
@@ -886,7 +889,7 @@ function toggleForma(idx){
     }else{
       window.location.href='index.html';
     }
-    cargarSorteosActivos();
+    await cargarSorteosActivos();
     await cargarCartonesGuardados();
   });
 
