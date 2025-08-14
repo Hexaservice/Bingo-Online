@@ -268,6 +268,9 @@ let sorteosActivos=[];
 let seleccionadoJugado=null;
 let seleccionadoGuardado=null;
 let consultando=false;
+const sorteosModal=document.getElementById('sorteos-modal');
+sorteosModal.close=()=>{sorteosModal.style.display='none';};
+sorteosModal.showModal=()=>{sorteosModal.style.display='flex';};
 let cookieKey='';
 let formasSorteo=[];
 let formaActiva=0;
@@ -543,60 +546,55 @@ function toggleForma(idx){
   }
 
   async function abrirSorteosModal(){
-    const list=document.getElementById('sorteos-list');
-    list.innerHTML='';
     if(sorteosActivos.length===0){
       await cargarSorteosActivos();
     }
-    sorteosActivos.forEach((s,i)=>{
-      const item=document.createElement('div');
-      item.className='sorteo-item';
-
-      const nombre=document.createElement('div');
-      nombre.className='sorteo-nombre';
-      nombre.textContent=`${i+1}. ${s.nombre}`;
-      item.appendChild(nombre);
-
-      const detalles=document.createElement('div');
-      detalles.className='sorteo-detalles';
-      const cal=document.createElement('span');
-      cal.className='sorteo-icon';
-      cal.textContent='📅';
-      const fecha=document.createElement('span');
-      fecha.className='fecha';
-      fecha.textContent=formatearFecha(s.fecha);
-      const reloj=document.createElement('span');
-      reloj.className='sorteo-icon';
-      reloj.textContent='🕒';
-      const hora=document.createElement('span');
-      hora.className='hora';
-      hora.textContent=formatearHora(s.hora);
-      detalles.append(cal,fecha,reloj,hora);
-      item.appendChild(detalles);
-
-      const tipo=document.createElement('div');
-      tipo.className='sorteo-tipo';
-      tipo.textContent=s.tipo==='Sorteo Especial'?'ESPECIAL':'DIARIO';
-      tipo.style.color=s.tipo==='Sorteo Especial'?'orange':'green';
-      item.appendChild(tipo);
-
-      item.addEventListener('click',()=>{
-        seleccionarSorteo(s);
-        document.getElementById('sorteos-modal').style.display='none';
-      });
-
-      list.appendChild(item);
-    });
-    document.getElementById('sorteos-modal').style.display='flex';
+    sorteosModal.showModal();
   }
 
   async function cargarSorteosActivos(){
+    const list=document.getElementById('sorteos-list');
+    list.innerHTML='';
     sorteosActivos=[];
     try{
       const snap=await db.collection('sorteos').where('estado','==','Activo').get();
-      snap.forEach(doc=>{
+      snap.forEach((doc,i)=>{
         const d=doc.data();
-        sorteosActivos.push({id:doc.id,nombre:d.nombre,fecha:d.fecha,hora:d.hora,tipo:d.tipo});
+        sorteosActivos.push({id:doc.id,nombre:d.nombre,fecha:d.fecha,hora:d.hora,tipo:d.tipo,premios:d.totalPremios});
+        const label=document.createElement('label');
+        label.className='sorteo-item';
+
+        const input=document.createElement('input');
+        input.type='radio';
+        input.name='sorteoSeleccion';
+        input.value=doc.id;
+        input.dataset.nombre=d.nombre;
+        input.dataset.fecha=d.fecha;
+        input.dataset.hora=d.hora;
+        input.dataset.premios=d.totalPremios||0;
+        input.dataset.tipo=d.tipo;
+
+        const datos=document.createElement('div');
+        datos.className='sorteo-detalles';
+        const cal=document.createElement('span');
+        cal.className='sorteo-icon';
+        cal.textContent='📅';
+        const fecha=document.createElement('span');
+        fecha.className='fecha';
+        fecha.textContent=formatearFecha(d.fecha);
+        const reloj=document.createElement('span');
+        reloj.className='sorteo-icon';
+        reloj.textContent='🕒';
+        const hora=document.createElement('span');
+        hora.className='hora';
+        hora.textContent=formatearHora(d.hora);
+        const premio=document.createElement('span');
+        premio.className='premios';
+        premio.textContent=`💰 ${d.totalPremios||0}`;
+        datos.append(cal,fecha,reloj,hora,premio);
+
+        label.append(input,datos);
+        list.appendChild(label);
       });
     }catch(e){ console.warn('No se pudieron cargar sorteos'); }
   }
@@ -849,6 +847,15 @@ function toggleForma(idx){
   }
 
   document.getElementById('sorteo-btn').addEventListener('click',abrirSorteosModal);
+  document.getElementById('sorteos-list').addEventListener('change',e=>{
+    if(e.target.name==='sorteoSeleccion'){
+      const {value,dataset}=e.target;
+      const s={id:value,nombre:dataset.nombre,fecha:dataset.fecha,hora:dataset.hora,tipo:dataset.tipo,premios:dataset.premios};
+      seleccionarSorteo(s);
+      document.getElementById('sorteo-btn').textContent=`${formatearFecha(s.fecha)} ${formatearHora(s.hora)}`;
+      sorteosModal.close();
+    }
+  });
   document.getElementById('jugar-carton-btn').addEventListener('click',enviarDatos);
   document.getElementById('guardar-carton-btn').addEventListener('click',guardarCarton);
   document.getElementById('mis-cartones-icon').addEventListener('click',abrirCartonesModal);
