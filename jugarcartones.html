@@ -545,12 +545,6 @@ function toggleForma(idx){
     cargarFormasSorteo();
   }
 
-  async function abrirSorteosModal(){
-    if(sorteosActivos.length===0){
-      await cargarSorteosActivos();
-    }
-    sorteosModal.showModal();
-  }
 
   async function cargarSorteosActivos(){
     const list=document.getElementById('sorteos-list');
@@ -846,7 +840,6 @@ function toggleForma(idx){
     document.getElementById('fecha-hora').textContent=ahora.toLocaleString('es-ES',opciones);
   }
 
-  document.getElementById('sorteo-btn').addEventListener('click',abrirSorteosModal);
   document.getElementById('sorteos-list').addEventListener('change',e=>{
     if(e.target.name==='sorteoSeleccion'){
       const {value,dataset}=e.target;
@@ -876,6 +869,15 @@ function toggleForma(idx){
   });
 
   auth.onAuthStateChanged(async user=>{
+    async function abrirSorteosModal(){
+      const list=document.getElementById('sorteos-list');
+      if(!list.querySelector('input[type="radio"]')){
+        await cargarSorteosActivos();
+      }
+      if(list.querySelector('input[type="radio"]')){
+        sorteosModal.showModal();
+      }
+    }
     if(user){
       const doc=await db.collection('users').doc(user.email).get();
       if(doc.exists){
@@ -898,6 +900,7 @@ function toggleForma(idx){
     }
     await cargarSorteosActivos();
     await cargarCartonesGuardados();
+    document.getElementById('sorteo-btn').addEventListener('click',abrirSorteosModal);
   });
 
   createBoard();

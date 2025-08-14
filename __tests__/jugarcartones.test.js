@@ -7,5 +7,5 @@ test('auth.onAuthStateChanged espera cargarSorteosActivos', () => {
 
 test('abrirSorteosModal carga sorteos si lista vacía', () => {
   const html = fs.readFileSync('jugarcartones.html', 'utf8');
-  expect(html).toMatch(/async function abrirSorteosModal\(\)[\s\S]*if\(sorteosActivos.length===0\)[\s\S]*await cargarSorteosActivos\(\);/);
+  expect(html).toMatch(/async function abrirSorteosModal\(\)[\s\S]*const list=document.getElementById\('sorteos-list'\);[\s\S]*if\(!list.querySelector\('input\[type="radio"\]'\)\)[\s\S]*await cargarSorteosActivos\(\);/);
 });
