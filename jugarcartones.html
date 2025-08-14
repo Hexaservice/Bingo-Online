@@ -141,6 +141,7 @@
     .guardar-row{justify-content:center;}
     #mis-cartones-icon{width:24px;height:24px;cursor:pointer;margin-left:5px;}
     #carton-num{font-family:'Bangers',cursive;text-shadow:0 0 5px green;}
+    #jugados-count{font-family:'Bangers',cursive;color:purple;text-shadow:0 0 5px #fff;display:inline-block;margin-right:5px;}
     #login-footer{margin-top:20px;}
     #fecha-hora,#derechos{font-size:0.7rem;text-align:center;color:#000;}
     #derechos{font-size:0.6rem;}
@@ -173,6 +174,7 @@
       </div>
       <div class="wallet-row"><strong>Créditos disponibles:</strong> <span id="creditos-label">0</span></div>
       <div class="wallet-row"><strong>Cartones gratis:</strong> <span id="gratis-label">0</span></div>
+      <span id="jugados-count">0</span>
       <button id="ver-jugados-btn" class="action-btn" title="Cartones jugados"><img src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" class="carton-icon" alt="cartón"></button>
       <button id="ir-billetera-btn" class="action-btn" onclick="window.location.href='billetera.html'" title="Recargar Billetera">👛</button>
     </div>
@@ -205,6 +207,7 @@
   </div>
   <div id="jugados-modal" class="modal" onclick="this.style.display='none'">
       <div id="jugados-content" class="modal-content" onclick="event.stopPropagation();">
+          <h2 id="jugados-nombre-sorteo"></h2>
           <div id="jugados-grid"></div>
           <button id="cargar-jugado-btn" class="action-btn" style="margin-top:10px;">Cargar cartón</button>
       </div>
@@ -346,6 +349,15 @@ let seleccionadoJugado=null;
     }
   }
 
+  async function actualizarCartonesJugador(){
+    const el=document.getElementById('jugados-count');
+    const user=auth.currentUser;
+    if(!el){return;}
+    if(!user||!currentSorteo){el.textContent='0';return;}
+    const snap=await db.collection('CartonJugado').where('userId','==',user.uid).where('sorteoId','==',currentSorteo).get();
+    el.textContent=snap.size||0;
+  }
+
   function iniciarIntervalo(){
     if(sorteoInterval) clearInterval(sorteoInterval);
     sorteoInterval=setInterval(actualizarDatosSorteo,10000);
@@ -360,12 +372,13 @@ let seleccionadoJugado=null;
     const btn=document.getElementById('sorteo-btn');
     btn.textContent=s.nombre;
     btn.classList.remove('diario','especial');
-    if(s.tipo==='Diario'){ btn.classList.add('diario'); }
-    else{ btn.classList.add('especial'); }
+    if(s.tipo==='Sorteo Diario'){ btn.classList.add('diario'); }
+    else if(s.tipo==='Sorteo Especial'){ btn.classList.add('especial'); }
     btn.style.fontSize = s.nombre.length>20?'0.8rem':'1.1rem';
     document.getElementById('fecha-sorteo').innerHTML=`<span class="cal-icon">📅</span> ${formatearFecha(s.fecha)}`;
     document.getElementById('hora-sorteo').innerHTML=`<span class="clock-icon">⏰</span> ${formatearHora(s.hora)}`;
     iniciarIntervalo();
+    actualizarCartonesJugador();
   }
 
   function abrirSorteosModal(){
@@ -374,7 +387,7 @@ let seleccionadoJugado=null;
     sorteosActivos.forEach((s,i)=>{
       const div=document.createElement('div');
       div.textContent=`${i+1}- ${s.nombre}`;
-      div.className=s.tipo==='Diario'?'sorteo-diario':'sorteo-especial';
+      div.className=s.tipo==='Sorteo Diario'?'sorteo-diario':'sorteo-especial';
       div.addEventListener('click',()=>{seleccionarSorteo(s);document.getElementById('sorteos-modal').style.display='none';});
       list.appendChild(div);
     });
@@ -447,15 +460,24 @@ let seleccionadoJugado=null;
       const c=parseInt(td.dataset.col);
       if(!(r===2&&c===2)) posiciones.push({r,c,valor:td.dataset.value||''});
     });
-      await db.collection('CartonJugado').add({
-        userId:user.uid,
-        alias:alias,
-        sorteoId:currentSorteo,
-        cartonNum:cartonNum,
-        posiciones:posiciones,
-        fecha:new Date().toLocaleDateString('es-ES'),
-        hora:new Date().toLocaleTimeString('es-ES')
-      });
+    const ncarton=document.getElementById('carton-num').textContent.toString();
+    const dup=await db.collection('CartonJugado').where('sorteoId','==',currentSorteo).where('Ncarton','==',ncarton).get();
+    if(!dup.empty){
+      alert('Este número de cartón ya fue jugado en este sorteo.');
+      return;
+    }
+    await db.collection('CartonJugado').add({
+      userId:user.uid,
+      alias:alias,
+      sorteoId:currentSorteo,
+      cartonNum:cartonNum,
+      Ncarton:ncarton,
+      posiciones:posiciones,
+      fecha:new Date().toLocaleDateString('es-ES'),
+      hora:new Date().toLocaleTimeString('es-ES')
+    });
+    await actualizarDatosSorteo();
+    await actualizarCartonesJugador();
     alert('Jugada de Cartón enviada correctamente.');
     limpiarcarton();
   }
@@ -504,9 +526,16 @@ let seleccionadoJugado=null;
     if(!currentSorteo){ alert('Selecciona un sorteo primero'); return; }
     const user=auth.currentUser;
     if(!user) return;
+    await actualizarCartonesJugador();
     const grid=document.getElementById('jugados-grid');
     grid.innerHTML='';
     seleccionadoJugado=null;
+    const titulo=document.getElementById('jugados-nombre-sorteo');
+    const s=sorteosActivos.find(x=>x.id===currentSorteo);
+    if(titulo&&s){
+      titulo.textContent=s.nombre;
+      titulo.className=s.tipo==='Sorteo Diario'?'sorteo-diario':'sorteo-especial';
+    }
     const snap=await db.collection('CartonJugado').where('userId','==',user.uid).where('sorteoId','==',currentSorteo).get();
     let idx=0;
     snap.forEach(doc=>{
