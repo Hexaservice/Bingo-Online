@@ -548,6 +548,7 @@ function toggleForma(idx){
     sorteosActivos.forEach((s,i)=>{
       const item=document.createElement('div');
       item.className='sorteo-item';
+      item.dataset.index=i;
 
       const nombre=document.createElement('div');
       nombre.className='sorteo-nombre';
@@ -577,7 +578,6 @@ function toggleForma(idx){
       tipo.style.color=s.tipo==='Sorteo Especial'?'orange':'green';
       item.appendChild(tipo);
 
-      item.addEventListener('click',()=>{seleccionarSorteo(s);document.getElementById('sorteos-modal').style.display='none';});
       list.appendChild(item);
     });
     document.getElementById('sorteos-modal').style.display='flex';
@@ -842,6 +842,15 @@ function toggleForma(idx){
   }
 
   document.getElementById('sorteo-btn').addEventListener('click',abrirSorteosModal);
+  document.getElementById('sorteos-list').addEventListener('click',e=>{
+    const item=e.target.closest('.sorteo-item');
+    if(!item) return;
+    const s=sorteosActivos[item.dataset.index];
+    if(s){
+      seleccionarSorteo(s);
+      document.getElementById('sorteos-modal').style.display='none';
+    }
+  });
   document.getElementById('jugar-carton-btn').addEventListener('click',enviarDatos);
   document.getElementById('guardar-carton-btn').addEventListener('click',guardarCarton);
   document.getElementById('mis-cartones-icon').addEventListener('click',abrirCartonesModal);
