@@ -6,12 +6,12 @@ test('auth.onAuthStateChanged espera cargarSorteosActivos', () => {
   expect(html).toMatch(/auth\.onAuthStateChanged\(async user=>{[\s\S]*await cargarSorteosActivos\(\);/);
 });
 
-test('abrirSorteosModal carga sorteos si lista vacía', () => {
+test('existe un menú desplegable de sorteos', () => {
   const html = fs.readFileSync('jugarcartones.html', 'utf8');
-  expect(html).toMatch(/async function abrirSorteosModal\(\)[\s\S]*const list=document.getElementById\('sorteos-list'\);[\s\S]*if\(list.children.length===0\)[\s\S]*await cargarSorteosActivos\(\);/);
+  expect(html).toMatch(/<select id=\"sorteo-select\">/);
 });
 
-test('al seleccionar un sorteo se actualiza el botón', () => {
+test('al seleccionar un sorteo se actualiza el menú', () => {
   const html = fs.readFileSync('jugarcartones.html', 'utf8');
   const dom = new JSDOM(html, {runScripts: 'outside-only'});
   const {window} = dom;
@@ -20,7 +20,6 @@ test('al seleccionar un sorteo se actualiza el botón', () => {
   window.ensureAuth = () => {};
   window.auth = {onAuthStateChanged: () => {}};
   window.db = {};
-  window.sorteosModal = {close: () => {}, showModal: () => {}};
   window.setInterval = () => {};
   window.alert = () => {};
 
@@ -34,12 +33,17 @@ test('al seleccionar un sorteo se actualiza el botón', () => {
   window.formatearFecha = f => f;
   window.formatearHora = h => h;
 
+  const select = document.getElementById('sorteo-select');
+  const opt = document.createElement('option');
+  opt.value='s1';
+  select.appendChild(opt);
+
   window.seleccionarSorteo({id:'s1',nombre:'Sorteo Demo',fecha:'2024-01-01',hora:'12:00',tipo:'Sorteo Diario'});
 
-  expect(document.getElementById('sorteo-btn').textContent).toBe('Sorteo Demo');
+  expect(select.value).toBe('s1');
 });
 
-test('cargarSorteosActivos crea botones que actualizan el sorteo', async () => {
+test('cargarSorteosActivos carga opciones y permite seleccionar', async () => {
   const html = fs.readFileSync('jugarcartones.html', 'utf8');
   const dom = new JSDOM(html, {runScripts: 'outside-only'});
   const {window} = dom;
@@ -60,7 +64,6 @@ test('cargarSorteosActivos crea botones que actualizan el sorteo', async () => {
       })
     })
   };
-  window.sorteosModal = {close: () => {}, showModal: () => {}};
   window.setInterval = () => {};
   window.alert = () => {};
 
@@ -75,7 +78,9 @@ test('cargarSorteosActivos crea botones que actualizan el sorteo', async () => {
   window.formatearHora = h => h;
 
   await window.cargarSorteosActivos();
-  const item = document.querySelector('#sorteos-list .sorteo-item');
-  item.click();
-  expect(document.getElementById('sorteo-btn').textContent).toBe('Sorteo Demo');
+  const option = document.querySelector('#sorteo-select option[value="s1"]');
+  expect(option).not.toBeNull();
+  document.getElementById('sorteo-select').value='s1';
+  document.getElementById('sorteo-select').dispatchEvent(new window.Event('change'));
+  expect(document.getElementById('sorteo-select').value).toBe('s1');
 });
