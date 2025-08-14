@@ -1,4 +1,5 @@
 const fs = require('fs');
+const {JSDOM} = require('jsdom');
 
 test('auth.onAuthStateChanged espera cargarSorteosActivos', () => {
   const html = fs.readFileSync('jugarcartones.html', 'utf8');
@@ -8,4 +9,32 @@ test('auth.onAuthStateChanged espera cargarSorteosActivos', () => {
 test('abrirSorteosModal carga sorteos si lista vacía', () => {
   const html = fs.readFileSync('jugarcartones.html', 'utf8');
   expect(html).toMatch(/async function abrirSorteosModal\(\)[\s\S]*const list=document.getElementById\('sorteos-list'\);[\s\S]*if\(!list.querySelector\('input\[type="radio"\]'\)\)[\s\S]*await cargarSorteosActivos\(\);/);
+});
+
+test('al seleccionar un sorteo se actualiza el botón', () => {
+  const html = fs.readFileSync('jugarcartones.html', 'utf8');
+  const dom = new JSDOM(html, {runScripts: 'outside-only'});
+  const {window} = dom;
+  const document = window.document;
+
+  window.ensureAuth = () => {};
+  window.auth = {onAuthStateChanged: () => {}};
+  window.db = {};
+  window.sorteosModal = {close: () => {}, showModal: () => {}};
+  window.setInterval = () => {};
+  window.alert = () => {};
+
+  const script = html.match(/<script>([\s\S]*)<\/script>\s*<\/body>/)[1];
+  window.eval(script);
+
+  window.resetForma = () => {};
+  window.iniciarIntervalo = () => {};
+  window.actualizarCartonesJugador = () => {};
+  window.cargarFormasSorteo = () => {};
+  window.formatearFecha = f => f;
+  window.formatearHora = h => h;
+
+  window.seleccionarSorteo({id:'s1',nombre:'Sorteo Demo',fecha:'2024-01-01',hora:'12:00',tipo:'Sorteo Diario'});
+
+  expect(document.getElementById('sorteo-btn').textContent).toBe('Sorteo Demo');
 });

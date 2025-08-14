@@ -265,6 +265,7 @@ const board=document.getElementById('bingo-board');
 let currentCell=null;
 let sorteoInterval=null;
 let currentSorteo=null;
+let sorteoSeleccionado=null;
 let cartonesGuardados={};
 let sorteosActivos=[];
 let seleccionadoJugado=null;
@@ -576,6 +577,10 @@ function toggleForma(idx){
         input.dataset.premios=premioVal;
         input.dataset.tipo=d.tipo;
 
+        input.addEventListener('change',()=>{
+          sorteoSeleccionado={id:doc.id,nombre:d.nombre,fecha:d.fecha,hora:d.hora,tipo:d.tipo};
+        });
+
         const info=document.createElement('div');
         info.className='sorteo-item-info';
         const nombre=document.createElement('div');
@@ -855,18 +860,8 @@ function toggleForma(idx){
   }
 
   document.getElementById('seleccionar-sorteo-btn').addEventListener('click',()=>{
-    console.log('click en seleccionar sorteo');
-    const chk=document.querySelector('#sorteos-list input[name="sorteoSeleccion"]:checked');
-    console.log('radio seleccionado:',chk?chk.dataset.nombre:null);
-    if(!chk){ alert('Selecciona un sorteo'); return; }
-    const s={
-      id:chk.value,
-      nombre:chk.dataset.nombre,
-      fecha:chk.dataset.fecha,
-      hora:chk.dataset.hora,
-      tipo:chk.dataset.tipo
-    };
-    seleccionarSorteo(s);
+    if(!sorteoSeleccionado){ alert('Selecciona un sorteo'); return; }
+    seleccionarSorteo(sorteoSeleccionado);
     sorteosModal.close();
   });
   document.getElementById('jugar-carton-btn').addEventListener('click',enviarDatos);
