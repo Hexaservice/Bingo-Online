@@ -81,7 +81,8 @@
   <div id="login-container">
     <img id="logo-bingo" src="https://i.imgur.com/twjhNtZ.png" />
     <button id="login-btn">Iniciar Sesión</button>
-    <div id="register-container" style="margin-top:10px;font-size:1rem;">¿Aún no tienes cuenta? <a href="registrarse.html" id="register-link">Regístrate</a></div>
+    <div id="terms-container"><input type="checkbox" id="accept-terms"> <label for="accept-terms">Acepto los <a href="#" id="terms-link">términos y condiciones</a></label></div>
+    <div id="register-container" style="margin-top:10px;font-size:1rem;">¿Aún no tienes cuenta? <a href="#" id="register-link">Regístrate</a></div>
     <div id="login-footer">
       <div id="fecha-hora"></div>
       <div id="derechos">Todos los derechos reservados ® Hexaservice 2025</div>
@@ -100,8 +101,21 @@
       }
       initFirebase();
       handleRedirect();
+      const termsContainer=document.getElementById('terms-container');
       const registerContainer=document.getElementById('register-container');
       document.getElementById('login-btn').addEventListener('click', () => {
+        if(termsContainer.style.display!=='none' && !document.getElementById('accept-terms').checked){
+          alert('Debe aceptar los términos y condiciones');
+          return;
+        }
+        loginGoogle();
+      });
+      document.getElementById('register-link').addEventListener('click', e => {
+        e.preventDefault();
+        if(termsContainer.style.display!=='none' && !document.getElementById('accept-terms').checked){
+          alert('Debe aceptar los términos y condiciones');
+          return;
+        }
         loginGoogle();
       });
       const logoutLink = document.getElementById('logout-link');
@@ -111,6 +125,7 @@
           logout();
         });
       }
+      document.getElementById('terms-link').addEventListener('click', e => { e.preventDefault(); window.location.href='terminos.html'; });
     function actualizarFechaHora(){
       const ahora = new Date();
       const opciones = { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' };
@@ -123,12 +138,14 @@
       if(user){
         const doc = await db.collection('users').doc(user.email).get();
         if(doc.exists){
+          termsContainer.style.display='none';
           registerContainer.style.display='none';
           const role = doc.data().role || await getUserRole(user);
           redirectByRole(role);
         }else{
+          termsContainer.style.display='block';
           registerContainer.style.display='block';
-          alert('Usuario no registrado, para poder jugar al Bingo debes registrarte con tu cuenta de Google.');
+          alert('Usuario no registrado, para poder jugar al Bingo debes registrarte con tu cuenta de Google y aceptando los Terminos y condiciones');
           window.location.href='registrarse.html';
           return;
         }
