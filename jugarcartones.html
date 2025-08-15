@@ -77,7 +77,8 @@
     .sorteo-diario{color:green;}
     .sorteo-especial{color:orange;}
     .sorteo-info{display:flex;align-items:center;justify-content:center;gap:10px;}
-    .datos-sorteo{display:flex;flex-direction:column;align-items:center;gap:10px;justify-content:center;margin-top:5px;flex-wrap:wrap;font-family:'Bangers',cursive;}
+    .datos-sorteo{display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:center;margin-top:2px;flex-wrap:wrap;font-family:'Bangers',cursive;}
+    #sorteo-section{margin-bottom:5px;}
     .datos-sorteo div{font-weight:bold;font-size:1.2rem;}
     #valor-carton span,#cartones-jugando span{font-size:1.5rem;}
     #valor-carton-valor,#premio-valor{animation:pulse 1s infinite;display:inline-block;}
@@ -88,7 +89,7 @@
     .billete-icon{font-size:1.5rem;}
     .carton-icon{width:24px;height:24px;}
     #premio-repartir{color:white;font-family:'Bangers',cursive;font-size:1.8rem;text-shadow:0 0 10px #004400;position:relative;}
-    #forma-nombre{position:fixed;transform:translate(-50%,-100%);font-size:0.8rem;display:none;text-shadow:0 0 5px #004400;z-index:1000;}
+    #forma-nombre{font-family:'Bangers',cursive;color:#4B0082;font-size:1rem;text-shadow:0 0 5px #fff;text-align:center;visibility:hidden;min-height:8px;margin:0;}
     .wallet-row{display:flex;align-items:center;gap:5px;margin:3px 0;font-size:1rem;font-weight:bold;}
     #creditos-label,#gratis-label{font-family:'Bangers',cursive;font-size:1.5rem;text-shadow:0 0 5px green;display:inline-block;animation:pulse 1s infinite;}
     #gratis-label{color:#4b0082;text-shadow:0 0 5px #fff;}
@@ -110,7 +111,7 @@
     #azar-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;position:absolute;bottom:5px;right:140px;background:linear-gradient(#ffffff,#dddddd);border:3px solid #FFD700;border-radius:8px;cursor:pointer;}
     #ir-billetera-btn{width:40px;height:40px;font-size:1.2rem;display:flex;align-items:center;justify-content:center;position:absolute;bottom:5px;right:5px;margin-left:0;}
     #jugar-carton-btn{width:200px;height:40px;font-size:1.2rem;display:flex;align-items:center;justify-content:center;margin:10px auto;}
-    .carton-box{display:flex;justify-content:center;margin:8px auto;perspective:1000px;}
+    .carton-box{display:flex;justify-content:center;margin:0 auto 8px;perspective:1000px;}
     .carton-wrapper{position:relative;transform-style:preserve-3d;transition:transform 0.6s;border-radius:16px;padding:6px;background:linear-gradient(green,yellow);box-shadow:0 0 15px rgba(0,0,0,0.5);}
     .carton-wrapper.flipped{transform:rotateY(180deg);}
     .carton-wrapper.flipped .carton{pointer-events:none;}
@@ -145,7 +146,7 @@
     .mini-carton th{font-size:0.8rem;color:#ff6600;background:radial-gradient(circle,#ffffff,#ffffff 60%,#00aa00);text-shadow:1px 1px 0 #000;}
     @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.2);}100%{transform:scale(1);}}
     @keyframes float{0%{transform:translateY(0);}50%{transform:translateY(-5px);}100%{transform:translateY(0);}}
-    #player-container{position:relative;border:2px solid green;border-radius:10px;background:linear-gradient(gray,white);padding:10px;margin-top:10px;}
+    #player-container{position:relative;border:2px solid green;border-radius:10px;background:linear-gradient(gray,white);padding:10px;margin-top:5px;}
     #alias-row{display:flex;align-items:center;justify-content:center;gap:5px;}
     #alias-jugador{font-size:1.2rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:220px;color:orange;}
     #editar-alias{background:none;border:none;color:#4B0082;font-size:1.5rem;cursor:pointer;border-radius:5px;text-shadow:0 0 4px #fff,0 0 8px #fff;}
@@ -173,7 +174,7 @@
       </div>
     </div>
     <div class="datos-sorteo">
-      <div id="premio-repartir"><span id="premio-label">Premio a Repartir:</span> <span id="premio-valor">0</span><div id="forma-nombre"></div></div>
+      <div id="premio-repartir"><span id="premio-label">Premio a Repartir:</span> <span id="premio-valor">0</span></div>
       <div id="stats-row">
         <div id="valor-carton"><span class="billete-icon">💵</span> Cartón: <span id="valor-carton-valor">0</span></div>
         <div id="cartones-jugando"><img src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" class="carton-icon" alt="Cartón"> Jugando: <span id="cartones-jugando-valor">0</span></div>
@@ -196,6 +197,7 @@
       </div>
       <button id="ir-billetera-btn" class="action-btn" onclick="window.location.href='billetera.html'" title="Recargar Billetera">👛</button>
     </div>
+    <div id="forma-nombre"></div>
     <div class="carton-box">
       <div class="carton-wrapper" id="carton-wrapper">
         <table class="carton">
@@ -306,7 +308,7 @@ function resetForma(){
   document.getElementById('premio-valor').style.textShadow='0 0 10px #004400';
   const pr=document.getElementById('premio-repartir');
   pr.style.textShadow='0 0 10px #004400';
-  document.getElementById('forma-nombre').style.display='none';
+  document.getElementById('forma-nombre').style.visibility='hidden';
   actualizarDatosSorteo();
 }
 
@@ -336,13 +338,7 @@ function toggleForma(idx){
   nombre.textContent=forma.nombre||'';
   nombre.style.textShadow=`0 0 5px ${formGlows[idx-1]}`;
   const wrapper=document.getElementById('carton-wrapper');
-  nombre.style.display=wrapper.classList.contains('flipped')?'none':'block';
-  const nCell=document.querySelector('.carton th:nth-child(3)');
-  if(nCell){
-    const rect=nCell.getBoundingClientRect();
-    nombre.style.left=`${rect.left+rect.width/2}px`;
-    nombre.style.top=`${rect.bottom}px`;
-  }
+  nombre.style.visibility=wrapper.classList.contains('flipped')?'hidden':'visible';
   pv.textContent=Math.round(premioActual*porcentaje/100);
 }
 
@@ -360,9 +356,9 @@ function toggleForma(idx){
       wrapper.classList.toggle('flipped');
       const nombre=document.getElementById('forma-nombre');
       if(wrapper.classList.contains('flipped')||formaActiva===0){
-        nombre.style.display='none';
+        nombre.style.visibility='hidden';
       }else{
-        nombre.style.display='block';
+        nombre.style.visibility='visible';
       }
     };
   }
