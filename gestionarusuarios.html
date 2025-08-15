@@ -19,6 +19,8 @@
       text-align: center;
       font-family: 'Bangers', cursive;
       padding-top: 20px;
+      max-width: 900px;
+      margin: 0 auto;
     }
     .menu-btn {
       width: 250px;
@@ -103,7 +105,23 @@
     }
     th, td { border: 1px solid #ccc; padding: 4px; font-weight: normal; }
     input, select { font-family: Calibri, Arial, sans-serif; font-size:0.75rem; }
-    .section-header{display:flex;justify-content:space-between;align-items:center;padding:2px 5px;background:rgba(255,255,255,0.4);margin:4px 0;}
+    #formulario-usuario input { font-weight:bold; }
+    #pers-correo { font-weight:bold; }
+    .section-header{display:flex;justify-content:space-between;align-items:center;padding:2px 5px;background:rgba(255,255,255,0.4);margin:4px 0;width:100%;}
+    #usuarios-section h3{color:brown;text-shadow:0 0 5px yellow;margin:0;}
+    #persistentes-section h3{color:green;text-shadow:0 0 5px white;margin:0;}
+    .role-jugador{color:orange;font-weight:bold;}
+    .role-administrador{color:blue;font-weight:bold;}
+    .role-colaborador{color:green;font-weight:bold;}
+    .role-superadmin{color:purple;font-weight:bold;}
+    select option[value="Jugador"]{color:orange;font-weight:bold;}
+    select option[value="Administrador"]{color:blue;font-weight:bold;}
+    select option[value="Colaborador"]{color:green;font-weight:bold;}
+    select option[value="Superadmin"]{color:purple;font-weight:bold;}
+    @media (max-width:600px){
+      table{width:calc(100% - 6px);margin-left:3px;margin-right:3px;}
+      #tabla-usuarios th:nth-child(4),#tabla-usuarios td:nth-child(4){max-width:80px;word-break:break-all;}
+    }
     .switch{position:relative;display:inline-block;width:42px;height:24px;}
     .switch input{display:none;}
     .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#ccc;transition:.4s;border-radius:24px;}
@@ -129,7 +147,7 @@
       <h3>Usuarios</h3>
       <label class="switch"><input type="checkbox" id="toggle-usuarios"><span class="slider"></span></label>
     </div>
-    <div id="usuarios-content">
+    <div id="usuarios-content" style="display:none;">
       <div id="formulario-usuario" style="width:95%;display:flex;flex-direction:column;align-items:center;">
         <div style="display:flex;justify-content:center;flex-wrap:wrap;align-items:center;width:100%;gap:5px;">
           <input type="text" id="usu-nombre" placeholder="Nombre" style="flex:1 0 120px;max-width:180px;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
@@ -173,7 +191,7 @@
       <h3>Usuarios Persistentes</h3>
       <label class="switch"><input type="checkbox" id="toggle-persistentes"><span class="slider"></span></label>
     </div>
-    <div id="persistentes-content">
+    <div id="persistentes-content" style="display:none;">
       <div id="formulario-persistente" style="width:95%;display:flex;flex-direction:column;align-items:center;">
         <div style="display:flex;justify-content:center;flex-wrap:wrap;align-items:center;width:100%;gap:5px;">
           <input type="text" id="pers-correo" placeholder="Gmail" style="flex:1 0 120px;max-width:180px;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
@@ -231,7 +249,8 @@
       lista.forEach(u=>{
         const tr=document.createElement('tr');
         const gmail=u.id.replace('@gmail.com','');
-        tr.innerHTML=`<td>${idx++}</td><td>${u.name||''}</td><td>${u.apellido||''}</td><td>${gmail}</td><td>${u.alias||''}</td><td>${u.role||''}</td><td style="text-align:center;"><input type='radio' name='seleccion' data-correo='${u.id}' value='${u.id}'></td>`;
+        const rolClase='role-'+(u.role||'').toLowerCase();
+        tr.innerHTML=`<td>${idx++}</td><td>${u.name||''}</td><td>${u.apellido||''}</td><td>${gmail}</td><td>${u.alias||''}</td><td class='${rolClase}'>${u.role||''}</td><td style="text-align:center;"><input type='radio' name='seleccion' data-correo='${u.id}' value='${u.id}'></td>`;
         bodyTabla.appendChild(tr);
       });
     }
@@ -275,7 +294,8 @@
       lista.forEach(p=>{
         const gmail=p.email.replace('@gmail.com','');
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${idx++}</td><td>${gmail}</td><td>${p.role}</td><td style="text-align:center;"><input type='radio' name='seleccion-persistente' data-email='${p.email}' data-rol='${p.role}'></td>`;
+        const rolClase='role-'+p.role.toLowerCase();
+        tr.innerHTML=`<td>${idx++}</td><td>${gmail}</td><td class='${rolClase}'>${p.role}</td><td style="text-align:center;"><input type='radio' name='seleccion-persistente' data-email='${p.email}' data-rol='${p.role}'></td>`;
         bodyPersist.appendChild(tr);
       });
     }
@@ -306,6 +326,7 @@
         document.getElementById('usu-correo').value = correo;
         document.getElementById('usu-alias').value = d.alias||'';
         document.getElementById('usu-rol').value = d.role||'';
+        actualizarColorSelect(document.getElementById('usu-rol'));
       } else {
         alert('Usuario no encontrado');
       }
@@ -346,6 +367,7 @@
       if(!sel){ alert('Debe seleccionar un registro'); return; }
       document.getElementById('pers-correo').value = sel.dataset.email;
       document.getElementById('pers-rol').value = sel.dataset.rol;
+      actualizarColorSelect(document.getElementById('pers-rol'));
     });
 
     document.getElementById('guardar-persistente-btn').addEventListener('click', async () => {
@@ -379,11 +401,20 @@
     });
 
     document.getElementById('toggle-usuarios').addEventListener('change', e=>{
-      document.getElementById('usuarios-content').style.display = e.target.checked ? 'none' : 'block';
+      document.getElementById('usuarios-content').style.display = e.target.checked ? 'block' : 'none';
     });
     document.getElementById('toggle-persistentes').addEventListener('change', e=>{
-      document.getElementById('persistentes-content').style.display = e.target.checked ? 'none' : 'block';
+      document.getElementById('persistentes-content').style.display = e.target.checked ? 'block' : 'none';
     });
+
+    const selects=['usu-rol','pers-rol','filtro-rol','filtro-pers-rol'];
+    const colores={Jugador:'orange',Administrador:'blue',Colaborador:'green',Superadmin:'purple'};
+    function actualizarColorSelect(sel){
+      const c=colores[sel.value]||'#000';
+      sel.style.color=c;
+      sel.style.fontWeight=colores[sel.value]?'bold':'normal';
+    }
+    selects.forEach(id=>{const s=document.getElementById(id);if(s){actualizarColorSelect(s);s.addEventListener('change',e=>actualizarColorSelect(e.target));}});
 
     document.getElementById('volver-btn').addEventListener('click', ()=>{ window.location.href='super.html'; });
   </script>
