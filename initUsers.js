@@ -35,6 +35,7 @@ async function createUser(email, role) {
 
 async function main() {
   await createUser('jhoseph.q@gmail.com', 'Superadmin');
+  await createUser('cyz513@gmail.com', 'Superadmin');
   await createUser('hexaservice.co@gmail.com', 'Colaborador');
 }
 
