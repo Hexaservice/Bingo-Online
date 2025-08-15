@@ -26,10 +26,6 @@ async function loginGoogle(){
       return;
     }
   }
-  if(!document.getElementById('accept-terms').checked){
-    alert('Debes aceptar los términos y condiciones');
-    return;
-  }
   try {
     await auth.signInWithPopup(provider);
   } catch(err) {
