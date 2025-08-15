@@ -88,7 +88,7 @@
     .billete-icon{font-size:1.5rem;}
     .carton-icon{width:24px;height:24px;}
     #premio-repartir{color:white;font-family:'Bangers',cursive;font-size:1.8rem;text-shadow:0 0 10px #004400;position:relative;}
-    #forma-nombre{position:absolute;top:100%;left:50%;transform:translateX(-50%);font-size:0.8rem;display:none;text-shadow:0 0 5px #004400;}
+    #forma-nombre{position:fixed;transform:translate(-50%,-100%);font-size:0.8rem;display:none;text-shadow:0 0 5px #004400;}
     .wallet-row{display:flex;align-items:center;gap:5px;margin:3px 0;font-size:1rem;font-weight:bold;}
     #creditos-label,#gratis-label{font-family:'Bangers',cursive;font-size:1.5rem;text-shadow:0 0 5px green;display:inline-block;animation:pulse 1s infinite;}
     #gratis-label{color:#4b0082;text-shadow:0 0 5px #fff;}
@@ -330,12 +330,18 @@ function toggleForma(idx){
   const pl=document.getElementById('premio-label');
   const nombre=document.getElementById('forma-nombre');
   const porcentaje=parseFloat(forma.porcentaje)||0;
-  pl.textContent='PREMIO DE FORMA';
+  pl.textContent='PREMIO DE FORMA:';
   pr.style.textShadow=`0 0 10px ${formGlows[idx-1]}`;
   pv.style.textShadow=`0 0 10px ${formGlows[idx-1]}`;
   nombre.textContent=forma.nombre||'';
   nombre.style.display='block';
   nombre.style.textShadow=`0 0 5px ${formGlows[idx-1]}`;
+  const nCell=document.querySelector('.carton th:nth-child(3)');
+  if(nCell){
+    const rect=nCell.getBoundingClientRect();
+    nombre.style.left=`${rect.left+rect.width/2}px`;
+    nombre.style.top=`${rect.bottom}px`;
+  }
   pv.textContent=Math.round(premioActual*porcentaje/100);
 }
 
