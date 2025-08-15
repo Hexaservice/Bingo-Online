@@ -98,10 +98,18 @@
       border-collapse: collapse;
       width: 95%;
       margin-bottom: 10px;
-      font-size:0.8rem;
-      font-family: inherit;
+      font-size:0.75rem;
+      font-family: Calibri, Arial, sans-serif;
     }
     th, td { border: 1px solid #ccc; padding: 4px; font-weight: normal; }
+    input, select { font-family: Calibri, Arial, sans-serif; font-size:0.75rem; }
+    .section-header{display:flex;justify-content:space-between;align-items:center;padding:2px 5px;background:rgba(255,255,255,0.4);margin:4px 0;}
+    .switch{position:relative;display:inline-block;width:42px;height:24px;}
+    .switch input{display:none;}
+    .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#ccc;transition:.4s;border-radius:24px;}
+    .slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background-color:white;transition:.4s;border-radius:50%;}
+    input:checked + .slider{background-color:#4caf50;}
+    input:checked + .slider:before{transform:translateX(18px);}
   </style>
 </head>
 <body>
@@ -116,41 +124,84 @@
   </div>
   <button id="volver-btn" class="menu-btn back-btn">&#9664; Volver</button>
 
-  <div id="formulario-usuario" style="width:95%;display:flex;flex-direction:column;align-items:center;">
-    <div style="display:flex;justify-content:center;flex-wrap:wrap;align-items:center;width:100%;gap:5px;">
-      <input type="text" id="usu-nombre" placeholder="Nombre" style="flex:1 0 120px;max-width:180px;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
-      <input type="text" id="usu-apellido" placeholder="Apellido" style="flex:1 0 120px;max-width:180px;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
+  <div id="usuarios-section">
+    <div class="section-header">
+      <h3>Usuarios</h3>
+      <label class="switch"><input type="checkbox" id="toggle-usuarios"><span class="slider"></span></label>
     </div>
-    <div style="display:flex;justify-content:center;flex-wrap:wrap;align-items:center;width:100%;gap:5px;margin-top:5px;">
-      <input type="email" id="usu-correo" placeholder="Correo" style="flex:1 0 120px;max-width:180px;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
-      <input type="text" id="usu-alias" placeholder="Alias" style="flex:1 0 120px;max-width:180px;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
-    </div>
-    <select id="usu-rol" style="width:180px;padding:5px;margin-top:5px;text-align:center;border-radius:5px;border:1px solid #ccc;">
-      <option value="Administrador">Administrador</option>
-      <option value="Colaborador">Colaborador</option>
-      <option value="Jugador">Jugador</option>
-    </select>
-    <div style="text-align:center;margin-top:5px;">
-      <button id="consultar-btn" class="icon-square" title="Buscar">&#128269;</button>
-      <button id="actualizar-btn" class="icon-square" title="Actualizar" style="color:green;">&#9998;</button>
-      <button id="eliminar-btn" class="icon-square" title="Eliminar" style="color:red;">&#128465;</button>
+    <div id="usuarios-content">
+      <div id="formulario-usuario" style="width:95%;display:flex;flex-direction:column;align-items:center;">
+        <div style="display:flex;justify-content:center;flex-wrap:wrap;align-items:center;width:100%;gap:5px;">
+          <input type="text" id="usu-nombre" placeholder="Nombre" style="flex:1 0 120px;max-width:180px;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
+          <input type="text" id="usu-apellido" placeholder="Apellido" style="flex:1 0 120px;max-width:180px;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
+        </div>
+        <div style="display:flex;justify-content:center;flex-wrap:wrap;align-items:center;width:100%;gap:5px;margin-top:5px;">
+          <input type="email" id="usu-correo" placeholder="Gmail" style="flex:1 0 120px;max-width:180px;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
+          <input type="text" id="usu-alias" placeholder="Alias" style="flex:1 0 120px;max-width:180px;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
+        </div>
+        <select id="usu-rol" style="width:180px;padding:5px;margin-top:5px;text-align:center;border-radius:5px;border:1px solid #ccc;">
+          <option value="Administrador">Administrador</option>
+          <option value="Colaborador">Colaborador</option>
+          <option value="Jugador">Jugador</option>
+        </select>
+        <div style="text-align:center;margin-top:5px;">
+          <button id="consultar-btn" class="icon-square" title="Buscar">&#128269;</button>
+          <button id="actualizar-btn" class="icon-square" title="Actualizar" style="color:green;">&#9998;</button>
+          <button id="eliminar-btn" class="icon-square" title="Eliminar" style="color:red;">&#128465;</button>
+        </div>
+      </div>
+
+      <table id="tabla-usuarios" style="max-height:50vh;overflow-y:auto;">
+        <thead>
+          <tr>
+            <th>N°</th>
+            <th><input id="filtro-nombre" type="text" placeholder="Nombre" style="width:100%;box-sizing:border-box;" /></th>
+            <th><input id="filtro-apellido" type="text" placeholder="Apellido" style="width:100%;box-sizing:border-box;" /></th>
+            <th><input id="filtro-correo" type="text" placeholder="Gmail" style="width:100%;box-sizing:border-box;" /></th>
+            <th><input id="filtro-alias" type="text" placeholder="Alias" style="width:100%;box-sizing:border-box;" /></th>
+            <th><select id="filtro-rol" style="width:100%;"><option value="">Rol</option><option value="Administrador">Administrador</option><option value="Colaborador">Colaborador</option><option value="Jugador">Jugador</option></select></th>
+            <th style="text-align:center;">&#10004;</th>
+          </tr>
+        </thead>
+        <tbody id="usuarios-body"></tbody>
+      </table>
     </div>
   </div>
 
-  <table id="tabla-usuarios" style="max-height:50vh;overflow-y:auto;">
-    <thead>
-      <tr>
-        <th>N°</th>
-        <th><input id="filtro-nombre" type="text" placeholder="Nombre" style="width:100%;box-sizing:border-box;" /></th>
-        <th><input id="filtro-apellido" type="text" placeholder="Apellido" style="width:100%;box-sizing:border-box;" /></th>
-        <th><input id="filtro-correo" type="text" placeholder="Correo" style="width:100%;box-sizing:border-box;" /></th>
-        <th><input id="filtro-alias" type="text" placeholder="Alias" style="width:100%;box-sizing:border-box;" /></th>
-        <th><select id="filtro-rol" style="width:100%;"><option value="">Rol</option><option value="Administrador">Administrador</option><option value="Colaborador">Colaborador</option><option value="Jugador">Jugador</option></select></th>
-        <th style="text-align:center;">&#10004;</th>
-      </tr>
-    </thead>
-    <tbody id="usuarios-body"></tbody>
-  </table>
+  <div id="persistentes-section">
+    <div class="section-header">
+      <h3>Usuarios Persistentes</h3>
+      <label class="switch"><input type="checkbox" id="toggle-persistentes"><span class="slider"></span></label>
+    </div>
+    <div id="persistentes-content">
+      <div id="formulario-persistente" style="width:95%;display:flex;flex-direction:column;align-items:center;">
+        <div style="display:flex;justify-content:center;flex-wrap:wrap;align-items:center;width:100%;gap:5px;">
+          <input type="text" id="pers-correo" placeholder="Gmail" style="flex:1 0 120px;max-width:180px;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;" />
+        </div>
+        <select id="pers-rol" style="width:180px;padding:5px;margin-top:5px;text-align:center;border-radius:5px;border:1px solid #ccc;">
+          <option value="Superadmin">Superadmin</option>
+          <option value="Administrador">Administrador</option>
+          <option value="Colaborador">Colaborador</option>
+        </select>
+        <div style="text-align:center;margin-top:5px;">
+          <button id="consultar-persistente-btn" class="icon-square" title="Buscar">&#128269;</button>
+          <button id="guardar-persistente-btn" class="icon-square" title="Guardar" style="color:green;">&#10010;</button>
+          <button id="eliminar-persistente-btn" class="icon-square" title="Eliminar" style="color:red;">&#128465;</button>
+        </div>
+      </div>
+      <table id="tabla-persistentes" style="max-height:40vh;overflow-y:auto;">
+        <thead>
+          <tr>
+            <th>N°</th>
+            <th><input id="filtro-pers-correo" type="text" placeholder="Gmail" style="width:100%;box-sizing:border-box;" /></th>
+            <th><select id="filtro-pers-rol" style="width:100%;"><option value="">Rol</option><option value="Superadmin">Superadmin</option><option value="Administrador">Administrador</option><option value="Colaborador">Colaborador</option></select></th>
+            <th style="text-align:center;">&#10004;</th>
+          </tr>
+        </thead>
+        <tbody id="persistentes-body"></tbody>
+      </table>
+    </div>
+  </div>
 
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
@@ -160,6 +211,8 @@
     ensureAuth('Superadmin');
     const datos = [];
     const bodyTabla = document.getElementById('usuarios-body');
+    const persistentes = [];
+    const bodyPersist = document.getElementById('persistentes-body');
 
     async function cargarDatos(){
       const snap = await db.collection('users').get();
@@ -177,7 +230,8 @@
       let idx=1;
       lista.forEach(u=>{
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${idx++}</td><td>${u.name||''}</td><td>${u.apellido||''}</td><td>${u.id}</td><td>${u.alias||''}</td><td>${u.role||''}</td><td style="text-align:center;"><input type='radio' name='seleccion' data-correo='${u.id}' value='${u.id}'></td>`;
+        const gmail=u.id.replace('@gmail.com','');
+        tr.innerHTML=`<td>${idx++}</td><td>${u.name||''}</td><td>${u.apellido||''}</td><td>${gmail}</td><td>${u.alias||''}</td><td>${u.role||''}</td><td style="text-align:center;"><input type='radio' name='seleccion' data-correo='${u.id}' value='${u.id}'></td>`;
         bodyTabla.appendChild(tr);
       });
     }
@@ -191,7 +245,7 @@
       let lista=datos;
       if(nom) lista=lista.filter(u=>(u.name||'').toLowerCase().includes(nom));
       if(ape) lista=lista.filter(u=>(u.apellido||'').toLowerCase().includes(ape));
-      if(cor) lista=lista.filter(u=>u.id.toLowerCase().includes(cor));
+      if(cor) lista=lista.filter(u=>u.id.replace('@gmail.com','').toLowerCase().includes(cor));
       if(ali) lista=lista.filter(u=>(u.alias||'').toLowerCase().includes(ali));
       if(rol) lista=lista.filter(u=>(u.role||'')===rol);
       renderTabla(lista);
@@ -204,6 +258,41 @@
     document.getElementById('filtro-rol').addEventListener('change', filtrar);
 
     cargarDatos();
+
+    async function cargarPersistentes(){
+      const snap = await db.collection('roles').get();
+      persistentes.length = 0;
+      snap.forEach(doc=>{
+        const rol = doc.id;
+        (doc.data().emails||[]).forEach(e=>persistentes.push({email:e, role:rol}));
+      });
+      filtrarPersistentes();
+    }
+
+    function renderPersistentes(lista){
+      bodyPersist.innerHTML='';
+      let idx=1;
+      lista.forEach(p=>{
+        const gmail=p.email.replace('@gmail.com','');
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${idx++}</td><td>${gmail}</td><td>${p.role}</td><td style="text-align:center;"><input type='radio' name='seleccion-persistente' data-email='${p.email}' data-rol='${p.role}'></td>`;
+        bodyPersist.appendChild(tr);
+      });
+    }
+
+    function filtrarPersistentes(){
+      const cor=document.getElementById('filtro-pers-correo').value.trim().toLowerCase();
+      const rol=document.getElementById('filtro-pers-rol').value;
+      let lista=persistentes;
+      if(cor) lista=lista.filter(p=>p.email.toLowerCase().includes(cor));
+      if(rol) lista=lista.filter(p=>p.role===rol);
+      renderPersistentes(lista);
+    }
+
+    document.getElementById('filtro-pers-correo').addEventListener('input', filtrarPersistentes);
+    document.getElementById('filtro-pers-rol').addEventListener('change', filtrarPersistentes);
+
+    cargarPersistentes();
 
     document.getElementById('consultar-btn').addEventListener('click', async () => {
       const sel = document.querySelector('input[name="seleccion"]:checked');
@@ -250,6 +339,50 @@
       await db.collection('users').doc(correo).delete();
       alert('Usuario eliminado');
       cargarDatos();
+    });
+
+    document.getElementById('consultar-persistente-btn').addEventListener('click', () => {
+      const sel = document.querySelector('input[name="seleccion-persistente"]:checked');
+      if(!sel){ alert('Debe seleccionar un registro'); return; }
+      document.getElementById('pers-correo').value = sel.dataset.email;
+      document.getElementById('pers-rol').value = sel.dataset.rol;
+    });
+
+    document.getElementById('guardar-persistente-btn').addEventListener('click', async () => {
+      const correo = document.getElementById('pers-correo').value.trim().toLowerCase();
+      const rol = document.getElementById('pers-rol').value;
+      if(!correo){ alert('Ingrese el Gmail'); return; }
+      const email = correo.includes('@') ? correo : `${correo}@gmail.com`;
+      const roles=['Superadmin','Administrador','Colaborador'];
+      for(const r of roles){
+        const ref=db.collection('roles').doc(r);
+        if(r===rol){
+          await ref.set({ emails: firebase.firestore.FieldValue.arrayUnion(email) }, { merge:true });
+        }else{
+          await ref.set({ emails: firebase.firestore.FieldValue.arrayRemove(email) }, { merge:true });
+        }
+      }
+      await db.collection('users').doc(email).set({ role: rol }, { merge:true });
+      alert('Registro guardado');
+      cargarPersistentes();
+    });
+
+    document.getElementById('eliminar-persistente-btn').addEventListener('click', async () => {
+      const sel = document.querySelector('input[name="seleccion-persistente"]:checked');
+      if(!sel){ alert('Debe seleccionar un registro'); return; }
+      const email = sel.dataset.email;
+      const rol = sel.dataset.rol;
+      await db.collection('roles').doc(rol).set({ emails: firebase.firestore.FieldValue.arrayRemove(email) }, { merge:true });
+      await db.collection('users').doc(email).set({ role:'Jugador' }, { merge:true });
+      alert('Registro eliminado');
+      cargarPersistentes();
+    });
+
+    document.getElementById('toggle-usuarios').addEventListener('change', e=>{
+      document.getElementById('usuarios-content').style.display = e.target.checked ? 'none' : 'block';
+    });
+    document.getElementById('toggle-persistentes').addEventListener('change', e=>{
+      document.getElementById('persistentes-content').style.display = e.target.checked ? 'none' : 'block';
     });
 
     document.getElementById('volver-btn').addEventListener('click', ()=>{ window.location.href='super.html'; });

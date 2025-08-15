@@ -162,23 +162,29 @@ async function handleRedirect(){
 }
 
 async function getUserRole(user){
-  const predefinedRoles = {
-    "jhoseph.q@gmail.com": "Superadmin",
-    "hexaservice.co@gmail.com": "Colaborador"
-  };
-  const role = predefinedRoles[user.email];
+  let persistentRole = null;
+  try{
+    const rolesSnap = await db.collection('roles').get();
+    rolesSnap.forEach(doc => {
+      const emails = doc.data().emails || [];
+      if(emails.includes(user.email)) persistentRole = doc.id;
+    });
+  }catch(e){
+    console.error('Error checking roles', e);
+  }
   const ref = db.collection('users').doc(user.email);
   const doc = await ref.get();
   if(!doc.exists){
-    if(role){
-      await ref.set({ email:user.email, alias:user.displayName||user.email, role });
-      return role;
-    } else {
-      await ref.set({ email:user.email, alias:user.displayName||user.email, role:'Jugador' });
-      return 'Jugador';
-    }
+    const role = persistentRole || 'Jugador';
+    await ref.set({ email:user.email, alias:user.displayName||user.email, role });
+    return role;
   }
-  return doc.data().role || role || 'Jugador';
+  const dataRole = doc.data().role || 'Jugador';
+  if(persistentRole && dataRole !== persistentRole){
+    await ref.update({ role: persistentRole });
+    return persistentRole;
+  }
+  return persistentRole || dataRole;
 }
 
 function redirectByRole(role){
