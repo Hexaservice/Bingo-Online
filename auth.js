@@ -1,4 +1,4 @@
-let app, auth, db, provider;
+let app, auth, db, provider, appName = 'BingOnline';
 function initFirebase(){
   const firebaseConfig = {
     apiKey: "AIzaSyBztIl46s-vOOxrUVDilJNSN6zuzldeUWI",
@@ -14,6 +14,63 @@ function initFirebase(){
   auth = firebase.auth();
   provider = new firebase.auth.GoogleAuthProvider();
   auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+}
+
+initFirebase();
+initAppName();
+overrideAlert();
+
+async function initAppName(){
+  try{
+    const doc = await db.collection('Variablesglobales').doc('Parametros').get();
+    if(doc.exists && doc.data().Aplicacion){
+      appName = doc.data().Aplicacion;
+    }
+  }catch(e){
+    console.error('Error obteniendo nombre de la app', e);
+  }
+}
+
+function overrideAlert(){
+  window.alert = function(message){
+    const overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100%';
+    overlay.style.height = '100%';
+    overlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.zIndex = '10000';
+
+    const box = document.createElement('div');
+    box.style.background = '#fff';
+    box.style.padding = '20px';
+    box.style.borderRadius = '10px';
+    box.style.textAlign = 'center';
+    box.style.maxWidth = '80%';
+    box.style.fontFamily = 'Calibri, Arial, sans-serif';
+
+    const title = document.createElement('h3');
+    title.textContent = appName;
+    title.style.marginTop = '0';
+
+    const msg = document.createElement('p');
+    msg.textContent = message;
+
+    const btn = document.createElement('button');
+    btn.textContent = 'Aceptar';
+    btn.style.marginTop = '10px';
+    btn.addEventListener('click', () => overlay.remove());
+
+    box.appendChild(title);
+    box.appendChild(msg);
+    box.appendChild(btn);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+  };
 }
 
 async function loginGoogle(){
