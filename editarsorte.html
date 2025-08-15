@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Editar Sorteo</title>
-  <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
     body {
       background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)),
@@ -18,7 +18,7 @@
       min-height: 100vh;
       text-align: center;
       font-family: 'Bangers', cursive;
-      padding-top: 20px;
+      padding-top: 5px;
     }
     .menu-btn {
       width: 250px;
@@ -59,180 +59,595 @@
       border:1px solid #ccc;
       width:250px;
       display:block;
-      margin:10px auto;
+      margin:3px auto;
       color:black;
+      box-sizing:border-box;
     }
-    .carton {
-      margin: 10px auto;
-      border-collapse: collapse;
-      background: rgba(255, 255, 255, 0.9);
-      border-radius: 15px;
-      border: 15px solid #004d00;
-      padding: 5px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    .row{display:flex;justify-content:center;gap:5px;width:calc(100% - 12px);margin:3px 6px;}
+    .row input{flex:1;width:100%;}
+    .premio-row{display:grid;grid-template-columns:repeat(4,1fr);align-items:center;width:calc(100% - 12px);gap:5px;font-weight:bold;}
+    .premio-row input{margin:0;text-align:center;font-weight:bold;width:100%;}
+    .premio-row span{margin:0;text-align:center;font-weight:bold;}
+    .porcentaje-forma{color:green;}
+    .porcentaje-forma::placeholder,
+    .cartones-forma::placeholder{font-size:0.8rem;}
+    .porcentaje-restante{color:#006400;font-size:1.2rem;}
+    .cartones-total{color:purple;font-size:1.2rem;}
+    #nombre-sorteo{font-weight:bold;color:purple;}
+    .toggle-group{display:flex;justify-content:center;gap:5px;margin:3px 0;}
+    .toggle-group button{flex:1;max-width:120px;padding:5px 10px;border-radius:20px;border:1px solid #ccc;font-family:'Bangers',cursive;font-size:1rem;cursor:pointer;background:#808080;color:#fff;text-shadow:1px 1px 2px #333;}
+    .toggle-group button.active{filter:brightness(1.2);text-shadow:1px 1px 2px #000;}
+    #tipo-sorteo-group button.active[data-value="Sorteo Especial"]{background:linear-gradient(#ff8c00,#ffd9a5);}
+    #tipo-sorteo-group button.active[data-value="Sorteo Diario"]{background:linear-gradient(#009900,#66ff66);}
+    #estado-group button.active[data-value="Activo"]{background:linear-gradient(#00a000,#ffffff);}
+    #estado-group button.active[data-value="Inactivo"]{background:linear-gradient(#ff0000,#ffffff);}
+    #estado-group button.active[data-value="Archivado"]{background:linear-gradient(#8b4513,#ffffff);}
+    .tabs{width:calc(100% - 30px);max-width:600px;margin:5px auto;}
+    .tab-buttons{display:flex;justify-content:center;}
+    .tab-buttons button{flex:1;padding:6px 0;margin:0 2px;font-family:'Bangers',cursive;font-size:1rem;border:1px solid #333;border-bottom:none;border-radius:10px 10px 0 0;color:white;cursor:pointer;background:#808080;text-shadow:1px 1px 2px #333;}
+    .tab-buttons button.active{filter:brightness(1.1);position:relative;top:1px;text-shadow:1px 1px 2px #000;}
+    .tab-content{display:none;border:1px solid #333;border-radius:0 0 20px 20px;padding:10px;position:relative;overflow:hidden;gap:5px;perspective:1000px;}
+    .tab-content.active{display:flex;flex-direction:column;align-items:center;}
+    .tab-content>input,
+    .tab-content .row,
+    .tab-content .premio-row,
+    .tab-content .ver-imagen{width:calc(100% - 12px);margin:2px 6px;}
+    .tab-content .imagen-wrapper{width:calc(100% - 12px);margin:2px 6px 0 6px;}
+    .tab-buttons button.active[data-tab="forma1"], .forma-item1{--forma-color:#90ee90;background:linear-gradient(#90ee90,#ffffff);}
+    .tab-buttons button.active[data-tab="forma2"], .forma-item2{--forma-color:#fffacd;background:linear-gradient(#fffacd,#ffffff);}
+    .tab-buttons button.active[data-tab="forma3"], .forma-item3{--forma-color:#add8e6;background:linear-gradient(#add8e6,#ffffff);}
+    .tab-buttons button.active[data-tab="forma4"], .forma-item4{--forma-color:#d8b0ff;background:linear-gradient(#d8b0ff,#ffffff);}
+    .tab-buttons button.active[data-tab="forma5"], .forma-item5{--forma-color:#ffcc99;background:linear-gradient(#ffcc99,#ffffff);}
+    .forma-label{position:absolute;left:-35px;top:50%;transform:translateY(-50%);writing-mode:vertical-rl;text-orientation:upright;font-weight:bold;font-size:0.8rem;}
+    .carton-wrapper{position:relative;transform-style:preserve-3d;transition:transform 0.6s;border-radius:16px;padding:6px;background:linear-gradient(green,yellow);box-shadow:0 0 15px rgba(0,0,0,0.5);margin:8px auto;}
+    .carton-wrapper.flipped .carton{pointer-events:none;}
+    .carton-wrapper.flipped .carton-back{pointer-events:auto;}
+    .carton{margin:0;border-collapse:separate;border-spacing:0;background:linear-gradient(#ffffff,#cccccc);border-radius:10px;backface-visibility:hidden;-webkit-backface-visibility:hidden;table-layout:fixed;box-sizing:border-box;}
+    .carton th,.carton td{background:transparent;border:2px solid gray;width:60px;height:60px;aspect-ratio:1/1;text-align:center;font-weight:bold;padding:0;margin:0;box-sizing:border-box;backface-visibility:hidden;-webkit-backface-visibility:hidden;font-family:'Poppins',sans-serif;}
+    .carton th{font-size:2.5rem;color:#ff6600;background:radial-gradient(circle,#ffffff,#ffffff 60%,#00aa00);text-shadow:2px 2px 0 #000;}
+    .carton td{cursor:pointer;font-size:1.8rem;text-shadow:0 0 3px green;}
+    .tab-content .carton td.selected:not(.free){background:radial-gradient(circle,#ffffff,#ffffff 60%,var(--forma-color,#ffff00));}
+    .carton td.selected .star{color:orange;}
+    .carton td.free{background:radial-gradient(circle,#ffff00,#ffffff);display:flex;align-items:center;justify-content:center;}
+    .carton td.free img{width:80%;height:80%;object-fit:contain;}
+    .carton td .star{display:inline-block;animation:spinStar 10s linear infinite;}
+    @keyframes spinStar{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+    .carton-back{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:10px;backface-visibility:hidden;transform:rotateY(180deg);background:linear-gradient(orange,white);display:flex;align-items:center;justify-content:center;}
+    .carton-back .back-content{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+    .carton-back .back-content img{width:80%;height:80%;object-fit:contain;}
+    .carton-back .back-info{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:5px;width:100%;}
+    .back-nombre{font-family:'Bangers',cursive;font-size:1.5rem;color:purple;text-shadow:0 0 5px #fff;font-weight:bold;animation:pulse 1s infinite;}
+    .back-tipo{font-family:'Bangers',cursive;font-size:1.3rem;text-shadow:0 0 5px #fff;font-weight:bold;animation:pulse 1s infinite;}
+    .back-fecha-hora{display:flex;gap:20px;font-family:'Bangers',cursive;font-size:1.2rem;color:purple;text-shadow:0 0 5px #fff;font-weight:bold;}
+    .imagen-wrapper{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;}
+    .imagen-wrapper input{flex:1;min-width:120px;font-size:0.8rem;}
+    .imagen-wrapper button{padding:3px 6px;font-size:0.8rem;}
+    .imagen-wrapper .ver-foto-btn{width:30px;height:30px;border:1px solid #ccc;border-radius:5px;display:flex;align-items:center;justify-content:center;background:#fff;}
+    .imagen-wrapper .ver-foto-btn img{width:100%;height:100%;object-fit:contain;}
+    .ver-imagen{display:none;margin-top:2px;font-size:0.9rem;color:#007bff;text-decoration:underline;cursor:pointer;}
+    .input-wrapper{display:flex;align-items:center;}
+    .label-left{font-weight:bold;font-size:0.8rem;margin-right:3px;text-shadow:0 0 3px #fff;}
+    .label-right{font-weight:bold;font-size:0.8rem;margin-left:3px;text-shadow:0 0 3px #fff;}
+    #fecha-label{font-size:1rem;color:#4b0082;text-shadow:0 0 1px #fff,1px 1px 1px #000;}
+    #fecha-sorteo{color:#4b0082;font-weight:bold;}
+    #hora-label{font-size:1rem;color:purple;text-shadow:0 0 1px #fff,1px 1px 1px #000;}
+    #hora-sorteo{color:purple;font-weight:bold;}
+    #minutos-label{font-size:1rem;color:#ff8c00;text-shadow:0 0 1px #fff,1px 1px 1px #000;}
+    #cierre-minutos{color:#ff8c00;font-weight:bold;}
+    #valor-label{font-size:1rem;color:#006400;text-shadow:0 0 1px #fff,1px 1px 1px #000;}
+    #valor-carton{color:#006400;font-weight:bold;}
+    .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);justify-content:center;align-items:center;}
+    .modal img{max-width:90%;max-height:90%;}
+    .modal span{position:absolute;top:10px;right:20px;font-size:2rem;color:#fff;cursor:pointer;}
+    @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.1);}100%{transform:scale(1);}}
+    @media (orientation:landscape){
+      .row,.premio-row,.imagen-wrapper,.toggle-group,.tabs{width:90% !important;margin-left:auto;margin-right:auto;}
+      .premio-row{grid-template-columns:2fr 1fr 2fr 1fr;}
     }
-    .carton td {
-      border:2px solid black;
-      width:40px;
-      height:40px;
-      text-align:center;
-      font-weight:bold;
-      cursor:pointer;
+    @media (max-width:600px){
+      body{align-items:stretch;padding:5px 20px;}
+      .menu-btn,input,select,.row,.toggle-group,.imagen-wrapper,.tabs{width:100%;max-width:none;margin-left:0;margin-right:0;}
     }
-    .carton td.selected {
-      background-color: orange;
+    @media (orientation:portrait){
+      #volver-btn{width:40px;}
+      #volver-btn .label{display:none;}
+    }
+
+    #actualizar-sorteo-btn{
+      font-family:'Bangers',cursive;
+      font-size:1.2rem;
+      background:#0a8800;
       color:white;
+      border:3px solid #FFD700;
+      border-radius:8px;
+      text-shadow:2px 2px 4px #000;
+      width:200px;
+      cursor:pointer;
+      margin:5px auto;
     }
-    .carton td.free {
-      background-color:#ffcc00;
-    }
-    .forma-item { margin-bottom:20px; }
   </style>
 </head>
 <body>
-  <button id="volver-btn" class="menu-btn back-btn">&#9664; Volver</button>
-  <h2>Editar Sorteo</h2>
+  <button id="volver-btn" class="menu-btn back-btn"><span class="icon">&#9664;</span><span class="label">Volver</span></button>
+  <h2 style="margin-top:0;">Editar Sorteo</h2>
   <input id="nombre-sorteo" maxlength="70" placeholder="Nombre de sorteo">
-  <select id="tipo-sorteo">
-    <option value="">-- Tipo de sorteo --</option>
-    <option value="Sorteo Diario">Sorteo Diario</option>
-    <option value="Sorteo Especial">Sorteo Especial</option>
-  </select>
-  <input id="fecha-sorteo" type="date">
-  <input id="hora-sorteo" type="time">
-  <input id="cierre-minutos" type="number" placeholder="Minutos antes de cerrar jugadas">
-  <input id="valor-carton" type="number" placeholder="Valor del Cartón">
-  <select id="estado-sorteo">
-    <option value="Inactivo">Inactivo</option>
-    <option value="Activo">Activo</option>
-    <option value="Archivado">Archivado</option>
-  </select>
+  <div id="tipo-sorteo-group" class="toggle-group">
+    <button data-value="Sorteo Especial">Especial</button>
+    <button data-value="Sorteo Diario">Diario</button>
+  </div>
+  <div class="row">
+    <div class="input-wrapper"><span class="label-left" id="fecha-label">Fecha</span><input id="fecha-sorteo" type="date"></div>
+    <div class="input-wrapper"><input id="hora-sorteo" type="time"><span class="label-right" id="hora-label">Hora</span></div>
+  </div>
+  <div class="row">
+    <div class="input-wrapper"><span class="label-left" id="minutos-label">MINUTOS CIERRE</span><input id="cierre-minutos" type="number" placeholder="Minutos antes de cerrar jugadas"></div>
+    <div class="input-wrapper"><input id="valor-carton" type="number" placeholder="Valor del Cartón"><span class="label-right" id="valor-label">VALOR CARTÓN</span></div>
+  </div>
+  <div id="estado-group" class="toggle-group">
+    <button data-value="Activo">Activo</button>
+    <button data-value="Inactivo" class="active">Inactivo</button>
+    <button data-value="Archivado">Archivado</button>
+  </div>
   <div id="forms-container"></div>
-  <button id="actualizar-sorteo-btn" class="menu-btn">Actualizar sorteo</button>
+  <div id="image-modal" class="modal"><span id="close-modal">&times;</span><img id="modal-img" src="" alt="premio"></div>
+  <button id="actualizar-sorteo-btn">Actualizar Sorteo</button>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
   <script src="auth.js"></script>
-  <script>
+  <script type="module">
+  import { UPLOAD_ENDPOINT } from './config.js';
   ensureAuth('Administrador');
-  function crearTabla(tbody){
+  const LOGO_URL='https://i.imgur.com/twjhNtZ.png';
+  const preloadLogo=new Image();
+  preloadLogo.src=LOGO_URL;
+
+  function setCookie(name,value){document.cookie=`${name}=${encodeURIComponent(value)};path=/;max-age=31536000`;}
+  function getCookie(name){const m=document.cookie.match(new RegExp('(?:^|; )'+name+'=([^;]*)'));return m?decodeURIComponent(m[1]):null;}
+  let cookieKey='';
+  const sorteoId=localStorage.getItem('editSorteoId');
+  if(!sorteoId){window.location.href='gestionsorteos.html';}
+
+
+  function saveState(){
+    if(!cookieKey) return;
+    const nombre=document.getElementById('nombre-sorteo').value.trim();
+    const fecha=document.getElementById('fecha-sorteo').value;
+    const hora=document.getElementById('hora-sorteo').value;
+    const cierre=document.getElementById('cierre-minutos').value;
+    const valor=document.getElementById('valor-carton').value;
+    const tipoBtn=document.querySelector('#tipo-sorteo-group button.active');
+    const estadoBtn=document.querySelector('#estado-group button.active');
+    const data={
+      nombre,tipo:tipoBtn?tipoBtn.dataset.value:'',fecha,hora,cierre,valor,
+      estado:estadoBtn?estadoBtn.dataset.value:'',
+      formas:[]
+    };
+    document.querySelectorAll('.tab-content').forEach(div=>{
+      const f={
+        nombre:div.querySelector('.nombre-forma').value.trim(),
+        porcentaje:div.querySelector('.porcentaje-forma').value,
+        cartones:div.querySelector('.cartones-forma').value,
+        imagen:div.querySelector('.imagen-url').value,
+        posiciones:[]
+      };
+      div.querySelectorAll('td.selected').forEach(td=>{
+        const r=parseInt(td.dataset.row);const c=parseInt(td.dataset.col);
+        if(!(r===2&&c===2)) f.posiciones.push({r,c});
+      });
+      data.formas.push(f);
+    });
+    setCookie(cookieKey,JSON.stringify(data));
+  }
+
+  function loadState(){
+    if(!cookieKey) return;
+    const raw=getCookie(cookieKey);
+    if(!raw) return;
+    try{
+      const data=JSON.parse(raw);
+      document.getElementById('nombre-sorteo').value=data.nombre||'';
+      document.getElementById('fecha-sorteo').value=data.fecha||'';
+      document.getElementById('hora-sorteo').value=data.hora||'';
+      document.getElementById('cierre-minutos').value=data.cierre||'';
+      document.getElementById('valor-carton').value=data.valor||'';
+      if(data.tipo){
+        document.querySelectorAll('#tipo-sorteo-group button').forEach(b=>b.classList.remove('active'));
+        const tb=document.querySelector(`#tipo-sorteo-group button[data-value="${data.tipo}"]`);
+        if(tb) tb.classList.add('active');
+      }
+      if(data.estado){
+        document.querySelectorAll('#estado-group button').forEach(b=>b.classList.remove('active'));
+        const eb=document.querySelector(`#estado-group button[data-value="${data.estado}"]`);
+        if(eb) eb.classList.add('active');
+      }
+      const divs=document.querySelectorAll('.tab-content');
+      data.formas&&data.formas.forEach((f,i)=>{
+        const div=divs[i];
+        if(!div) return;
+        div.querySelector('.nombre-forma').value=f.nombre||'';
+        div.querySelector('.porcentaje-forma').value=f.porcentaje||'';
+        div.querySelector('.cartones-forma').value=f.cartones||'';
+        div.querySelector('.imagen-url').value=f.imagen||'';
+        if(f.imagen){
+          const ver=div.querySelector('.ver-imagen');
+          ver.style.display='block';
+          ver.dataset.url=f.imagen;
+          ver.href=f.imagen;
+        }
+          div.querySelectorAll('td').forEach(td=>{
+            td.classList.remove('selected');
+            td.innerHTML='';
+            if(td.dataset.row==='2' && td.dataset.col==='2'){
+              td.classList.add('free','selected');
+              const img=document.createElement('img');
+              img.src=LOGO_URL;
+              img.alt='logo';
+              img.style.width='100%';
+              img.style.height='100%';
+              img.style.objectFit='contain';
+              td.appendChild(img);
+            }
+          });
+          f.posiciones&&f.posiciones.forEach(p=>{
+            const td=div.querySelector(`td[data-row="${p.r}"][data-col="${p.c}"]`);
+            if(td){td.classList.add('selected');td.innerHTML='<span class="star">\u2605</span>';}
+          });
+        });
+        actualizarTotales();
+      }catch(e){console.error('loadState',e);}
+    }
+
+  function setupSaveListeners(){
+    document.getElementById('nombre-sorteo').addEventListener('input',saveState);
+    document.getElementById('fecha-sorteo').addEventListener('input',saveState);
+    document.getElementById('hora-sorteo').addEventListener('input',saveState);
+    document.getElementById('cierre-minutos').addEventListener('input',saveState);
+    document.getElementById('valor-carton').addEventListener('input',saveState);
+    document.querySelectorAll('.tab-content .nombre-forma,.tab-content .porcentaje-forma,.tab-content .cartones-forma,.tab-content .imagen-url').forEach(i=>i.addEventListener('input',e=>{
+      saveState();
+      if(e.target.classList.contains('porcentaje-forma')||e.target.classList.contains('cartones-forma')) actualizarTotales();
+    }));
+  }
+
+  function selectTab(idx){
+    const tabs=document.querySelector('.tabs');
+    if(!tabs) return;
+    const btn=tabs.querySelector(`.tab-buttons button[data-tab="forma${idx}"]`);
+    if(btn) btn.click();
+  }
+
+    async function cargarDatos(){
+    const doc=await db.collection('sorteos').doc(sorteoId).get();
+    if(!doc.exists){alert('Sorteo no encontrado');window.location.href='gestionsorteos.html';return;}
+    const d=doc.data();
+    let est=d.estado||'';
+    if(d.condicion==='ARCHIVADO') est='Archivado';
+    const data={nombre:d.nombre||'',tipo:d.tipo||'',fecha:d.fecha||'',hora:d.hora||'',cierre:d.cierreMinutos||'',valor:d.valorCarton||'',estado:est,formas:[]};
+    const snap=await db.collection('formas').where('sorteoId','==',sorteoId).get();
+    const arr=[];snap.forEach(s=>arr.push(s.data()));
+    arr.sort((a,b)=>(a.idx||0)-(b.idx||0));
+    arr.forEach(f=>{data.formas.push({nombre:f.nombre||'',porcentaje:f.porcentaje||'',cartones:f.cartonesGratis||'',imagen:f.premioImagen||'',posiciones:f.posiciones||[]});});
+    setCookie(cookieKey,JSON.stringify(data));
+  }
+
+firebase.auth().onAuthStateChanged(u=>{
+    if(u){
+      cookieKey='editarsorteo_'+sorteoId+'_'+u.email.replace(/[^\w]/g,'_');
+      cargarDatos().then(()=>{
+        loadState();
+        setupSaveListeners();
+      });
+    }
+  });
+
+  function formatearHora(hora){
+    if(!hora) return '';
+    const [hh,mm]=hora.split(':');
+    let h=parseInt(hh,10);
+    const ampm=h>=12?'PM':'AM';
+    h=h%12; if(h===0) h=12;
+    return `${h}:${mm} ${ampm}`;
+  }
+
+  function formatearFecha(fecha){
+    if(!fecha) return '';
+    const [yy,mm,dd]=fecha.split('-');
+    return `${dd}/${mm}/${yy}`;
+  }
+
+  function updateCartonBack(wrapper){
+    const tab=wrapper.closest('.tab-content');
+    const nombre=tab.querySelector('.nombre-forma').value.trim();
+    const tipoBtn=document.querySelector('#tipo-sorteo-group button.active');
+    const tipoVal=tipoBtn?tipoBtn.dataset.value:'';
+    const tipo=tipoVal==='Sorteo Especial'?'ESPECIAL':(tipoVal==='Sorteo Diario'?'DIARIO':'');
+    const fecha=document.getElementById('fecha-sorteo').value;
+    const hora=document.getElementById('hora-sorteo').value;
+    const imagenUrl=tab.querySelector('.imagen-url').value.trim();
+    const content=wrapper.querySelector('.back-content');
+    const img=content.querySelector('img');
+    const nombreDiv=content.querySelector('.back-nombre');
+    const tipoDiv=content.querySelector('.back-tipo');
+    const fechaSpan=content.querySelector('.back-fecha');
+    const horaSpan=content.querySelector('.back-hora');
+    img.src=imagenUrl||LOGO_URL;
+    nombreDiv.textContent=nombre;
+    nombreDiv.style.display=nombre? 'block':'none';
+    if(tipo){
+      tipoDiv.textContent=tipo;
+      tipoDiv.style.display='block';
+      tipoDiv.style.color=tipo==='ESPECIAL'?'orange':'green';
+    }else{
+      tipoDiv.style.display='none';
+    }
+    const fhDiv=content.querySelector('.back-fecha-hora');
+    if(fecha||hora){
+      fhDiv.style.display='flex';
+      fechaSpan.textContent=fecha?`FECHA: ${formatearFecha(fecha)}`:'';
+      horaSpan.textContent=hora?`HORA: ${formatearHora(hora)}`:'';
+    }else{
+      fhDiv.style.display='none';
+    }
+  }
+
+  function flipCard(wrapper){
+    const flipped=wrapper.classList.contains('flipped');
+    if(!flipped) updateCartonBack(wrapper);
+    const start=flipped?180:0;
+    const end=flipped?0:180;
+    wrapper.animate([
+      {transform:`rotateY(${start}deg) scale(1)`},
+      {transform:`rotateY(${(start+end)/2}deg) scale(1.2)`},
+      {transform:`rotateY(${end}deg) scale(1)`}
+    ],{duration:600,easing:'ease-in-out'}).onfinish=()=>{
+      wrapper.style.transform=`rotateY(${end}deg)`;
+      wrapper.classList.toggle('flipped');
+    };
+  }
+
+  function crearTabla(table){
+    const letters=['B','I','N','G','O'];
+    const thead=document.createElement('thead');
+    const htr=document.createElement('tr');
+    letters.forEach(l=>{
+      const th=document.createElement('th');
+      th.textContent=l;
+      htr.appendChild(th);
+    });
+    thead.appendChild(htr);
+    table.appendChild(thead);
+    const tbody=document.createElement('tbody');
     for(let r=0;r<5;r++){
       const tr=document.createElement('tr');
       for(let c=0;c<5;c++){
         const td=document.createElement('td');
         td.dataset.row=r;td.dataset.col=c;
-        if(r===2&&c===2){ td.classList.add('free','selected'); td.textContent='\u2605'; }
-        td.addEventListener('click',()=>{
-          if(td.classList.contains('free')) return;
+        if(r===2&&c===2){
+          td.classList.add('free','selected');
+          const img=document.createElement('img');
+          img.src=LOGO_URL;
+          img.alt='logo';
+          img.style.width='100%';
+          img.style.height='100%';
+          img.style.objectFit='contain';
+          td.appendChild(img);
+          td.addEventListener('click',()=>{
+            const wrapper=table.closest('.carton-wrapper');
+            if(wrapper) flipCard(wrapper);
+          });
+        }else{
+          td.addEventListener('click',()=>{
           td.classList.toggle('selected');
-          td.textContent = td.classList.contains('selected') ? '\u2605' : '';
-        });
+          td.innerHTML = td.classList.contains('selected') ? '<span class="star">\u2605</span>' : '';
+            saveState();
+          });
+        }
         tr.appendChild(td);
       }
       tbody.appendChild(tr);
     }
+    table.appendChild(tbody);
   }
+
+  function actualizarTotales(){
+    const porcentajes=Array.from(document.querySelectorAll('.porcentaje-forma')).map(i=>parseFloat(i.value)||0);
+    const totalPorcentaje=porcentajes.reduce((a,b)=>a+b,0);
+    const restanteVal=100-totalPorcentaje;
+    const restante=Math.max(0,Math.round(restanteVal));
+    document.querySelectorAll('.porcentaje-restante').forEach(span=>{
+      span.textContent=restante+'%';
+      span.style.color=totalPorcentaje>=100?'red':'#006400';
+    });
+    document.querySelectorAll('.porcentaje-forma').forEach(inp=>{inp.style.color='green';});
+    const cartones=Array.from(document.querySelectorAll('.cartones-forma')).map(i=>parseInt(i.value)||0);
+    const totalCartones=cartones.reduce((a,b)=>a+b,0);
+    document.querySelectorAll('.cartones-total').forEach(span=>{span.textContent=totalCartones;});
+  }
+
   function crearFormas(){
     const cont=document.getElementById('forms-container');
+    const tabs=document.createElement('div');
+    tabs.className='tabs';
+    const btns=document.createElement('div');
+    btns.className='tab-buttons';
+    tabs.appendChild(btns);
+    cont.appendChild(tabs);
     for(let i=1;i<=5;i++){
+      const btn=document.createElement('button');
+      btn.textContent=`Forma${i}`;
+      btn.dataset.tab=`forma${i}`;
+      if(i===1) btn.classList.add('active');
+      btns.appendChild(btn);
+
       const div=document.createElement('div');
-      div.className='forma-item';
-      div.innerHTML=`<h3>Forma ${i}</h3>
-      <input class="nombre-forma" placeholder="Nombre de forma">
-      <input type="number" class="porcentaje-forma" placeholder="% Premio">
-      <input type="number" class="cartones-forma" placeholder="Cartones gratis">
-      <input class="imagen-forma" placeholder="Imagen del premio">
-      <table class="carton" data-idx="${i}"><tbody></tbody></table>`;
-      cont.appendChild(div);
-      const tbody=div.querySelector('tbody');
-      crearTabla(tbody);
+      div.id=`forma${i}`;
+      div.className=`tab-content forma-item${i}${i===1?' active':''}`;
+      div.innerHTML=`<div class=\"forma-label\">Forma ${i}</div><input class=\"nombre-forma\" placeholder=\"Nombre de forma\">\
+      <div class=\"premio-row\"><input type=\"number\" class=\"porcentaje-forma\" placeholder=\"% Premio\">\
+      <span class=\"porcentaje-restante\">100%<\/span>\
+      <input type=\"number\" class=\"cartones-forma\" placeholder=\"Cartones Gratis\">\
+      <span class=\"cartones-total\">0<\/span><\/div>\
+      <div class=\"imagen-wrapper\">\
+        <button type=\"button\" class=\"ver-foto-btn\"><img src=\"https://img.icons8.com/ios-glyphs/30/image.png\" alt=\"foto\"><\/button>\
+        <input type=\"file\" accept=\"image/*\" class=\"imagen-forma\">\
+        <button type=\"button\" class=\"subir-imagen\">Subir<\/button><\/div>\
+      <a class=\"ver-imagen\">Ver imagen<\/a>\
+      <input type=\"hidden\" class=\"imagen-url\">\
+        <div class=\"carton-wrapper\"><table class=\"carton\" data-idx=\"${i}\"><\/table><div class=\"carton-back\"><div class=\"back-content\"><img src=\"${LOGO_URL}\" alt=\"logo\"><div class=\"back-info\"><div class=\"back-nombre\"><\/div><div class=\"back-tipo\"><\/div><div class=\"back-fecha-hora\"><span class=\"back-fecha\"><\/span><span class=\"back-hora\"><\/span><\/div><\/div><\/div><\/div><\/div>`;
+      tabs.appendChild(div);
+      const wrapper=div.querySelector('.carton-wrapper');
+      const table=wrapper.querySelector('table');
+      crearTabla(table);
+      wrapper.addEventListener('click',()=>{
+        if(wrapper.classList.contains('flipped')) flipCard(wrapper);
+      });
     }
-  }
-  crearFormas();
-  const sorteoId = localStorage.getItem('editSorteoId');
-  if(!sorteoId){ window.location.href = 'gestionsorteos.html'; }
-  async function cargarDatos(){
-    const doc = await db.collection('sorteos').doc(sorteoId).get();
-    if(!doc.exists){ alert('Sorteo no encontrado'); return; }
-    const d = doc.data();
-    document.getElementById('nombre-sorteo').value = d.nombre || '';
-    document.getElementById('tipo-sorteo').value = d.tipo || '';
-    document.getElementById('fecha-sorteo').value = d.fecha || '';
-    document.getElementById('hora-sorteo').value = d.hora || '';
-    document.getElementById('cierre-minutos').value = d.cierreMinutos || '';
-    document.getElementById('valor-carton').value = d.valorCarton || '';
-    document.getElementById('estado-sorteo').value = d.estado || '';
-    const snap = await db.collection('formas').where('sorteoId','==',sorteoId).get();
-    const forms = document.querySelectorAll('.forma-item');
-    const datos=[];
-    snap.forEach(d=>datos.push({id:d.id,...d.data()}));
-    datos.sort((a,b)=>{const ia=a.idx||0, ib=b.idx||0;return ia-ib;});
-    datos.forEach((data,idx)=>{
-      if(idx<forms.length){
-        const div=forms[idx];
-        div.querySelector('.nombre-forma').value=data.nombre||'';
-        div.querySelector('.porcentaje-forma').value = data.porcentaje>0 ? data.porcentaje : '';
-        div.querySelector('.cartones-forma').value=data.cartonesGratis||'';
-        div.querySelector('.imagen-forma').value=data.premioImagen||'';
-        data.posiciones.forEach(p=>{
-          const td=div.querySelector(`td[data-row="${p.r}"][data-col="${p.c}"]`);
-          if(td){ td.classList.add('selected'); td.textContent='\u2605'; }
+
+    tabs.querySelectorAll('.tab-buttons button').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        tabs.querySelectorAll('.tab-buttons button').forEach(b=>b.classList.remove('active'));
+        tabs.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+        btn.classList.add('active');
+        const contenido=tabs.querySelector(`#${btn.dataset.tab}`);
+        contenido.classList.add('active');
+        const wrapper=contenido.querySelector('.carton-wrapper');
+        if(wrapper.classList.contains('flipped')) flipCard(wrapper);
+        const base=wrapper.style.transform||'rotateY(0deg)';
+        wrapper.animate([
+          {transform:`${base} translateX(0)`},
+          {transform:`${base} translateX(20px)`},
+          {transform:`${base} translateX(-20px)`},
+          {transform:`${base} translateX(0)`}
+        ],{duration:400,easing:'ease-in-out'});
+        btn.animate([
+          {transform:'translateX(0)'},
+          {transform:'translateX(5px)'},
+          {transform:'translateX(-5px)'},
+          {transform:'translateX(0)'}
+        ],{duration:400,easing:'ease-in-out'});
+      });
+    });
+
+    tabs.querySelectorAll('.subir-imagen').forEach(btn=>{
+      btn.addEventListener('click',async()=>{
+        const wrapper=btn.closest('.imagen-wrapper').parentElement;
+        const fileInput=wrapper.querySelector('.imagen-forma');
+        const urlInput=wrapper.querySelector('.imagen-url');
+        const ver=wrapper.querySelector('.ver-imagen');
+        if(!fileInput.files[0]){alert('Selecciona una imagen');return;}
+          try{
+            const url=await subirImagen(fileInput.files[0]);
+            urlInput.value=url;
+            ver.style.display='block';
+            ver.dataset.url=url;
+            ver.href=url;
+            fileInput.value='';
+            saveState();
+          }catch(e){console.error(e);alert('Error al subir imagen: '+e.message);}
         });
-      }
+      });
+
+    tabs.querySelectorAll('.ver-imagen').forEach(link=>{
+      link.addEventListener('click',e=>{
+        e.preventDefault();
+        const url=link.dataset.url;
+        if(!url) return;
+        document.getElementById('modal-img').src=url;
+        document.getElementById('image-modal').style.display='flex';
+      });
     });
   }
-  cargarDatos();
+
+  async function subirImagen(file){
+    const formData=new FormData();
+    formData.append('file',file);
+    const token=await auth.currentUser.getIdToken();
+    const res=await fetch(UPLOAD_ENDPOINT,{method:'POST',headers:{Authorization:'Bearer '+token},body:formData});
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.message || data.error || 'Error al subir imagen');
+    return data.url;
+  }
+
+  crearFormas();
+  actualizarTotales();
+
+  document.getElementById('close-modal').addEventListener('click',()=>{
+    document.getElementById('image-modal').style.display='none';
+  });
+
   document.getElementById('volver-btn').addEventListener('click',()=>{window.history.back();});
+
+    document.querySelectorAll('#tipo-sorteo-group button').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        document.querySelectorAll('#tipo-sorteo-group button').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        saveState();
+      });
+    });
+    document.querySelectorAll('#estado-group button').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        document.querySelectorAll('#estado-group button').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        saveState();
+      });
+    });
+
   document.getElementById('actualizar-sorteo-btn').addEventListener('click',async()=>{
     const nombreInput=document.getElementById('nombre-sorteo');
-    const tipoInput=document.getElementById('tipo-sorteo');
     const fechaInput=document.getElementById('fecha-sorteo');
     const horaInput=document.getElementById('hora-sorteo');
     const cierreInput=document.getElementById('cierre-minutos');
     const valorInput=document.getElementById('valor-carton');
     const nombre=nombreInput.value.trim();
-    const tipo=tipoInput.value;
+    const tipoBtn=document.querySelector('#tipo-sorteo-group button.active');
+    const estadoBtn=document.querySelector('#estado-group button.active');
+    const tipo=tipoBtn?tipoBtn.dataset.value:'';
+    let estado=estadoBtn?estadoBtn.dataset.value:'';
     const fecha=fechaInput.value;
     const hora=horaInput.value;
     const cierreVal=cierreInput.value;
     const valorVal=valorInput.value;
-    const estado=document.getElementById('estado-sorteo').value;
     if(!nombre){alert('Asigna un nombre al Sorteo');nombreInput.focus();return;}
-    if(!tipo){alert('Elije un tipo de sorteo');tipoInput.focus();return;}
+    if(!tipo){alert('Elije un tipo de sorteo');return;}
     if(!fecha){alert('Elige una fecha para el Sorteo');fechaInput.focus();return;}
     if(!hora){alert('Debes elegir una hora para el Sorteo');horaInput.focus();return;}
     if(!cierreVal){alert('Elije una cantidad de minutos para cierre previo de Jugadas');cierreInput.focus();return;}
-    if(!valorVal){alert('Coloca un valor para el cart\u00f3n');valorInput.focus();return;}
+    if(!valorVal){alert('Coloca un valor para el cartón');valorInput.focus();return;}
     const cierre=parseInt(cierreVal);
     const valor=parseFloat(valorVal);
+    const condicion = estado==='Archivado'?'ARCHIVADO':'VISIBLE';
+    if(estado==='Archivado') estado='Inactivo';
     const formas=[];let total=0;let conPorcentaje=0;
-    const divs=document.querySelectorAll('.forma-item');
+    const divs=document.querySelectorAll('.tab-content');
     for(let i=0;i<divs.length;i++){
       const div=divs[i];
       const nomInput=div.querySelector('.nombre-forma');
       const porInput=div.querySelector('.porcentaje-forma');
       const cartInput=div.querySelector('.cartones-forma');
-      const imgInput=div.querySelector('.imagen-forma');
+      const urlInput=div.querySelector('.imagen-url');
       const nom=nomInput.value.trim();
       const por=parseFloat(porInput.value);
       const cart=parseInt(cartInput.value);
-      const img=imgInput.value.trim();
+      const img=urlInput.value.trim();
       const pos=[];
       div.querySelectorAll('td.selected').forEach(td=>{
         const r=parseInt(td.dataset.row); const c=parseInt(td.dataset.col);
         if(!(r===2&&c===2)) pos.push({r,c});
       });
-      if(!nom){alert(`Asigna un nombre a la forma ${i+1}`);nomInput.focus();return;}
-      if((isNaN(por)||por<=0) && (isNaN(cart)||cart<=0) && !img){
-        alert(`Asigna un premio a la forma ${i+1}`);
-        porInput.focus();
-        return;
-      }
-      if(pos.length===0){
-        alert(`Debes elegir al menos una posicion en el carton para la forma ${i+1}`);
-        div.querySelector('.carton').scrollIntoView({behavior:'smooth'});
-        return;
-      }
+        if(!nom){selectTab(i+1);alert(`Asigna un nombre a la forma ${i+1}`);nomInput.focus();return;}
+        if((isNaN(por)||por<=0) && (isNaN(cart)||cart<=0) && !img){
+          selectTab(i+1);
+          alert(`Asigna un premio a la forma ${i+1}`);
+          porInput.focus();
+          return;
+        }
+        if(pos.length===0){
+          selectTab(i+1);
+          alert(`Debes elegir al menos una posicion en el carton para la forma ${i+1}`);
+          div.querySelector('.carton').scrollIntoView({behavior:'smooth'});
+          return;
+        }
       const obj={idx:i+1,nombre:nom,posiciones:pos};
       if(!isNaN(por)&&por>0){obj.porcentaje=por;total+=por;conPorcentaje++;}
       if(!isNaN(cart)&&cart>0){obj.cartonesGratis=cart;}
@@ -241,17 +656,18 @@
     }
     if(conPorcentaje>0 && total!==100){alert('La suma de porcentajes debe ser exactamente 100%');return;}
     try{
-      await db.collection('sorteos').doc(sorteoId).update({nombre,tipo,fecha,hora,cierreMinutos:cierre,valorCarton:valor,estado});
-      const snap = await db.collection('formas').where('sorteoId','==',sorteoId).get();
+      await db.collection('sorteos').doc(sorteoId).update({nombre,tipo,fecha,hora,cierreMinutos:cierre,valorCarton:valor,estado,condicion});
+      const snap=await db.collection('formas').where('sorteoId','==',sorteoId).get();
       const batch=db.batch();
       snap.forEach(d=>batch.delete(db.collection('formas').doc(d.id)));
       formas.forEach(f=>{const ref=db.collection('formas').doc();batch.set(ref,{sorteoId,...f});});
       await batch.commit();
       alert('Sorteo actualizado');
+      if(cookieKey) setCookie(cookieKey,'',0);
       localStorage.removeItem('editSorteoId');
       window.location.href='gestionsorteos.html';
     }catch(e){console.error(e);alert('Error al actualizar');}
-  });
-</script>
+    });
+  </script>
 </body>
 </html>
