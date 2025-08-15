@@ -18,7 +18,7 @@ function initFirebase(){
 
 initFirebase();
 initAppName();
-overrideAlert();
+overrideDialogs();
 
 async function initAppName(){
   try{
@@ -31,8 +31,8 @@ async function initAppName(){
   }
 }
 
-function overrideAlert(){
-  window.alert = function(message){
+function overrideDialogs(){
+  const createOverlay = message => {
     const overlay = document.createElement('div');
     overlay.style.position = 'fixed';
     overlay.style.top = '0';
@@ -60,16 +60,58 @@ function overrideAlert(){
     const msg = document.createElement('p');
     msg.textContent = message;
 
+    box.appendChild(title);
+    box.appendChild(msg);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    return { overlay, box };
+  };
+
+  window.alert = function(message){
+    const { overlay, box } = createOverlay(message);
     const btn = document.createElement('button');
     btn.textContent = 'Aceptar';
     btn.style.marginTop = '10px';
     btn.addEventListener('click', () => overlay.remove());
-
-    box.appendChild(title);
-    box.appendChild(msg);
     box.appendChild(btn);
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
+  };
+
+  window.confirm = function(message){
+    return new Promise(resolve => {
+      const { overlay, box } = createOverlay(message);
+      const btnOk = document.createElement('button');
+      btnOk.textContent = 'Aceptar';
+      btnOk.style.margin = '10px';
+      btnOk.addEventListener('click', () => { overlay.remove(); resolve(true); });
+      const btnCancel = document.createElement('button');
+      btnCancel.textContent = 'Cancelar';
+      btnCancel.style.margin = '10px';
+      btnCancel.addEventListener('click', () => { overlay.remove(); resolve(false); });
+      box.appendChild(btnOk);
+      box.appendChild(btnCancel);
+    });
+  };
+
+  window.prompt = function(message, def=''){
+    return new Promise(resolve => {
+      const { overlay, box } = createOverlay(message);
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.style.marginTop = '10px';
+      input.value = def;
+      const btnOk = document.createElement('button');
+      btnOk.textContent = 'Aceptar';
+      btnOk.style.margin = '10px';
+      btnOk.addEventListener('click', () => { const val = input.value; overlay.remove(); resolve(val); });
+      const btnCancel = document.createElement('button');
+      btnCancel.textContent = 'Cancelar';
+      btnCancel.style.margin = '10px';
+      btnCancel.addEventListener('click', () => { overlay.remove(); resolve(null); });
+      box.appendChild(input);
+      box.appendChild(btnOk);
+      box.appendChild(btnCancel);
+      input.focus();
+    });
   };
 }
 

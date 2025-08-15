@@ -706,9 +706,9 @@ function toggleForma(idx){
     document.getElementById('cartones-modal').style.display='flex';
   }
 
-  function cargarCartonGuardado(){
+  async function cargarCartonGuardado(){
     if(!seleccionadoGuardado) return;
-    if(confirm('¿Desea cargar el cartón seleccionado? Se sobreescribirán las jugadas actuales.')){
+    if(await confirm('¿Desea cargar el cartón seleccionado? Se sobreescribirán las jugadas actuales.')){
       setBoardFromPosiciones(seleccionadoGuardado.posiciones);
       document.getElementById('cartones-modal').style.display='none';
       saveToCookie();
@@ -784,9 +784,9 @@ function toggleForma(idx){
     return table;
   }
 
-  function cargarCartonJugado(){
+  async function cargarCartonJugado(){
     if(!seleccionadoJugado) return;
-    if(confirm('¿Desea cargar el cartón seleccionado? Se sobreescribirán los datos actuales.')){
+    if(await confirm('¿Desea cargar el cartón seleccionado? Se sobreescribirán los datos actuales.')){
       setBoardFromPosiciones(seleccionadoJugado.posiciones);
       const numEl=document.getElementById('carton-num');
       if(seleccionadoJugado.cartonNum!==undefined){
@@ -819,8 +819,8 @@ function toggleForma(idx){
   document.getElementById('jugados-close').addEventListener('click',()=>{document.getElementById('jugados-modal').style.display='none';});
   document.getElementById('cargar-guardado-btn').addEventListener('click',cargarCartonGuardado);
   document.getElementById('cartones-close').addEventListener('click',()=>{document.getElementById('cartones-modal').style.display='none';});
-  document.getElementById('limpiar-btn').addEventListener('click',()=>{if(confirm('¿Deseas limpiar todas las jugadas del carton?')) limpiarcarton();});
-  document.getElementById('azar-btn').addEventListener('click',()=>{if(confirm('¿Quieres cargar jugadas al azar?')) cargarAzar();});
+  document.getElementById('limpiar-btn').addEventListener('click',async()=>{if(await confirm('¿Deseas limpiar todas las jugadas del carton?')) limpiarcarton();});
+  document.getElementById('azar-btn').addEventListener('click',async()=>{if(await confirm('¿Quieres cargar jugadas al azar?')) cargarAzar();});
   document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='player.html';});
   document.getElementById('guardar-check').addEventListener('change',e=>{
     const show=e.target.checked;
