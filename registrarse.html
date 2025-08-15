@@ -16,33 +16,62 @@
       min-height:100vh;
       text-align:center;
     }
-    input {
+    h2{
+      font-family:'Bangers',cursive;
+      color:#ff6600;
+      text-shadow:2px 2px 4px #000;
+      margin-bottom:10px;
+    }
+    input{
       font-size:1rem;
       padding:5px;
       margin:5px;
       width:250px;
       text-align:center;
+      background:#fff;
+      font-weight:bold;
     }
-    button {
-      padding:10px 20px;
-      margin:5px;
+    #alias{color:#ff6600;}
+    #email{margin:10px;font-weight:bold;color:#006400;}
+    #user-photo{width:80px;height:80px;border-radius:50%;margin-top:10px;}
+    .action-btn{
       font-family:'Bangers',cursive;
-      background:#ff6600;
+      background:linear-gradient(#0a8800,#ffffff);
       color:white;
-      border:none;
-      border-radius:5px;
+      border:3px solid #FFD700;
+      border-radius:8px;
+      text-shadow:2px 2px 4px #000;
       cursor:pointer;
+      width:200px;
+      height:40px;
+      font-size:1.2rem;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      margin:5px auto;
     }
+    #cancelar{background:linear-gradient(orange,#ffffff);}
+    #terms-container{margin:10px;font-size:0.8rem;}
+    #login-footer{margin-top:20px;}
+    #fecha-hora,#derechos{font-size:0.7rem;}
+    #derechos{font-size:0.6rem;}
   </style>
 </head>
 <body>
+  <img id="logo-bingo" src="https://i.imgur.com/twjhNtZ.png" style="width:80px;margin-bottom:5px;" />
   <h2>Registro de Jugador</h2>
   <input type="text" id="nombre" placeholder="Nombre">
   <input type="text" id="apellido" placeholder="Apellido">
   <input type="text" id="alias" placeholder="Alias">
-  <div id="email" style="margin:10px;font-weight:bold;"></div>
-  <button id="registrar">Registrarse</button>
-  <button id="cancelar">Cancelar</button>
+  <img id="user-photo" src="" alt="foto perfil" />
+  <div id="email"></div>
+  <div id="terms-container"><input type="checkbox" id="accept-terms"> <label for="accept-terms">Acepto <a href="terminos.html" target="_blank">términos y condiciones</a></label></div>
+  <button id="registrar" class="action-btn">Registrarse</button>
+  <button id="cancelar" class="action-btn">Cancelar</button>
+  <div id="login-footer">
+    <div id="fecha-hora"></div>
+    <div id="derechos">Todos los derechos reservados ® Hexaservice 2025</div>
+  </div>
 
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
@@ -53,11 +82,16 @@
     auth.onAuthStateChanged(user=>{
       if(!user) return;
       document.getElementById('email').textContent = user.email;
+      document.getElementById('user-photo').src = user.photoURL;
     });
     function validarTexto(txt,max){
       return txt && txt.length<=max && /^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]+$/.test(txt);
     }
     document.getElementById('registrar').addEventListener('click', async ()=>{
+      if(!document.getElementById('accept-terms').checked){
+        alert('Para poder registrarte debes aceptar nuestros terminos y condiciones');
+        return;
+      }
       const nombre = document.getElementById('nombre').value.trim();
       if(!validarTexto(nombre,40)){ alert('Nombre inválido'); document.getElementById('nombre').focus(); return; }
       const apellido = document.getElementById('apellido').value.trim();
@@ -76,6 +110,13 @@
       window.location.href='player.html';
     });
     document.getElementById('cancelar').addEventListener('click', ()=>{ window.location.href='index.html'; });
+    function actualizarFechaHora(){
+      const ahora = new Date();
+      const opciones={year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'};
+      document.getElementById('fecha-hora').textContent=ahora.toLocaleString('es-ES',opciones);
+    }
+    actualizarFechaHora();
+    setInterval(actualizarFechaHora,60000);
   </script>
 </body>
 </html>
