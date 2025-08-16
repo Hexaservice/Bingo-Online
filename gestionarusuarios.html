@@ -454,18 +454,22 @@
       const u = datos.find(d=>d.id===correo) || {};
       const nuevoEstado = !(u.disabled);
       if(!await confirm(`¿Esta seguro que desea ${nuevoEstado ? 'deshabilitar' : 'habilitar'} la cuenta ${correo}?`)) return;
-      const token = await auth.currentUser.getIdToken();
-      const res = await fetch(`${API_BASE}/toggleUser`, {
-        method:'POST',
-        headers:{'Content-Type':'application/json', Authorization:'Bearer '+token},
-        body: JSON.stringify({ email: correo, disabled: nuevoEstado })
-      });
-      if(res.ok){
-        alert('Estado actualizado');
-        cargarDatos();
-      }else{
-        const err = await res.json().catch(()=>({error:'Error'}));
-        alert('Error: '+(err.message||err.error));
+      try{
+        const token = await auth.currentUser.getIdToken();
+        const res = await fetch(`${API_BASE}/toggleUser`, {
+          method:'POST',
+          headers:{'Content-Type':'application/json', Authorization:'Bearer '+token},
+          body: JSON.stringify({ email: correo, disabled: nuevoEstado })
+        });
+        if(res.ok){
+          alert('Estado actualizado');
+          cargarDatos();
+        }else{
+          const err = await res.json().catch(()=>({error:'Error'}));
+          alert('Error: '+(err.message||err.error));
+        }
+      }catch(e){
+        alert('No se pudo conectar con el servicio: '+e.message);
       }
     });
 

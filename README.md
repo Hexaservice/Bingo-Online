@@ -24,14 +24,14 @@ Este script creará las entradas en la colección `users` y actualizará los rol
 
 ## Subida de imágenes
 
-Para almacenar las imágenes de los sorteos se utiliza **Firebase Cloud Storage**. El servicio de subida (`uploadServer.js`) guarda los archivos en el bucket configurado y devuelve la URL pública.
+Para almacenar las imágenes de los sorteos se utiliza **Firebase Cloud Storage**. El servicio auxiliar (`uploadServer.js`) guarda los archivos en el bucket configurado y devuelve la URL pública. Además expone el endpoint `/toggleUser` utilizado en la página de gestión de usuarios para habilitar o deshabilitar cuentas.
 
 Antes de ejecutarlo asegúrese de:
 
 - Definir la variable de entorno `GOOGLE_APPLICATION_CREDENTIALS` apuntando al archivo de claves del servicio.
 - Definir la variable `FIREBASE_STORAGE_BUCKET` con el nombre del bucket de Storage del proyecto.
 
-Luego inicie el servicio con:
+Este servidor requiere privilegios de administrador de Firebase, por lo que es necesario definir las credenciales antes de iniciarlo. Luego inicie el servicio con:
 
 ```bash
 npm start
@@ -42,6 +42,8 @@ variable `UPLOAD_ENDPOINT` exportada en `config.js`. Por defecto apunta a
 `http://localhost:3000/upload`. Para entornos distintos a localhost puede
 definirse la variable de entorno `UPLOAD_ENDPOINT` o asignarse
 `window.UPLOAD_ENDPOINT` antes de cargar los scripts.
+
+Para utilizar el botón de habilitar/deshabilitar usuarios en `gestionarusuarios.html` este servicio debe estar activo y accesible desde la URL indicada. El cliente envía un *ID token* de Firebase, por lo que se debe iniciar sesión con un usuario con rol **Superadmin** para realizar estos cambios.
 
 ## Despliegue estático
 
