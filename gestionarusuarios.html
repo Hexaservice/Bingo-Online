@@ -205,6 +205,7 @@
         <div style="text-align:center;margin-top:5px;">
           <button id="consultar-btn" class="icon-square" title="Buscar">&#128269;</button>
           <button id="actualizar-btn" class="icon-square" title="Actualizar" style="color:green;">&#9998;</button>
+          <button id="toggle-disable-btn" class="icon-square" title="Deshabilitar" style="color:red;">&#128683;</button>
           <button id="eliminar-btn" class="icon-square" title="Eliminar" style="color:red;">&#128465;</button>
         </div>
       </div>
@@ -276,7 +277,8 @@
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
   <script src="auth.js"></script>
-  <script>
+  <script type="module">
+    import { UPLOAD_ENDPOINT } from './config.js';
     ensureAuth('Superadmin');
     const datos = [];
     const bodyTabla = document.getElementById('usuarios-body');
@@ -288,6 +290,8 @@
     const modalGmail = document.getElementById('modal-gmail');
     const modalAlias = document.getElementById('modal-alias');
     const modalRol = document.getElementById('modal-rol');
+    const toggleBtn = document.getElementById('toggle-disable-btn');
+    const API_BASE = UPLOAD_ENDPOINT.replace(/\/upload$/, '');
     document.getElementById('modal-cerrar').addEventListener('click',()=>{modal.style.display='none';});
 
     function mostrarModal(u){
@@ -299,6 +303,26 @@
       modalRol.className = '';
       if(u.role) modalRol.classList.add('role-'+u.role.toLowerCase());
       modal.style.display='flex';
+    }
+
+    function updateToggleButton(){
+      const sel=document.querySelector('input[name="seleccion"]:checked');
+      if(!sel){
+        toggleBtn.innerHTML='&#128683;';
+        toggleBtn.style.color='red';
+        toggleBtn.title='Deshabilitar';
+        return;
+      }
+      const u=datos.find(d=>d.id===sel.dataset.correo);
+      if(u && u.disabled){
+        toggleBtn.innerHTML='&#10004;';
+        toggleBtn.style.color='green';
+        toggleBtn.title='Habilitar';
+      }else{
+        toggleBtn.innerHTML='&#128683;';
+        toggleBtn.style.color='red';
+        toggleBtn.title='Deshabilitar';
+      }
     }
 
     async function cargarDatos(){
@@ -319,10 +343,14 @@
         const tr=document.createElement('tr');
         const gmail=u.id.replace('@gmail.com','');
         const rolClase='role-'+(u.role||'').toLowerCase();
-        tr.innerHTML=`<td>${idx++}</td><td>${u.name||''}</td><td>${u.apellido||''}</td><td class='gmail-cell'>${gmail}</td><td>${u.alias||''}</td><td class='${rolClase}'>${u.role||''}</td><td style="text-align:center;"><input type='radio' name='seleccion' data-correo='${u.id}' value='${u.id}'></td>`;
+        const color=u.disabled?'red':'green';
+        tr.innerHTML=`<td>${idx++}</td><td style="color:${color}">${u.name||''}</td><td style="color:${color}">${u.apellido||''}</td><td class='gmail-cell' style="color:${color}">${gmail}</td><td style="color:${color}">${u.alias||''}</td><td class='${rolClase}'>${u.role||''}</td><td style="text-align:center;"><input type='radio' name='seleccion' data-correo='${u.id}' value='${u.id}'></td>`;
         tr.children[3].addEventListener('click',()=>mostrarModal(u));
+        const radio=tr.querySelector('input[name="seleccion"]');
+        radio.addEventListener('change', updateToggleButton);
         bodyTabla.appendChild(tr);
       });
+      updateToggleButton();
     }
 
     function filtrar(){
@@ -417,6 +445,28 @@
       await db.collection('users').doc(correo).set(data, { merge: true });
       alert('Datos actualizados');
       cargarDatos();
+    });
+
+    document.getElementById('toggle-disable-btn').addEventListener('click', async () => {
+      const sel = document.querySelector('input[name="seleccion"]:checked');
+      if(!sel){ alert('Debe seleccionar un usuario en la tabla'); return; }
+      const correo = sel.dataset.correo;
+      const u = datos.find(d=>d.id===correo) || {};
+      const nuevoEstado = !(u.disabled);
+      if(!await confirm(`¿Esta seguro que desea ${nuevoEstado ? 'deshabilitar' : 'habilitar'} la cuenta ${correo}?`)) return;
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`${API_BASE}/toggleUser`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json', Authorization:'Bearer '+token},
+        body: JSON.stringify({ email: correo, disabled: nuevoEstado })
+      });
+      if(res.ok){
+        alert('Estado actualizado');
+        cargarDatos();
+      }else{
+        const err = await res.json().catch(()=>({error:'Error'}));
+        alert('Error: '+(err.message||err.error));
+      }
     });
 
     document.getElementById('eliminar-btn').addEventListener('click', async () => {

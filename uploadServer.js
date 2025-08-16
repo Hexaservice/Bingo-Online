@@ -22,6 +22,7 @@ if (!admin.apps.length) {
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -36,6 +37,22 @@ async function verificarToken(req, res, next) {
     return res.status(401).json({ error: 'Token inválido' });
   }
 }
+
+app.post('/toggleUser', verificarToken, async (req, res) => {
+  const { email, disabled } = req.body || {};
+  if (!email || typeof disabled !== 'boolean') {
+    return res.status(400).json({ error: 'Datos inválidos' });
+  }
+  try {
+    const user = await admin.auth().getUserByEmail(email);
+    await admin.auth().updateUser(user.uid, { disabled });
+    await admin.firestore().collection('users').doc(email).set({ disabled }, { merge: true });
+    res.json({ status: 'ok' });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Error actualizando usuario', message: e.message });
+  }
+});
 
 app.post('/upload', verificarToken, upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Archivo requerido' });
