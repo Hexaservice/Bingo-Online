@@ -1,4 +1,5 @@
 let app, auth, db, provider, appName = 'BingOnline';
+const DISABLED_MSG = "Tu cuenta ha sido deshabilitada, Motivado posiblemente a que has incumplido una o más clausulas en nuestros Terminos y condiciones. Contacta con un administrador del sistema si necesitas información.";
 function initFirebase(){
   const firebaseConfig = {
     apiKey: "AIzaSyBztIl46s-vOOxrUVDilJNSN6zuzldeUWI",
@@ -128,11 +129,17 @@ async function loginGoogle(){
   try {
     await auth.signInWithPopup(provider);
   } catch(err) {
+    if (err.code === 'auth/user-disabled') {
+      alert(DISABLED_MSG);
+      return;
+    }
     console.warn('Popup login failed, trying redirect', err);
     try {
       await auth.signInWithRedirect(provider);
     } catch(e){
-      if (e.code === 'auth/web-storage-unsupported') {
+      if (e.code === 'auth/user-disabled') {
+        alert(DISABLED_MSG);
+      } else if (e.code === 'auth/web-storage-unsupported') {
         alert('El navegador ha bloqueado las cookies necesarias para continuar. Intenta habilitarlas o abre la aplicación desde un dominio configurado en Firebase.');
       } else {
         console.error('Error login Google', e);
@@ -228,7 +235,25 @@ function ensureAuth(roleExpected){
         logout();
       });
     }
+    startUserStatusWatcher();
   });
+}
+
+let statusWatcher = null;
+function startUserStatusWatcher(){
+  if(statusWatcher) return;
+  statusWatcher = setInterval(async ()=>{
+    const u = auth.currentUser;
+    if(!u) return;
+    try{
+      await u.reload();
+    }catch(e){
+      if(e.code === 'auth/user-disabled'){
+        alert(DISABLED_MSG);
+        logout();
+      }
+    }
+  },60000);
 }
 
 if (typeof module !== "undefined") { module.exports = { redirectByRole, ensureAuth }; }
