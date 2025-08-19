@@ -605,7 +605,6 @@ function toggleForma(idx){
       alert('No tienes créditos suficientes.');
       return;
     }
-    if(!confirm('¿Estas seguro de comprar el carton jugado?')) return;
     if(jugarGratis){
       await billeteraRef.update({CartonesGratis:nuevoGratis});
       document.getElementById('gratis-label').textContent=nuevoGratis;
@@ -648,6 +647,12 @@ function toggleForma(idx){
     await actualizarCartonesJugador();
     alert('Jugada de Cartón enviada correctamente.');
     limpiarcarton();
+  }
+
+  function confirmarCompra(){
+    if(confirm('¿Estas seguro de comprar el carton jugado?')){
+      enviarDatos();
+    }
   }
 
   async function guardarCarton(){
@@ -816,7 +821,7 @@ function toggleForma(idx){
   }
 
   document.getElementById('sorteo-btn').addEventListener('click',abrirSorteosModal);
-  document.getElementById('jugar-carton-btn').addEventListener('click',enviarDatos);
+document.getElementById('jugar-carton-btn').addEventListener('click',confirmarCompra);
   document.getElementById('guardar-carton-btn').addEventListener('click',guardarCarton);
   document.getElementById('mis-cartones-icon').addEventListener('click',abrirCartonesModal);
   document.getElementById('ver-jugados-btn').addEventListener('click',abrirJugadosModal);

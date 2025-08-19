@@ -620,10 +620,10 @@
         const total=parseFloat(t.Monto);
         const cont=document.querySelector('#modal-detalle .contenido');
         cont.innerHTML=
-          `<div style="font-weight:bold;color:#333;">Monto solicitado: ${solicitado.toFixed(2)}</div>`+
-          `<div>Comisión Bancaria: ${comB.toFixed(2)}</div>`+
-          `<div>Comisión Gestión: ${comG.toFixed(2)}</div>`+
-          `<div>Total recibido: ${total.toFixed(2)}</div>`+
+          `<div style="font-weight:bold;color:purple;">Monto solicitado: ${solicitado.toFixed(2)}</div>`+
+          `<div style="color:orange;">Comisión Bancaria: ${comB.toFixed(2)}</div>`+
+          `<div style="color:orange;">Comisión Gestión: ${comG.toFixed(2)}</div>`+
+          `<div style="font-weight:bold;color:darkgreen;">Total recibido: ${total.toFixed(2)}</div>`+
           `<button id='modal-ok'>Aceptar</button>`;
         const modal=document.getElementById('modal-detalle');
         modal.style.display='flex';
@@ -707,25 +707,16 @@
       cargarTransacciones();
     });
 
-    document.getElementById('btn-retirar').addEventListener('click', async () => {
-      if(!await validarDatosBancarios()) return;
-      const user = auth.currentUser;
-      const montoStr=document.getElementById('monto-retiro').value.trim();
-      const monto=parseFloat(montoStr);
-      if(!montoStr || isNaN(monto) || monto<=0){alert('Ingrese un monto válido');document.getElementById('monto-retiro').focus();return;}
-      const creditos = parseFloat(document.getElementById('creditos-valor').textContent) || 0;
-      if(monto>creditos){ alert('El monto supera los créditos disponibles'); return; }
-      const montoFinal = monto - (monto*porcentajeRetiro/100) - (monto*porcentajeAdministra/100);
-      document.getElementById('monto-retiro-neto').value = montoFinal>0 ? montoFinal.toFixed(2) : '';
-      if(!confirm(`¿Confirmas la solicitud de retiro por ${montoFinal.toFixed(2)}?`)) return;
+    async function ejecutarRetiro(monto,montoFinal){
+      const user=auth.currentUser;
       const docB=await db.collection('Billetera').doc(user.email).get();
-      const data = {
+      const data={
         tipotrans:'retiro',
-        bancoreceptor: docB.exists?(docB.data().banco||''):'' ,
-        MontoSolicitado: monto,
-        Monto: montoFinal,
+        bancoreceptor: docB.exists?(docB.data().banco||''):'',
+        MontoSolicitado:monto,
+        Monto:montoFinal,
         referencia:'',
-        comentario: document.getElementById('comentario-retiro').value.trim(),
+        comentario:document.getElementById('comentario-retiro').value.trim(),
         estado:'PENDIENTE',
         IDbilletera:user.email,
         fechasolicitud:fechaActual(),
@@ -740,6 +731,20 @@
       alert('Solicitud enviada, una vez validada se transferirá a tu pago móvil');
       limpiarCamposTransaccion('retiro');
       cargarTransacciones();
+    }
+
+    document.getElementById('btn-retirar').addEventListener('click', async () => {
+      if(!await validarDatosBancarios()) return;
+      const montoStr=document.getElementById('monto-retiro').value.trim();
+      const monto=parseFloat(montoStr);
+      if(!montoStr || isNaN(monto) || monto<=0){alert('Ingrese un monto válido');document.getElementById('monto-retiro').focus();return;}
+      const creditos=parseFloat(document.getElementById('creditos-valor').textContent) || 0;
+      if(monto>creditos){ alert('El monto supera los créditos disponibles'); return; }
+      const montoFinal=monto - (monto*porcentajeRetiro/100) - (monto*porcentajeAdministra/100);
+      document.getElementById('monto-retiro-neto').value = montoFinal>0 ? montoFinal.toFixed(2) : '';
+      if(confirm(`¿Confirmas la solicitud de retiro por ${montoFinal.toFixed(2)}?`)){
+        await ejecutarRetiro(monto,montoFinal);
+      }
     });
 
     document.getElementById('volver-btn').addEventListener('click',()=>{
