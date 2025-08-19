@@ -590,31 +590,36 @@ function toggleForma(idx){
     const porcentaje=Number(vars.data().porcentaje||0);
     const porcentajesu=Number(vars.data().porcentajesu||0);
     let jugarGratis=false;
+    let nuevoCreditos=creditos;
+    let nuevoGratis=gratis;
+    let porcentajeVal=0, porcentajeSuVal=0, paraPremio=0;
     if(gratis>0){
-      gratis--;
       jugarGratis=true;
-      await billeteraRef.update({CartonesGratis:gratis});
-      document.getElementById('gratis-label').textContent=gratis;
+      nuevoGratis=gratis-1;
     }else if(creditos>=valor){
-      creditos-=valor;
-      await billeteraRef.update({creditos});
-      document.getElementById('creditos-label').textContent=creditos;
-      const porcentajeVal=valor*porcentaje/100;
-      const porcentajeSuVal=valor*porcentajesu/100;
-      const paraPremio=valor-porcentajeVal-porcentajeSuVal;
+      nuevoCreditos=creditos-valor;
+      porcentajeVal=valor*porcentaje/100;
+      porcentajeSuVal=valor*porcentajesu/100;
+      paraPremio=valor-porcentajeVal-porcentajeSuVal;
+    }else{
+      alert('No tienes créditos suficientes.');
+      return;
+    }
+    if(!confirm('¿Estas seguro de comprar el carton jugado?')) return;
+    if(jugarGratis){
+      await billeteraRef.update({CartonesGratis:nuevoGratis});
+      document.getElementById('gratis-label').textContent=nuevoGratis;
+      await sorteoRef.update({
+        cartonesjugando: firebase.firestore.FieldValue.increment(1)
+      });
+    }else{
+      await billeteraRef.update({creditos:nuevoCreditos});
+      document.getElementById('creditos-label').textContent=nuevoCreditos;
       await sorteoRef.update({
         cartonesjugando: firebase.firestore.FieldValue.increment(1),
         totalPremios: firebase.firestore.FieldValue.increment(paraPremio),
         totalporcentaje: firebase.firestore.FieldValue.increment(porcentajeVal),
         totalporcentajesu: firebase.firestore.FieldValue.increment(porcentajeSuVal)
-      });
-    }else{
-      alert('No tienes créditos suficientes.');
-      return;
-    }
-    if(jugarGratis){
-      await sorteoRef.update({
-        cartonesjugando: firebase.firestore.FieldValue.increment(1)
       });
     }
     const posiciones=[];

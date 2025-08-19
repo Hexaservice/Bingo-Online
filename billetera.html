@@ -580,10 +580,13 @@
         if(estado && t.estado!==estado) return;
         const estadoColor=t.estado==='PENDIENTE'?'orange':t.estado==='ANULADO'?'red':t.estado==='APROBADO'?'green':'black';
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${n}</td><td style="color:${t.tipotrans==='deposito'?'green':'red'}">${t.tipotrans.toUpperCase()}</td><td style="color:${t.tipotrans==='deposito'?'green':'red'}">${t.Monto}</td><td class="celda-fecha">${f}</td><td style="color:${estadoColor}">${t.estado}</td>`;
+        tr.innerHTML=`<td>${n}</td><td style="color:${t.tipotrans==='deposito'?'green':'red'}">${t.tipotrans.toUpperCase()}</td><td class="celda-monto" style="color:${t.tipotrans==='deposito'?'green':'red'}">${t.Monto}</td><td class="celda-fecha">${f}</td><td style="color:${estadoColor}">${t.estado}</td>`;
         const fechaTd=tr.querySelector('.celda-fecha');
         fechaTd.style.cursor='pointer';
         fechaTd.addEventListener('click',()=>mostrarDetalle(t));
+        const montoTd=tr.querySelector('.celda-monto');
+        montoTd.style.cursor='pointer';
+        montoTd.addEventListener('click',()=>mostrarDetalleMonto(t));
         const estadoTd=tr.lastElementChild;
         if(t.estado==='ANULADO' && t.nota){
           estadoTd.classList.add('nota-estado');
@@ -605,6 +608,23 @@
         `<div style="color:green;">Fecha de gestión: ${fg}</div>`+
         `<div style="color:green;">Hora de gestión: ${hg}</div>`+
         `<button id="modal-ok">Aceptar</button>`;
+        const modal=document.getElementById('modal-detalle');
+        modal.style.display='flex';
+        document.getElementById('modal-ok').addEventListener('click',()=>{modal.style.display='none';},{once:true});
+      }
+
+      function mostrarDetalleMonto(t){
+        const solicitado=t.tipotrans==='retiro'?parseFloat(t.MontoSolicitado||t.Monto):parseFloat(t.Monto);
+        const comB=t.tipotrans==='retiro'?solicitado*porcentajeRetiro/100:0;
+        const comG=t.tipotrans==='retiro'?solicitado*porcentajeAdministra/100:0;
+        const total=parseFloat(t.Monto);
+        const cont=document.querySelector('#modal-detalle .contenido');
+        cont.innerHTML=
+          `<div style="font-weight:bold;color:#333;">Monto solicitado: ${solicitado.toFixed(2)}</div>`+
+          `<div>Comisión Bancaria: ${comB.toFixed(2)}</div>`+
+          `<div>Comisión Gestión: ${comG.toFixed(2)}</div>`+
+          `<div>Total recibido: ${total.toFixed(2)}</div>`+
+          `<button id='modal-ok'>Aceptar</button>`;
         const modal=document.getElementById('modal-detalle');
         modal.style.display='flex';
         document.getElementById('modal-ok').addEventListener('click',()=>{modal.style.display='none';},{once:true});
@@ -697,6 +717,7 @@
       if(monto>creditos){ alert('El monto supera los créditos disponibles'); return; }
       const montoFinal = monto - (monto*porcentajeRetiro/100) - (monto*porcentajeAdministra/100);
       document.getElementById('monto-retiro-neto').value = montoFinal>0 ? montoFinal.toFixed(2) : '';
+      if(!confirm(`¿Confirmas la solicitud de retiro por ${montoFinal.toFixed(2)}?`)) return;
       const docB=await db.collection('Billetera').doc(user.email).get();
       const data = {
         tipotrans:'retiro',
