@@ -83,6 +83,7 @@
     #valor-carton span,#cartones-jugando span{font-size:1.5rem;}
     #valor-carton-valor,#premio-valor{animation:pulse 1s infinite;display:inline-block;}
     #cartones-jugando-valor,#carton-num,#gratis-plus,#cartones-gratis-jugando{animation:wiggle 1s infinite;display:inline-block;}
+    #cartones-gratis-jugando{color:#00008b;}
     #valor-carton{color:green;display:flex;align-items:center;gap:5px;}
     #cartones-jugando{color:purple;display:flex;align-items:center;gap:5px;}
     #gratis-plus{font-weight:bold;color:black;font-family:'Bangers',cursive;}
@@ -161,6 +162,10 @@
     #login-footer{margin-top:20px;}
     #fecha-hora,#derechos{font-size:0.7rem;text-align:center;color:#000;}
     #derechos{font-size:0.6rem;}
+    .info-line{font-family:'Bangers',cursive;font-size:1.5rem;}
+    .text-premio-total{font-family:'Bangers',cursive;color:white;text-shadow:0 0 5px green,-3px 0 3px #000,0 3px 3px #000,3px 0 3px #000,0 -3px 3px #000;}
+    .text-forma-premio{font-family:'Bangers',cursive;font-weight:bold;text-shadow:0 0 5px green,-3px 0 3px #000,0 3px 3px #000,3px 0 3px #000,0 -3px 3px #000;}
+    .text-forma-gratis{font-family:'Bangers',cursive;font-weight:bold;color:purple;}
   </style>
 </head>
 <body>
@@ -242,6 +247,22 @@
           <button id="cargar-jugado-btn" class="action-btn" style="margin-top:10px;">Cargar cartón</button>
       </div>
   </div>
+  <div id="info-cartones-modal" class="modal" onclick="this.style.display='none'">
+      <div class="modal-content" onclick="event.stopPropagation();">
+          <h2 id="info-cartones-titulo"></h2>
+          <div id="info-cartones-jugando" class="info-line"></div>
+          <div id="info-cartones-gratis" class="info-line"></div>
+          <button id="info-cartones-aceptar" class="action-btn">Aceptar</button>
+      </div>
+  </div>
+  <div id="premios-modal" class="modal" onclick="this.style.display='none'">
+      <div class="modal-content" onclick="event.stopPropagation();">
+          <h2 id="premios-titulo"></h2>
+          <div id="premios-total" class="text-premio-total"></div>
+          <div id="premios-formas"></div>
+          <button id="premios-aceptar" class="action-btn">Aceptar</button>
+      </div>
+  </div>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
@@ -254,6 +275,8 @@ const board=document.getElementById('bingo-board');
 let currentCell=null;
 let sorteoInterval=null;
 let currentSorteo=null;
+let currentSorteoNombre='';
+let currentSorteoTipo='';
 let cartonesGuardados={};
 let sorteosActivos=[];
 let seleccionadoJugado=null;
@@ -264,6 +287,8 @@ let formasSorteo=[];
 let formaActiva=0;
 let premioActual=0;
 let maxCartonesGratis=0;
+let cartonesJugando=0;
+let cartonesGratisJugando=0;
 const formColors=['#90ee90','#fffacd','#add8e6','#d8b0ff','#ffcc99'];
 const formGlows=['#006400','#b8860b','#00008b','#4b0082','#8b4513'];
 
@@ -493,6 +518,8 @@ function toggleForma(idx){
   maxCartonesGratis=parseInt(data.maxcartongratis||0);
   const premio=data.totalPremios||0;
   premioActual=premio;
+  cartonesJugando=jug;
+  cartonesGratisJugando=gratisJug;
   document.getElementById('valor-carton-valor').textContent=valor;
   document.getElementById('cartones-jugando-valor').textContent=jug;
   document.getElementById('cartones-gratis-jugando').textContent=gratisJug;
@@ -539,6 +566,8 @@ function toggleForma(idx){
   function seleccionarSorteo(s){
     resetForma();
     currentSorteo=s.id;
+    currentSorteoNombre=s.nombre;
+    currentSorteoTipo=s.tipo;
     const btn=document.getElementById('sorteo-btn');
     btn.textContent=s.nombre;
     btn.classList.remove('diario','especial');
@@ -580,8 +609,8 @@ function toggleForma(idx){
     const alias=document.getElementById('alias-jugador').value.trim();
     const user=auth.currentUser;
     if(alias===''||!user){ alert('Por favor, ingresa tu Alias.'); return; }
-      if(!validateBoard(true)){ alert('Corrige los errores antes de enviar.'); return; }
-    if(!currentSorteo){ alert('Selecciona un sorteo.'); return; }
+    if(!validateBoard(true)){ alert('Debes llenar las celdas vacías del cratón primero'); return; }
+    if(!currentSorteo){ alert('Debes selecionar primero un sorteo'); abrirSorteosModal(); return; }
     if(consultando){
       alert('Este cartón ya está jugando y no se puede jugar nuevamente.');
       limpiarcarton();
@@ -689,13 +718,18 @@ function toggleForma(idx){
       alert('Por favor, inicia sesión.');
       return;
     }
+    if(!validateBoard(true)){
+      alert('Debes llenar las celdas vacías del cratón primero');
+      return;
+    }
+    if(!currentSorteo){
+      alert('Debes selecionar primero un sorteo');
+      abrirSorteosModal();
+      return;
+    }
     const billeteraDoc=await db.collection('Billetera').doc(user.email).get();
     const creditos=billeteraDoc.data().creditos||0;
     const gratis=billeteraDoc.data().CartonesGratis||0;
-    if(!currentSorteo){
-      alert('Selecciona un sorteo.');
-      return;
-    }
     const sorteoDoc=await db.collection('sorteos').doc(currentSorteo).get();
     const sorteoData=sorteoDoc.data();
     const valor=Number(sorteoData.valorCarton||0);
@@ -798,6 +832,49 @@ function toggleForma(idx){
       document.getElementById('cartones-modal').style.display='none';
       saveToCookie();
     }
+  }
+
+  function mostrarCartonesJugandoModal(){
+    if(!currentSorteo){
+      alert('Debes selecionar primero un sorteo');
+      abrirSorteosModal();
+      return;
+    }
+    const titulo=document.getElementById('info-cartones-titulo');
+    titulo.textContent=`Cartones jugando en ${currentSorteoNombre}`;
+    titulo.style.color=currentSorteoTipo==='Sorteo Diario'?'green':'orange';
+    const cj=document.getElementById('info-cartones-jugando');
+    cj.innerHTML=`Cartones jugando: <strong style="color:purple;">${cartonesJugando}</strong>`;
+    const cg=document.getElementById('info-cartones-gratis');
+    cg.innerHTML=`Cartones Gratis jugando: <strong style="color:#00008b;">${cartonesGratisJugando}</strong>`;
+    document.getElementById('info-cartones-modal').style.display='flex';
+  }
+
+  function mostrarPremiosModal(){
+    if(!currentSorteo){
+      alert('Debes selecionar primero un sorteo');
+      abrirSorteosModal();
+      return;
+    }
+    const titulo=document.getElementById('premios-titulo');
+    titulo.textContent=`PREMIOS A REPARTIR en: ${currentSorteoNombre}`;
+    titulo.style.color=currentSorteoTipo==='Sorteo Diario'?'green':'orange';
+    document.getElementById('premios-total').textContent=`Creditos totales a repartir: ${Math.round(premioActual)}`;
+    const cont=document.getElementById('premios-formas');
+    cont.innerHTML='';
+    formasSorteo.sort((a,b)=>a.idx-b.idx).forEach(f=>{
+      const linea=document.createElement('div');
+      linea.className='text-forma-premio';
+      linea.style.color=formGlows[f.idx-1];
+      const premioForma=Math.round(premioActual*parseFloat(f.porcentaje||0)/100);
+      linea.textContent=`Creditos Premio Forma ${f.idx}: ${premioForma}`;
+      cont.appendChild(linea);
+      const gratis=document.createElement('div');
+      gratis.className='text-forma-gratis';
+      gratis.textContent=`Cartones gratis premio forma: ${f.cartonesGratis||0}`;
+      cont.appendChild(gratis);
+    });
+    document.getElementById('premios-modal').style.display='flex';
   }
 
   async function abrirJugadosModal(){
@@ -911,6 +988,11 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
   document.getElementById('jugados-close').addEventListener('click',()=>{document.getElementById('jugados-modal').style.display='none';});
   document.getElementById('cargar-guardado-btn').addEventListener('click',cargarCartonGuardado);
   document.getElementById('cartones-close').addEventListener('click',()=>{document.getElementById('cartones-modal').style.display='none';});
+  document.getElementById('cartones-jugando-valor').addEventListener('click',mostrarCartonesJugandoModal);
+  document.getElementById('cartones-gratis-jugando').addEventListener('click',mostrarCartonesJugandoModal);
+  document.getElementById('premio-valor').addEventListener('click',mostrarPremiosModal);
+  document.getElementById('info-cartones-aceptar').addEventListener('click',()=>{document.getElementById('info-cartones-modal').style.display='none';});
+  document.getElementById('premios-aceptar').addEventListener('click',()=>{document.getElementById('premios-modal').style.display='none';});
   document.getElementById('limpiar-btn').addEventListener('click',async()=>{if(await confirm('¿Deseas limpiar todas las jugadas del carton?')) limpiarcarton();});
   document.getElementById('azar-btn').addEventListener('click',async()=>{if(await confirm('¿Quieres cargar jugadas al azar?')) cargarAzar();});
   document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='player.html';});
