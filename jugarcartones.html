@@ -125,8 +125,8 @@
     .carton td{cursor:pointer;font-size:1.8rem;text-shadow:0 0 3px green;}
     .carton td.free{background:radial-gradient(circle,#ffffff,#ffff00);display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:#4B0082;}
     .carton td.error{border:2px solid red;}
-    .carton-back{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:10px;backface-visibility:hidden;transform:rotateY(180deg);background:linear-gradient(white,gray);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:5px;}
-    .carton-back img{width:80%;height:80%;opacity:0.3;object-fit:contain;margin-top:auto;}
+    .carton-back{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:10px;backface-visibility:hidden;transform:rotateY(180deg);background:linear-gradient(white,gray);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:5px;overflow:hidden;}
+    .carton-back img{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;height:auto;opacity:0.7;object-fit:contain;pointer-events:none;z-index:0;}
     .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);justify-content:center;align-items:center;z-index:1000;}
     .modal-content{background:#fff;padding:10px;border-radius:10px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;width:max-content;}
     #sorteos-list div{display:block;font-weight:bold;font-size:1rem;color:#000;cursor:pointer;font-family:'Poppins',sans-serif;white-space:nowrap;}
@@ -173,7 +173,8 @@
     .premio-row{display:flex;justify-content:center;align-items:center;gap:10px;font-family:'Bangers',cursive;font-weight:bold;margin-bottom:4px;}
     .premio-row .premio-valor{font-size:1.4rem;}
     .premio-row .cartones-valor{font-size:1.2rem;}
-    #back-premios-content{display:flex;flex-direction:column;align-items:center;}
+    .premio-row .forma-nombre{font-family:'Poppins',sans-serif;font-weight:normal;font-size:0.6rem;display:block;margin-top:-2px;}
+    #back-premios-content{display:flex;flex-direction:column;align-items:center;position:relative;z-index:1;}
   </style>
 </head>
 <body>
@@ -890,7 +891,10 @@ function toggleForma(idx){
         fila.className='premio-row';
         const premioSpan=document.createElement('span');
         premioSpan.style.color=color;
-        premioSpan.innerHTML=`PREMIO FORMA ${f.idx}: <span class=\"premio-valor\">${premioForma}</span>`;
+        premioSpan.style.display='flex';
+        premioSpan.style.flexDirection='column';
+        premioSpan.style.alignItems='center';
+        premioSpan.innerHTML=`PREMIO FORMA ${f.idx}: <span class=\"premio-valor\">${premioForma}</span><span class=\"forma-nombre\">${f.nombre||''}</span>`;
         const cartSpan=document.createElement('span');
         cartSpan.style.color=color;
         cartSpan.style.opacity='0.7';
