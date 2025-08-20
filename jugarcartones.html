@@ -264,7 +264,6 @@ let formasSorteo=[];
 let formaActiva=0;
 let premioActual=0;
 let maxCartonesGratis=0;
-let avisoMaxGratisMostrado=false;
 const formColors=['#90ee90','#fffacd','#add8e6','#d8b0ff','#ffcc99'];
 const formGlows=['#006400','#b8860b','#00008b','#4b0082','#8b4513'];
 
@@ -500,8 +499,10 @@ function toggleForma(idx){
   const gratisLabel=document.getElementById('gratis-label');
   if(gratisJug>=maxCartonesGratis && maxCartonesGratis>0 && parseInt(gratisLabel.textContent)>0){
     gratisLabel.style.color='red';
+    gratisLabel.style.animation='none';
   }else{
     gratisLabel.style.color='';
+    gratisLabel.style.animation='';
   }
   const pv=document.getElementById('premio-valor');
   if(formaActiva>0){
@@ -611,10 +612,13 @@ function toggleForma(idx){
       if(gratisJugando < maxGratis){
         jugarGratis=true;
         nuevoGratis=gratis-1;
-        document.getElementById('gratis-label').style.color='';
+        const gl=document.getElementById('gratis-label');
+        gl.style.color='';
+        gl.style.animation='';
       }else{
-        if(!avisoMaxGratisMostrado){alert(`Solo se pueden jugar un máximo de: ${maxGratis}`);avisoMaxGratisMostrado=true;}
-        document.getElementById('gratis-label').style.color='red';
+        const gl=document.getElementById('gratis-label');
+        gl.style.color='red';
+        gl.style.animation='none';
         if(creditos>=valor){
           nuevoCreditos=creditos-valor;
           porcentajeVal=valor*porcentaje/100;
@@ -680,8 +684,49 @@ function toggleForma(idx){
   }
 
   async function confirmarCompra(){
-    if(await confirm('¿Estas seguro de jugar el carton?')){
-      await enviarDatos();
+    const user=auth.currentUser;
+    if(!user){
+      alert('Por favor, inicia sesión.');
+      return;
+    }
+    const billeteraDoc=await db.collection('Billetera').doc(user.email).get();
+    const creditos=billeteraDoc.data().creditos||0;
+    const gratis=billeteraDoc.data().CartonesGratis||0;
+    if(!currentSorteo){
+      alert('Selecciona un sorteo.');
+      return;
+    }
+    const sorteoDoc=await db.collection('sorteos').doc(currentSorteo).get();
+    const sorteoData=sorteoDoc.data();
+    const valor=Number(sorteoData.valorCarton||0);
+    const gratisJugando=sorteoData.cartonesgratisjugando||0;
+    const maxGratis=sorteoData.maxcartongratis||0;
+    let mensaje='';
+    let continuar=false;
+    if(gratis>0 && gratisJugando<maxGratis){
+      mensaje=`¿Estas seguro de jugar el cartón?\nEstas usando un cartón gratis disponible`;
+      continuar=true;
+    }else if(gratis>0 && gratisJugando>=maxGratis){
+      if(creditos>=valor){
+        mensaje=`¿Estas seguro de jugar el cartón?\nTienes cartones gratis, pero ya se llego al máximo permitido para este sorteo. se descontaran de tus creditos ${valor} por el valor del cartón`;
+        continuar=true;
+      }else{
+        mensaje=`No tienes créditos ni cartones gratis disponibles\nEntra en tu billetera para solicitar depósitos que hayas realizado desde tu banco. El valor para el cartón de este sorteo es: ${valor}`;
+      }
+    }else if(gratis<=0){
+      if(creditos>=valor){
+        mensaje=`¿Estas seguro de jugar el cartón?\nNo tienes cartones gratis,  se descontaran de tus creditos ${valor} por el valor del cartón`;
+        continuar=true;
+      }else{
+        mensaje=`No tienes créditos ni cartones gratis disponibles\nEntra en tu billetera para solicitar depósitos que hayas realizado desde tu banco. El valor para el cartón de este sorteo es: ${valor}`;
+      }
+    }
+    if(continuar){
+      if(await confirm(mensaje)){
+        await enviarDatos();
+      }
+    }else{
+      alert(mensaje);
     }
   }
 
@@ -850,8 +895,15 @@ function toggleForma(idx){
     document.getElementById('fecha-hora').textContent=ahora.toLocaleString('es-ES',opciones);
   }
 
-  document.getElementById('sorteo-btn').addEventListener('click',abrirSorteosModal);
+document.getElementById('sorteo-btn').addEventListener('click',abrirSorteosModal);
 document.getElementById('jugar-carton-btn').addEventListener('click',confirmarCompra);
+document.getElementById('gratis-label').addEventListener('click',()=>{
+  const gl=document.getElementById('gratis-label');
+  if(gl.style.color==='red'){
+    const jug=document.getElementById('cartones-gratis-jugando').textContent;
+    alert(`Para este sorteo solo se puede jugar un máximo de ${maxCartonesGratis} y has jugado ${jug}`);
+  }
+});
   document.getElementById('guardar-carton-btn').addEventListener('click',guardarCarton);
   document.getElementById('mis-cartones-icon').addEventListener('click',abrirCartonesModal);
   document.getElementById('ver-jugados-btn').addEventListener('click',abrirJugadosModal);

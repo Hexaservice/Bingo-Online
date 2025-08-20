@@ -580,7 +580,8 @@
         if(estado && t.estado!==estado) return;
         const estadoColor=t.estado==='PENDIENTE'?'orange':t.estado==='ANULADO'?'red':t.estado==='APROBADO'?'green':'black';
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${n}</td><td style="color:${t.tipotrans==='deposito'?'green':'red'}">${t.tipotrans.toUpperCase()}</td><td class="celda-monto" style="color:${t.tipotrans==='deposito'?'green':'red'}">${t.Monto}</td><td class="celda-fecha">${f}</td><td style="color:${estadoColor}">${t.estado}</td>`;
+        const montoFmt=parseFloat(t.Monto).toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
+        tr.innerHTML=`<td>${n}</td><td style="color:${t.tipotrans==='deposito'?'green':'red'}">${t.tipotrans.toUpperCase()}</td><td class="celda-monto" style="color:${t.tipotrans==='deposito'?'green':'red'}">${montoFmt}</td><td class="celda-fecha">${f}</td><td style="color:${estadoColor}">${t.estado}</td>`;
         const fechaTd=tr.querySelector('.celda-fecha');
         fechaTd.style.cursor='pointer';
         fechaTd.addEventListener('click',()=>mostrarDetalle(t));
