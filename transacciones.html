@@ -162,6 +162,15 @@
     const transRef=db.collection('transacciones');
     const datosRec=[];const datosRet=[];
     let editRefs={};
+    function loadRefCookies(){
+      const m=document.cookie.match(/refVals=([^;]+)/);
+      if(m){try{return JSON.parse(decodeURIComponent(m[1]));}catch(e){}}
+      return {};
+    }
+    function saveRefCookies(){
+      document.cookie=`refVals=${encodeURIComponent(JSON.stringify(refCookies))};path=/;max-age=31536000`;
+    }
+    let refCookies=loadRefCookies();
     let mostrarRecArch=false;
     let mostrarRetArch=false;
     function actualizarArchivarRecBtn(){
@@ -315,14 +324,15 @@
         const cond=t.Condicion||'VISIBLE';
         if(mostrarRecArch?cond!=='ARCHIVADA':cond==='ARCHIVADA')return;
         const fecha=formatearFecha(t.fechasolicitud);
-        if(filtrosRec.monto&& !t.Monto.toString().includes(filtrosRec.monto))return;
+        const monto=parseFloat(t.Monto).toFixed(2);
+        if(filtrosRec.monto&& !monto.includes(filtrosRec.monto))return;
         if(filtrosRec.nombre&& !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRec.nombre))return;
         if(filtrosRec.banco&& (t.bancoreceptor||'')!==filtrosRec.banco)return;
         if(filtrosRec.ref&& !(t.referencia||'').toString().includes(filtrosRec.ref))return;
         if(filtrosRec.fecha&& fecha!==filtrosRec.fecha)return;
         if(filtrosRec.estado&& t.estado!==filtrosRec.estado)return;
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td>${t.bancoreceptor||''}</td><td style='color:#4b0082;'>${t.referencia}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
+        tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td>${t.bancoreceptor||''}</td><td style='color:#4b0082;'>${t.referencia}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
         const estadoTd=tr.children[6];
         if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{estadoTd.style.color=estadoColor(t.estado);}
         if(t.nota){estadoTd.classList.add('nota-estado');estadoTd.addEventListener('click',e=>{e.stopPropagation();alert(t.nota);});}
@@ -335,6 +345,7 @@
         tb.appendChild(tr);
         i++;
       });
+      actualizarBotonRet();
     }
     function renderRet(){
       const tb=document.querySelector('#tabla-retiros tbody');
@@ -344,29 +355,32 @@
         const cond=t.Condicion||'VISIBLE';
         if(mostrarRetArch?cond!=='ARCHIVADA':cond==='ARCHIVADA')return;
         const fecha=formatearFecha(t.fechasolicitud);
-        if(filtrosRet.monto&& !t.Monto.toString().includes(filtrosRet.monto))return;
+        const monto=parseFloat(t.Monto).toFixed(2);
+        if(filtrosRet.monto&& !monto.includes(filtrosRet.monto))return;
         if(filtrosRet.nombre&& !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRet.nombre))return;
         if(filtrosRet.banco&& (t.bancoreceptor||'')!==filtrosRet.banco)return;
         if(filtrosRet.ref&& !(t.referencia||'').toString().includes(filtrosRet.ref))return;
         if(filtrosRet.fecha&& fecha!==filtrosRet.fecha)return;
         if(filtrosRet.estado&& t.estado!==filtrosRet.estado)return;
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${t.Monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;' contenteditable='false' inputmode='numeric' oninput="this.textContent=this.textContent.replace(/[^0-9]/g,'').slice(0,5);">${t.referencia||''}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
+        const refValue=refCookies[t.id]!==undefined?refCookies[t.id]:(t.referencia||'');
+        tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;' contenteditable='false' inputmode='numeric' oninput="this.textContent=this.textContent.replace(/[^0-9]/g,'').slice(0,5);">${refValue}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
         const estadoTd=tr.children[6];
         if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{estadoTd.style.color=estadoColor(t.estado);}
         if(t.nota){estadoTd.classList.add('nota-estado');estadoTd.addEventListener('click',e=>{e.stopPropagation();alert(t.nota);});}
         const chk=tr.querySelector('input[type=checkbox]');
         const refTd=tr.children[4];
         refTd.dataset.original=t.referencia||'';
+        if(refValue!== (t.referencia||'')) editRefs[t.id]=refValue;
         chk.addEventListener('change',()=>{actualizarEditable();});
         refTd.addEventListener('input',()=>{
           refTd.textContent=refTd.textContent.replace(/[^0-9]/g,'').slice(0,5);
-          if(t.estado==='APROBADO'){
-            const nuevo=refTd.textContent.trim();
-            const orig=refTd.dataset.original||'';
-            if(nuevo!==orig)editRefs[t.id]=nuevo; else delete editRefs[t.id];
-            actualizarBotonRet();
-          }
+          const nuevo=refTd.textContent.trim();
+          refCookies[t.id]=nuevo;
+          saveRefCookies();
+          const orig=refTd.dataset.original||'';
+          if(nuevo!==orig) editRefs[t.id]=nuevo; else delete editRefs[t.id];
+          actualizarBotonRet();
         });
         const mailTd=tr.children[2];
         mailTd.style.cursor='pointer';
@@ -384,14 +398,20 @@
       const selected=checks.filter(c=>c.checked);
       checks.forEach(c=>{
         const refTd=c.closest('tr').children[4];
+        const id=c.dataset.id;
         refTd.contentEditable=false;
-        refTd.textContent=refTd.dataset.original;
+        refTd.textContent=refCookies[id]!==undefined?refCookies[id]:refTd.dataset.original;
         const estado=c.dataset.estado;
         if(selected.length===1 && c===selected[0] && (estado==='PENDIENTE' || estado==='APROBADO')){
           refTd.contentEditable=true;
           refTd.focus();
         }else{
-          delete editRefs[c.dataset.id];
+          const val=refCookies[id];
+          if(val!==undefined && val!==refTd.dataset.original){
+            editRefs[id]=val;
+          }else{
+            delete editRefs[id];
+          }
         }
       });
       actualizarBotonRet();
@@ -409,6 +429,8 @@
         if(ref)upd.referencia=ref;
         if(condicion)upd.Condicion=condicion; else if(!data.Condicion)upd.Condicion='VISIBLE';
         await transRef.doc(id).update(upd);
+        delete refCookies[id];
+        delete editRefs[id];
         if(estado==='APROBADO'){
           const billeteraRef=db.collection('Billetera').doc(data.IDbilletera);
           await db.runTransaction(async t=>{
@@ -421,6 +443,7 @@
           });
         }
       }
+      saveRefCookies();
       cargar();
     }
 

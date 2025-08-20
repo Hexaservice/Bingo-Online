@@ -163,11 +163,15 @@
     #fecha-hora,#derechos{font-size:0.7rem;text-align:center;color:#000;}
     #derechos{font-size:0.6rem;}
     .info-line{font-family:'Bangers',cursive;font-size:1.5rem;text-align:center;}
-    .text-premio-total{font-family:'Bangers',cursive;color:white;text-shadow:0 0 5px green;font-size:1.5rem;text-align:center;}
-    .text-forma-premio{font-family:'Bangers',cursive;font-weight:bold;text-shadow:0 0 5px green;font-size:1.2rem;text-align:center;}
     .text-forma-gratis{font-family:'Bangers',cursive;font-weight:bold;color:purple;font-size:1.1rem;text-align:center;}
-    #premios-titulo,#info-cartones-titulo{font-size:0.9rem;text-align:center;}
+    #premios-titulo,#info-cartones-titulo{font-size:1.1rem;text-align:center;font-family:'Bangers',cursive;}
     #premios-modal .modal-content,#info-cartones-modal .modal-content{align-items:center;}
+    #info-cartones-aceptar,#premios-aceptar{font-size:1.2rem;padding:8px 20px;}
+    .text-premio-total{font-family:'Bangers',cursive;color:white;font-size:1.5rem;text-align:center;text-shadow:none;}
+    .valor-total{font-size:3rem;}
+    .premio-row{display:flex;justify-content:center;align-items:center;gap:10px;font-family:'Bangers',cursive;font-weight:bold;margin-bottom:4px;}
+    .premio-row .premio-valor{font-size:1.4rem;}
+    .premio-row .cartones-valor{font-size:1.2rem;}
   </style>
 </head>
 <body>
@@ -843,8 +847,9 @@ function toggleForma(idx){
       return;
     }
     const titulo=document.getElementById('info-cartones-titulo');
-    titulo.innerHTML=`Cartones jugando<br>${currentSorteoNombre}`;
-    titulo.style.color=currentSorteoTipo==='Sorteo Diario'?'green':'orange';
+    titulo.innerHTML=`<span style="color:purple;">CARTONES JUGANDO SORTEO:</span><br><span id="info-cartones-nombre">${currentSorteoNombre}</span>`;
+    const infoNombre=document.getElementById('info-cartones-nombre');
+    infoNombre.style.color=currentSorteoTipo==='Sorteo Diario'?'green':'orange';
     const cj=document.getElementById('info-cartones-jugando');
     cj.innerHTML=`Cartones jugando: <strong style="color:purple;">${cartonesJugando}</strong>`;
     const cg=document.getElementById('info-cartones-gratis');
@@ -859,22 +864,28 @@ function toggleForma(idx){
       return;
     }
     const titulo=document.getElementById('premios-titulo');
-    titulo.innerHTML=`PREMIOS A REPARTIR<br>${currentSorteoNombre}`;
-    titulo.style.color=currentSorteoTipo==='Sorteo Diario'?'green':'orange';
-    document.getElementById('premios-total').textContent=`Creditos totales a repartir: ${Math.round(premioActual)}`;
+    titulo.innerHTML=`<span style="color:blue;">CARTONES JUGANDO SORTEO:</span><br><span id="premios-nombre-sorteo">${currentSorteoNombre}</span>`;
+    const premiosNombre=document.getElementById('premios-nombre-sorteo');
+    premiosNombre.style.color=currentSorteoTipo==='Sorteo Diario'?'green':'orange';
+    const totalDiv=document.getElementById('premios-total');
+    totalDiv.innerHTML=`<div>CREDITOS TOTALES A REPARTIR:</div><div class="valor-total">${Math.round(premioActual)}</div>`;
     const cont=document.getElementById('premios-formas');
     cont.innerHTML='';
     formasSorteo.sort((a,b)=>a.idx-b.idx).forEach(f=>{
-      const linea=document.createElement('div');
-      linea.className='text-forma-premio';
-      linea.style.color=formGlows[f.idx-1];
       const premioForma=Math.round(premioActual*parseFloat(f.porcentaje||0)/100);
-      linea.textContent=`Creditos Premio Forma ${f.idx}: ${premioForma}`;
-      cont.appendChild(linea);
-      const gratis=document.createElement('div');
-      gratis.className='text-forma-gratis';
-      gratis.textContent=`Cartones gratis premio forma: ${f.cartonesGratis||0}`;
-      cont.appendChild(gratis);
+      const color=formGlows[f.idx-1];
+      const fila=document.createElement('div');
+      fila.className='premio-row';
+      const premioSpan=document.createElement('span');
+      premioSpan.style.color=color;
+      premioSpan.innerHTML=`PREMIO FORMA ${f.idx}: <span class="premio-valor">${premioForma}</span>`;
+      const cartSpan=document.createElement('span');
+      cartSpan.style.color=color;
+      cartSpan.style.opacity='0.7';
+      cartSpan.innerHTML=`Cartones de Premio: <span class="cartones-valor">${f.cartonesGratis||0}</span>`;
+      fila.appendChild(premioSpan);
+      fila.appendChild(cartSpan);
+      cont.appendChild(fila);
     });
     document.getElementById('premios-modal').style.display='flex';
   }
