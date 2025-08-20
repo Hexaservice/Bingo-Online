@@ -82,9 +82,10 @@
     .datos-sorteo div{font-weight:bold;font-size:1.2rem;}
     #valor-carton span,#cartones-jugando span{font-size:1.5rem;}
     #valor-carton-valor,#premio-valor{animation:pulse 1s infinite;display:inline-block;}
-    #cartones-jugando-valor,#carton-num{animation:float 1s infinite;display:inline-block;}
+    #cartones-jugando-valor,#carton-num,#gratis-plus,#cartones-gratis-jugando{animation:wiggle 1s infinite;display:inline-block;}
     #valor-carton{color:green;display:flex;align-items:center;gap:5px;}
     #cartones-jugando{color:purple;display:flex;align-items:center;gap:5px;}
+    #gratis-plus{font-weight:bold;color:black;font-family:'Bangers',cursive;}
     #stats-row{display:flex;justify-content:center;align-items:center;gap:20px;}
     .billete-icon{font-size:1.5rem;}
     .carton-icon{width:24px;height:24px;}
@@ -145,7 +146,7 @@
     .mini-carton th,.mini-carton td{border:1px solid gray;width:20px;height:20px;text-align:center;font-weight:bold;font-size:0.6rem;aspect-ratio:1/1;}
     .mini-carton th{font-size:0.8rem;color:#ff6600;background:radial-gradient(circle,#ffffff,#ffffff 60%,#00aa00);text-shadow:1px 1px 0 #000;}
     @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.2);}100%{transform:scale(1);}}
-    @keyframes float{0%{transform:translateY(0);}50%{transform:translateY(-5px);}100%{transform:translateY(0);}}
+    @keyframes wiggle{0%{transform:translateX(0);}33%{transform:translateX(5px);}66%{transform:translateX(-5px);}100%{transform:translateX(0);}}
     #player-container{position:relative;border:2px solid green;border-radius:10px;background:linear-gradient(gray,white);padding:10px;margin-top:5px;}
     #alias-row{display:flex;align-items:center;justify-content:center;gap:5px;}
     #alias-jugador{font-size:1.2rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:220px;color:orange;}
@@ -177,7 +178,7 @@
       <div id="premio-repartir"><span id="premio-label">Premio a Repartir:</span> <span id="premio-valor">0</span></div>
       <div id="stats-row">
         <div id="valor-carton"><span class="billete-icon">💵</span> Cartón: <span id="valor-carton-valor">0</span></div>
-        <div id="cartones-jugando"><img src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" class="carton-icon" alt="Cartón"> Jugando: <span id="cartones-jugando-valor">0</span></div>
+        <div id="cartones-jugando"><img src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" class="carton-icon" alt="Cartón"> Jugando: <span id="cartones-jugando-valor">0</span> <span id="gratis-plus">+</span> <span id="cartones-gratis-jugando">0</span></div>
       </div>
     </div>
   </section>
@@ -262,6 +263,8 @@ let cookieKey='';
 let formasSorteo=[];
 let formaActiva=0;
 let premioActual=0;
+let maxCartonesGratis=0;
+let avisoMaxGratisMostrado=false;
 const formColors=['#90ee90','#fffacd','#add8e6','#d8b0ff','#ffcc99'];
 const formGlows=['#006400','#b8860b','#00008b','#4b0082','#8b4513'];
 
@@ -487,10 +490,19 @@ function toggleForma(idx){
     const data=doc.data();
   const valor=data.valorCarton||0;
   const jug=data.cartonesjugando||0;
+  const gratisJug=data.cartonesgratisjugando||0;
+  maxCartonesGratis=parseInt(data.maxcartongratis||0);
   const premio=data.totalPremios||0;
   premioActual=premio;
   document.getElementById('valor-carton-valor').textContent=valor;
   document.getElementById('cartones-jugando-valor').textContent=jug;
+  document.getElementById('cartones-gratis-jugando').textContent=gratisJug;
+  const gratisLabel=document.getElementById('gratis-label');
+  if(gratisJug>=maxCartonesGratis && maxCartonesGratis>0 && parseInt(gratisLabel.textContent)>0){
+    gratisLabel.style.color='red';
+  }else{
+    gratisLabel.style.color='';
+  }
   const pv=document.getElementById('premio-valor');
   if(formaActiva>0){
     const f=formasSorteo.find(x=>x.idx===formaActiva);
@@ -585,6 +597,8 @@ function toggleForma(idx){
   const sorteoData=sorteoDoc.data();
   const valor=Number(sorteoData.valorCarton||0);
   const jugActual=sorteoData.cartonesjugando||0;
+  const gratisJugando=sorteoData.cartonesgratisjugando||0;
+  const maxGratis=sorteoData.maxcartongratis||0;
   const cartonNum=jugActual+1;
   const vars=await db.collection('Variablesglobales').doc('Parametros').get();
     const porcentaje=Number(vars.data().porcentaje||0);
@@ -594,8 +608,23 @@ function toggleForma(idx){
     let nuevoGratis=gratis;
     let porcentajeVal=0, porcentajeSuVal=0, paraPremio=0;
     if(gratis>0){
-      jugarGratis=true;
-      nuevoGratis=gratis-1;
+      if(gratisJugando < maxGratis){
+        jugarGratis=true;
+        nuevoGratis=gratis-1;
+        document.getElementById('gratis-label').style.color='';
+      }else{
+        if(!avisoMaxGratisMostrado){alert(`Solo se pueden jugar un máximo de: ${maxGratis}`);avisoMaxGratisMostrado=true;}
+        document.getElementById('gratis-label').style.color='red';
+        if(creditos>=valor){
+          nuevoCreditos=creditos-valor;
+          porcentajeVal=valor*porcentaje/100;
+          porcentajeSuVal=valor*porcentajesu/100;
+          paraPremio=valor-porcentajeVal-porcentajeSuVal;
+        }else{
+          alert('No tienes créditos suficientes.');
+          return;
+        }
+      }
     }else if(creditos>=valor){
       nuevoCreditos=creditos-valor;
       porcentajeVal=valor*porcentaje/100;
@@ -609,7 +638,8 @@ function toggleForma(idx){
       await billeteraRef.update({CartonesGratis:nuevoGratis});
       document.getElementById('gratis-label').textContent=nuevoGratis;
       await sorteoRef.update({
-        cartonesjugando: firebase.firestore.FieldValue.increment(1)
+        cartonesjugando: firebase.firestore.FieldValue.increment(1),
+        cartonesgratisjugando: firebase.firestore.FieldValue.increment(1)
       });
     }else{
       await billeteraRef.update({creditos:nuevoCreditos});
