@@ -125,8 +125,8 @@
     .carton td{cursor:pointer;font-size:1.8rem;text-shadow:0 0 3px green;}
     .carton td.free{background:radial-gradient(circle,#ffffff,#ffff00);display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:#4B0082;}
     .carton td.error{border:2px solid red;}
-    .carton-back{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:10px;backface-visibility:hidden;transform:rotateY(180deg);background:linear-gradient(gray,white);display:flex;align-items:center;justify-content:center;}
-    .carton-back img{width:80%;height:80%;opacity:0.3;object-fit:contain;}
+    .carton-back{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:10px;backface-visibility:hidden;transform:rotateY(180deg);background:linear-gradient(white,gray);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:5px;}
+    .carton-back img{width:80%;height:80%;opacity:0.3;object-fit:contain;margin-top:auto;}
     .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);justify-content:center;align-items:center;z-index:1000;}
     .modal-content{background:#fff;padding:10px;border-radius:10px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;width:max-content;}
     #sorteos-list div{display:block;font-weight:bold;font-size:1rem;color:#000;cursor:pointer;font-family:'Poppins',sans-serif;white-space:nowrap;}
@@ -164,15 +164,16 @@
     #derechos{font-size:0.6rem;}
     .info-line{font-family:'Bangers',cursive;font-size:1.5rem;text-align:center;}
     .text-forma-gratis{font-family:'Bangers',cursive;font-weight:bold;color:purple;font-size:1.1rem;text-align:center;}
-    #premios-titulo,#info-cartones-titulo{font-size:1.1rem;text-align:center;font-family:'Bangers',cursive;}
+    #premios-titulo,#info-cartones-titulo,#back-premios-titulo{font-size:1.1rem;text-align:center;font-family:'Bangers',cursive;}
     #premios-modal .modal-content,#info-cartones-modal .modal-content{align-items:center;}
     #info-cartones-aceptar,#premios-aceptar{font-size:1.2rem;padding:8px 20px;}
     .text-premio-total{font-family:'Bangers',cursive;color:white;font-size:1.5rem;text-align:center;}
     .text-premio-total div{ text-shadow:0 0 4px darkgreen; }
-    .valor-total{font-size:3rem;text-shadow:0 0 4px darkgreen;}
+    .valor-total{font-size:3rem;text-shadow:0 0 4px darkgreen;animation:pulse 1s infinite;}
     .premio-row{display:flex;justify-content:center;align-items:center;gap:10px;font-family:'Bangers',cursive;font-weight:bold;margin-bottom:4px;}
     .premio-row .premio-valor{font-size:1.4rem;}
     .premio-row .cartones-valor{font-size:1.2rem;}
+    #back-premios-content{display:flex;flex-direction:column;align-items:center;}
   </style>
 </head>
 <body>
@@ -219,7 +220,14 @@
           </thead>
           <tbody id="bingo-board"></tbody>
         </table>
-        <div class="carton-back"><img src="https://i.imgur.com/twjhNtZ.png" alt="logo"></div>
+        <div class="carton-back">
+          <div id="back-premios-content">
+            <h2 id="back-premios-titulo"></h2>
+            <div id="back-premios-total" class="text-premio-total"></div>
+            <div id="back-premios-formas"></div>
+          </div>
+          <img src="https://i.imgur.com/twjhNtZ.png" alt="logo">
+        </div>
       </div>
     </div>
     <div class="wallet-row guardar-row"><label><input type="checkbox" id="guardar-check"><span id="guardar-titulo"> Guardar cartón</span></label><input type="text" id="nombre-carton" placeholder="Nombra el Cartón"><button id="guardar-carton-btn" title="Guardar cartón">💾</button><div id="mis-cartones-btn-container"><img id="mis-cartones-icon" class="carton-icon" src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" alt="Mis Cartones" title="Mis Cartones"><span id="guardados-count">0</span></div></div>
@@ -389,10 +397,15 @@ function toggleForma(idx){
       wrapper.style.transform=`rotateY(${end}deg)`;
       wrapper.classList.toggle('flipped');
       const nombre=document.getElementById('forma-nombre');
-      if(wrapper.classList.contains('flipped')||formaActiva===0){
+      const isFlipped=wrapper.classList.contains('flipped');
+      if(isFlipped||formaActiva===0){
         nombre.style.visibility='hidden';
       }else{
         nombre.style.visibility='visible';
+      }
+      if(isFlipped){
+        renderPremios('back-premios');
+        actualizarFondoCarton();
       }
     };
   }
@@ -550,6 +563,9 @@ function toggleForma(idx){
     if(numEl && !consultando){
       numEl.textContent=(jug+1).toString().padStart(4,'0');
     }
+  if(document.getElementById('carton-wrapper').classList.contains('flipped')){
+    renderPremios('back-premios');
+  }
   }
 
   async function actualizarCartonesJugador(){
@@ -586,6 +602,10 @@ function toggleForma(idx){
     iniciarIntervalo();
     actualizarCartonesJugador();
     cargarFormasSorteo();
+    if(document.getElementById('carton-wrapper').classList.contains('flipped')){
+      renderPremios('back-premios');
+      actualizarFondoCarton();
+    }
   }
 
   function abrirSorteosModal(){
@@ -841,6 +861,47 @@ function toggleForma(idx){
     }
   }
 
+  function actualizarFondoCarton(){
+    const back=document.querySelector('.carton-back');
+    let color='gray';
+    if(currentSorteoTipo==='Sorteo Diario') color='green';
+    else if(currentSorteoTipo==='Sorteo Especial') color='orange';
+    back.style.background=`linear-gradient(white,${color})`;
+  }
+
+  function renderPremios(prefijo){
+    const titulo=document.getElementById(`${prefijo}-titulo`);
+    if(titulo){
+      titulo.innerHTML=`<span style="color:blue;">PREMIOS A REPARTIR EN SORTEO:</span><br><span id="${prefijo}-nombre-sorteo">${currentSorteoNombre}</span>`;
+      const nombre=document.getElementById(`${prefijo}-nombre-sorteo`);
+      if(nombre) nombre.style.color=currentSorteoTipo==='Sorteo Diario'?'green':'orange';
+    }
+    const totalDiv=document.getElementById(`${prefijo}-total`);
+    if(totalDiv){
+      totalDiv.innerHTML=`<div>CREDITOS TOTALES A REPARTIR:</div><div class="valor-total">${Math.round(premioActual)}</div>`;
+    }
+    const cont=document.getElementById(`${prefijo}-formas`);
+    if(cont){
+      cont.innerHTML='';
+      formasSorteo.sort((a,b)=>a.idx-b.idx).forEach(f=>{
+        const premioForma=Math.round(premioActual*parseFloat(f.porcentaje||0)/100);
+        const color=formGlows[f.idx-1];
+        const fila=document.createElement('div');
+        fila.className='premio-row';
+        const premioSpan=document.createElement('span');
+        premioSpan.style.color=color;
+        premioSpan.innerHTML=`PREMIO FORMA ${f.idx}: <span class=\"premio-valor\">${premioForma}</span>`;
+        const cartSpan=document.createElement('span');
+        cartSpan.style.color=color;
+        cartSpan.style.opacity='0.7';
+        cartSpan.innerHTML=`Cartones de Premio: <span class=\"cartones-valor\">${f.cartonesGratis||0}</span>`;
+        fila.appendChild(premioSpan);
+        fila.appendChild(cartSpan);
+        cont.appendChild(fila);
+      });
+    }
+  }
+
   function mostrarCartonesJugandoModal(){
     if(!currentSorteo){
       alert('Debes selecionar primero un sorteo');
@@ -864,30 +925,8 @@ function toggleForma(idx){
       abrirSorteosModal();
       return;
     }
-    const titulo=document.getElementById('premios-titulo');
-    titulo.innerHTML=`<span style="color:blue;">CARTONES JUGANDO SORTEO:</span><br><span id="premios-nombre-sorteo">${currentSorteoNombre}</span>`;
-    const premiosNombre=document.getElementById('premios-nombre-sorteo');
-    premiosNombre.style.color=currentSorteoTipo==='Sorteo Diario'?'green':'orange';
-    const totalDiv=document.getElementById('premios-total');
-    totalDiv.innerHTML=`<div>CREDITOS TOTALES A REPARTIR:</div><div class="valor-total">${Math.round(premioActual)}</div>`;
-    const cont=document.getElementById('premios-formas');
-    cont.innerHTML='';
-    formasSorteo.sort((a,b)=>a.idx-b.idx).forEach(f=>{
-      const premioForma=Math.round(premioActual*parseFloat(f.porcentaje||0)/100);
-      const color=formGlows[f.idx-1];
-      const fila=document.createElement('div');
-      fila.className='premio-row';
-      const premioSpan=document.createElement('span');
-      premioSpan.style.color=color;
-      premioSpan.innerHTML=`PREMIO FORMA ${f.idx}: <span class="premio-valor">${premioForma}</span>`;
-      const cartSpan=document.createElement('span');
-      cartSpan.style.color=color;
-      cartSpan.style.opacity='0.7';
-      cartSpan.innerHTML=`Cartones de Premio: <span class="cartones-valor">${f.cartonesGratis||0}</span>`;
-      fila.appendChild(premioSpan);
-      fila.appendChild(cartSpan);
-      cont.appendChild(fila);
-    });
+    renderPremios('premios');
+    renderPremios('back-premios');
     document.getElementById('premios-modal').style.display='flex';
   }
 
