@@ -126,7 +126,7 @@
     .carton td.free{background:radial-gradient(circle,#ffffff,#ffff00);display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:#4B0082;}
     .carton td.error{border:2px solid red;}
     .carton-back{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:10px;backface-visibility:hidden;transform:rotateY(180deg);background:linear-gradient(white,gray);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:5px;overflow:hidden;}
-    .carton-back img{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;height:auto;opacity:0.7;object-fit:contain;pointer-events:none;z-index:0;}
+    .carton-back img{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;height:auto;opacity:0.15;object-fit:contain;pointer-events:none;z-index:0;}
     .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);justify-content:center;align-items:center;z-index:1000;}
     .modal-content{background:#fff;padding:10px;border-radius:10px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;width:max-content;}
     #sorteos-list div{display:block;font-weight:bold;font-size:1rem;color:#000;cursor:pointer;font-family:'Poppins',sans-serif;white-space:nowrap;}
@@ -174,6 +174,7 @@
     .premio-row .premio-valor{font-size:1.4rem;}
     .premio-row .cartones-valor{font-size:1.2rem;}
     .premio-row .forma-nombre{font-family:'Poppins',sans-serif;font-weight:normal;font-size:0.6rem;display:block;margin-top:-2px;}
+    .premio-row div,.premio-row span{ text-shadow:0 0 6px #fff,0 0 10px #fff; }
     #back-premios-content{display:flex;flex-direction:column;align-items:center;position:relative;z-index:1;}
   </style>
 </head>
@@ -404,10 +405,6 @@ function toggleForma(idx){
       }else{
         nombre.style.visibility='visible';
       }
-      if(isFlipped){
-        renderPremios('back-premios');
-        actualizarFondoCarton();
-      }
     };
   }
 
@@ -564,9 +561,7 @@ function toggleForma(idx){
     if(numEl && !consultando){
       numEl.textContent=(jug+1).toString().padStart(4,'0');
     }
-  if(document.getElementById('carton-wrapper').classList.contains('flipped')){
-    renderPremios('back-premios');
-  }
+  renderPremios('back-premios');
   }
 
   async function actualizarCartonesJugador(){
@@ -587,7 +582,7 @@ function toggleForma(idx){
   function formatearFecha(f){ if(!f) return ''; const [y,m,d]=f.split('-'); return `${d}/${m}/${y}`; }
   function formatearHora(h){ if(!h) return ''; const [hh,mm]=h.split(':'); let n=parseInt(hh); const ampm=n>=12?'pm':'am'; n=n%12||12; return `${n}:${mm} ${ampm}`; }
 
-  function seleccionarSorteo(s){
+  async function seleccionarSorteo(s){
     resetForma();
     currentSorteo=s.id;
     currentSorteoNombre=s.nombre;
@@ -600,13 +595,11 @@ function toggleForma(idx){
     btn.style.fontSize = s.nombre.length>20?'0.8rem':'1.1rem';
     document.getElementById('fecha-sorteo').innerHTML=`<span class="cal-icon">📅</span> ${formatearFecha(s.fecha)}`;
     document.getElementById('hora-sorteo').innerHTML=`<span class="clock-icon">⏰</span> ${formatearHora(s.hora)}`;
+    actualizarFondoCarton();
+    await cargarFormasSorteo();
+    await actualizarDatosSorteo();
     iniciarIntervalo();
     actualizarCartonesJugador();
-    cargarFormasSorteo();
-    if(document.getElementById('carton-wrapper').classList.contains('flipped')){
-      renderPremios('back-premios');
-      actualizarFondoCarton();
-    }
   }
 
   function abrirSorteosModal(){
@@ -889,16 +882,30 @@ function toggleForma(idx){
         const color=formGlows[f.idx-1];
         const fila=document.createElement('div');
         fila.className='premio-row';
-        const premioSpan=document.createElement('span');
+
+        const premioSpan=document.createElement('div');
         premioSpan.style.color=color;
         premioSpan.style.display='flex';
         premioSpan.style.flexDirection='column';
         premioSpan.style.alignItems='center';
-        premioSpan.innerHTML=`PREMIO FORMA ${f.idx}: <span class=\"premio-valor\">${premioForma}</span><span class=\"forma-nombre\">${f.nombre||''}</span>`;
-        const cartSpan=document.createElement('span');
+        const labelDiv=document.createElement('div');
+        labelDiv.style.display='flex';
+        labelDiv.style.alignItems='baseline';
+        labelDiv.style.gap='4px';
+        labelDiv.innerHTML=`PREMIO FORMA ${f.idx}: <span class=\"premio-valor\">${premioForma}</span>`;
+        const nombreDiv=document.createElement('div');
+        nombreDiv.className='forma-nombre';
+        nombreDiv.textContent=f.nombre||'';
+        premioSpan.appendChild(labelDiv);
+        premioSpan.appendChild(nombreDiv);
+
+        const cartSpan=document.createElement('div');
         cartSpan.style.color=color;
-        cartSpan.style.opacity='0.7';
-        cartSpan.innerHTML=`Cartones de Premio: <span class=\"cartones-valor\">${f.cartonesGratis||0}</span>`;
+        cartSpan.style.display='flex';
+        cartSpan.style.alignItems='baseline';
+        cartSpan.style.gap='4px';
+        cartSpan.innerHTML=`CARTONES: <span class=\"cartones-valor\">${f.cartonesGratis||0}</span>`;
+
         fila.appendChild(premioSpan);
         fila.appendChild(cartSpan);
         cont.appendChild(fila);
