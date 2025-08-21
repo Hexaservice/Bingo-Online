@@ -59,7 +59,7 @@ async function initFechaHora(idElemento = "fecha-hora") {
         const fechaStr = ahora.toLocaleDateString(locale, opcionesFecha);
         let horaStr = ahora.toLocaleTimeString(locale, opcionesHora);
         horaStr = horaStr.replace(' a. m.', ' am').replace(' p. m.', ' pm');
-        el.textContent = `${fechaStr}, ${horaStr}`;
+        el.textContent = `${Pais}, ${fechaStr}, ${horaStr}`;
       } catch (err) {
         console.error('Error formateando fecha/hora', err);
         el.textContent = '';
