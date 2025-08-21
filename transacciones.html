@@ -314,6 +314,7 @@
     function parseFecha(f){if(!f)return 0;if(f.includes('-')){const[y,m,d]=f.split('-');return new Date(`${y}-${m}-${d}`).getTime();}const[d,m,y]=f.split('/');return new Date(`${y}-${m}-${d}`).getTime();}
     function aHora24(str){if(!str) return '00:00';str=str.toLowerCase().replace(/\./g,'').replace(/\s+/g,'');const m=str.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?(a|p)?m?/);if(!m) return str;let h=parseInt(m[1],10);const min=m[2];const ap=m[4];if(ap==='p'&&h<12)h+=12;if(ap==='a'&&h===12)h=0;return `${String(h).padStart(2,'0')}:${min}`;}
     function formatearHora(str){if(!str) return '';const [h24,min]=aHora24(str).split(':');let h=parseInt(h24,10);const ampm=h>=12?'pm':'am';h=h%12;if(h===0)h=12;return `${h}:${min} ${ampm}`;}
+    function formatearMonto(valor){const num=parseFloat(valor);if(isNaN(num))return valor;return num%1===0?num.toString():num.toFixed(2);}
     function sortTrans(a,b){if(a.estado==='PENDIENTE'&&b.estado!=='PENDIENTE')return -1;if(a.estado!=='PENDIENTE'&&b.estado==='PENDIENTE')return 1;return parseFecha(a.fechasolicitud)-parseFecha(b.fechasolicitud);}
     function actualizarBotonRet(){const btn=document.getElementById('aprobar-ret');const icon=btn.querySelector('.icon');const txt=btn.querySelector('span:last-child');if(Object.keys(editRefs).length){icon.innerHTML='&#9998;';icon.style.color='blue';txt.textContent='Editar';}else{icon.innerHTML='&#10004;';icon.style.color='green';txt.textContent='Aprobar';}}
     function renderRec(){
@@ -324,8 +325,10 @@
         const cond=t.Condicion||'VISIBLE';
         if(mostrarRecArch?cond!=='ARCHIVADA':cond==='ARCHIVADA')return;
         const fecha=formatearFecha(t.fechasolicitud);
-        const monto=parseFloat(t.Monto).toFixed(2);
-        if(filtrosRec.monto&& !monto.includes(filtrosRec.monto))return;
+        const montoNum=parseFloat(t.Monto);
+        const montoStr=montoNum.toFixed(2);
+        if(filtrosRec.monto&& !montoStr.includes(filtrosRec.monto))return;
+        const monto=formatearMonto(montoNum);
         if(filtrosRec.nombre&& !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRec.nombre))return;
         if(filtrosRec.banco&& (t.bancoreceptor||'')!==filtrosRec.banco)return;
         if(filtrosRec.ref&& !(t.referencia||'').toString().includes(filtrosRec.ref))return;
@@ -355,8 +358,10 @@
         const cond=t.Condicion||'VISIBLE';
         if(mostrarRetArch?cond!=='ARCHIVADA':cond==='ARCHIVADA')return;
         const fecha=formatearFecha(t.fechasolicitud);
-        const monto=parseFloat(t.Monto).toFixed(2);
-        if(filtrosRet.monto&& !monto.includes(filtrosRet.monto))return;
+        const montoNum=parseFloat(t.Monto);
+        const montoStr=montoNum.toFixed(2);
+        if(filtrosRet.monto&& !montoStr.includes(filtrosRet.monto))return;
+        const monto=formatearMonto(montoNum);
         if(filtrosRet.nombre&& !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRet.nombre))return;
         if(filtrosRet.banco&& (t.bancoreceptor||'')!==filtrosRet.banco)return;
         if(filtrosRet.ref&& !(t.referencia||'').toString().includes(filtrosRet.ref))return;
