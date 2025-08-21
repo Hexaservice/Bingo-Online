@@ -56,7 +56,7 @@
     #cancelar{background:linear-gradient(orange,#ffffff);}
     #terms-container{margin:10px;font-size:0.8rem;display:flex;align-items:center;justify-content:center;gap:5px;}
     #terms-container label{display:flex;align-items:center;}
-    #login-footer{position:absolute;bottom:0;left:0;right:0;}
+    #login-footer{position:absolute;bottom:0;left:0;right:0;text-align:center;}
     #fecha-hora,#derechos{font-size:0.7rem;}
     #derechos{font-size:0.6rem;}
   </style>
@@ -80,6 +80,7 @@
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
   <script src="auth.js"></script>
+  <script src="scripts/timezone.js"></script>
   <script>
     ensureAuth();
     auth.onAuthStateChanged(user=>{
@@ -112,13 +113,7 @@
       window.location.href='player.html';
     });
     document.getElementById('cancelar').addEventListener('click', ()=>{ window.location.href='index.html'; });
-    function actualizarFechaHora(){
-      const ahora = new Date();
-      const opciones={year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'};
-      document.getElementById('fecha-hora').textContent=ahora.toLocaleString('es-ES',opciones);
-    }
-    actualizarFechaHora();
-    setInterval(actualizarFechaHora,60000);
+    initFechaHora('fecha-hora');
   </script>
 </body>
 </html>

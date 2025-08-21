@@ -55,6 +55,7 @@
       left: 0;
       right: 0;
       font-size: 0.7rem;
+      text-align: center;
     }
     .back-btn {
       position: fixed;
@@ -93,6 +94,7 @@
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
   <script src="auth.js"></script>
+  <script src="scripts/timezone.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       if(typeof firebase === 'undefined'){
@@ -101,6 +103,7 @@
       }
       initFirebase();
       handleRedirect();
+      initFechaHora('fecha-hora');
       const termsContainer=document.getElementById('terms-container');
       const registerContainer=document.getElementById('register-container');
       document.getElementById('login-btn').addEventListener('click', () => {
@@ -126,14 +129,6 @@
         });
       }
       document.getElementById('terms-link').addEventListener('click', e => { e.preventDefault(); window.location.href='terminos.html'; });
-    function actualizarFechaHora(){
-      const ahora = new Date();
-      const opciones = { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' };
-      document.getElementById('fecha-hora').textContent = ahora.toLocaleString('es-ES', opciones);
-    }
-    actualizarFechaHora();
-    setInterval(actualizarFechaHora, 60000);
-
     auth.onAuthStateChanged(async user => {
       if(user){
         const doc = await db.collection('users').doc(user.email).get();

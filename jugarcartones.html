@@ -284,6 +284,7 @@
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
   <script src="auth.js"></script>
+  <script src="scripts/timezone.js"></script>
   <script>
   ensureAuth();
 
@@ -1030,13 +1031,7 @@ function toggleForma(idx){
     setBoard(carton);
   }
 
-  function actualizarFechaHora(){
-    const ahora=new Date();
-    const opciones={year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'};
-    document.getElementById('fecha-hora').textContent=ahora.toLocaleString('es-ES',opciones);
-  }
-
-document.getElementById('sorteo-btn').addEventListener('click',abrirSorteosModal);
+  document.getElementById('sorteo-btn').addEventListener('click',abrirSorteosModal);
 document.getElementById('jugar-carton-btn').addEventListener('click',confirmarCompra);
 document.getElementById('gratis-label').addEventListener('click',()=>{
   const gl=document.getElementById('gratis-label');
@@ -1068,6 +1063,8 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
     if(!show) document.getElementById('nombre-carton').value='';
   });
 
+  initFechaHora('fecha-hora');
+
   auth.onAuthStateChanged(async user=>{
     if(user){
       const doc=await db.collection('users').doc(user.email).get();
@@ -1097,8 +1094,6 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
   document.querySelectorAll('.carton th').forEach((th,i)=>{
     th.addEventListener('click',()=>toggleForma(i+1));
   });
-  actualizarFechaHora();
-  setInterval(actualizarFechaHora,60000);
   </script>
 </body>
 </html>
