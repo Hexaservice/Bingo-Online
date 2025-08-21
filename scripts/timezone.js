@@ -17,15 +17,26 @@ async function initFechaHora(idElemento = "fecha-hora") {
     };
     const locale = locales[Pais] || 'es-ES';
 
+    function parseZona(zona) {
+      const match = zona.match(/^UTC([+-])(\d{2}):(\d{2})$/);
+      if (match) {
+        const sign = match[1] === '-' ? '+' : '-';
+        const h = String(parseInt(match[2], 10));
+        return `Etc/GMT${sign}${h}`;
+      }
+      return zona;
+    }
+
+    const zonaIana = parseZona(ZonaHoraria);
     let diferencia = 0;
 
     async function sincronizar() {
-      if (!ZonaHoraria) {
+      if (!zonaIana) {
         diferencia = 0;
         return;
       }
       try {
-        const resp = await fetch(`https://worldtimeapi.org/api/timezone/${encodeURIComponent(ZonaHoraria)}`);
+        const resp = await fetch(`https://worldtimeapi.org/api/timezone/${encodeURIComponent(zonaIana)}`);
         if (!resp.ok) throw new Error('Respuesta no válida');
         const data = await resp.json();
         const serverDate = new Date(data.datetime);
@@ -42,15 +53,16 @@ async function initFechaHora(idElemento = "fecha-hora") {
 
     function mostrar() {
       const ahora = new Date(Date.now() + diferencia);
-      const opcionesFecha = { year: 'numeric', month: 'long', day: 'numeric', timeZone: ZonaHoraria };
-      const opcionesHora = { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: ZonaHoraria };
+      const opcionesFecha = { year: 'numeric', month: 'long', day: 'numeric', timeZone: zonaIana };
+      const opcionesHora = { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: zonaIana };
       try {
         const fechaStr = ahora.toLocaleDateString(locale, opcionesFecha);
-        const horaStr = ahora.toLocaleTimeString(locale, opcionesHora);
-        el.textContent = `${Pais}${Pais ? ', ' : ''}${fechaStr}, ${horaStr}`;
+        let horaStr = ahora.toLocaleTimeString(locale, opcionesHora);
+        horaStr = horaStr.replace(' a. m.', ' am').replace(' p. m.', ' pm');
+        el.textContent = `${fechaStr}, ${horaStr}`;
       } catch (err) {
         console.error('Error formateando fecha/hora', err);
-        el.textContent = Pais;
+        el.textContent = '';
       }
     }
 
