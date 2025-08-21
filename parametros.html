@@ -165,7 +165,7 @@
     <div class="form-row small-row">
       <div class="field">
         <label for="pais">País:</label>
-        <input type="text" id="pais" placeholder="País" />
+        <select id="pais"></select>
       </div>
       <div class="field">
         <label for="porcentaje">Porcentaje Agencia:</label>
@@ -197,6 +197,30 @@
   <script src="auth.js"></script>
   <script>
     ensureAuth('Superadmin');
+
+    async function cargarPaises(){
+      try{
+        const resp = await fetch('https://restcountries.com/v3.1/all?fields=name,translations,timezones');
+        const paises = await resp.json();
+        paises.sort((a,b)=>{
+          const nA = (a.translations?.spa?.common || a.name.common);
+          const nB = (b.translations?.spa?.common || b.name.common);
+          return nA.localeCompare(nB);
+        });
+        const sel = document.getElementById('pais');
+        paises.forEach(p=>{
+          const nombre = p.translations?.spa?.common || p.name.common;
+          const opt = document.createElement('option');
+          opt.value = nombre;
+          opt.textContent = nombre;
+          opt.dataset.timezone = p.timezones[0];
+          sel.appendChild(opt);
+        });
+      }catch(e){
+        console.error('Error cargando países', e);
+      }
+    }
+
     async function solicitarPassword(){
       const pwd = await prompt('Ingresa tu contraseña');
       if(!pwd){ window.location.href='super.html'; return; }
@@ -224,7 +248,7 @@
       document.getElementById('emailA').value = data.EmailA || '';
       document.getElementById('nombreAgencia').value = data.NombreAgencia || '';
       document.getElementById('direccion').value = data.Direccion || '';
-      document.getElementById('pais').value = data.Pais || '';
+      if(data.Pais){ document.getElementById('pais').value = data.Pais; }
       document.getElementById('porcentaje').value = data.porcentaje || '';
       document.getElementById('porcentajesu').value = data.porcentajesu || '';
       document.getElementById('porcentajeretiro').value = data.porcentajeretiro || '';
@@ -232,7 +256,7 @@
       toggleEdicion(true);
     }
     function toggleEdicion(disabled){
-      document.querySelectorAll('#parametros-form input').forEach(inp=>inp.disabled = disabled);
+      document.querySelectorAll('#parametros-form input, #parametros-form select').forEach(inp=>inp.disabled = disabled);
       document.getElementById('editar-btn').style.display = disabled ? 'block':'none';
       document.getElementById('guardar-btn').style.display = disabled ? 'none':'block';
     }
@@ -247,6 +271,7 @@
         NombreAgencia: document.getElementById('nombreAgencia').value.trim(),
         Direccion: document.getElementById('direccion').value.trim(),
         Pais: document.getElementById('pais').value.trim(),
+        ZonaHoraria: document.getElementById('pais').selectedOptions[0]?.dataset.timezone || '',
         porcentaje: parseFloat(document.getElementById('porcentaje').value)||0,
         porcentajesu: parseFloat(document.getElementById('porcentajesu').value)||0,
         porcentajeretiro: parseFloat(document.getElementById('porcentajeretiro').value)||0,
@@ -265,7 +290,7 @@
         if(logout){logout.addEventListener('click',e=>{e.preventDefault();logout();});}
       }
     });
-    solicitarPassword();
+    (async()=>{ await cargarPaises(); await solicitarPassword(); })();
   </script>
 </body>
 </html>
