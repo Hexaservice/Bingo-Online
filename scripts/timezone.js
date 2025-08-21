@@ -1,9 +1,18 @@
 async function initFechaHora(idElemento = "fecha-hora") {
   try {
-    const doc = await db.collection('Variablesglobales').doc('Parametros').get();
-    if (!doc.exists) return;
+    let Pais = "";
+    let ZonaHoraria = "";
+    try {
+      const doc = await db.collection('Variablesglobales').doc('Parametros').get();
+      if (doc.exists) {
+        const data = doc.data();
+        Pais = data.Pais || "";
+        ZonaHoraria = data.ZonaHoraria || "";
+      }
+    } catch (err) {
+      console.error('Error obteniendo parámetros', err);
+    }
 
-    const { Pais = '', ZonaHoraria } = doc.data();
     const el = document.getElementById(idElemento);
     if (!el) return;
 
@@ -32,16 +41,26 @@ async function initFechaHora(idElemento = "fecha-hora") {
     }
 
     function mostrar() {
-      const ahora = new Date(Date.now() + diferencia);
-      const opcionesFecha = { year: 'numeric', month: 'long', day: 'numeric' };
-      const opcionesHora = { hour: '2-digit', minute: '2-digit', hour12: true };
-      if (ZonaHoraria) {
-        opcionesFecha.timeZone = ZonaHoraria;
-        opcionesHora.timeZone = ZonaHoraria;
+      try {
+        const ahora = new Date(Date.now() + diferencia);
+        const opcionesFecha = { year: 'numeric', month: 'long', day: 'numeric' };
+        const opcionesHora = { hour: '2-digit', minute: '2-digit', hour12: true };
+        if (ZonaHoraria) {
+          opcionesFecha.timeZone = ZonaHoraria;
+          opcionesHora.timeZone = ZonaHoraria;
+        }
+        const fechaStr = ahora.toLocaleDateString('es-ES', opcionesFecha);
+        const horaStr = ahora.toLocaleString('en-US', opcionesHora).toLowerCase();
+        el.textContent = `${Pais ? Pais + ', ' : ''}${fechaStr}, ${horaStr}`;
+      } catch (err) {
+        console.error('Error formateando fecha/hora', err);
+        const ahora = new Date();
+        const fechaStr = ahora.toLocaleDateString('es-ES');
+        const horaStr = ahora
+          .toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+          .toLowerCase();
+        el.textContent = `${Pais ? Pais + ', ' : ''}${fechaStr}, ${horaStr}`;
       }
-      const fechaStr = ahora.toLocaleDateString('es-ES', opcionesFecha);
-      const horaStr = ahora.toLocaleString('en-US', opcionesHora).toLowerCase();
-      el.textContent = `${Pais}, ${fechaStr}, ${horaStr}`;
     }
 
     await sincronizar();
@@ -49,6 +68,6 @@ async function initFechaHora(idElemento = "fecha-hora") {
     setInterval(mostrar, 1000);
     setInterval(sincronizar, 3600000);
   } catch (e) {
-    console.error('Error obteniendo parámetros', e);
+    console.error('Error inicializando fecha/hora', e);
   }
 }
