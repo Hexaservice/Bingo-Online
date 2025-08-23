@@ -108,7 +108,8 @@
     }
     #jugados-btn-container{position:absolute;bottom:5px;right:50px;}
     #ver-jugados-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:linear-gradient(purple,#ffffff);border:3px solid #FFD700;border-radius:8px;cursor:pointer;position:relative;}
-    #jugados-count{position:absolute;top:-8px;right:-8px;background:purple;color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-family:'Bangers',cursive;z-index:10;}
+    #jugados-count{position:absolute;top:-8px;left:-8px;background:purple;color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-family:'Bangers',cursive;z-index:10;}
+    #jugados-gratis-count{position:absolute;top:-8px;right:-8px;background:#00008b;color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-family:'Bangers',cursive;z-index:10;}
     #limpiar-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;position:absolute;bottom:5px;right:95px;background:linear-gradient(gray,#ffffff);border:3px solid #FFD700;border-radius:8px;cursor:pointer;}
     #azar-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;position:absolute;bottom:5px;right:140px;background:linear-gradient(#ffffff,#dddddd);border:3px solid #FFD700;border-radius:8px;cursor:pointer;}
     #ir-billetera-btn{width:40px;height:40px;font-size:1.2rem;display:flex;align-items:center;justify-content:center;position:absolute;bottom:5px;right:5px;margin-left:0;}
@@ -143,9 +144,11 @@
     .mini-index{color:#000;}
     .mini-num{color:purple;}
     .mini-carton-wrapper{background:linear-gradient(green,yellow);padding:3px;border-radius:10px;box-shadow:0 0 5px rgba(0,0,0,0.5);}
+    .mini-carton-wrapper.gratis{background:linear-gradient(#00008b,yellow);}
     .mini-carton{border-collapse:separate;border-spacing:0;background:linear-gradient(#ffffff,#cccccc);border-radius:8px;}
     .mini-carton th,.mini-carton td{border:1px solid gray;width:20px;height:20px;text-align:center;font-weight:bold;font-size:0.6rem;aspect-ratio:1/1;}
     .mini-carton th{font-size:0.8rem;color:#ff6600;background:radial-gradient(circle,#ffffff,#ffffff 60%,#00aa00);text-shadow:1px 1px 0 #000;}
+    .mini-carton-wrapper.gratis .mini-carton th{background:radial-gradient(circle,#00008b,#ffffff);}
     @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.2);}100%{transform:scale(1);}}
     @keyframes wiggle{0%{transform:translateX(0);}33%{transform:translateX(5px);}66%{transform:translateX(-5px);}100%{transform:translateX(0);}}
     #player-container{position:relative;border:2px solid green;border-radius:10px;background:linear-gradient(gray,white);padding:10px;margin-top:5px;}
@@ -210,6 +213,7 @@
       <div id="jugados-btn-container">
         <button id="ver-jugados-btn" class="action-btn" title="Cartones jugados"><img src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" class="carton-icon" alt="cartón"></button>
         <span id="jugados-count">0</span>
+        <span id="jugados-gratis-count">0</span>
       </div>
       <button id="ir-billetera-btn" class="action-btn" onclick="window.location.href='billetera.html'" title="Recargar Billetera">👛</button>
     </div>
@@ -560,18 +564,25 @@ function toggleForma(idx){
   }
   const numEl=document.getElementById('carton-num');
     if(numEl && !consultando){
-      numEl.textContent=(jug+1).toString().padStart(4,'0');
+      numEl.textContent=(jug+gratisJug+1).toString().padStart(4,'0');
     }
   renderPremios('back-premios');
   }
 
   async function actualizarCartonesJugador(){
-    const el=document.getElementById('jugados-count');
+    const elPag=document.getElementById('jugados-count');
+    const elGratis=document.getElementById('jugados-gratis-count');
     const user=auth.currentUser;
-    if(!el){return;}
-    if(!user||!currentSorteo){el.textContent='0';return;}
+    if(!user||!currentSorteo){
+      if(elPag) elPag.textContent='0';
+      if(elGratis) elGratis.textContent='0';
+      return;
+    }
     const snap=await db.collection('CartonJugado').where('userId','==',user.uid).where('sorteoId','==',currentSorteo).get();
-    el.textContent=snap.size||0;
+    let pagados=0,gratis=0;
+    snap.forEach(doc=>{ const t=doc.data().tipocarton; if(t==='gratis') gratis++; else pagados++; });
+    if(elPag) elPag.textContent=pagados;
+    if(elGratis) elGratis.textContent=gratis;
   }
 
   function iniciarIntervalo(){
@@ -651,7 +662,7 @@ function toggleForma(idx){
   const jugActual=sorteoData.cartonesjugando||0;
   const gratisJugando=sorteoData.cartonesgratisjugando||0;
   const maxGratis=sorteoData.maxcartongratis||0;
-  const cartonNum=jugActual+1;
+  const cartonNum=jugActual+gratisJugando+1;
   const vars=await db.collection('Variablesglobales').doc('Parametros').get();
     const porcentaje=Number(vars.data().porcentaje||0);
     const porcentajesu=Number(vars.data().porcentajesu||0);
@@ -693,7 +704,6 @@ function toggleForma(idx){
       await billeteraRef.update({CartonesGratis:nuevoGratis});
       document.getElementById('gratis-label').textContent=nuevoGratis;
       await sorteoRef.update({
-        cartonesjugando: firebase.firestore.FieldValue.increment(1),
         cartonesgratisjugando: firebase.firestore.FieldValue.increment(1)
       });
     }else{
@@ -724,6 +734,7 @@ function toggleForma(idx){
       sorteoId:currentSorteo,
       cartonNum:cartonNum,
       Ncarton:ncarton,
+      tipocarton:jugarGratis?'gratis':'pagado',
       posiciones:posiciones,
       fecha:new Date().toLocaleDateString('es-ES'),
       hora:new Date().toLocaleTimeString('es-ES')
@@ -957,9 +968,10 @@ function toggleForma(idx){
       titulo.className=s.tipo==='Sorteo Diario'?'sorteo-diario':'sorteo-especial';
     }
     const snap=await db.collection('CartonJugado').where('userId','==',user.uid).where('sorteoId','==',currentSorteo).get();
+    const docs=[]; snap.forEach(d=>docs.push(d.data()));
+    const ordenados=[...docs.filter(d=>d.tipocarton==='gratis'),...docs.filter(d=>d.tipocarton!=='gratis')];
     let idx=0;
-    snap.forEach(doc=>{
-      const data=doc.data();
+    ordenados.forEach(data=>{
       const box=document.createElement('div');
       box.className='mini-carton-box';
       box.addEventListener('click',()=>{
@@ -974,6 +986,7 @@ function toggleForma(idx){
       box.appendChild(num);
       const wrap=document.createElement('div');
       wrap.className='mini-carton-wrapper';
+      if(data.tipocarton==='gratis') wrap.classList.add('gratis');
       wrap.appendChild(crearMiniCarton(data.posiciones));
       box.appendChild(wrap);
       const bnum=document.createElement('div');
