@@ -148,9 +148,9 @@
     .mini-carton th,.mini-carton td{border:1px solid gray;width:20px;height:20px;text-align:center;font-weight:bold;font-size:0.6rem;aspect-ratio:1/1;}
     .mini-carton th{font-size:0.8rem;color:#ff6600;background:radial-gradient(circle,#ffffff,#ffffff 60%,#00aa00);text-shadow:1px 1px 0 #000;}
     .mini-carton-wrapper.gratis{background:linear-gradient(#0000ff,yellow);}
-    .mini-carton-wrapper.gratis .mini-carton th{background:radial-gradient(circle,#ffffff,#0000ff);}
+    .mini-carton-wrapper.gratis .mini-carton th{background:radial-gradient(circle,#ffffff,#ffffff 60%,#0000ff);}
     #cargar-jugado-btn,#cargar-guardado-btn,#borrar-jugado-btn,#borrar-guardado-btn{font-size:1.2rem;padding:10px 20px;}
-    .borrar-btn{background:linear-gradient(brown,white);color:black;}
+    .borrar-btn{background:linear-gradient(brown,white);color:white;}
     .modal-buttons{display:flex;gap:10px;margin-top:10px;}
     .no-cartones{grid-column:1/-1;font-family:'Bangers',cursive;font-size:1rem;text-align:center;}
     @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.2);}100%{transform:scale(1);}}
@@ -1014,7 +1014,7 @@ function toggleForma(idx){
       box.addEventListener('click',()=>{
         document.querySelectorAll('#jugados-grid .mini-carton-box').forEach(b=>b.classList.remove('selected'));
         box.classList.add('selected');
-        seleccionadoJugado={id:data.id,posiciones:data.posiciones,cartonNum:data.cartonNum};
+        seleccionadoJugado={id:data.id,posiciones:data.posiciones,cartonNum:data.cartonNum,tipocarton:data.tipocarton};
         btnCargar.disabled=false;
         btnBorrar.disabled=false;
       });
@@ -1049,8 +1049,41 @@ function toggleForma(idx){
 
   async function borrarCartonJugado(){
     if(!seleccionadoJugado) return;
-    if(await confirm('¿Estas seguro que deseas borrar este cartón? no se puede deshacer esta acción')){
-      await db.collection('CartonJugado').doc(seleccionadoJugado.id).delete();
+    const user=auth.currentUser;
+    if(!user||!currentSorteo) return;
+    const sorteoRef=db.collection('sorteos').doc(currentSorteo);
+    const sorteoDoc=await sorteoRef.get();
+    if(!sorteoDoc.exists) return;
+    const sData=sorteoDoc.data();
+    const estado=sData.estado||'';
+    if(estado!=='Activo'){
+      alert(`No puedes borrar este cartón ya que el sorteo está ${estado}`);
+      return;
+    }
+    const tipoc=seleccionadoJugado.tipocarton||'';
+    const valor=sData.valorCarton||0;
+    const mensaje=tipoc==='gratis'
+      ? `¿Estas seguro que quieres borrar este cartón ${tipoc} de la jugada del sorteo ${currentSorteoNombre} ? será restaurado este cartón gratis, para que lo tengas disponible`
+      : `¿Estas seguro que quieres borrar este cartón ${tipoc} de la jugada del sorteo ${currentSorteoNombre} ? serán restaurados tus ${valor} Creditos a Billetera.`;
+    if(await confirm(mensaje)){
+      const jugadoRef=db.collection('CartonJugado').doc(seleccionadoJugado.id);
+      const billeteraRef=db.collection('Billetera').doc(user.email);
+      const batch=db.batch();
+      batch.delete(jugadoRef);
+      if(tipoc==='gratis'){
+        batch.update(billeteraRef,{CartonesGratis:firebase.firestore.FieldValue.increment(1)});
+        batch.update(sorteoRef,{cartonesgratisjugando:firebase.firestore.FieldValue.increment(-1)});
+      }else{
+        batch.update(billeteraRef,{creditos:firebase.firestore.FieldValue.increment(valor)});
+        batch.update(sorteoRef,{cartonesjugando:firebase.firestore.FieldValue.increment(-1)});
+      }
+      await batch.commit();
+      const billeteraDoc=await billeteraRef.get();
+      if(billeteraDoc.exists){
+        document.getElementById('creditos-label').textContent=billeteraDoc.data().creditos||0;
+        document.getElementById('gratis-label').textContent=billeteraDoc.data().CartonesGratis||0;
+      }
+      await actualizarDatosSorteo();
       await actualizarCartonesJugador();
       abrirJugadosModal();
     }
