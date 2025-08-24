@@ -286,7 +286,9 @@
       fechaCell.addEventListener('click',()=>mostrarInfo(d));
       const color=d.estado==='Activo'?'green':
                    d.estado==='Inactivo'?'red':
-                   d.estado==='Finalizado'?'black':'';
+                   d.estado==='Finalizado'?'black':
+                   d.estado==='Jugando'?'purple':
+                   d.estado==='Sellado'?'gray':'';
       if(color){
         tr.children[1].style.color=color;
         tr.children[2].style.color=color;
@@ -333,40 +335,58 @@
 
   document.getElementById('nuevo-btn').addEventListener('click',()=>{window.location.href='nuevosorteo.html';});
   document.getElementById('editar-btn').addEventListener('click',()=>{
+    const chks=document.querySelectorAll('#tabla-sorteos input[type=checkbox]:checked');
+    if(chks.length===0){alert('Elige al menos un sorteo para editarlo');return;}
+    let jug=false,sell=false;
+    chks.forEach(c=>{
+      if(c.dataset.estado==='Jugando'){jug=true;c.checked=false;}
+      else if(c.dataset.estado==='Sellado'){sell=true;c.checked=false;}
+    });
+    if(jug) alert('No se pueden modificar ni cambiar estado de sorteos que estan Jugando');
+    if(sell) alert('No se pueden modificar ni cambiar estado de sorteos que estan Sellados');
     const chk=document.querySelector('#tabla-sorteos input[type=checkbox]:checked');
-    if(!chk){alert('Elige al menos un sorteo para editarlo');return;}
+    if(!chk) return;
     localStorage.setItem('editSorteoId',chk.dataset.id);
     window.location.href='editarsorte.html';
   });
   document.getElementById('inactivar-btn').addEventListener('click',async ()=>{
     const chks=document.querySelectorAll('#tabla-sorteos input[type=checkbox]:checked');
     if(chks.length===0){alert('Debes seleccionar al menos un sorteo para poder ponerlo incativo');return;}
+    const ids=[];let jug=false,sell=false;
+    chks.forEach(c=>{
+      if(c.dataset.estado==='Jugando'){jug=true;c.checked=false;}
+      else if(c.dataset.estado==='Sellado'){sell=true;c.checked=false;}
+      else ids.push(c.dataset.id);
+    });
+    if(jug) alert('No se pueden modificar ni cambiar estado de sorteos que estan Jugando');
+    if(sell) alert('No se pueden modificar ni cambiar estado de sorteos que estan Sellados');
+    if(!ids.length) return;
     const batch=db.batch();
-    chks.forEach(c=>batch.update(db.collection('sorteos').doc(c.dataset.id),{estado:'Inactivo'}));
+    ids.forEach(id=>batch.update(db.collection('sorteos').doc(id),{estado:'Inactivo'}));
     await batch.commit();
     cargarDatos();
   });
   document.getElementById('archivar-btn').addEventListener('click',async ()=>{
     const chks=document.querySelectorAll('#tabla-sorteos input[type=checkbox]:checked');
     if(chks.length===0){alert('Debes seleccionar al menos un sorteo');return;}
+    const ids=[];let jug=false,sell=false,activo=false;
+    chks.forEach(c=>{
+      if(c.dataset.estado==='Jugando'){jug=true;c.checked=false;}
+      else if(c.dataset.estado==='Sellado'){sell=true;c.checked=false;}
+      else if(!mostrarArch && c.dataset.estado==='Activo'){activo=true;c.checked=false;}
+      else ids.push(c.dataset.id);
+    });
+    if(jug) alert('No se pueden modificar ni cambiar estado de sorteos que estan Jugando');
+    if(sell) alert('No se pueden modificar ni cambiar estado de sorteos que estan Sellados');
+    if(!mostrarArch && activo) alert('No pueden archivarse Sorteos Activos');
+    if(!ids.length) return;
+    const batch=db.batch();
     if(mostrarArch){
-      const ids=[];
-      chks.forEach(c=>ids.push(c.dataset.id));
-      const batch=db.batch();
       ids.forEach(id=>batch.update(db.collection('sorteos').doc(id),{condicion:'VISIBLE'}));
-      await batch.commit();
     }else{
-      const ids=[];let tieneActivo=false;
-      chks.forEach(c=>{
-        if(c.dataset.estado==='Activo'){tieneActivo=true;c.checked=false;}
-        else ids.push(c.dataset.id);
-      });
-      if(tieneActivo){alert('No pueden archivarse Sorteos Activos');}
-      if(!ids.length) return;
-      const batch=db.batch();
       ids.forEach(id=>batch.update(db.collection('sorteos').doc(id),{condicion:'ARCHIVADO'}));
-      await batch.commit();
     }
+    await batch.commit();
     cargarDatos();
   });
 
