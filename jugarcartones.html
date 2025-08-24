@@ -136,7 +136,7 @@
     #number-grid div{width:60px;height:60px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;text-shadow:0 0 5px green;cursor:pointer;}
     #jugados-content,#cartones-content{width:max-content;max-width:100%;margin:auto;max-height:80vh;align-items:center;position:relative;padding:5px;box-sizing:border-box;display:flex;flex-direction:column;}
     #jugados-grid,#cartones-grid{display:grid;grid-template-columns:repeat(2,auto);gap:8px;justify-items:center;overflow-y:auto;flex-grow:1;min-height:0;}
-    #jugados-nombre-sorteo,#cargar-jugado-btn,#borrar-jugado-btn,#cartones-titulo,#cargar-guardado-btn,#borrar-guardado-btn{flex-shrink:0;}
+    #jugados-nombre-sorteo,#cargar-jugado-btn,#editar-jugado-btn,#cartones-titulo,#cargar-guardado-btn,#editar-guardado-btn{flex-shrink:0;}
     .close-icon{position:absolute;top:5px;right:5px;cursor:pointer;font-size:1.2rem;}
     .mini-carton-box{display:flex;flex-direction:column;align-items:center;cursor:pointer;}
     .mini-carton-box.selected{outline:3px solid blue;}
@@ -149,8 +149,8 @@
     .mini-carton th{font-size:0.8rem;color:#ff6600;background:radial-gradient(circle,#ffffff,#ffffff 60%,#00aa00);text-shadow:1px 1px 0 #000;}
     .mini-carton-wrapper.gratis{background:linear-gradient(#0000ff,yellow);}
     .mini-carton-wrapper.gratis .mini-carton th{background:radial-gradient(circle,#ffffff,#ffffff 60%,#0000ff);}
-    #cargar-jugado-btn,#cargar-guardado-btn,#borrar-jugado-btn,#borrar-guardado-btn{font-size:1.2rem;padding:10px 20px;}
-    .borrar-btn{background:linear-gradient(brown,white);color:white;}
+    #cargar-jugado-btn,#cargar-guardado-btn,#editar-jugado-btn,#editar-guardado-btn{font-size:1.2rem;padding:10px 20px;}
+    .editar-btn{background:linear-gradient(blue,white);color:white;}
     .modal-buttons{display:flex;gap:10px;margin-top:10px;}
     .no-cartones{grid-column:1/-1;font-family:'Bangers',cursive;font-size:1rem;text-align:center;}
     @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.2);}100%{transform:scale(1);}}
@@ -259,7 +259,7 @@
           <h2 id="cartones-titulo">Mis Cartones</h2>
           <div id="cartones-grid"></div>
           <div id="cartones-buttons" class="modal-buttons">
-            <button id="borrar-guardado-btn" class="action-btn borrar-btn">Borrar</button>
+            <button id="editar-guardado-btn" class="action-btn editar-btn">Editar</button>
             <button id="cargar-guardado-btn" class="action-btn">Cargar cartón</button>
           </div>
       </div>
@@ -273,7 +273,7 @@
           <h2 id="jugados-nombre-sorteo"></h2>
           <div id="jugados-grid"></div>
           <div id="jugados-buttons" class="modal-buttons">
-            <button id="borrar-jugado-btn" class="action-btn borrar-btn" style="display:none;">Borrar</button>
+            <button id="editar-jugado-btn" class="action-btn editar-btn">Editar</button>
             <button id="cargar-jugado-btn" class="action-btn">Cargar cartón</button>
           </div>
       </div>
@@ -323,17 +323,8 @@ let cartonesJugando=0;
 let cartonesGratisJugando=0;
 const formColors=['#90ee90','#fffacd','#add8e6','#d8b0ff','#ffcc99'];
 const formGlows=['#006400','#b8860b','#00008b','#4b0082','#8b4513'];
-
-auth.onAuthStateChanged(()=>{
-  const btn=document.getElementById('borrar-jugado-btn');
-  if(btn){
-    if(window.currentRole==='Superadmin'){
-      btn.style.display='';
-    }else{
-      btn.style.display='none';
-    }
-  }
-});
+let editandoTipo=null;
+let editandoId=null;
 
 function setCookie(name,value){document.cookie=`${name}=${encodeURIComponent(value)};path=/;max-age=31536000`;}
 function getCookie(name){const m=document.cookie.match(new RegExp('(?:^|; )'+name+'=([^;]*)'));return m?decodeURIComponent(m[1]):null;}
@@ -855,7 +846,7 @@ function toggleForma(idx){
     grid.innerHTML='';
     seleccionadoGuardado=null;
     const btnCargar=document.getElementById('cargar-guardado-btn');
-    const btnBorrar=document.getElementById('borrar-guardado-btn');
+    const btnEditar=document.getElementById('editar-guardado-btn');
     const botones=document.getElementById('cartones-buttons');
     const entries=Object.entries(cartonesGuardados);
     if(entries.length===0){
@@ -866,7 +857,7 @@ function toggleForma(idx){
     }
     botones.style.display='flex';
     btnCargar.disabled=true;
-    btnBorrar.disabled=true;
+    btnEditar.disabled=true;
     entries.forEach(([id,data],index)=>{
       const box=document.createElement('div');
       box.className='mini-carton-box';
@@ -875,7 +866,7 @@ function toggleForma(idx){
         box.classList.add('selected');
         seleccionadoGuardado={id, posiciones:data.posiciones};
         btnCargar.disabled=false;
-        btnBorrar.disabled=false;
+        btnEditar.disabled=false;
       });
       const idx=document.createElement('div');
       idx.className='mini-index';
@@ -897,6 +888,7 @@ function toggleForma(idx){
   async function cargarCartonGuardado(){
     if(!seleccionadoGuardado) return;
     if(await confirm('¿Desea cargar el cartón seleccionado? Se sobreescribirán las jugadas actuales.')){
+      desactivarModoEdicion();
       setBoardFromPosiciones(seleccionadoGuardado.posiciones);
       document.getElementById('cartones-modal').style.display='none';
       saveToCookie();
@@ -1004,7 +996,7 @@ function toggleForma(idx){
       titulo.className=s.tipo==='Sorteo Diario'?'sorteo-diario':'sorteo-especial';
     }
     const btnCargar=document.getElementById('cargar-jugado-btn');
-    const btnBorrar=document.getElementById('borrar-jugado-btn');
+    const btnEditar=document.getElementById('editar-jugado-btn');
     const botones=document.getElementById('jugados-buttons');
     const snap=await db.collection('CartonJugado').where('userId','==',user.uid).where('sorteoId','==',currentSorteo).get();
     const docs=[]; snap.forEach(d=>docs.push({id:d.id,...d.data()}));
@@ -1017,7 +1009,7 @@ function toggleForma(idx){
     }
     botones.style.display='flex';
     btnCargar.disabled=true;
-    btnBorrar.disabled=true;
+    btnEditar.disabled=true;
     let idx=0;
     ordenados.forEach(data=>{
       const box=document.createElement('div');
@@ -1027,7 +1019,7 @@ function toggleForma(idx){
         box.classList.add('selected');
         seleccionadoJugado={id:data.id,posiciones:data.posiciones,cartonNum:data.cartonNum,tipocarton:data.tipocarton};
         btnCargar.disabled=false;
-        btnBorrar.disabled=false;
+        btnEditar.disabled=false;
       });
       const num=document.createElement('div');
       num.className='mini-index';
@@ -1048,56 +1040,82 @@ function toggleForma(idx){
     document.getElementById('jugados-modal').style.display='flex';
   }
 
-  async function borrarCartonGuardado(){
+  async function editarCartonGuardado(){
     if(!seleccionadoGuardado) return;
-    if(await confirm('¿Estas seguro que deseas borrar este cartón? no se puede deshacer esta acción')){
-      await db.collection('CartonGuardado').doc(seleccionadoGuardado.id).delete();
-      delete cartonesGuardados[seleccionadoGuardado.id];
-      await cargarCartonesGuardados();
-      abrirCartonesModal();
-    }
+    setBoardFromPosiciones(seleccionadoGuardado.posiciones);
+    document.getElementById('cartones-modal').style.display='none';
+    editandoTipo='guardado';
+    editandoId=seleccionadoGuardado.id;
+    activarModoEdicion();
   }
 
-  async function borrarCartonJugado(){
+  async function editarCartonJugado(){
     if(!seleccionadoJugado) return;
     const user=auth.currentUser;
     if(!user||!currentSorteo) return;
     const sorteoRef=db.collection('sorteos').doc(currentSorteo);
     const sorteoDoc=await sorteoRef.get();
     if(!sorteoDoc.exists) return;
-    const sData=sorteoDoc.data();
-    const estado=sData.estado||'';
+    const estado=sorteoDoc.data().estado||'';
     if(estado!=='Activo'){
-      alert(`No puedes borrar este cartón ya que el sorteo está ${estado}`);
+      alert(`No puedes editar este cartón ya que el sorteo está ${estado}`);
       return;
     }
-    const tipoc=seleccionadoJugado.tipocarton||'';
-    const valor=sData.valorCarton||0;
-    const mensaje=tipoc==='gratis'
-      ? `¿Estas seguro que quieres borrar este cartón ${tipoc} de la jugada del sorteo ${currentSorteoNombre} ? será restaurado este cartón gratis, para que lo tengas disponible`
-      : `¿Estas seguro que quieres borrar este cartón ${tipoc} de la jugada del sorteo ${currentSorteoNombre} ? serán restaurados tus ${valor} Creditos a Billetera.`;
-    if(await confirm(mensaje)){
-      const jugadoRef=db.collection('CartonJugado').doc(seleccionadoJugado.id);
-      const billeteraRef=db.collection('Billetera').doc(user.email);
-      const batch=db.batch();
-      batch.delete(jugadoRef);
-      if(tipoc==='gratis'){
-        batch.update(billeteraRef,{CartonesGratis:firebase.firestore.FieldValue.increment(1)});
-        batch.update(sorteoRef,{cartonesgratisjugando:firebase.firestore.FieldValue.increment(-1)});
-      }else{
-        batch.update(billeteraRef,{creditos:firebase.firestore.FieldValue.increment(valor)});
-        batch.update(sorteoRef,{cartonesjugando:firebase.firestore.FieldValue.increment(-1)});
-      }
-      await batch.commit();
-      const billeteraDoc=await billeteraRef.get();
-      if(billeteraDoc.exists){
-        document.getElementById('creditos-label').textContent=billeteraDoc.data().creditos||0;
-        document.getElementById('gratis-label').textContent=billeteraDoc.data().CartonesGratis||0;
-      }
-      await actualizarDatosSorteo();
-      await actualizarCartonesJugador();
-      abrirJugadosModal();
+    setBoardFromPosiciones(seleccionadoJugado.posiciones);
+    const numEl=document.getElementById('carton-num');
+    if(seleccionadoJugado.cartonNum!==undefined){
+      numEl.textContent=seleccionadoJugado.cartonNum.toString().padStart(4,'0');
     }
+    numEl.style.animation='none';
+    consultando=true;
+    document.getElementById('jugados-modal').style.display='none';
+    editandoTipo='jugado';
+    editandoId=seleccionadoJugado.id;
+    activarModoEdicion();
+  }
+
+  function activarModoEdicion(){
+    const btn=document.getElementById('jugar-carton-btn');
+    btn.textContent='EDITAR CARTÓN';
+    btn.style.background='linear-gradient(blue,white)';
+  }
+
+  function desactivarModoEdicion(){
+    const btn=document.getElementById('jugar-carton-btn');
+    btn.textContent='JUGAR CARTÓN';
+    btn.style.background='linear-gradient(#0a8800,#ffffff)';
+    editandoTipo=null;
+    editandoId=null;
+  }
+
+  async function confirmarEdicion(){
+    if(!validateBoard(true)){
+      alert('Debes llenar las celdas vacías del cartón primero');
+      return;
+    }
+    const posiciones=[];
+    document.querySelectorAll('#bingo-board td').forEach(td=>{
+      const r=parseInt(td.dataset.row);
+      const c=parseInt(td.dataset.col);
+      if(!(r===2&&c===2)) posiciones.push({r,c,valor:td.dataset.value||''});
+    });
+    if(editandoTipo==='guardado'){
+      await db.collection('CartonGuardado').doc(editandoId).update({posiciones});
+      await cargarCartonesGuardados();
+      alert('Cartón guardado editado correctamente.');
+    }else if(editandoTipo==='jugado'){
+      const sorteoDoc=await db.collection('sorteos').doc(currentSorteo).get();
+      const estado=sorteoDoc.data().estado||'';
+      if(estado!=='Activo'){
+        alert(`No puedes editar este cartón ya que el sorteo está ${estado}`);
+        return;
+      }
+      await db.collection('CartonJugado').doc(editandoId).update({posiciones});
+      await actualizarCartonesJugador();
+      alert('Cartón jugado editado correctamente.');
+    }
+    desactivarModoEdicion();
+    limpiarcarton();
   }
 
   function crearMiniCarton(posiciones){
@@ -1127,6 +1145,7 @@ function toggleForma(idx){
   async function cargarCartonJugado(){
     if(!seleccionadoJugado) return;
     if(await confirm('¿Desea cargar el cartón seleccionado? Se sobreescribirán los datos actuales.')){
+      desactivarModoEdicion();
       setBoardFromPosiciones(seleccionadoJugado.posiciones);
       const numEl=document.getElementById('carton-num');
       if(seleccionadoJugado.cartonNum!==undefined){
@@ -1145,7 +1164,13 @@ function toggleForma(idx){
   }
 
   document.getElementById('sorteo-btn').addEventListener('click',abrirSorteosModal);
-document.getElementById('jugar-carton-btn').addEventListener('click',confirmarCompra);
+document.getElementById('jugar-carton-btn').addEventListener('click',()=>{
+  if(editandoTipo){
+    confirmarEdicion();
+  }else{
+    confirmarCompra();
+  }
+});
 document.getElementById('gratis-label').addEventListener('click',()=>{
   const gl=document.getElementById('gratis-label');
   if(gl.style.color==='red'){
@@ -1157,10 +1182,10 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
   document.getElementById('mis-cartones-icon').addEventListener('click',abrirCartonesModal);
   document.getElementById('ver-jugados-btn').addEventListener('click',abrirJugadosModal);
   document.getElementById('cargar-jugado-btn').addEventListener('click',cargarCartonJugado);
-  document.getElementById('borrar-jugado-btn').addEventListener('click',borrarCartonJugado);
+  document.getElementById('editar-jugado-btn').addEventListener('click',editarCartonJugado);
   document.getElementById('jugados-close').addEventListener('click',()=>{document.getElementById('jugados-modal').style.display='none';});
   document.getElementById('cargar-guardado-btn').addEventListener('click',cargarCartonGuardado);
-  document.getElementById('borrar-guardado-btn').addEventListener('click',borrarCartonGuardado);
+  document.getElementById('editar-guardado-btn').addEventListener('click',editarCartonGuardado);
   document.getElementById('cartones-close').addEventListener('click',()=>{document.getElementById('cartones-modal').style.display='none';});
   document.getElementById('cartones-jugando-valor').addEventListener('click',mostrarCartonesJugandoModal);
   document.getElementById('cartones-gratis-jugando').addEventListener('click',mostrarCartonesJugandoModal);
