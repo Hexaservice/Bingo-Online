@@ -78,6 +78,8 @@
     .sorteo-especial{color:orange;}
     .sorteo-sellado{color:gray;}
     .sorteo-jugando{color:purple;}
+    @keyframes zoomInOut{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+    .sorteo-jugando span,.sorteo-jugando .sorteo-detalle{display:inline-block;animation:zoomInOut 1s infinite;transform-origin:left center;}
     .sorteo-info{display:flex;align-items:center;justify-content:center;gap:10px;}
     .datos-sorteo{display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:center;margin-top:2px;flex-wrap:wrap;font-family:'Bangers',cursive;}
     #sorteo-section{margin-bottom:5px;}
@@ -133,7 +135,8 @@
     .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);justify-content:center;align-items:center;z-index:1000;}
     .modal-content{background:#fff;padding:10px;border-radius:10px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;width:max-content;}
     #sorteos-list div{display:block;font-weight:bold;font-size:1rem;cursor:pointer;font-family:'Poppins',sans-serif;margin-bottom:2px;}
-    #sorteos-list div .sorteo-detalle{display:block;font-size:0.6rem;font-weight:normal;pointer-events:none;color:inherit;font-family:'Poppins',sans-serif;margin-top:-2px;}
+    #sorteos-list .sorteo-index{display:inline-block;width:30px;margin-right:2px;}
+    #sorteos-list div .sorteo-detalle{display:block;font-size:0.6rem;font-weight:normal;pointer-events:none;color:inherit;font-family:'Poppins',sans-serif;margin-top:-2px;margin-left:30px;}
     #number-modal-title{font-size:0.8rem;text-align:center;width:100%;text-shadow:0 0 5px blue;margin-bottom:5px;font-family:'Poppins',sans-serif;}
     #number-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;justify-items:center;}
     #number-grid div{width:60px;height:60px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;text-shadow:0 0 5px green;cursor:pointer;}
@@ -640,18 +643,21 @@ function toggleForma(idx){
                     : s.estado==='Jugando' ? 'sorteo-jugando'
                     : (s.tipo==='Sorteo Diario' ? 'sorteo-diario' : 'sorteo-especial');
       const indexSpan=document.createElement('span');
-      indexSpan.textContent=`${i+1}- `;
+      indexSpan.className='sorteo-index';
+      indexSpan.textContent=`${i+1}-`;
       div.appendChild(indexSpan);
       const nombreSpan=document.createElement('span');
       nombreSpan.textContent=s.nombre;
       div.appendChild(nombreSpan);
-      list.appendChild(div);
       const detalle=document.createElement('div');
       detalle.className='sorteo-detalle';
-      detalle.innerHTML=`<span class="cal-icon">📅</span> ${formatearFecha(s.fecha)} <span class="clock-icon">⏰</span> ${formatearHora(s.hora)}`;
-      detalle.style.marginLeft=indexSpan.offsetWidth+'px';
+      detalle.innerHTML=`<span class=\"cal-icon\">📅</span> ${formatearFecha(s.fecha)} <span class=\"clock-icon\">⏰</span> ${formatearHora(s.hora)}`;
       div.appendChild(detalle);
-      div.addEventListener('click',()=>{seleccionarSorteo(s);document.getElementById('sorteos-modal').style.display='none';});
+      div.addEventListener('click',()=>{
+        if(s.estado==='Jugando') window.location.href='juegoactivo.html';
+        else { seleccionarSorteo(s); document.getElementById('sorteos-modal').style.display='none'; }
+      });
+      list.appendChild(div);
     });
     document.getElementById('sorteos-modal').style.display='flex';
   }
