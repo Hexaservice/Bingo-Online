@@ -136,7 +136,7 @@
     .modal-content{background:#fff;padding:10px;border-radius:10px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;width:max-content;}
     #sorteos-list div{display:block;font-weight:bold;font-size:1rem;cursor:pointer;font-family:'Poppins',sans-serif;margin-bottom:2px;}
     #sorteos-list .sorteo-index{display:inline-block;width:30px;margin-right:2px;}
-    #sorteos-list div .sorteo-detalle{display:block;font-size:0.6rem;font-weight:normal;pointer-events:none;color:inherit;font-family:'Poppins',sans-serif;margin-top:-2px;margin-left:30px;}
+    #sorteos-list div .sorteo-detalle{display:flex;align-items:center;gap:4px;font-size:0.6rem;font-weight:normal;pointer-events:none;color:inherit;font-family:'Poppins',sans-serif;margin-top:-2px;padding-left:30px;}
     #number-modal-title{font-size:0.8rem;text-align:center;width:100%;text-shadow:0 0 5px blue;margin-bottom:5px;font-family:'Poppins',sans-serif;}
     #number-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;justify-items:center;}
     #number-grid div{width:60px;height:60px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;text-shadow:0 0 5px green;cursor:pointer;}
@@ -157,6 +157,7 @@
     .mini-carton-wrapper.gratis .mini-carton th{background:radial-gradient(circle,#ffffff,#ffffff 60%,#0000ff);}
     #cargar-jugado-btn,#cargar-guardado-btn,#editar-jugado-btn,#editar-guardado-btn{font-size:1.2rem;padding:10px 20px;}
     .editar-btn{background:linear-gradient(blue,white);color:white;}
+    .eliminar-btn{background:linear-gradient(brown,white);width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;}
     .modal-buttons{display:flex;gap:10px;margin-top:10px;}
     .no-cartones{grid-column:1/-1;font-family:'Bangers',cursive;font-size:1rem;text-align:center;}
     @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.2);}100%{transform:scale(1);}}
@@ -267,6 +268,7 @@
           <div id="cartones-buttons" class="modal-buttons">
             <button id="editar-guardado-btn" class="action-btn editar-btn">Editar</button>
             <button id="cargar-guardado-btn" class="action-btn">Cargar cartón</button>
+            <button id="borrar-guardado-btn" class="action-btn eliminar-btn" title="Borrar cartón">🗑️</button>
           </div>
       </div>
   </div>
@@ -651,7 +653,7 @@ function toggleForma(idx){
       div.appendChild(nombreSpan);
       const detalle=document.createElement('div');
       detalle.className='sorteo-detalle';
-      detalle.innerHTML=`<span class=\"cal-icon\">📅</span> ${formatearFecha(s.fecha)} <span class=\"clock-icon\">⏰</span> ${formatearHora(s.hora)}`;
+      detalle.innerHTML=`<span class=\"cal-icon\">📅</span><span>${formatearFecha(s.fecha)}</span><span class=\"clock-icon\">⏰</span><span>${formatearHora(s.hora)}</span>`;
       div.appendChild(detalle);
       div.addEventListener('click',()=>{
         if(s.estado==='Jugando') window.location.href='juegoactivo.html';
@@ -870,6 +872,7 @@ function toggleForma(idx){
     seleccionadoGuardado=null;
     const btnCargar=document.getElementById('cargar-guardado-btn');
     const btnEditar=document.getElementById('editar-guardado-btn');
+    const btnBorrar=document.getElementById('borrar-guardado-btn');
     const botones=document.getElementById('cartones-buttons');
     const entries=Object.entries(cartonesGuardados);
     if(entries.length===0){
@@ -881,15 +884,17 @@ function toggleForma(idx){
     botones.style.display='flex';
     btnCargar.disabled=true;
     btnEditar.disabled=true;
+    btnBorrar.disabled=true;
     entries.forEach(([id,data],index)=>{
       const box=document.createElement('div');
       box.className='mini-carton-box';
       box.addEventListener('click',()=>{
         document.querySelectorAll('#cartones-grid .mini-carton-box').forEach(b=>b.classList.remove('selected'));
         box.classList.add('selected');
-        seleccionadoGuardado={id, posiciones:data.posiciones};
+        seleccionadoGuardado={id, posiciones:data.posiciones, nombre:data.nombre||''};
         btnCargar.disabled=false;
         btnEditar.disabled=false;
+        btnBorrar.disabled=false;
       });
       const idx=document.createElement('div');
       idx.className='mini-index';
@@ -1065,11 +1070,26 @@ function toggleForma(idx){
 
   async function editarCartonGuardado(){
     if(!seleccionadoGuardado) return;
-    setBoardFromPosiciones(seleccionadoGuardado.posiciones);
-    document.getElementById('cartones-modal').style.display='none';
-    editandoTipo='guardado';
-    editandoId=seleccionadoGuardado.id;
-    activarModoEdicion();
+    if(await confirm('¿Deseas editar este cartón?')){
+      setBoardFromPosiciones(seleccionadoGuardado.posiciones);
+      const check=document.getElementById('guardar-check');
+      check.checked=true;
+      check.dispatchEvent(new Event('change'));
+      document.getElementById('nombre-carton').value=seleccionadoGuardado.nombre||'';
+      document.getElementById('cartones-modal').style.display='none';
+      editandoTipo='guardado';
+      editandoId=seleccionadoGuardado.id;
+      activarModoEdicion();
+    }
+  }
+
+  async function eliminarCartonGuardado(){
+    if(!seleccionadoGuardado) return;
+    if(await confirm('¿Estas seguro de borrar este cartón? esta acción no se puede deshacer')){
+      await db.collection('CartonGuardado').doc(seleccionadoGuardado.id).delete();
+      await cargarCartonesGuardados();
+      abrirCartonesModal();
+    }
   }
 
   async function editarCartonJugado(){
@@ -1101,12 +1121,21 @@ function toggleForma(idx){
     const btn=document.getElementById('jugar-carton-btn');
     btn.textContent='EDITAR CARTÓN';
     btn.style.background='linear-gradient(blue,white)';
+    document.getElementById('guardar-carton-btn').disabled=true;
+    document.getElementById('guardar-check').disabled=true;
   }
 
   function desactivarModoEdicion(){
     const btn=document.getElementById('jugar-carton-btn');
     btn.textContent='JUGAR CARTÓN';
     btn.style.background='linear-gradient(#0a8800,#ffffff)';
+    const check=document.getElementById('guardar-check');
+    document.getElementById('guardar-carton-btn').disabled=false;
+    check.disabled=false;
+    if(editandoTipo==='guardado'){
+      check.checked=false;
+      check.dispatchEvent(new Event('change'));
+    }
     editandoTipo=null;
     editandoId=null;
   }
@@ -1123,7 +1152,8 @@ function toggleForma(idx){
       if(!(r===2&&c===2)) posiciones.push({r,c,valor:td.dataset.value||''});
     });
     if(editandoTipo==='guardado'){
-      await db.collection('CartonGuardado').doc(editandoId).update({posiciones});
+      const nombre=document.getElementById('nombre-carton').value.trim();
+      await db.collection('CartonGuardado').doc(editandoId).update({posiciones, nombre});
       await cargarCartonesGuardados();
       alert('Cartón guardado editado correctamente.');
     }else if(editandoTipo==='jugado'){
@@ -1209,6 +1239,7 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
   document.getElementById('jugados-close').addEventListener('click',()=>{document.getElementById('jugados-modal').style.display='none';});
   document.getElementById('cargar-guardado-btn').addEventListener('click',cargarCartonGuardado);
   document.getElementById('editar-guardado-btn').addEventListener('click',editarCartonGuardado);
+  document.getElementById('borrar-guardado-btn').addEventListener('click',eliminarCartonGuardado);
   document.getElementById('cartones-close').addEventListener('click',()=>{document.getElementById('cartones-modal').style.display='none';});
   document.getElementById('cartones-jugando-valor').addEventListener('click',mostrarCartonesJugandoModal);
   document.getElementById('cartones-gratis-jugando').addEventListener('click',mostrarCartonesJugandoModal);
