@@ -9,8 +9,10 @@
     body {background: linear-gradient(rgba(255,255,255,0.7),rgba(255,255,255,0.7)), url('https://img.freepik.com/vectores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg'); background-repeat: repeat; text-align:center; font-family: 'Bangers', cursive; padding:5px;}
     .menu-btn{width:120px;height:40px;background:orange;border:4px solid #FFD700;border-radius:10px;color:#fff;text-shadow:2px 2px 4px #000;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:5px;}
     .back-btn{position:fixed;top:5px;left:5px;font-family:'Bangers',cursive;font-size:1.2rem;text-transform:uppercase;}
-    .icon-btn{display:inline-flex;align-items:center;gap:4px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;padding:4px 8px;margin:0 2px;cursor:pointer;}
+    .icon-btn{display:inline-flex;align-items:center;gap:4px;font-size:0.7rem;border:1px solid #ccc;border-radius:4px;padding:4px 8px;margin:0 2px;cursor:pointer;}
     .icon-btn .icon.check{color:green;}
+    .icon-btn .icon.edit{color:blue;}
+    .icon-only{padding:4px;width:24px;height:24px;justify-content:center;gap:0;}
     .archivo-activo{background:#654321;color:#fff;}
     table{margin:5px auto;border-collapse:collapse;width:100%;font-size:0.8rem;font-family:Calibri, Arial, sans-serif;background:rgba(255,255,255,0.6);table-layout:fixed;}
     th,td{border:1px solid #ccc;padding:2px;white-space:nowrap;font-weight:bold;}
@@ -122,9 +124,10 @@
     <div id="retiros-content">
       <div class="acciones">
         <button id="aprobar-ret" class="icon-btn" title="Aprobar"><span class="icon check">&#10004;</span><span>Aprobar</span></button>
+        <button id="editar-ret" class="icon-btn" title="Editar"><span class="icon edit">&#9998;</span><span>Editar</span></button>
         <button id="anular-ret" class="icon-btn" title="Anular"><span class="icon">&#10060;</span><span>Anular</span></button>
         <button id="archivar-ret" class="icon-btn" title="Archivar"><span class="icon">&#128194;</span><span>Archivar</span></button>
-        <button id="ver-arch-ret" class="icon-btn" title="Archivo"><span class="icon">&#128193;</span><span>Archivo</span></button>
+        <button id="ver-arch-ret" class="icon-btn icon-only" title="Archivo"><span class="icon">&#128230;</span></button>
       </div>
       <table id="tabla-retiros">
         <colgroup>
@@ -161,7 +164,6 @@
     ensureAuth('Colaborador');
     const transRef=db.collection('transacciones');
     const datosRec=[];const datosRet=[];
-    let editRefs={};
     function loadRefCookies(){
       const m=document.cookie.match(/refVals=([^;]+)/);
       if(m){try{return JSON.parse(decodeURIComponent(m[1]));}catch(e){}}
@@ -237,7 +239,6 @@
     function toggleView(id,content){document.getElementById(id).addEventListener('change',()=>{content.style.display=document.getElementById(id).checked?'block':'none';});content.style.display='none';}
     toggleView('toggle-recargas',document.getElementById('recargas-content'));
     toggleView('toggle-retiros',document.getElementById('retiros-content'));
-    actualizarBotonRet();
 
     async function cargarBancos(){
       const selRec=document.getElementById('filtro-rec-banco');
@@ -316,7 +317,6 @@
     function formatearHora(str){if(!str) return '';const [h24,min]=aHora24(str).split(':');let h=parseInt(h24,10);const ampm=h>=12?'pm':'am';h=h%12;if(h===0)h=12;return `${h}:${min} ${ampm}`;}
     function formatearMonto(valor){const num=parseFloat(valor);if(isNaN(num))return valor;return num%1===0?num.toString():num.toFixed(2);}
     function sortTrans(a,b){if(a.estado==='PENDIENTE'&&b.estado!=='PENDIENTE')return -1;if(a.estado!=='PENDIENTE'&&b.estado==='PENDIENTE')return 1;return parseFecha(a.fechasolicitud)-parseFecha(b.fechasolicitud);}
-    function actualizarBotonRet(){const btn=document.getElementById('aprobar-ret');const icon=btn.querySelector('.icon');const txt=btn.querySelector('span:last-child');if(Object.keys(editRefs).length){icon.innerHTML='&#9998;';icon.style.color='blue';txt.textContent='Editar';}else{icon.innerHTML='&#10004;';icon.style.color='green';txt.textContent='Aprobar';}}
     function renderRec(){
       const tb=document.querySelector('#tabla-recargas tbody');
       tb.innerHTML='';
@@ -348,7 +348,6 @@
         tb.appendChild(tr);
         i++;
       });
-      actualizarBotonRet();
     }
     function renderRet(){
       const tb=document.querySelector('#tabla-retiros tbody');
@@ -376,16 +375,12 @@
         const chk=tr.querySelector('input[type=checkbox]');
         const refTd=tr.children[4];
         refTd.dataset.original=t.referencia||'';
-        if(refValue!== (t.referencia||'')) editRefs[t.id]=refValue;
         chk.addEventListener('change',()=>{actualizarEditable();});
         refTd.addEventListener('input',()=>{
           refTd.textContent=refTd.textContent.replace(/[^0-9]/g,'').slice(0,5);
           const nuevo=refTd.textContent.trim();
           refCookies[t.id]=nuevo;
           saveRefCookies();
-          const orig=refTd.dataset.original||'';
-          if(nuevo!==orig) editRefs[t.id]=nuevo; else delete editRefs[t.id];
-          actualizarBotonRet();
         });
         const mailTd=tr.children[2];
         mailTd.style.cursor='pointer';
@@ -400,26 +395,17 @@
 
     function actualizarEditable(){
       const checks=Array.from(document.querySelectorAll('#tabla-retiros tbody input[type=checkbox]'));
-      const selected=checks.filter(c=>c.checked);
       checks.forEach(c=>{
         const refTd=c.closest('tr').children[4];
         const id=c.dataset.id;
-        refTd.contentEditable=false;
-        refTd.textContent=refCookies[id]!==undefined?refCookies[id]:refTd.dataset.original;
         const estado=c.dataset.estado;
-        if(selected.length===1 && c===selected[0] && (estado==='PENDIENTE' || estado==='APROBADO')){
+        if(c.checked && (estado==='PENDIENTE' || estado==='APROBADO')){
           refTd.contentEditable=true;
-          refTd.focus();
         }else{
-          const val=refCookies[id];
-          if(val!==undefined && val!==refTd.dataset.original){
-            editRefs[id]=val;
-          }else{
-            delete editRefs[id];
-          }
+          refTd.contentEditable=false;
+          refTd.textContent=refCookies[id]!==undefined?refCookies[id]:refTd.dataset.original;
         }
       });
-      actualizarBotonRet();
     }
 
     function seleccionados(tb){return Array.from(tb.querySelectorAll('input[type=checkbox]:checked')).map(c=>c.dataset.id);}
@@ -435,7 +421,6 @@
         if(condicion)upd.Condicion=condicion; else if(!data.Condicion)upd.Condicion='VISIBLE';
         await transRef.doc(id).update(upd);
         delete refCookies[id];
-        delete editRefs[id];
         if(estado==='APROBADO'){
           const billeteraRef=db.collection('Billetera').doc(data.IDbilletera);
           await db.runTransaction(async t=>{
@@ -505,23 +490,8 @@
     });
 
     document.getElementById('aprobar-ret').addEventListener('click',async()=>{
-      if(Object.keys(editRefs).length){
-        for(const [id,ref] of Object.entries(editRefs)){
-          if(!/^[0-9]{5}$/.test(ref)){
-            alert('Debes colocar una Referencia válida de los ultimos 5 digitos de la Referencia');
-            document.querySelector(`#tabla-retiros input[data-id="${id}"]`).checked=false;
-            delete editRefs[id];
-            actualizarEditable();
-            return;
-          }
-        }
-        for(const [id,ref] of Object.entries(editRefs)){await actualizar([id],null,null,ref);}
-        alert('Se ha editado correctamente la Referencia');
-        editRefs={};actualizarBotonRet();actualizarEditable();
-        return;
-      }
       const tb=document.getElementById('tabla-retiros');
-      const sel=tb.querySelectorAll('input[type=checkbox]:checked');
+      const sel=Array.from(tb.querySelectorAll('input[type=checkbox]:checked'));
       if(!sel.length) return;
       const invalidSel=[];
       for(const chk of sel){
@@ -534,13 +504,48 @@
         actualizarEditable();
         return;
       }
+      if(sel.length>1){
+        const conf=confirm('¿Deseas APROBAR todos los registros seleccionados?');
+        if(!conf) return;
+      }
       for(const chk of sel){
         const ref=chk.closest('tr').children[4].textContent.trim();
         const t=datosRet.find(x=>x.id===chk.dataset.id);
-        if(t.estado==='APROBADO'){alert('No se pueden aprobar las transacciones APROBADAS');chk.checked=false;}
-        else if(t.estado==='PENDIENTE') await actualizar([chk.dataset.id],'APROBADO',null,ref);
-        else {alert('No se pueden aprobar las transacciones ANULADAS');chk.checked=false;}
+        if(t.estado==='APROBADO'){
+          alert('No se pueden aprobar las transacciones APROBADAS');
+          chk.checked=false;
+        }else if(t.estado==='PENDIENTE'){
+          await actualizar([chk.dataset.id],'APROBADO',null,ref);
+        }else{
+          alert('No se pueden aprobar las transacciones ANULADAS');
+          chk.checked=false;
+        }
       }
+      actualizarEditable();
+    });
+    document.getElementById('editar-ret').addEventListener('click',async()=>{
+      const tb=document.getElementById('tabla-retiros');
+      const sel=Array.from(tb.querySelectorAll('input[type=checkbox]:checked'));
+      if(!sel.length) return;
+      let edited=false;
+      for(const chk of sel){
+        const tr=chk.closest('tr');
+        const refTd=tr.children[4];
+        const nuevo=refTd.textContent.trim();
+        const orig=refTd.dataset.original||'';
+        if(nuevo===orig) continue;
+        if(!/^[0-9]{5}$/.test(nuevo)){
+          alert('Debes colocar una Referencia válida de los ultimos 5 digitos de la Referencia');
+          chk.checked=false;
+          continue;
+        }
+        const conf=confirm(`¿Estas seguro de querer editar a este nuevo valor de Referencia ${nuevo}?`);
+        if(conf){
+          await actualizar([chk.dataset.id],null,null,nuevo);
+          edited=true;
+        }
+      }
+      if(edited) alert('Se ha editado correctamente la Referencia');
       actualizarEditable();
     });
     document.getElementById('anular-ret').addEventListener('click',async()=>{
