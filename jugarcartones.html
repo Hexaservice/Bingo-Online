@@ -273,7 +273,7 @@
           <h2 id="jugados-nombre-sorteo"></h2>
           <div id="jugados-grid"></div>
           <div id="jugados-buttons" class="modal-buttons">
-            <button id="borrar-jugado-btn" class="action-btn borrar-btn">Borrar</button>
+            <button id="borrar-jugado-btn" class="action-btn borrar-btn" style="display:none;">Borrar</button>
             <button id="cargar-jugado-btn" class="action-btn">Cargar cartón</button>
           </div>
       </div>
@@ -323,6 +323,17 @@ let cartonesJugando=0;
 let cartonesGratisJugando=0;
 const formColors=['#90ee90','#fffacd','#add8e6','#d8b0ff','#ffcc99'];
 const formGlows=['#006400','#b8860b','#00008b','#4b0082','#8b4513'];
+
+auth.onAuthStateChanged(()=>{
+  const btn=document.getElementById('borrar-jugado-btn');
+  if(btn){
+    if(window.currentRole==='Superadmin'){
+      btn.style.display='';
+    }else{
+      btn.style.display='none';
+    }
+  }
+});
 
 function setCookie(name,value){document.cookie=`${name}=${encodeURIComponent(value)};path=/;max-age=31536000`;}
 function getCookie(name){const m=document.cookie.match(new RegExp('(?:^|; )'+name+'=([^;]*)'));return m?decodeURIComponent(m[1]):null;}
