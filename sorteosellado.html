@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sorteo Sellado</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    body{
+      font-family:'Poppins',sans-serif;
+      background:linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)),
+                 url('https://img.freepik.com/vetores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg');
+      background-repeat:repeat;
+      background-size:auto;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:flex-start;
+      min-height:100vh;
+      text-align:center;
+      padding:5px;
+    }
+    h1{font-family:'Bangers',cursive;color:purple;text-shadow:0 0 10px #fff;margin:5px 0;}
+    #info{font-family:'Bangers',cursive;font-size:1rem;color:#000;margin-bottom:10px;}
+    #cartones-container{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;width:100%;}
+    .mini-carton-box{display:flex;flex-direction:column;align-items:center;}
+    .mini-index,.mini-num{padding:1px 3px;background:rgba(255,255,255,0.8);border-radius:3px;font-weight:bold;font-size:0.7rem;margin:2px 0;text-align:center;}
+    .mini-index{color:#000;}
+    .mini-num{color:purple;}
+    .mini-carton-wrapper{background:linear-gradient(green,yellow);padding:3px;border-radius:10px;box-shadow:0 0 5px rgba(0,0,0,0.5);}
+    .mini-carton-wrapper.gratis{background:linear-gradient(#0000ff,yellow);}
+    .mini-carton{border-collapse:separate;border-spacing:0;background:linear-gradient(#ffffff,#cccccc);border-radius:8px;}
+    .mini-carton th,.mini-carton td{border:1px solid gray;width:20px;height:20px;text-align:center;font-weight:bold;font-size:0.6rem;aspect-ratio:1/1;}
+    .mini-carton th{font-size:0.8rem;color:#ff6600;background:radial-gradient(circle,#ffffff,#ffffff 60%,#00aa00);text-shadow:1px 1px 0 #000;}
+    .mini-carton-wrapper.gratis .mini-carton th{background:radial-gradient(circle,#ffffff,#ffffff 60%,#0000ff);}
+    @media (orientation:landscape){#cartones-container{justify-content:flex-start;}}
+  </style>
+</head>
+<body>
+  <h1 id="titulo"></h1>
+  <div id="info"></div>
+  <div id="cartones-container"></div>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
+  <script src="auth.js"></script>
+  <script>
+  ensureAuth();
+  async function cargar(){
+    const params=new URLSearchParams(location.search);
+    const sorteoId=params.get('s');
+    const nombre=params.get('n')||'';
+    const tipo=params.get('t')||'';
+    const fecha=params.get('f')||'';
+    const hora=params.get('h')||'';
+    document.getElementById('titulo').textContent=nombre;
+    document.getElementById('info').textContent=`${tipo} - ${fecha} ${hora}`;
+    const snap=await db.collection('CartonJugado').where('sorteoId','==',sorteoId).get();
+    const docs=[]; snap.forEach(d=>docs.push(d.data()));
+    docs.sort((a,b)=> (b.alias||'').localeCompare(a.alias||''));
+    const cont=document.getElementById('cartones-container');
+    docs.forEach(d=>{
+      const box=document.createElement('div');
+      box.className='mini-carton-box';
+      const idx=document.createElement('div');
+      idx.className='mini-index';
+      idx.textContent=`${d.tipocarton==='gratis'?'Gratis':'Pagado'} ${String(d.cartonNum).padStart(4,'0')}`;
+      box.appendChild(idx);
+      const wrap=document.createElement('div');
+      wrap.className='mini-carton-wrapper';
+      if(d.tipocarton==='gratis') wrap.classList.add('gratis');
+      wrap.appendChild(crearMiniCarton(d.posiciones||[]));
+      box.appendChild(wrap);
+      const alias=document.createElement('div');
+      alias.className='mini-num';
+      alias.textContent=d.alias||'';
+      box.appendChild(alias);
+      cont.appendChild(box);
+    });
+  }
+  function crearMiniCarton(posiciones){
+    const table=document.createElement('table');
+    table.className='mini-carton';
+    const head=document.createElement('thead');
+    const trh=document.createElement('tr');
+    ['B','I','N','G','O'].forEach(l=>{const th=document.createElement('th');th.textContent=l;trh.appendChild(th);});
+    head.appendChild(trh);table.appendChild(head);
+    const tbody=document.createElement('tbody');
+    for(let r=0;r<5;r++){
+      const tr=document.createElement('tr');
+      for(let c=0;c<5;c++){
+        const td=document.createElement('td');
+        if(r===2&&c===2){td.innerHTML='<span style="color:orange;">★</span>';}else{
+          const found=posiciones.find(p=>p.r===r&&p.c===c);
+          if(found) td.textContent=found.valor;
+        }
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    return table;
+  }
+  cargar();
+  </script>
+</body>
+</html>
