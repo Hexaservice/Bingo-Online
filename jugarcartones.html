@@ -101,7 +101,16 @@
     #gratis-label{color:#4b0082;text-shadow:0 0 5px #fff;}
     #creditos-label{color:#333;text-shadow:0 0 5px green;}
     .credit-icon{color:white;font-weight:bold;text-shadow:0 0 5px lime;}
-        #info-cartones-pdf{background:linear-gradient(purple,#00008b);}
+    .action-btn{
+      font-family:'Bangers',cursive;
+      background:linear-gradient(#0a8800,#ffffff);
+      color:white;
+      border:3px solid #FFD700;
+      border-radius:8px;
+      text-shadow:2px 2px 4px #000;
+      cursor:pointer;
+    }
+    #info-cartones-pdf{background:linear-gradient(purple,#00008b);}
     #jugados-btn-container{position:absolute;bottom:5px;right:50px;}
     #ver-jugados-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:linear-gradient(purple,#ffffff);border:3px solid #FFD700;border-radius:8px;cursor:pointer;position:relative;}
     #jugados-count{position:absolute;top:-8px;left:-8px;background:purple;color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-family:'Bangers',cursive;z-index:10;}
@@ -1035,25 +1044,63 @@ function toggleForma(idx){
     doc.setTextColor(tipoColor[0],tipoColor[1],tipoColor[2]); doc.text(`${s.tipo} Sorteo: ${s.nombre}`,105,32,{align:'center'});
     doc.setTextColor(0,0,0);
     const cont=document.createElement('div');
-    cont.style.display='flex'; cont.style.flexWrap='wrap'; cont.style.width='190mm';
+    cont.style.display='flex';
+    cont.style.flexWrap='wrap';
+    cont.style.width='190mm';
+    cont.style.position='fixed';
+    cont.style.left='-10000px';
     docs.forEach(d=>{
+      const wrapper=document.createElement('div');
+      wrapper.style.width='30mm';
+      wrapper.style.height='38mm';
+      wrapper.style.margin='2mm';
+      wrapper.style.borderRadius='10px';
+      wrapper.style.padding='1mm';
+      wrapper.style.background=d.tipocarton==='gratis'? 'linear-gradient(#0000ff,#ffff00)':'linear-gradient(#008000,#ffff00)';
+      wrapper.style.boxShadow='0 0 5px rgba(0,0,0,0.5)';
       const mini=document.createElement('div');
-      mini.style.width='30mm'; mini.style.height='38mm'; mini.style.margin='2mm'; mini.style.border='1px solid #000';
+      wrapper.appendChild(mini);
       const top=document.createElement('div');
       top.textContent=`${d.tipocarton==='gratis'?'Gratis':'Pagado'} ${String(d.cartonNum).padStart(4,'0')}`;
-      top.style.textAlign='center'; top.style.fontSize='6px';
-      top.style.background=d.tipocarton==='gratis'? 'linear-gradient(#00008b,#ffff00)':'linear-gradient(#008000,#ffff00)';
+      top.style.textAlign='center';
+      top.style.fontSize='6px';
       top.style.color='white';
       mini.appendChild(top);
-      const alias=document.createElement('div'); alias.textContent=d.alias||''; alias.style.textAlign='center'; alias.style.fontSize='5px'; alias.style.color='black'; mini.appendChild(alias);
-      const table=document.createElement('table'); table.style.width='100%'; table.style.borderCollapse='collapse';
-      for(let r=0;r<5;r++){ const tr=document.createElement('tr'); for(let c=0;c<5;c++){ const td=document.createElement('td'); td.style.border='0.2mm solid #555'; td.style.width='20%'; td.style.height='6mm'; td.style.fontSize='5px'; td.style.textAlign='center'; const pos=(d.posiciones||[]).find(p=>p.r===r&&p.c===c); td.textContent=pos?pos.valor:''; td.style.background=d.tipocarton==='gratis'?'#e0f0ff':'#e0ffe0'; tr.appendChild(td);} table.appendChild(tr);} mini.appendChild(table); cont.appendChild(mini); });
+      const alias=document.createElement('div');
+      alias.textContent=d.alias||'';
+      alias.style.textAlign='center';
+      alias.style.fontSize='5px';
+      alias.style.color='black';
+      mini.appendChild(alias);
+      const table=document.createElement('table');
+      table.style.width='100%';
+      table.style.borderCollapse='collapse';
+      table.style.background='linear-gradient(#ffffff,#cccccc)';
+      for(let r=0;r<5;r++){
+        const tr=document.createElement('tr');
+        for(let c=0;c<5;c++){
+          const td=document.createElement('td');
+          td.style.border='0.2mm solid #555';
+          td.style.width='20%';
+          td.style.height='6mm';
+          td.style.fontSize='5px';
+          td.style.textAlign='center';
+          const pos=(d.posiciones||[]).find(p=>p.r===r&&p.c===c);
+          td.textContent=pos?pos.valor:'';
+          tr.appendChild(td);
+        }
+        table.appendChild(tr);
+      }
+      mini.appendChild(table);
+      cont.appendChild(wrapper);
+    });
     document.body.appendChild(cont);
     await new Promise(res=>doc.html(cont,{x:10,y:40,width:190,callback:res}));
     document.body.removeChild(cont);
     const pages=doc.getNumberOfPages();
     for(let i=1;i<=pages;i++){ doc.setPage(i); const pw=doc.internal.pageSize.getWidth(); const ph=doc.internal.pageSize.getHeight(); doc.setFontSize(8); doc.setTextColor(128); doc.text(`página ${i} de ${pages}`, pw-30, ph-5); }
     doc.save('jugadas-'+s.nombre+'.pdf');
+    document.getElementById('info-cartones-modal').style.display='none';
   }
 
   async function abrirJugadosModal(){
