@@ -9,11 +9,15 @@ async function actualizarEstadosSorteos(){
       if(!d.fecha || !d.hora) return;
       const [dia,mes,anio]=d.fecha.split('/').map(n=>parseInt(n,10));
       const [hor,min]=d.hora.split(':').map(n=>parseInt(n,10));
-      const sorteoDate = new Date(anio,mes-1,dia,hor,min);
-      const cierre = parseInt(d.cierreMinutos||0,10);
-      const selladoDate = new Date(sorteoDate.getTime() - cierre*60000);
-      if(d.estado==='Activo' && ahora>=selladoDate){
-        updates.push(doc.ref.update({estado:'Sellado'}));
+      const sorteoDate=new Date(anio,mes-1,dia,hor,min);
+      const cierre=parseInt(d.cierreMinutos||0,10);
+      const selladoDate=new Date(sorteoDate.getTime()-cierre*60000);
+      if(d.estado==='Activo'){
+        if(ahora>=sorteoDate){
+          updates.push(doc.ref.update({estado:'Jugando'}));
+        }else if(ahora>=selladoDate){
+          updates.push(doc.ref.update({estado:'Sellado'}));
+        }
       }else if(d.estado==='Sellado' && ahora>=sorteoDate){
         updates.push(doc.ref.update({estado:'Jugando'}));
       }
