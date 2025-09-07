@@ -389,8 +389,10 @@
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
   <script src="auth.js"></script>
+  <script src="scripts/timezone.js"></script>
   <script>
     ensureAuth();
+    initServerTime();
     const transacciones=[];
     let porcentajeRetiro=0, porcentajeAdministra=0;
 
@@ -498,15 +500,10 @@
     });
 
     function fechaActual(){
-      const d=new Date();
-      const dia=String(d.getDate()).padStart(2,'0');
-      const mes=String(d.getMonth()+1).padStart(2,'0');
-      const anio=d.getFullYear();
-      return `${dia}/${mes}/${anio}`;
+      return fechaServidor();
     }
     function horaActual(){
-      const d=new Date();
-      return d.toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'});
+      return horaServidor();
     }
 
     function formatearFecha(str){
@@ -678,6 +675,7 @@
 
     document.getElementById('btn-depositar').addEventListener('click', async () => {
       if(!await validarDatosBancarios()) return;
+      await initServerTime();
       const user = auth.currentUser;
       const banco=document.getElementById('banco-deposito').value;
       if(!banco){alert('Seleccione el banco donde transferiste');document.getElementById('banco-deposito').focus();return;}
@@ -710,6 +708,7 @@
 
     async function ejecutarRetiro(monto,montoFinal){
       const user=auth.currentUser;
+      await initServerTime();
       const docB=await db.collection('Billetera').doc(user.email).get();
       const data={
         tipotrans:'retiro',

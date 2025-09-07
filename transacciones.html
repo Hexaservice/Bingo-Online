@@ -163,8 +163,10 @@
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
   <script src="auth.js"></script>
+  <script src="scripts/timezone.js"></script>
   <script>
     ensureAuth('Colaborador');
+    initServerTime();
     const transRef=db.collection('transacciones');
     const datosRec=[];const datosRet=[];
     function loadRefCookies(){
@@ -208,8 +210,8 @@
     }
     const filtrosRec={monto:'',nombre:'',banco:'',ref:'',fecha:'',estado:''};
     const filtrosRet={monto:'',nombre:'',banco:'',ref:'',fecha:'',estado:''};
-    function fecha(){const d=new Date();return d.toLocaleDateString('es-VE');}
-    function hora(){const d=new Date();return d.toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'});}
+    function fecha(){return fechaServidor();}
+    function hora(){return horaServidor();}
 
     function solicitarMotivo(){
       return new Promise(res=>{
@@ -414,6 +416,7 @@
     function seleccionados(tb){return Array.from(tb.querySelectorAll('input[type=checkbox]:checked')).map(c=>c.dataset.id);}
 
     async function actualizar(ids,estado,nota,ref,condicion){
+      await initServerTime();
       for(const id of ids){
         const doc=await transRef.doc(id).get();
         const data=doc.data();
