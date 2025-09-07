@@ -309,6 +309,7 @@
   <script src="scripts/timezone.js"></script>
   <script>
   ensureAuth();
+  initServerTime();
 
   const ranges=[[1,15],[16,30],[31,45],[46,60],[61,75]];
 const board=document.getElementById('bingo-board');
@@ -765,6 +766,7 @@ function toggleForma(idx){
       alert('Este número de cartón ya fue jugado en este sorteo.');
       return;
     }
+    await initServerTime();
     await db.collection('CartonJugado').add({
       userId:user.uid,
       alias:alias,
@@ -773,8 +775,8 @@ function toggleForma(idx){
       Ncarton:ncarton,
       tipocarton:jugarGratis?'gratis':'pagado',
       posiciones:posiciones,
-      fecha:new Date().toLocaleDateString('es-ES'),
-      hora:new Date().toLocaleTimeString('es-ES')
+      fecha:fechaServidor(),
+      hora:horaServidor()
     });
     await actualizarDatosSorteo();
     await actualizarCartonesJugador();
