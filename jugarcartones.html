@@ -110,7 +110,7 @@
       text-shadow:2px 2px 4px #000;
       cursor:pointer;
     }
-    #info-cartones-pdf{background:linear-gradient(purple,#00008b);}
+    #info-cartones-ver{background:linear-gradient(purple,#00008b);}
     #jugados-btn-container{position:absolute;bottom:5px;right:50px;}
     #ver-jugados-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:linear-gradient(purple,#ffffff);border:3px solid #FFD700;border-radius:8px;cursor:pointer;position:relative;}
     #jugados-count{position:absolute;top:-8px;left:-8px;background:purple;color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-family:'Bangers',cursive;z-index:10;}
@@ -293,7 +293,7 @@
           <div id="info-cartones-jugando" class="info-line"></div>
           <div id="info-cartones-gratis" class="info-line"></div>
           <div class="modal-buttons">
-            <button id="info-cartones-pdf" class="action-btn">PDF Jugadas</button>
+            <button id="info-cartones-ver" class="action-btn">Ver Cartones</button>
             <button id="info-cartones-aceptar" class="action-btn">Aceptar</button>
           </div>
       </div>
@@ -312,7 +312,6 @@
   <script src="auth.js"></script>
   <script src="scripts/timezone.js"></script>
   <script src="scripts/estadoSorteos.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
   ensureAuth();
   initServerTime();
@@ -1005,9 +1004,9 @@ function toggleForma(idx){
     cj.innerHTML=`Cartones jugando: <strong style="color:purple;">${cartonesJugando}</strong>`;
     const cg=document.getElementById('info-cartones-gratis');
     cg.innerHTML=`Cartones Gratis jugando: <strong style="color:#00008b;">${cartonesGratisJugando}</strong>`;
-    const pdfBtn=document.getElementById('info-cartones-pdf');
+    const verBtn=document.getElementById('info-cartones-ver');
     const s=sorteosActivos.find(x=>x.id===currentSorteo);
-    if(s && (s.estado==='Sellado' || s.estado==='Jugando')) pdfBtn.style.display='inline-block'; else pdfBtn.style.display='none';
+    if(s && (s.estado==='Sellado' || s.estado==='Jugando')) verBtn.style.display='inline-block'; else verBtn.style.display='none';
     document.getElementById('info-cartones-modal').style.display='flex';
   }
 
@@ -1022,84 +1021,11 @@ function toggleForma(idx){
     document.getElementById('premios-modal').style.display='flex';
   }
 
-  async function generarPDFJugadas(){
+  async function verCartonesJugadas(){
     const s=sorteosActivos.find(x=>x.id===currentSorteo);
     if(!s) return;
-    const snap=await db.collection('CartonJugado').where('sorteoId','==',currentSorteo).get();
-    const docs=[]; snap.forEach(d=>docs.push(d.data()));
-    docs.sort((a,b)=>a.cartonNum-b.cartonNum);
-    const { jsPDF } = window.jspdf;
-    const doc=new jsPDF('p','mm','a4');
-    async function toDataURL(url){
-      const res=await fetch(url); const blob=await res.blob();
-      return await new Promise(r=>{const reader=new FileReader(); reader.onload=()=>r(reader.result); reader.readAsDataURL(blob);});
-    }
-    const logo=await toDataURL('https://i.imgur.com/twjhNtZ.png');
-    doc.addImage(logo,'PNG',10,10,15,15);
-    doc.setFontSize(16); doc.text('BingOnline',105,18,{align:'center'});
-    doc.setFontSize(10); doc.text('📅 '+s.fecha,190,12,{align:'right'}); doc.text('🕒 '+s.hora,190,18,{align:'right'});
-    const tipoColor=s.tipo==='Sorteo Especial'?[255,165,0]:[0,128,0];
-    doc.setFontSize(12); doc.setTextColor(0,0,0);
-    doc.text('Tipo de sorteo:',105,26,{align:'center'});
-    doc.setTextColor(tipoColor[0],tipoColor[1],tipoColor[2]); doc.text(`${s.tipo} Sorteo: ${s.nombre}`,105,32,{align:'center'});
-    doc.setTextColor(0,0,0);
-    const cont=document.createElement('div');
-    cont.style.display='flex';
-    cont.style.flexWrap='wrap';
-    cont.style.width='190mm';
-    cont.style.position='fixed';
-    cont.style.left='-10000px';
-    docs.forEach(d=>{
-      const wrapper=document.createElement('div');
-      wrapper.style.width='30mm';
-      wrapper.style.height='38mm';
-      wrapper.style.margin='2mm';
-      wrapper.style.borderRadius='10px';
-      wrapper.style.padding='1mm';
-      wrapper.style.background=d.tipocarton==='gratis'? 'linear-gradient(#0000ff,#ffff00)':'linear-gradient(#008000,#ffff00)';
-      wrapper.style.boxShadow='0 0 5px rgba(0,0,0,0.5)';
-      const mini=document.createElement('div');
-      wrapper.appendChild(mini);
-      const top=document.createElement('div');
-      top.textContent=`${d.tipocarton==='gratis'?'Gratis':'Pagado'} ${String(d.cartonNum).padStart(4,'0')}`;
-      top.style.textAlign='center';
-      top.style.fontSize='6px';
-      top.style.color='white';
-      mini.appendChild(top);
-      const alias=document.createElement('div');
-      alias.textContent=d.alias||'';
-      alias.style.textAlign='center';
-      alias.style.fontSize='5px';
-      alias.style.color='black';
-      mini.appendChild(alias);
-      const table=document.createElement('table');
-      table.style.width='100%';
-      table.style.borderCollapse='collapse';
-      table.style.background='linear-gradient(#ffffff,#cccccc)';
-      for(let r=0;r<5;r++){
-        const tr=document.createElement('tr');
-        for(let c=0;c<5;c++){
-          const td=document.createElement('td');
-          td.style.border='0.2mm solid #555';
-          td.style.width='20%';
-          td.style.height='6mm';
-          td.style.fontSize='5px';
-          td.style.textAlign='center';
-          const pos=(d.posiciones||[]).find(p=>p.r===r&&p.c===c);
-          td.textContent=pos?pos.valor:'';
-          tr.appendChild(td);
-        }
-        table.appendChild(tr);
-      }
-      mini.appendChild(table);
-      cont.appendChild(wrapper);
-    });
-    document.body.appendChild(cont);
-    await new Promise(res=>doc.html(cont,{x:10,y:40,width:190,callback:res}));
-    document.body.removeChild(cont);
-    const pages=doc.getNumberOfPages();
-    for(let i=1;i<=pages;i++){ doc.setPage(i); const pw=doc.internal.pageSize.getWidth(); const ph=doc.internal.pageSize.getHeight(); doc.setFontSize(8); doc.setTextColor(128); doc.text(`página ${i} de ${pages}`, pw-30, ph-5); }
-    doc.save('jugadas-'+s.nombre+'.pdf');
+    const url=`sorteosellado.html?s=${currentSorteo}&n=${encodeURIComponent(s.nombre)}&t=${encodeURIComponent(s.tipo)}&f=${encodeURIComponent(s.fecha)}&h=${encodeURIComponent(s.hora)}`;
+    window.open(url,'_blank');
     document.getElementById('info-cartones-modal').style.display='none';
   }
 
@@ -1339,7 +1265,7 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
   document.getElementById('cartones-gratis-jugando').addEventListener('click',mostrarCartonesJugandoModal);
   document.getElementById('premio-valor').addEventListener('click',mostrarPremiosModal);
   document.getElementById('info-cartones-aceptar').addEventListener('click',()=>{document.getElementById('info-cartones-modal').style.display='none';});
-  document.getElementById('info-cartones-pdf').addEventListener('click',generarPDFJugadas);
+  document.getElementById('info-cartones-ver').addEventListener('click',verCartonesJugadas);
   document.getElementById('premios-aceptar').addEventListener('click',()=>{document.getElementById('premios-modal').style.display='none';});
   document.getElementById('limpiar-btn').addEventListener('click',async()=>{if(await confirm('¿Deseas limpiar todas las jugadas del carton?')) limpiarcarton();});
   document.getElementById('azar-btn').addEventListener('click',async()=>{if(await confirm('¿Quieres cargar jugadas al azar?')) cargarAzar();});
