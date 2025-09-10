@@ -45,6 +45,18 @@ definirse la variable de entorno `UPLOAD_ENDPOINT` o asignarse
 
 Para utilizar el botón de habilitar/deshabilitar usuarios en `gestionarusuarios.html` este servicio debe estar activo y accesible desde la URL indicada. El cliente envía un *ID token* de Firebase, por lo que se debe iniciar sesión con un usuario con rol **Superadmin** para realizar estos cambios.
 
+## Actualización automática de estados de sorteos
+
+Para que los sorteos cambien de "Activo" a "Sellado" y luego a "Jugando" sin depender de una página abierta en el navegador, se incluye el script `cronActualizarEstadosSorteos.js`. Este proceso utiliza Firebase Admin para consultar y actualizar los documentos en Firestore.
+
+Ejecute localmente con:
+
+```bash
+npm run cron
+```
+
+Puede programarse con `cron` del sistema o desplegarse como una Cloud Function con un disparador temporal.
+
 ## Despliegue estático
 
 El archivo `index.html` contiene toda la lógica de la aplicación. Sólo es necesario servirlo desde cualquier servidor web estático. El inicio de sesión se realiza con cuentas de Google y se redirige automáticamente al menú correspondiente según el rol almacenado en Firestore.
