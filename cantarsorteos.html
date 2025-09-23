@@ -61,6 +61,7 @@
     @media (orientation: portrait) {
       #salir-btn { width: 40px; }
       #salir-btn .label { display: none; }
+      #detalle-container { margin-left: 5px; margin-right: 5px; }
     }
     #sorteo-btn {
       width: 240px;
@@ -91,12 +92,21 @@
     }
     #fecha-hora-sorteo {
       display: flex;
-      flex-direction: column;
-      gap: 3px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
       font-family: 'Bangers', cursive;
       font-size: 1rem;
     }
-    #fecha-sorteo, #hora-sorteo { display: flex; gap: 6px; align-items: center; justify-content: center; color: #0f2a0f; }
+    #fecha-sorteo, #hora-sorteo {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      justify-content: center;
+      color: #0f2a0f;
+      white-space: nowrap;
+    }
     .datos-sorteo {
       display: flex;
       flex-direction: column;
@@ -134,11 +144,10 @@
     #valor-carton span.valor, #cartones-jugando span.valor { font-size: 1.6rem; }
     #cartones-jugando span.extra { color: #00008b; text-shadow: 0 0 6px #fff; }
     #detalle-container {
-      position: relative;
       border: 2px solid #013220;
       border-radius: 12px;
       background: linear-gradient(135deg, rgba(0,60,0,0.85), rgba(255,255,255,0.95));
-      padding: 15px 10px 60px;
+      padding: 15px 10px 20px;
       margin-top: 10px;
       width: min(480px, 95vw);
       box-shadow: 0 0 10px rgba(0,0,0,0.4);
@@ -155,37 +164,58 @@
       font-size: 1.2rem;
       color: #111;
       text-shadow: 0 0 4px rgba(255,255,255,0.8);
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
     }
+    .estado-badge {
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 1rem;
+      letter-spacing: 1px;
+    }
+    .estado-badge.activo { background: rgba(0,128,0,0.15); color: #0f8b0f; border: 1px solid rgba(15,139,15,0.5); }
+    .estado-badge.sellado { background: rgba(110,110,110,0.2); color: #444; border: 1px solid rgba(110,110,110,0.5); }
+    .estado-badge.jugando { background: rgba(106,13,173,0.15); color: #6a0dad; border: 1px solid rgba(106,13,173,0.4); animation: zoomInOut 1.2s ease-in-out infinite; }
+    .estado-badge.finalizado { background: rgba(30,30,30,0.1); color: #000; border: 1px solid rgba(0,0,0,0.4); }
     #resumen-sorteo {
       margin-top: 10px;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 6px;
       font-family: 'Poppins', sans-serif;
       color: #0b1d0b;
       font-weight: 600;
+      align-items: center;
     }
-    #resumen-sorteo div { display: flex; justify-content: center; gap: 6px; align-items: center; }
+    #resumen-sorteo div { display: flex; justify-content: center; gap: 10px; align-items: center; flex-wrap: wrap; }
+    #tipo-sorteo span { white-space: nowrap; }
+    #acciones-sorteo {
+      margin-top: 14px;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
     .estado-btn {
-      width: 48px;
-      height: 48px;
-      border-radius: 10px;
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
       border: 3px solid #FFD700;
       background: linear-gradient(#0a8800,#ffffff);
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      position: absolute;
-      bottom: 10px;
       box-shadow: 0 0 8px rgba(0,0,0,0.4);
       transition: transform 0.2s;
     }
     .estado-btn:hover { transform: scale(1.05); }
-    #sellar-btn { left: 10px; }
-    #pdf-btn { left: 70px; background: linear-gradient(#003c71,#ffffff); }
-    #jugar-btn { right: 70px; background: linear-gradient(#4b0082,#ffffff); }
-    #finalizar-btn { right: 10px; background: linear-gradient(#8b0000,#ffffff); }
+    #pdf-btn { background: linear-gradient(#003c71,#ffffff); }
+    #jugar-btn { background: linear-gradient(#4b0082,#ffffff); }
+    #finalizar-btn { background: linear-gradient(#8b0000,#ffffff); }
     .estado-btn img { width: 28px; height: 28px; }
     .modal {
       display: none;
@@ -277,23 +307,24 @@
   </section>
   <section id="detalle-container">
     <div id="sorteo-nombre">Selecciona un sorteo para ver los detalles</div>
-    <div id="estado-actual">Estado actual: -</div>
+    <div id="estado-actual">Estado: <span class="estado-badge">-</span></div>
     <div id="resumen-sorteo">
       <div id="tipo-sorteo"></div>
-      <div id="cierre-sorteo"></div>
     </div>
-    <button id="sellar-btn" class="estado-btn" title="Sellar sorteo">
-      <img src="https://api.iconify.design/mdi/seal-variant.svg?color=white" alt="Sellar">
-    </button>
-    <button id="pdf-btn" class="estado-btn" title="Generar PDF">
-      <img src="https://api.iconify.design/mdi/book-open-page-variant.svg?color=white" alt="PDF">
-    </button>
-    <button id="jugar-btn" class="estado-btn" title="Cambiar a Jugando">
-      <img src="https://api.iconify.design/mdi/slot-machine.svg?color=white" alt="Jugar">
-    </button>
-    <button id="finalizar-btn" class="estado-btn" title="Finalizar sorteo">
-      <img src="https://api.iconify.design/mdi/flag-checkered.svg?color=white" alt="Finalizar">
-    </button>
+    <div id="acciones-sorteo">
+      <button id="sellar-btn" class="estado-btn" title="Sellar sorteo">
+        <img src="https://api.iconify.design/mdi/stamp.svg?color=white" alt="Sellar">
+      </button>
+      <button id="pdf-btn" class="estado-btn" title="Generar PDF">
+        <img src="https://api.iconify.design/mdi/book-open-page-variant.svg?color=white" alt="PDF">
+      </button>
+      <button id="jugar-btn" class="estado-btn" title="Cambiar a Jugando">
+        <img src="https://api.iconify.design/mdi/slot-machine.svg?color=white" alt="Jugar">
+      </button>
+      <button id="finalizar-btn" class="estado-btn" title="Finalizar sorteo">
+        <img src="https://api.iconify.design/mdi/flag-checkered.svg?color=white" alt="Finalizar">
+      </button>
+    </div>
   </section>
   <div id="mensaje-area">Selecciona un sorteo para administrar su estado.</div>
   <div id="footer">
@@ -330,7 +361,6 @@
   const sorteoNombreEl = document.getElementById('sorteo-nombre');
   const estadoActualEl = document.getElementById('estado-actual');
   const tipoEl = document.getElementById('tipo-sorteo');
-  const cierreEl = document.getElementById('cierre-sorteo');
   const mensajeEl = document.getElementById('mensaje-area');
   const sellarBtn = document.getElementById('sellar-btn');
   const pdfBtn = document.getElementById('pdf-btn');
@@ -348,42 +378,94 @@
     return new Date(Date.now() + (window.serverTime?.diferencia || 0));
   }
 
-  function formatearFecha(fecha){
-    if(!fecha) return '';
-    const partes = fecha.split('/');
-    if(partes.length === 3){
-      return `${partes[0]}/${partes[1]}/${partes[2]}`;
+  function obtenerFechaDesdeValor(valor){
+    if(!valor) return null;
+    if(valor instanceof Date) return valor;
+    if(typeof valor === 'object' && typeof valor.toDate === 'function'){ return valor.toDate(); }
+    if(typeof valor !== 'string') return null;
+    const limpio = valor.trim();
+    if(!limpio) return null;
+    if(limpio.includes('/')){
+      const [dia, mes, anio] = limpio.split('/').map(num=>parseInt(num,10));
+      if([dia, mes, anio].some(n=>isNaN(n))) return null;
+      return new Date(anio, (mes||1)-1, dia||1);
     }
-    return fecha;
+    if(limpio.includes('-')){
+      const [anio, mes, dia] = limpio.split('-').map(num=>parseInt(num,10));
+      if([dia, mes, anio].some(n=>isNaN(n))) return null;
+      return new Date(anio, (mes||1)-1, dia||1);
+    }
+    const timestamp = Date.parse(limpio);
+    if(!isNaN(timestamp)) return new Date(timestamp);
+    return null;
   }
 
-  function formatearHora(hora){
-    if(!hora) return '';
-    const [hh, mm] = hora.split(':');
-    if(hh===undefined) return hora;
-    let h = parseInt(hh, 10);
-    const sufijo = h >= 12 ? 'pm' : 'am';
-    h = h % 12 || 12;
-    return `${h.toString().padStart(2,'0')}:${mm} ${sufijo}`;
+  function obtenerHoraDesdeValor(valor){
+    if(!valor) return null;
+    if(valor instanceof Date){
+      return { hora: valor.getHours(), minuto: valor.getMinutes() };
+    }
+    if(typeof valor === 'object' && typeof valor.seconds === 'number'){
+      const fecha = new Date(valor.seconds * 1000);
+      return { hora: fecha.getHours(), minuto: fecha.getMinutes() };
+    }
+    if(typeof valor !== 'string') return null;
+    let texto = valor.trim().toLowerCase();
+    if(!texto) return null;
+    let sufijo = null;
+    if(/a\s*\.?m\.?/.test(texto)) sufijo = 'am';
+    if(/p\s*\.?m\.?/.test(texto)) sufijo = 'pm';
+    texto = texto.replace(/[^0-9:]/g, '');
+    if(!texto) return null;
+    const partes = texto.split(':');
+    const horas = parseInt(partes[0] || '0', 10);
+    const minutos = parseInt((partes[1] || '0').slice(0,2), 10);
+    if(isNaN(horas) || isNaN(minutos)) return null;
+    let hora24 = horas;
+    if(sufijo === 'pm' && hora24 < 12) hora24 += 12;
+    if(sufijo === 'am' && hora24 === 12) hora24 = 0;
+    return { hora: hora24, minuto: minutos };
+  }
+
+  function formatearFecha(valor){
+    const fecha = obtenerFechaDesdeValor(valor);
+    if(!fecha || isNaN(fecha.getTime())) return '';
+    const dia = String(fecha.getDate()).padStart(2,'0');
+    const mes = String(fecha.getMonth()+1).padStart(2,'0');
+    const anio = fecha.getFullYear();
+    return `${dia}/${mes}/${anio}`;
+  }
+
+  function formatearHora(valor){
+    const horaInfo = obtenerHoraDesdeValor(valor);
+    if(!horaInfo) return '';
+    const { hora, minuto } = horaInfo;
+    const sufijo = hora >= 12 ? 'pm' : 'am';
+    const hora12 = hora % 12 || 12;
+    return `${hora12.toString().padStart(2,'0')}:${minuto.toString().padStart(2,'0')} ${sufijo}`;
   }
 
   function obtenerFechaSorteo(data){
-    if(!data || !data.fecha || !data.hora) return null;
-    const [dia, mes, anio] = data.fecha.split('/').map(n=>parseInt(n,10));
-    const [hor, min] = data.hora.split(':').map(n=>parseInt(n,10));
-    if([dia, mes, anio, hor, min].some(n=>isNaN(n))) return null;
-    return new Date(anio, mes-1, dia, hor, min);
+    if(!data) return null;
+    const fechaBase = obtenerFechaDesdeValor(data.fecha);
+    const horaInfo = obtenerHoraDesdeValor(data.hora);
+    if(!fechaBase || !horaInfo) return null;
+    const { hora, minuto } = horaInfo;
+    return new Date(fechaBase.getFullYear(), fechaBase.getMonth(), fechaBase.getDate(), hora, minuto);
   }
 
   function actualizarAnimaciones(){
     [sellarBtn, pdfBtn, jugarBtn].forEach(btn=>btn.classList.remove('attention'));
+    actualizarBotones();
     if(!currentSorteoData) return;
     const ahora = getServerNow();
     const sorteoDate = obtenerFechaSorteo(currentSorteoData);
-    const cierre = parseInt(currentSorteoData.cierreMinutos || currentSorteoData.cierre || 0, 10);
+    const cierreRaw = parseInt(currentSorteoData.cierreMinutos || currentSorteoData.cierre || 0, 10);
+    const cierre = isNaN(cierreRaw) ? 0 : cierreRaw;
     const inicioSellado = sorteoDate ? new Date(sorteoDate.getTime() - cierre * 60000) : null;
+    const inicioSelladoValido = inicioSellado && !isNaN(inicioSellado.getTime());
 
-    if(currentSorteoData.estado !== 'Sellado' && inicioSellado && ahora >= inicioSellado){
+    if(currentSorteoData.estado !== 'Sellado' && inicioSelladoValido && ahora >= inicioSellado){
       sellarBtn.classList.add('attention');
     }
     if(currentSorteoData.estado === 'Sellado' && (currentSorteoData.pdf || '').toLowerCase() !== 'si'){
@@ -392,6 +474,36 @@
     if(currentSorteoData.estado !== 'Jugando' && sorteoDate && ahora >= sorteoDate){
       jugarBtn.classList.add('attention');
     }
+  }
+
+  function actualizarEstadoVisual(estado){
+    const estadoTexto = (estado || '-').toString().toUpperCase();
+    const estadoNormalizado = (estado || '').toString().toLowerCase();
+    let clase = '';
+    if(estadoNormalizado === 'activo') clase = 'activo';
+    else if(estadoNormalizado === 'sellado') clase = 'sellado';
+    else if(estadoNormalizado === 'jugando') clase = 'jugando';
+    else if(estadoNormalizado === 'finalizado') clase = 'finalizado';
+    estadoActualEl.innerHTML = `Estado: <span class="estado-badge ${clase}">${estadoTexto}</span>`;
+  }
+
+  function actualizarBotones(){
+    if(!currentSorteoData){
+      [sellarBtn, pdfBtn, jugarBtn, finalizarBtn].forEach(btn=>btn.disabled=true);
+      return;
+    }
+    const estado = (currentSorteoData.estado || '').toLowerCase();
+    const ahora = getServerNow();
+    const sorteoDate = obtenerFechaSorteo(currentSorteoData);
+    const cierreRaw = parseInt(currentSorteoData.cierreMinutos || currentSorteoData.cierre || 0, 10);
+    const cierre = isNaN(cierreRaw) ? 0 : cierreRaw;
+    const inicioSellado = sorteoDate ? new Date(sorteoDate.getTime() - cierre * 60000) : null;
+    const inicioSelladoValido = inicioSellado && !isNaN(inicioSellado.getTime());
+
+    sellarBtn.disabled = estado === 'sellado' || estado === 'jugando' || estado === 'finalizado' || !inicioSelladoValido || (inicioSelladoValido && ahora < inicioSellado);
+    pdfBtn.disabled = estado !== 'sellado';
+    jugarBtn.disabled = estado === 'jugando' || estado === 'finalizado' || !sorteoDate || ahora < sorteoDate;
+    finalizarBtn.disabled = estado === 'finalizado';
   }
 
   function mostrarDatos(){
@@ -404,9 +516,8 @@
       cartonesPagosEl.textContent = '0';
       cartonesGratisEl.textContent = '0';
       sorteoNombreEl.textContent = 'Selecciona un sorteo para ver los detalles';
-      estadoActualEl.textContent = 'Estado actual: -';
-      tipoEl.textContent = '';
-      cierreEl.textContent = '';
+      actualizarEstadoVisual(null);
+      tipoEl.innerHTML = '';
       mensajeEl.textContent = 'Selecciona un sorteo para administrar su estado.';
       [sellarBtn, pdfBtn, jugarBtn, finalizarBtn].forEach(btn=>btn.disabled=true);
       actualizarAnimaciones();
@@ -426,17 +537,16 @@
     cartonesPagosEl.textContent = data.cartonesjugando || 0;
     cartonesGratisEl.textContent = data.cartonesgratisjugando || 0;
     sorteoNombreEl.textContent = data.nombre || '';
-    estadoActualEl.textContent = `Estado actual: ${data.estado || '-'}`;
-    tipoEl.textContent = data.tipo ? `Tipo: ${data.tipo}` : '';
-    const cierre = parseInt(data.cierreMinutos || data.cierre || 0, 10);
-    cierreEl.textContent = isNaN(cierre) ? '' : `Minutos previos de sellado: ${cierre}`;
+    actualizarEstadoVisual(data.estado);
+    const cierreVal = parseInt(data.cierreMinutos || data.cierre || 0, 10);
+    const cierreMin = isNaN(cierreVal) ? null : cierreVal;
+    const tipoNombre = (data.tipo || '').replace(/^Sorteo\s+/i,'').toUpperCase();
+    const partesResumen = [];
+    if(tipoNombre){ partesResumen.push(`Tipo: ${tipoNombre}`); }
+    if(cierreMin !== null){ partesResumen.push(`Antes cierre: ${cierreMin} min.`); }
+    tipoEl.innerHTML = partesResumen.length ? partesResumen.map(texto=>`<span>${texto}</span>`).join('') : '';
     mensajeEl.textContent = 'Gestiona el estado del sorteo usando los botones inferiores.';
-    [sellarBtn, pdfBtn, jugarBtn, finalizarBtn].forEach(btn=>btn.disabled=false);
-    if((data.estado || '') === 'Finalizado'){
-      jugarBtn.disabled = true;
-      sellarBtn.disabled = true;
-      pdfBtn.disabled = false;
-    }
+    actualizarBotones();
     actualizarAnimaciones();
   }
 
@@ -479,7 +589,13 @@
       const fechaB = obtenerFechaSorteo(b) || new Date(0);
       return fechaB - fechaA;
     });
-    ordenados.forEach((s, idx)=>{
+    const activos = ordenados.filter(s=> (s.estado || '').toLowerCase() === 'activo');
+    if(!activos.length){
+      mensajeEl.textContent = 'No hay sorteos activos disponibles en este momento.';
+      document.getElementById('sorteos-modal').style.display = 'none';
+      return;
+    }
+    activos.forEach((s, idx)=>{
       const div = document.createElement('div');
       div.className = `sorteo-item ${s.estado ? s.estado.toLowerCase() : ''} ${s.tipo === 'Sorteo Diario' ? 'diario' : s.tipo === 'Sorteo Especial' ? 'especial' : ''}`.trim();
       const header = document.createElement('div');
@@ -538,8 +654,13 @@
     }
     const sorteoDate = obtenerFechaSorteo(currentSorteoData);
     if(!sorteoDate){ alert('Datos de fecha y hora inválidos.'); return; }
-    const cierre = parseInt(currentSorteoData.cierreMinutos || currentSorteoData.cierre || 0, 10);
+    const cierreVal = parseInt(currentSorteoData.cierreMinutos || currentSorteoData.cierre || 0, 10);
+    const cierre = isNaN(cierreVal) ? 0 : cierreVal;
     const inicioSellado = new Date(sorteoDate.getTime() - cierre * 60000);
+    if(isNaN(inicioSellado.getTime())){
+      alert('No se pudo calcular el inicio de sellado del sorteo.');
+      return;
+    }
     const ahora = getServerNow();
     if(ahora < inicioSellado){
       alert('Aún el sorteo no se puede sellar, no esta en los minutos previos al sorteo');
@@ -602,6 +723,8 @@
     await cargarSorteos();
     mostrarDatos();
   }
+
+  setInterval(actualizarAnimaciones, 15000);
 
   inicializar();
   </script>
