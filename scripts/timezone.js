@@ -68,13 +68,19 @@ function obtenerFecha() {
   return `${dia}/${mes}/${anio}`;
 }
 
+function limpiarMeridiano(valor = '') {
+  return valor.replace(/\s*a\.?\s*m\.?/ig, ' AM').replace(/\s*p\.?\s*m\.?/ig, ' PM');
+}
+
 function obtenerHora() {
   const d = new Date(Date.now() + serverTime.diferencia);
-  return d.toLocaleTimeString(serverTime.locale, {
+  const hora = d.toLocaleTimeString(serverTime.locale, {
     hour: '2-digit',
     minute: '2-digit',
+    hour12: true,
     timeZone: serverTime.zonaIana
   });
+  return limpiarMeridiano(hora);
 }
 
 async function initFechaHora(idElemento = "fecha-hora") {
@@ -83,14 +89,26 @@ async function initFechaHora(idElemento = "fecha-hora") {
   if (!el) return;
 
   function mostrar() {
-    const ahora = new Date(Date.now() + serverTime.diferencia);
-    const opcionesFecha = { year: 'numeric', month: 'long', day: 'numeric', timeZone: serverTime.zonaIana };
-    const opcionesHora = { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: serverTime.zonaIana };
     try {
-      const fechaStr = ahora.toLocaleDateString(serverTime.locale, opcionesFecha);
-      let horaStr = ahora.toLocaleTimeString(serverTime.locale, opcionesHora);
-      horaStr = horaStr.replace(' a. m.', ' am').replace(' p. m.', ' pm');
-      el.textContent = `${serverTime.Pais}, ${fechaStr}, ${horaStr}`;
+      const fechaStr = obtenerFecha();
+      const horaStr = obtenerHora();
+      el.textContent = '';
+      if (serverTime.Pais) {
+        const paisSpan = document.createElement('span');
+        paisSpan.className = 'pais-actual';
+        paisSpan.textContent = `${serverTime.Pais} |`;
+        el.appendChild(paisSpan);
+        el.appendChild(document.createTextNode(' '));
+      }
+      const fechaSpan = document.createElement('span');
+      fechaSpan.className = 'fecha-actual-icono';
+      fechaSpan.textContent = `📅 ${fechaStr}`;
+      el.appendChild(fechaSpan);
+      el.appendChild(document.createTextNode(' '));
+      const horaSpan = document.createElement('span');
+      horaSpan.className = 'hora-actual-icono';
+      horaSpan.textContent = `⏰ ${horaStr}`;
+      el.appendChild(horaSpan);
     } catch (err) {
       console.error('Error formateando fecha/hora', err);
       el.textContent = '';
