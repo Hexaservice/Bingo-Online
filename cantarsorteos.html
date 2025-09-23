@@ -147,9 +147,9 @@
       border: 2px solid #013220;
       border-radius: 12px;
       background: linear-gradient(135deg, rgba(0,60,0,0.85), rgba(255,255,255,0.95));
-      padding: 15px 10px 20px;
-      margin-top: 10px;
-      width: min(480px, 95vw);
+      padding: 15px 14px 20px;
+      margin: 10px auto 0;
+      width: min(420px, 92vw);
       box-shadow: 0 0 10px rgba(0,0,0,0.4);
     }
     #sorteo-nombre {
@@ -190,8 +190,8 @@
       font-weight: 600;
       align-items: center;
     }
-    #resumen-sorteo div { display: flex; justify-content: center; gap: 10px; align-items: center; flex-wrap: wrap; }
-    #tipo-sorteo span { white-space: nowrap; }
+    #resumen-sorteo div { display: flex; justify-content: center; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 0.95rem; }
+    #tipo-sorteo span { white-space: nowrap; text-transform: uppercase; }
     #acciones-sorteo {
       margin-top: 14px;
       display: flex;
@@ -200,8 +200,8 @@
       flex-wrap: wrap;
     }
     .estado-btn {
-      width: 56px;
-      height: 56px;
+      width: 52px;
+      height: 52px;
       border-radius: 12px;
       border: 3px solid #FFD700;
       background: linear-gradient(#0a8800,#ffffff);
@@ -216,7 +216,69 @@
     #pdf-btn { background: linear-gradient(#003c71,#ffffff); }
     #jugar-btn { background: linear-gradient(#4b0082,#ffffff); }
     #finalizar-btn { background: linear-gradient(#8b0000,#ffffff); }
-    .estado-btn img { width: 28px; height: 28px; }
+    .estado-btn img { width: 24px; height: 24px; }
+    #tabla-cantos-wrapper {
+      margin: 16px auto 0;
+      width: min(420px, 92vw);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    #tabla-cantos-titulo {
+      font-family: 'Bangers', cursive;
+      font-size: 1.2rem;
+      color: #0f2a0f;
+      text-shadow: 0 0 4px rgba(255,255,255,0.8);
+      margin: 0;
+    }
+    #tabla-cantos-container {
+      width: 100%;
+      border-radius: 12px;
+      padding: 10px;
+      background: linear-gradient(145deg, rgba(255,255,255,0.85), rgba(200,255,200,0.9));
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      transition: filter 0.3s ease, opacity 0.3s ease;
+    }
+    #tabla-cantos-container.disabled {
+      filter: grayscale(0.9);
+      opacity: 0.75;
+    }
+    #tabla-cantos {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 6px;
+      text-align: center;
+      font-family: 'Bangers', cursive;
+    }
+    #tabla-cantos thead th {
+      font-size: 1.4rem;
+      color: #0a5c0a;
+      text-shadow: 0 0 6px #fff;
+    }
+    .canto-cell {
+      border-radius: 10px;
+      padding: 8px 4px;
+      font-size: 1.1rem;
+      background: linear-gradient(160deg, rgba(240,255,240,0.95), rgba(180,235,180,0.9));
+      border: 2px solid rgba(15,90,15,0.5);
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .canto-cell:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 6px rgba(0,128,0,0.6);
+    }
+    .canto-cell.selected {
+      background: radial-gradient(circle at center, rgba(0,200,0,0.85), rgba(255,255,0,0.9));
+      color: #083108;
+      box-shadow: 0 0 8px rgba(255,255,0,0.8);
+      transform: scale(1.03);
+    }
+    #tabla-cantos-container.disabled .canto-cell {
+      pointer-events: none;
+      cursor: default;
+    }
     .modal {
       display: none;
       position: fixed;
@@ -313,7 +375,7 @@
     </div>
     <div id="acciones-sorteo">
       <button id="sellar-btn" class="estado-btn" title="Sellar sorteo">
-        <img src="https://api.iconify.design/mdi/stamp.svg?color=white" alt="Sellar">
+        <img src="https://api.iconify.design/mdi/seal-variant.svg?color=white" alt="Sellar">
       </button>
       <button id="pdf-btn" class="estado-btn" title="Generar PDF">
         <img src="https://api.iconify.design/mdi/book-open-page-variant.svg?color=white" alt="PDF">
@@ -325,6 +387,10 @@
         <img src="https://api.iconify.design/mdi/flag-checkered.svg?color=white" alt="Finalizar">
       </button>
     </div>
+  </section>
+  <section id="tabla-cantos-wrapper">
+    <h2 id="tabla-cantos-titulo">NÚMEROS CANTADOS</h2>
+    <div id="tabla-cantos-container" class="disabled"></div>
   </section>
   <div id="mensaje-area">Selecciona un sorteo para administrar su estado.</div>
   <div id="footer">
@@ -366,6 +432,11 @@
   const pdfBtn = document.getElementById('pdf-btn');
   const jugarBtn = document.getElementById('jugar-btn');
   const finalizarBtn = document.getElementById('finalizar-btn');
+  const tablaCantosContainer = document.getElementById('tabla-cantos-container');
+  const tablaCantosTitulo = document.getElementById('tabla-cantos-titulo');
+  const cantoCeldas = new Map();
+  let cantosSeleccionados = new Set();
+  let cantosUnsub = null;
 
   document.getElementById('salir-btn').addEventListener('click',()=>{ window.location.href='admin.html'; });
   btnSorteo.addEventListener('click', abrirModalSorteos);
@@ -373,9 +444,127 @@
   pdfBtn.addEventListener('click', abrirPDF);
   jugarBtn.addEventListener('click', cambiarAJugando);
   finalizarBtn.addEventListener('click', finalizarSorteo);
+  construirTablaCantos();
 
   function getServerNow(){
     return new Date(Date.now() + (window.serverTime?.diferencia || 0));
+  }
+
+  function construirTablaCantos(){
+    if(!tablaCantosContainer) return;
+    tablaCantosContainer.innerHTML = '';
+    cantoCeldas.clear();
+    const tabla = document.createElement('table');
+    tabla.id = 'tabla-cantos';
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    const letras = ['B','I','N','G','O'];
+    letras.forEach(letra=>{
+      const th = document.createElement('th');
+      th.textContent = letra;
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    tabla.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    for(let fila=0; fila<15; fila++){
+      const tr = document.createElement('tr');
+      letras.forEach((letra, idx)=>{
+        const base = idx * 15 + 1;
+        const numero = base + fila;
+        const numeroTexto = numero.toString().padStart(2,'0');
+        const clave = `${letra}-${numeroTexto}`;
+        const td = document.createElement('td');
+        td.className = 'canto-cell';
+        td.dataset.key = clave;
+        td.textContent = clave;
+        td.addEventListener('click', ()=>manejarCantoClick(clave));
+        cantoCeldas.set(clave, td);
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    }
+    tabla.appendChild(tbody);
+    tablaCantosContainer.appendChild(tabla);
+  }
+
+  async function manejarCantoClick(clave){
+    if(!currentSorteoId || !currentSorteoData) return;
+    if(tablaCantosContainer.classList.contains('disabled')) return;
+    if(cantosSeleccionados.has(clave)) return;
+    const confirmar = await confirm(`Confirmas la jugada de ${clave}?`);
+    if(!confirmar) return;
+    try {
+      await db.collection('cantos').doc(currentSorteoId).set({
+        numeros: firebase.firestore.FieldValue.arrayUnion(clave),
+        actualizado: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      mensajeEl.textContent = `Se registró la jugada ${clave}.`;
+    } catch (err) {
+      console.error('Error registrando canto', err);
+      alert('No fue posible registrar el canto.');
+    }
+  }
+
+  function actualizarCantosSeleccionados(lista){
+    const valores = Array.isArray(lista) ? lista : [];
+    cantosSeleccionados = new Set(valores.map(v=>{
+      const texto = (v ?? '').toString();
+      return texto.toUpperCase();
+    }));
+    cantoCeldas.forEach((celda, clave)=>{
+      if(cantosSeleccionados.has(clave)) celda.classList.add('selected');
+      else celda.classList.remove('selected');
+    });
+  }
+
+  function detenerCantos(){
+    if(cantosUnsub){
+      cantosUnsub();
+      cantosUnsub = null;
+    }
+  }
+
+  function escucharCantos(id){
+    detenerCantos();
+    if(!id){
+      actualizarCantosSeleccionados([]);
+      return;
+    }
+    const ref = db.collection('cantos').doc(id);
+    cantosUnsub = ref.onSnapshot(doc=>{
+      if(!doc.exists){
+        actualizarCantosSeleccionados([]);
+        return;
+      }
+      const data = doc.data() || {};
+      const numeros = Array.isArray(data.numeros) ? data.numeros : [];
+      actualizarCantosSeleccionados(numeros);
+    }, err=>console.error('Error escuchando cantos', err));
+  }
+
+  function actualizarTablaEstado(){
+    if(!tablaCantosContainer) return;
+    const estado = (currentSorteoData?.estado || '').toString().toLowerCase();
+    if(estado === 'jugando'){
+      tablaCantosContainer.classList.remove('disabled');
+      if(tablaCantosTitulo) tablaCantosTitulo.textContent = 'NÚMEROS CANTADOS';
+    } else {
+      tablaCantosContainer.classList.add('disabled');
+      if(tablaCantosTitulo){
+        tablaCantosTitulo.textContent = estado ? 'NÚMEROS CANTADOS (Inhabilitado)' : 'NÚMEROS CANTADOS';
+      }
+    }
+  }
+
+  function asegurarCampoPdf(id, data){
+    if(!id || !data) return;
+    if(typeof data.pdf === 'undefined' || data.pdf === null || data.pdf === ''){
+      db.collection('sorteos').doc(id).set({ pdf: 'no' }, { merge: true }).catch(err=>{
+        console.error('Error estableciendo pdf predeterminado', err);
+      });
+      data.pdf = 'no';
+    }
   }
 
   function obtenerFechaDesdeValor(valor){
@@ -464,14 +653,16 @@
     const cierre = isNaN(cierreRaw) ? 0 : cierreRaw;
     const inicioSellado = sorteoDate ? new Date(sorteoDate.getTime() - cierre * 60000) : null;
     const inicioSelladoValido = inicioSellado && !isNaN(inicioSellado.getTime());
-
-    if(currentSorteoData.estado !== 'Sellado' && inicioSelladoValido && ahora >= inicioSellado){
+    const estadoLower = (currentSorteoData.estado || '').toString().toLowerCase();
+    const pdfEstado = (currentSorteoData.pdf || '').toString().toLowerCase();
+    const esMismoDia = sorteoDate && ahora.toDateString() === sorteoDate.toDateString();
+    if(estadoLower === 'activo' && inicioSelladoValido && sorteoDate && esMismoDia && ahora >= inicioSellado && ahora <= sorteoDate){
       sellarBtn.classList.add('attention');
     }
-    if(currentSorteoData.estado === 'Sellado' && (currentSorteoData.pdf || '').toLowerCase() !== 'si'){
+    if(estadoLower === 'sellado' && pdfEstado !== 'si'){
       pdfBtn.classList.add('attention');
     }
-    if(currentSorteoData.estado !== 'Jugando' && sorteoDate && ahora >= sorteoDate){
+    if(estadoLower === 'sellado' && pdfEstado === 'si' && sorteoDate && ahora >= sorteoDate){
       jugarBtn.classList.add('attention');
     }
   }
@@ -499,11 +690,14 @@
     const cierre = isNaN(cierreRaw) ? 0 : cierreRaw;
     const inicioSellado = sorteoDate ? new Date(sorteoDate.getTime() - cierre * 60000) : null;
     const inicioSelladoValido = inicioSellado && !isNaN(inicioSellado.getTime());
+    const esMismoDia = sorteoDate && ahora.toDateString() === sorteoDate.toDateString();
+    const ventanaSellado = estado === 'activo' && inicioSelladoValido && sorteoDate && esMismoDia && ahora >= inicioSellado && ahora <= sorteoDate;
+    const pdfEstado = (currentSorteoData.pdf || '').toString().toLowerCase();
 
-    sellarBtn.disabled = estado === 'sellado' || estado === 'jugando' || estado === 'finalizado' || !inicioSelladoValido || (inicioSelladoValido && ahora < inicioSellado);
+    sellarBtn.disabled = !ventanaSellado;
     pdfBtn.disabled = estado !== 'sellado';
-    jugarBtn.disabled = estado === 'jugando' || estado === 'finalizado' || !sorteoDate || ahora < sorteoDate;
-    finalizarBtn.disabled = estado === 'finalizado';
+    jugarBtn.disabled = estado !== 'sellado' || pdfEstado !== 'si' || !sorteoDate || ahora < sorteoDate;
+    finalizarBtn.disabled = estado !== 'jugando';
   }
 
   function mostrarDatos(){
@@ -521,6 +715,8 @@
       mensajeEl.textContent = 'Selecciona un sorteo para administrar su estado.';
       [sellarBtn, pdfBtn, jugarBtn, finalizarBtn].forEach(btn=>btn.disabled=true);
       actualizarAnimaciones();
+      actualizarCantosSeleccionados([]);
+      actualizarTablaEstado();
       return;
     }
     const data = currentSorteoData;
@@ -540,20 +736,21 @@
     actualizarEstadoVisual(data.estado);
     const cierreVal = parseInt(data.cierreMinutos || data.cierre || 0, 10);
     const cierreMin = isNaN(cierreVal) ? null : cierreVal;
-    const tipoNombre = (data.tipo || '').replace(/^Sorteo\s+/i,'').toUpperCase();
-    const partesResumen = [];
-    if(tipoNombre){ partesResumen.push(`Tipo: ${tipoNombre}`); }
-    if(cierreMin !== null){ partesResumen.push(`Antes cierre: ${cierreMin} min.`); }
-    tipoEl.innerHTML = partesResumen.length ? partesResumen.map(texto=>`<span>${texto}</span>`).join('') : '';
-    mensajeEl.textContent = 'Gestiona el estado del sorteo usando los botones inferiores.';
+    const tipoNombre = ((data.tipo || '').replace(/^Sorteo\s+/i,'') || 'N/D').toUpperCase();
+    const estadoLinea = (data.estado || '-').toString().toUpperCase();
+    const cierreTexto = cierreMin !== null ? `${cierreMin} min.` : 'N/D';
+    tipoEl.innerHTML = `<span>ESTADO: ${estadoLinea}</span><span>Tipo: ${tipoNombre}</span><span>Cierre: ${cierreTexto}</span>`;
+    mensajeEl.textContent = '';
     actualizarBotones();
     actualizarAnimaciones();
+    actualizarTablaEstado();
   }
 
   async function cargarSorteos(){
     sorteos = [];
     try {
       const snap = await db.collection('sorteos').get();
+      const pendientesPdf = [];
       snap.forEach(doc=>{
         const d = doc.data();
         sorteos.push({
@@ -570,7 +767,15 @@
           cierreMinutos: d.cierreMinutos || d.cierre || 0,
           pdf: d.pdf || 'no'
         });
+        if(typeof d.pdf === 'undefined' || d.pdf === null || d.pdf === ''){
+          pendientesPdf.push(doc.id);
+        }
       });
+      if(pendientesPdf.length){
+        await Promise.all(pendientesPdf.map(id=>
+          db.collection('sorteos').doc(id).set({ pdf: 'no' }, { merge: true })
+        )).catch(err=>console.error('Error asegurando pdf en sorteos', err));
+      }
     } catch (err) {
       console.error('Error cargando sorteos', err);
     }
@@ -626,9 +831,11 @@
       if(!doc.exists){
         currentSorteoData = null;
         mostrarDatos();
+        detenerCantos();
         return;
       }
       currentSorteoData = { id: doc.id, ...doc.data() };
+      asegurarCampoPdf(doc.id, currentSorteoData);
       const idx = sorteos.findIndex(s=>s.id===doc.id);
       if(idx>=0){
         sorteos[idx] = { ...sorteos[idx], ...doc.data() };
@@ -641,7 +848,11 @@
     currentSorteoId = id;
     const encontrado = sorteos.find(s=>s.id===id);
     currentSorteoData = encontrado ? { ...encontrado } : null;
+    if(currentSorteoData){
+      asegurarCampoPdf(currentSorteoId, currentSorteoData);
+    }
     escucharSorteo(id);
+    escucharCantos(id);
     mostrarDatos();
   }
 
@@ -666,9 +877,18 @@
       alert('Aún el sorteo no se puede sellar, no esta en los minutos previos al sorteo');
       return;
     }
+    if(ahora > sorteoDate){
+      alert('El sorteo ya superó la hora programada.');
+      return;
+    }
+    if(ahora.toDateString() !== sorteoDate.toDateString()){
+      alert('Solo puedes sellar el día del sorteo.');
+      return;
+    }
     try {
       await db.collection('sorteos').doc(currentSorteoId).update({ estado: 'Sellado' });
       mensajeEl.textContent = 'El sorteo fue sellado correctamente.';
+      sellarBtn.classList.remove('attention');
     } catch (err) {
       console.error('Error sellando sorteo', err);
       alert('No fue posible sellar el sorteo.');
@@ -689,6 +909,14 @@
     if(!currentSorteoId || !currentSorteoData){ alert('Selecciona un sorteo primero.'); return; }
     if(currentSorteoData.estado === 'Jugando'){ alert('El sorteo ya está en estado Jugando.'); return; }
     if(currentSorteoData.estado === 'Finalizado'){ alert('El sorteo ya finalizó.'); return; }
+    if((currentSorteoData.estado || '').toLowerCase() !== 'sellado'){
+      alert('El sorteo debe estar Sellado para iniciar el juego.');
+      return;
+    }
+    if((currentSorteoData.pdf || '').toString().toLowerCase() !== 'si'){
+      alert('Debes generar el PDF antes de iniciar el juego.');
+      return;
+    }
     const sorteoDate = obtenerFechaSorteo(currentSorteoData);
     if(!sorteoDate){ alert('Datos de fecha y hora inválidos.'); return; }
     const ahora = getServerNow();
@@ -696,9 +924,12 @@
       alert('Aún el sorteo no ha llegado a su fecha y hora de sorteo');
       return;
     }
+    const confirmar = await confirm('¿Deseas cambiar el estado del sorteo a "Jugando"?');
+    if(!confirmar) return;
     try {
       await db.collection('sorteos').doc(currentSorteoId).update({ estado: 'Jugando' });
       mensajeEl.textContent = 'El sorteo cambió a estado Jugando.';
+      jugarBtn.classList.remove('attention');
     } catch (err) {
       console.error('Error cambiando a Jugando', err);
       alert('No fue posible cambiar el estado a Jugando.');
@@ -707,12 +938,16 @@
 
   async function finalizarSorteo(){
     if(!currentSorteoId || !currentSorteoData){ alert('Selecciona un sorteo primero.'); return; }
-    if(currentSorteoData.estado === 'Finalizado'){ alert('El sorteo ya está finalizado.'); return; }
-    const confirmar = await confirm('¿Desea cambiar el estado del sorteo a "Finalizado"?');
+    if((currentSorteoData.estado || '').toLowerCase() !== 'jugando'){
+      alert('El sorteo debe estar en estado Jugando para finalizar.');
+      return;
+    }
+    const confirmar = await confirm('¿Deseas finalizar el sorteo actual? No podrás deshacer esta acción.');
     if(!confirmar) return;
     try {
       await db.collection('sorteos').doc(currentSorteoId).update({ estado: 'Finalizado' });
       mensajeEl.textContent = 'El sorteo fue finalizado correctamente.';
+      finalizarBtn.classList.remove('attention');
     } catch (err) {
       console.error('Error finalizando sorteo', err);
       alert('No fue posible finalizar el sorteo.');
