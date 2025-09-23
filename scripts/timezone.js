@@ -102,12 +102,12 @@ async function initFechaHora(idElemento = "fecha-hora") {
       }
       const fechaSpan = document.createElement('span');
       fechaSpan.className = 'fecha-actual-icono';
-      fechaSpan.textContent = `📅 ${fechaStr}`;
+      fechaSpan.textContent = fechaStr;
       el.appendChild(fechaSpan);
       el.appendChild(document.createTextNode(' '));
       const horaSpan = document.createElement('span');
       horaSpan.className = 'hora-actual-icono';
-      horaSpan.textContent = `⏰ ${horaStr}`;
+      horaSpan.textContent = horaStr;
       el.appendChild(horaSpan);
     } catch (err) {
       console.error('Error formateando fecha/hora', err);
