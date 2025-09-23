@@ -172,12 +172,19 @@
       margin: 16px 8px 0;
       width: min(360px, calc(100% - 16px));
       box-shadow: 0 0 10px rgba(0,0,0,0.4);
+      transition: background 0.3s ease;
     }
-    #detalle-container.diario {
-      background: linear-gradient(135deg, rgba(0,128,0,0.85), rgba(255,255,255,0.95));
+    #detalle-container.estado-sellado {
+      background: linear-gradient(135deg, #c0c0c0, #ffffff);
     }
-    #detalle-container.especial {
-      background: linear-gradient(135deg, rgba(255,140,0,0.8), rgba(255,255,255,0.95));
+    #detalle-container.estado-pdf {
+      background: linear-gradient(135deg, #3ba74d, #ffffff);
+    }
+    #detalle-container.estado-jugando {
+      background: linear-gradient(135deg, #7f3fbf, #ffffff);
+    }
+    #detalle-container.estado-finalizado {
+      background: linear-gradient(135deg, #8b4513, #ffffff);
     }
     #sorteo-nombre {
       font-size: 1rem;
@@ -278,6 +285,10 @@
       filter: grayscale(0.9);
       opacity: 0.75;
     }
+    #tabla-cantos-container.bloqueado {
+      filter: none;
+      opacity: 1;
+    }
     #tabla-cantos {
       width: 100%;
       border-collapse: separate;
@@ -309,7 +320,8 @@
       box-shadow: 0 0 8px rgba(255,255,0,0.8);
       transform: scale(1.03);
     }
-    #tabla-cantos-container.disabled .canto-cell {
+    #tabla-cantos-container.disabled .canto-cell,
+    #tabla-cantos-container.bloqueado .canto-cell {
       pointer-events: none;
       cursor: default;
     }
@@ -489,6 +501,53 @@
   const cantoCeldas = new Map();
   let cantosSeleccionados = new Set();
   let cantosUnsub = null;
+  let sorteoCookieKey = '';
+  let restauracionPendiente = false;
+
+  function setCookie(name, value){
+    document.cookie = `${name}=${encodeURIComponent(value)};path=/;max-age=31536000`;
+  }
+
+  function getCookie(name){
+    const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/[.$?*|{}()\[\]\\\/\+^]/g, '\\$&') + '=([^;]*)'));
+    return match ? decodeURIComponent(match[1]) : null;
+  }
+
+  function deleteCookie(name){
+    document.cookie = `${name}=;path=/;max-age=0`;
+  }
+
+  function guardarSorteoSeleccionado(id){
+    if(!sorteoCookieKey || !id) return;
+    setCookie(sorteoCookieKey, id);
+  }
+
+  function intentarRestaurarSorteo(){
+    if(!sorteoCookieKey) return false;
+    const guardado = getCookie(sorteoCookieKey);
+    if(!guardado) return false;
+    if(guardado === currentSorteoId) return true;
+    const existe = sorteos.find(s=>s.id===guardado);
+    if(!existe){
+      deleteCookie(sorteoCookieKey);
+      return false;
+    }
+    seleccionarSorteo(guardado);
+    return true;
+  }
+
+  auth.onAuthStateChanged(user=>{
+    if(!user){
+      sorteoCookieKey = '';
+      restauracionPendiente = false;
+      return;
+    }
+    sorteoCookieKey = `cantarsorteos_${user.email.replace(/[^\w]/g,'_')}`;
+    restauracionPendiente = true;
+    if(intentarRestaurarSorteo()){
+      restauracionPendiente = false;
+    }
+  });
 
   document.getElementById('salir-btn').addEventListener('click',()=>{ window.location.href='admin.html'; });
   btnSorteo.addEventListener('click', abrirModalSorteos);
@@ -627,6 +686,7 @@
   async function manejarCantoClick(clave){
     if(!currentSorteoId || !currentSorteoData) return;
     if(tablaCantosContainer.classList.contains('disabled')) return;
+    if(tablaCantosContainer.classList.contains('bloqueado')) return;
     if(cantosSeleccionados.has(clave)) return;
     const confirmar = confirm(`Confirmas la jugada de ${clave}?`);
     if(!confirmar) return;
@@ -690,10 +750,12 @@
   function actualizarTablaEstado(){
     if(!tablaCantosContainer) return;
     const estado = (currentSorteoData?.estado || '').toString().toLowerCase();
+    const esFinalizado = estado === 'finalizado';
     const habilitado = estado === 'jugando';
-    tablaCantosContainer.classList.toggle('disabled', !habilitado);
+    tablaCantosContainer.classList.toggle('disabled', !habilitado && !esFinalizado);
+    tablaCantosContainer.classList.toggle('bloqueado', esFinalizado);
     if(tablaCantosTitulo){
-      tablaCantosTitulo.textContent = 'NÚMEROS CANTADOS';
+      tablaCantosTitulo.textContent = esFinalizado ? 'NÚMEROS CANTADOS (FINALIZADO)' : 'NÚMEROS CANTADOS';
     }
   }
 
@@ -836,7 +898,7 @@
       sorteoNombreEl.textContent = 'Selecciona un sorteo para ver los detalles';
       actualizarEstadoVisual(null);
       tipoEl.innerHTML = '';
-      if(detalleContainer) detalleContainer.classList.remove('diario','especial');
+      if(detalleContainer) detalleContainer.classList.remove('estado-sellado','estado-pdf','estado-jugando','estado-finalizado');
       mensajeEl.textContent = 'Selecciona un sorteo para administrar su estado.';
       [sellarBtn, pdfBtn, jugarBtn, finalizarBtn].forEach(btn=>btn.disabled=true);
       actualizarAnimaciones();
@@ -856,9 +918,13 @@
     else if(esDiario) btnSorteo.classList.add('diario');
     else if(esEspecial) btnSorteo.classList.add('especial');
     if(detalleContainer){
-      detalleContainer.classList.remove('diario','especial');
-      if(esDiario) detalleContainer.classList.add('diario');
-      else if(esEspecial) detalleContainer.classList.add('especial');
+      detalleContainer.classList.remove('estado-sellado','estado-pdf','estado-jugando','estado-finalizado');
+      const estadoLower = estadoActual.toLowerCase();
+      const pdfEstado = (data.pdf || '').toString().toLowerCase();
+      if(estadoLower === 'finalizado') detalleContainer.classList.add('estado-finalizado');
+      else if(estadoLower === 'jugando') detalleContainer.classList.add('estado-jugando');
+      else if(pdfEstado === 'si') detalleContainer.classList.add('estado-pdf');
+      else if(estadoLower === 'sellado') detalleContainer.classList.add('estado-sellado');
     }
     if(fechaProgramadaEl) fechaProgramadaEl.textContent = data.fecha ? formatearFecha(data.fecha) : '';
     if(horaProgramadaEl) horaProgramadaEl.textContent = data.hora ? formatearHora(data.hora) : '';
@@ -920,6 +986,10 @@
       }
       if(cantosPromises.length){
         await Promise.all(cantosPromises);
+      }
+      if(restauracionPendiente){
+        const restaurado = intentarRestaurarSorteo();
+        restauracionPendiente = !restaurado;
       }
     } catch (err) {
       console.error('Error cargando sorteos', err);
@@ -1000,7 +1070,10 @@
   }
 
   function seleccionarSorteo(id){
+    if(!id) return;
     currentSorteoId = id;
+    restauracionPendiente = false;
+    guardarSorteoSeleccionado(id);
     const encontrado = sorteos.find(s=>s.id===id);
     currentSorteoData = encontrado ? { ...encontrado } : null;
     if(currentSorteoData){
@@ -1031,10 +1104,27 @@
     }
   }
 
-  function abrirPDF(){
+  async function abrirPDF(){
     if(!currentSorteoId || !currentSorteoData){ alert('Selecciona un sorteo primero.'); return; }
     if((currentSorteoData.estado || '') !== 'Sellado'){
       alert('Para generar el archivo PDF de sellado el sorteo debe estar Sellado primero');
+      return;
+    }
+    const confirmar = await confirm('¿Ya se guardó el documento PDF de este sorteo?');
+    if(confirmar){
+      try {
+        await db.collection('sorteos').doc(currentSorteoId).update({ pdf: 'si' });
+        currentSorteoData.pdf = 'si';
+        const idx = sorteos.findIndex(s=>s.id===currentSorteoId);
+        if(idx>=0) sorteos[idx].pdf = 'si';
+        mensajeEl.textContent = 'Se marcó el documento PDF como guardado.';
+        actualizarBotones();
+        actualizarAnimaciones();
+        mostrarDatos();
+      } catch (err) {
+        console.error('Error actualizando estado del PDF', err);
+        alert('No fue posible actualizar el estado del PDF.');
+      }
       return;
     }
     const url = `pdfsorteo.html?s=${currentSorteoId}`;
@@ -1085,7 +1175,9 @@
 
   async function inicializar(){
     await cargarSorteos();
-    mostrarDatos();
+    if(!intentarRestaurarSorteo()){
+      mostrarDatos();
+    }
   }
 
   setInterval(actualizarAnimaciones, 15000);
