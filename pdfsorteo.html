@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Sorteo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #ffffff;
+      margin: 0;
+      padding: 60px 15px 40px;
+      box-sizing: border-box;
+      color: #1a1a1a;
+    }
+    #salir-btn {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      width: 120px;
+      height: 40px;
+      background: orange;
+      border: 4px solid #FFD700;
+      border-radius: 10px;
+      color: white;
+      text-shadow: 2px 2px 4px #000;
+      font-family: 'Bangers', cursive;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s;
+      z-index: 1001;
+    }
+    #salir-btn:hover { transform: scale(1.05); box-shadow: 0 0 15px rgba(255,215,0,0.8); }
+    #salir-btn:active { transform: scale(0.95); }
+    #salir-btn .label { font-size: 1.1rem; }
+    @media (orientation: portrait) {
+      #salir-btn { width: 40px; }
+      #salir-btn .label { display: none; }
+    }
+    #generar-pdf-btn {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      padding: 10px 18px;
+      font-family: 'Bangers', cursive;
+      font-size: 1.1rem;
+      border-radius: 12px;
+      border: 4px solid #FFD700;
+      background: linear-gradient(#003c8f, #ffffff);
+      color: #ffffff;
+      text-shadow: 1px 1px 2px #000;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      display: none;
+      z-index: 1001;
+    }
+    #generar-pdf-btn:hover { transform: scale(1.05); }
+    #pdf-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    #logo {
+      width: 140px;
+      margin: 0 auto 15px;
+      display: block;
+    }
+    #nombre-sorteo {
+      font-family: 'Bangers', cursive;
+      font-size: 2.2rem;
+      color: #0b5394;
+      margin: 5px 0;
+      text-transform: uppercase;
+    }
+    #tipo-sorteo {
+      font-family: 'Bangers', cursive;
+      font-size: 1.4rem;
+      color: #0b6623;
+      margin-bottom: 8px;
+    }
+    #fecha-hora-line {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 18px;
+    }
+    #premios-section {
+      border: 2px solid #0b6623;
+      border-radius: 16px;
+      padding: 15px;
+      background: linear-gradient(180deg, rgba(10,120,10,0.15), rgba(255,255,255,0.95));
+      margin-bottom: 20px;
+    }
+    #premios-section h2 {
+      font-family: 'Bangers', cursive;
+      font-size: 1.6rem;
+      color: #0b6623;
+      margin: 0;
+    }
+    #total-premios {
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: #0b6623;
+      text-shadow: 0 0 6px rgba(255,255,255,0.9);
+      margin: 10px 0 20px;
+    }
+    #formas-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      text-align: left;
+    }
+    .forma-card {
+      border: 2px solid #003c8f;
+      border-radius: 12px;
+      padding: 10px;
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    }
+    .forma-card h3 {
+      margin: 0 0 6px;
+      font-family: 'Bangers', cursive;
+      font-size: 1.2rem;
+      color: #0b5394;
+    }
+    .forma-info { font-weight: 600; font-size: 0.95rem; color: #0b1d0b; }
+    #cartones-section h2 {
+      font-family: 'Bangers', cursive;
+      font-size: 1.6rem;
+      color: #0b5394;
+      margin-bottom: 10px;
+    }
+    #cartones-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+    }
+    .mini-carton-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 6px;
+      border-radius: 12px;
+      background: linear-gradient(#0a8800,#dff5d8);
+      box-shadow: 0 0 6px rgba(0,0,0,0.15);
+    }
+    .mini-carton-box.gratis { background: linear-gradient(#0044cc,#cce0ff); }
+    .mini-info {
+      font-weight: 700;
+      font-size: 0.85rem;
+      margin: 4px 0;
+      text-align: center;
+      color: #1a1a1a;
+    }
+    .mini-carton-wrapper {
+      background: linear-gradient(#ffffff,#cccccc);
+      border-radius: 10px;
+      padding: 4px;
+    }
+    .mini-carton {
+      border-collapse: separate;
+      border-spacing: 0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .mini-carton th, .mini-carton td {
+      border: 1px solid #666;
+      width: 24px;
+      height: 24px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.75rem;
+    }
+    .mini-carton th {
+      background: radial-gradient(circle,#ffffff,#ffffff 60%,#00aa00);
+      color: #ff6600;
+      font-size: 1rem;
+      text-shadow: 1px 1px 0 #000;
+    }
+    .mini-carton-box.gratis .mini-carton th {
+      background: radial-gradient(circle,#ffffff,#ffffff 60%,#0044cc);
+    }
+    .mini-carton td.free { background: radial-gradient(circle,#ffffff,#ffff00); color: #e67e22; }
+    #loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-family: 'Bangers', cursive;
+      font-size: 1.4rem;
+      gap: 12px;
+      z-index: 1200;
+    }
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 6px solid rgba(255,255,255,0.3);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    <div id="loading-text">Generando cartones del sorteo por favor espera</div>
+  </div>
+  <button id="salir-btn"><span class="tri">&#9664;</span><span class="label">Salir</span></button>
+  <button id="generar-pdf-btn">Generar PDF</button>
+  <div id="pdf-wrapper">
+    <img id="logo" src="https://i.imgur.com/twjhNtZ.png" alt="Bingo Online">
+    <div id="info-basica">
+      <div id="nombre-sorteo">Sorteo</div>
+      <div id="tipo-sorteo"></div>
+      <div id="fecha-hora-line">
+        <span id="fecha-sorteo"></span>
+        <span id="hora-sorteo"></span>
+      </div>
+    </div>
+    <section id="premios-section">
+      <h2>CRÉDITOS TOTALES A REPARTIR</h2>
+      <div id="total-premios">0</div>
+      <div id="formas-container"></div>
+    </section>
+    <section id="cartones-section">
+      <h2>Cartones del sorteo</h2>
+      <div id="cartones-grid"></div>
+    </section>
+  </div>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-storage-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNa5H1L1MSQe6hw2yYB9H9n1tFoZT3zh0+BTtPlqvGjufH6G+jD/adJzi10BGSAdoo6gWQBaIj++ImQF0kGZ7Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-HqKj1iJt+uCQXDpUe1koRaSPoaqe7i0rGUNShUMHbOWcZH/5LiCFYl8aAkaI0s5momkGLumZ5qX6bi12PtD3ug==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="auth.js"></script>
+  <script>
+  ensureAuth('Administrador');
+
+  const params = new URLSearchParams(window.location.search);
+  const sorteoId = params.get('s');
+  if(!sorteoId){
+    alert('No se indicó un sorteo.');
+    window.location.href = 'cantarsorteos.html';
+  }
+
+  const salirBtn = document.getElementById('salir-btn');
+  const pdfBtn = document.getElementById('generar-pdf-btn');
+  const loadingOverlay = document.getElementById('loading-overlay');
+  const loadingText = document.getElementById('loading-text');
+  const nombreEl = document.getElementById('nombre-sorteo');
+  const tipoEl = document.getElementById('tipo-sorteo');
+  const fechaEl = document.getElementById('fecha-sorteo');
+  const horaEl = document.getElementById('hora-sorteo');
+  const totalPremiosEl = document.getElementById('total-premios');
+  const formasCont = document.getElementById('formas-container');
+  const cartonesGrid = document.getElementById('cartones-grid');
+
+  let sorteoData = null;
+  let formasData = [];
+  let cartonesData = [];
+
+  salirBtn.addEventListener('click', ()=>{ window.location.href = 'cantarsorteos.html'; });
+  pdfBtn.addEventListener('click', generarPDF);
+
+  function formatearFecha(fecha){
+    if(!fecha) return '';
+    return `📅 ${fecha}`;
+  }
+
+  function formatearHora(hora){
+    if(!hora) return '';
+    const [hh, mm] = hora.split(':');
+    let h = parseInt(hh, 10);
+    const sufijo = h >= 12 ? 'pm' : 'am';
+    h = h % 12 || 12;
+    return `⏰ ${h.toString().padStart(2,'0')}:${mm} ${sufijo}`;
+  }
+
+  function crearMiniCarton(posiciones){
+    const table = document.createElement('table');
+    table.className = 'mini-carton';
+    const thead = document.createElement('thead');
+    const trh = document.createElement('tr');
+    ['B','I','N','G','O'].forEach(l=>{
+      const th = document.createElement('th');
+      th.textContent = l;
+      trh.appendChild(th);
+    });
+    thead.appendChild(trh);
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    for(let r=0; r<5; r++){
+      const tr = document.createElement('tr');
+      for(let c=0; c<5; c++){
+        const td = document.createElement('td');
+        if(r===2 && c===2){
+          td.classList.add('free');
+          td.textContent = '★';
+        }else{
+          const found = posiciones.find(p=>p.r===r && p.c===c);
+          if(found){ td.textContent = found.valor; }
+        }
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    return table;
+  }
+
+  function renderFormas(){
+    formasCont.innerHTML = '';
+    const total = Number(sorteoData.totalPremios || 0);
+    formasData.sort((a,b)=>(a.idx||0)-(b.idx||0));
+    formasData.forEach(forma=>{
+      const card = document.createElement('div');
+      card.className = 'forma-card';
+      const titulo = document.createElement('h3');
+      titulo.textContent = `Forma ${forma.idx || ''} - ${forma.nombre || ''}`;
+      card.appendChild(titulo);
+      const premioForma = Math.round(total * (parseFloat(forma.porcentaje || 0)/100));
+      const premioInfo = document.createElement('div');
+      premioInfo.className = 'forma-info';
+      premioInfo.textContent = `Premio: ${premioForma}`;
+      card.appendChild(premioInfo);
+      const cartonesInfo = document.createElement('div');
+      cartonesInfo.className = 'forma-info';
+      cartonesInfo.textContent = `Cartones gratis: ${forma.cartonesGratis || 0}`;
+      card.appendChild(cartonesInfo);
+      formasCont.appendChild(card);
+    });
+  }
+
+  function renderCartones(){
+    cartonesGrid.innerHTML = '';
+    cartonesData.sort((a,b)=> (b.cartonNum || 0) - (a.cartonNum || 0));
+    cartonesData.forEach(data=>{
+      const box = document.createElement('div');
+      box.className = 'mini-carton-box';
+      if((data.tipocarton || '').toLowerCase() === 'gratis'){ box.classList.add('gratis'); }
+      const numero = document.createElement('div');
+      numero.className = 'mini-info';
+      numero.textContent = `Cartón ${String(data.cartonNum || 0).padStart(4,'0')}`;
+      box.appendChild(numero);
+      const wrapper = document.createElement('div');
+      wrapper.className = 'mini-carton-wrapper';
+      wrapper.appendChild(crearMiniCarton(data.posiciones || []));
+      box.appendChild(wrapper);
+      const alias = document.createElement('div');
+      alias.className = 'mini-info';
+      alias.textContent = data.alias || '';
+      box.appendChild(alias);
+      cartonesGrid.appendChild(box);
+    });
+  }
+
+  async function cargarDatos(){
+    try {
+      const sorteoDoc = await db.collection('sorteos').doc(sorteoId).get();
+      if(!sorteoDoc.exists){
+        alert('No se encontró el sorteo.');
+        window.location.href = 'cantarsorteos.html';
+        return;
+      }
+      sorteoData = sorteoDoc.data();
+      nombreEl.textContent = sorteoData.nombre || 'Sorteo';
+      tipoEl.textContent = sorteoData.tipo ? `Tipo de sorteo: ${sorteoData.tipo}` : '';
+      fechaEl.textContent = formatearFecha(sorteoData.fecha || '');
+      horaEl.textContent = formatearHora(sorteoData.hora || '');
+      totalPremiosEl.textContent = Math.round(sorteoData.totalPremios || 0);
+
+      const formasSnap = await db.collection('formas').where('sorteoId','==',sorteoId).get();
+      formasData = [];
+      formasSnap.forEach(doc=>formasData.push(doc.data()));
+      renderFormas();
+
+      const cartonesSnap = await db.collection('CartonJugado').where('sorteoId','==',sorteoId).get();
+      cartonesData = [];
+      cartonesSnap.forEach(doc=>cartonesData.push(doc.data()));
+      renderCartones();
+
+      pdfBtn.style.display = 'block';
+    } catch (err) {
+      console.error('Error cargando datos', err);
+      alert('Ocurrió un error cargando la información del sorteo.');
+      window.location.href = 'cantarsorteos.html';
+    } finally {
+      loadingOverlay.style.display = 'none';
+    }
+  }
+
+  function normalizarTexto(texto){
+    return (texto || '').toString().normalize('NFD').replace(/[^\w\s-]/g,'').trim().replace(/\s+/g,'_');
+  }
+
+  async function generarPDF(){
+    if(!sorteoData){ return; }
+    loadingText.textContent = 'Generando PDF, por favor espera';
+    loadingOverlay.style.display = 'flex';
+    try {
+      await db.collection('sorteos').doc(sorteoId).set({ pdf: 'si' }, { merge: true });
+      const { jsPDF } = window.jspdf;
+      const element = document.getElementById('pdf-wrapper');
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p','pt','a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pageWidth;
+      const imgHeight = canvas.height * imgWidth / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      while(heightLeft > 0){
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      const blob = pdf.output('blob');
+      const nombre = normalizarTexto(sorteoData.nombre || 'sorteo');
+      const fecha = normalizarTexto((sorteoData.fecha || '').replace(/\//g,'-'));
+      const hora = normalizarTexto((sorteoData.hora || '').replace(/:/g,'-'));
+      const archivo = `${nombre}_${fecha}_${hora}.pdf`;
+      const storageRef = firebase.storage().ref().child(`PDF sorteos/${archivo}`);
+      await storageRef.put(blob);
+      alert('PDF generado y guardado correctamente.');
+    } catch (err) {
+      console.error('Error generando PDF', err);
+      alert('No fue posible generar el PDF.');
+    } finally {
+      loadingOverlay.style.display = 'none';
+      loadingText.textContent = 'Generando cartones del sorteo por favor espera';
+    }
+  }
+
+  cargarDatos();
+  </script>
+</body>
+</html>
