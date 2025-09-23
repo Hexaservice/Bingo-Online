@@ -93,19 +93,40 @@
     #fecha-hora-sorteo {
       display: flex;
       flex-wrap: wrap;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
-      gap: 10px;
+      gap: 12px;
       font-family: 'Bangers', cursive;
       font-size: 1rem;
     }
-    #fecha-sorteo, #hora-sorteo {
+    .dato-programado {
       display: flex;
-      gap: 6px;
-      align-items: center;
-      justify-content: center;
+      align-items: flex-start;
+      gap: 8px;
       color: #0f2a0f;
       white-space: nowrap;
+    }
+    .dato-programado .icono {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      font-size: 1.1rem;
+    }
+    .dato-programado .contenedor-valores {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+    }
+    .valor-programado {
+      font-size: 1rem;
+    }
+    .valor-actual {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.7rem;
+      color: #0b4dda;
+      font-weight: 600;
     }
     .datos-sorteo {
       display: flex;
@@ -148,7 +169,7 @@
       border-radius: 12px;
       background: linear-gradient(135deg, rgba(0,60,0,0.85), rgba(255,255,255,0.95));
       padding: 15px 14px 20px;
-      margin: 10px auto 0;
+      margin: 16px auto 0;
       width: min(420px, 92vw);
       box-shadow: 0 0 10px rgba(0,0,0,0.4);
     }
@@ -350,8 +371,20 @@
     <div class="sorteo-info">
       <button id="sorteo-btn">Selecciona Sorteo</button>
       <div id="fecha-hora-sorteo">
-        <div id="fecha-sorteo"></div>
-        <div id="hora-sorteo"></div>
+        <div id="fecha-sorteo" class="dato-programado">
+          <span class="icono">📅</span>
+          <div class="contenedor-valores">
+            <span id="fecha-programada" class="valor-programado"></span>
+            <span id="fecha-actual" class="valor-actual"></span>
+          </div>
+        </div>
+        <div id="hora-sorteo" class="dato-programado">
+          <span class="icono">⏰</span>
+          <div class="contenedor-valores">
+            <span id="hora-programada" class="valor-programado"></span>
+            <span id="hora-actual" class="valor-actual"></span>
+          </div>
+        </div>
       </div>
     </div>
     <div class="datos-sorteo">
@@ -378,7 +411,7 @@
         <img src="https://api.iconify.design/mdi/seal-variant.svg?color=white" alt="Sellar">
       </button>
       <button id="pdf-btn" class="estado-btn" title="Generar PDF">
-        <img src="https://api.iconify.design/mdi/book-open-page-variant.svg?color=white" alt="PDF">
+        <img src="https://api.iconify.design/mdi/file-pdf-box.svg?color=white" alt="PDF">
       </button>
       <button id="jugar-btn" class="estado-btn" title="Cambiar a Jugando">
         <img src="https://api.iconify.design/mdi/slot-machine.svg?color=white" alt="Jugar">
@@ -410,7 +443,10 @@
   <script src="scripts/timezone.js"></script>
   <script>
   ensureAuth('Administrador');
-  initServerTime().then(()=>initFechaHora());
+  initServerTime().then(()=>{
+    initFechaHora();
+    iniciarActualizacionesActuales();
+  });
 
   let sorteos = [];
   let currentSorteoId = null;
@@ -418,8 +454,10 @@
   let sorteoUnsub = null;
 
   const btnSorteo = document.getElementById('sorteo-btn');
-  const fechaEl = document.getElementById('fecha-sorteo');
-  const horaEl = document.getElementById('hora-sorteo');
+  const fechaProgramadaEl = document.getElementById('fecha-programada');
+  const horaProgramadaEl = document.getElementById('hora-programada');
+  const fechaActualValorEl = document.getElementById('fecha-actual');
+  const horaActualValorEl = document.getElementById('hora-actual');
   const premioEl = document.getElementById('premio-valor');
   const valorCartonEl = document.getElementById('valor-carton-valor');
   const cartonesPagosEl = document.getElementById('cartones-jugando-valor');
@@ -446,8 +484,45 @@
   finalizarBtn.addEventListener('click', finalizarSorteo);
   construirTablaCantos();
 
+  function obtenerServerTime(){
+    if(typeof window !== 'undefined' && window.serverTime) return window.serverTime;
+    if(typeof serverTime !== 'undefined') return serverTime;
+    return null;
+  }
+
   function getServerNow(){
-    return new Date(Date.now() + (window.serverTime?.diferencia || 0));
+    const st = obtenerServerTime();
+    return new Date(Date.now() + (st?.diferencia || 0));
+  }
+
+  function actualizarValoresActuales(){
+    if(!fechaActualValorEl || !horaActualValorEl) return;
+    try {
+      const st = obtenerServerTime();
+      const diferencia = st?.diferencia || 0;
+      const ahora = new Date(Date.now() + diferencia);
+      const locale = st?.locale || 'es-ES';
+      const zona = st?.zonaIana;
+      const opcionesFecha = { year: 'numeric', month: 'long', day: 'numeric' };
+      const opcionesHora = { hour: '2-digit', minute: '2-digit', hour12: true };
+      if(zona){
+        opcionesFecha.timeZone = zona;
+        opcionesHora.timeZone = zona;
+      }
+      const pais = st?.Pais ? `${st.Pais}, ` : '';
+      const fechaStr = ahora.toLocaleDateString(locale, opcionesFecha);
+      let horaStr = ahora.toLocaleTimeString(locale, opcionesHora);
+      horaStr = horaStr.replace(' a. m.', ' am').replace(' p. m.', ' pm');
+      fechaActualValorEl.textContent = `${pais}${fechaStr}`.trim();
+      horaActualValorEl.textContent = `${pais}${horaStr}`.trim();
+    } catch (err) {
+      console.error('Error actualizando fecha y hora actuales', err);
+    }
+  }
+
+  function iniciarActualizacionesActuales(){
+    actualizarValoresActuales();
+    setInterval(actualizarValoresActuales, 1000);
   }
 
   function construirTablaCantos(){
@@ -492,7 +567,7 @@
     if(!currentSorteoId || !currentSorteoData) return;
     if(tablaCantosContainer.classList.contains('disabled')) return;
     if(cantosSeleccionados.has(clave)) return;
-    const confirmar = await confirm(`Confirmas la jugada de ${clave}?`);
+    const confirmar = confirm(`Confirmas la jugada de ${clave}?`);
     if(!confirmar) return;
     try {
       await db.collection('cantos').doc(currentSorteoId).set({
@@ -546,14 +621,10 @@
   function actualizarTablaEstado(){
     if(!tablaCantosContainer) return;
     const estado = (currentSorteoData?.estado || '').toString().toLowerCase();
-    if(estado === 'jugando'){
-      tablaCantosContainer.classList.remove('disabled');
-      if(tablaCantosTitulo) tablaCantosTitulo.textContent = 'NÚMEROS CANTADOS';
-    } else {
-      tablaCantosContainer.classList.add('disabled');
-      if(tablaCantosTitulo){
-        tablaCantosTitulo.textContent = estado ? 'NÚMEROS CANTADOS (Inhabilitado)' : 'NÚMEROS CANTADOS';
-      }
+    const habilitado = estado === 'jugando';
+    tablaCantosContainer.classList.toggle('disabled', !habilitado);
+    if(tablaCantosTitulo){
+      tablaCantosTitulo.textContent = 'NÚMEROS CANTADOS';
     }
   }
 
@@ -644,26 +715,18 @@
   }
 
   function actualizarAnimaciones(){
-    [sellarBtn, pdfBtn, jugarBtn].forEach(btn=>btn.classList.remove('attention'));
+    [sellarBtn, pdfBtn, jugarBtn, finalizarBtn].forEach(btn=>btn.classList.remove('attention'));
     actualizarBotones();
     if(!currentSorteoData) return;
-    const ahora = getServerNow();
-    const sorteoDate = obtenerFechaSorteo(currentSorteoData);
-    const cierreRaw = parseInt(currentSorteoData.cierreMinutos || currentSorteoData.cierre || 0, 10);
-    const cierre = isNaN(cierreRaw) ? 0 : cierreRaw;
-    const inicioSellado = sorteoDate ? new Date(sorteoDate.getTime() - cierre * 60000) : null;
-    const inicioSelladoValido = inicioSellado && !isNaN(inicioSellado.getTime());
     const estadoLower = (currentSorteoData.estado || '').toString().toLowerCase();
     const pdfEstado = (currentSorteoData.pdf || '').toString().toLowerCase();
-    const esMismoDia = sorteoDate && ahora.toDateString() === sorteoDate.toDateString();
-    if(estadoLower === 'activo' && inicioSelladoValido && sorteoDate && esMismoDia && ahora >= inicioSellado && ahora <= sorteoDate){
+    if(estadoLower === 'activo'){
       sellarBtn.classList.add('attention');
-    }
-    if(estadoLower === 'sellado' && pdfEstado !== 'si'){
-      pdfBtn.classList.add('attention');
-    }
-    if(estadoLower === 'sellado' && pdfEstado === 'si' && sorteoDate && ahora >= sorteoDate){
-      jugarBtn.classList.add('attention');
+    } else if(estadoLower === 'sellado'){
+      if(pdfEstado === 'si') jugarBtn.classList.add('attention');
+      else pdfBtn.classList.add('attention');
+    } else if(estadoLower === 'jugando'){
+      finalizarBtn.classList.add('attention');
     }
   }
 
@@ -684,27 +747,19 @@
       return;
     }
     const estado = (currentSorteoData.estado || '').toLowerCase();
-    const ahora = getServerNow();
-    const sorteoDate = obtenerFechaSorteo(currentSorteoData);
-    const cierreRaw = parseInt(currentSorteoData.cierreMinutos || currentSorteoData.cierre || 0, 10);
-    const cierre = isNaN(cierreRaw) ? 0 : cierreRaw;
-    const inicioSellado = sorteoDate ? new Date(sorteoDate.getTime() - cierre * 60000) : null;
-    const inicioSelladoValido = inicioSellado && !isNaN(inicioSellado.getTime());
-    const esMismoDia = sorteoDate && ahora.toDateString() === sorteoDate.toDateString();
-    const ventanaSellado = estado === 'activo' && inicioSelladoValido && sorteoDate && esMismoDia && ahora >= inicioSellado && ahora <= sorteoDate;
     const pdfEstado = (currentSorteoData.pdf || '').toString().toLowerCase();
 
-    sellarBtn.disabled = !ventanaSellado;
+    sellarBtn.disabled = estado !== 'activo';
     pdfBtn.disabled = estado !== 'sellado';
-    jugarBtn.disabled = estado !== 'sellado' || pdfEstado !== 'si' || !sorteoDate || ahora < sorteoDate;
+    jugarBtn.disabled = estado !== 'sellado' || pdfEstado !== 'si';
     finalizarBtn.disabled = estado !== 'jugando';
   }
 
   function mostrarDatos(){
     if(!currentSorteoData){
       btnSorteo.textContent = 'Selecciona Sorteo';
-      fechaEl.textContent = '';
-      horaEl.textContent = '';
+      if(fechaProgramadaEl) fechaProgramadaEl.textContent = '';
+      if(horaProgramadaEl) horaProgramadaEl.textContent = '';
       premioEl.textContent = '0';
       valorCartonEl.textContent = '0';
       cartonesPagosEl.textContent = '0';
@@ -726,8 +781,8 @@
     else if(data.estado === 'Finalizado') btnSorteo.classList.add('finalizado');
     else if(data.tipo === 'Sorteo Diario') btnSorteo.classList.add('diario');
     else if(data.tipo === 'Sorteo Especial') btnSorteo.classList.add('especial');
-    fechaEl.innerHTML = data.fecha ? `📅 ${formatearFecha(data.fecha)}` : '';
-    horaEl.innerHTML = data.hora ? `⏰ ${formatearHora(data.hora)}` : '';
+    if(fechaProgramadaEl) fechaProgramadaEl.textContent = data.fecha ? formatearFecha(data.fecha) : '';
+    if(horaProgramadaEl) horaProgramadaEl.textContent = data.hora ? formatearHora(data.hora) : '';
     premioEl.textContent = Math.round(data.totalPremios || 0);
     valorCartonEl.textContent = data.valorCarton || 0;
     cartonesPagosEl.textContent = data.cartonesjugando || 0;
@@ -737,9 +792,8 @@
     const cierreVal = parseInt(data.cierreMinutos || data.cierre || 0, 10);
     const cierreMin = isNaN(cierreVal) ? null : cierreVal;
     const tipoNombre = ((data.tipo || '').replace(/^Sorteo\s+/i,'') || 'N/D').toUpperCase();
-    const estadoLinea = (data.estado || '-').toString().toUpperCase();
     const cierreTexto = cierreMin !== null ? `${cierreMin} min.` : 'N/D';
-    tipoEl.innerHTML = `<span>ESTADO: ${estadoLinea}</span><span>Tipo: ${tipoNombre}</span><span>Cierre: ${cierreTexto}</span>`;
+    tipoEl.innerHTML = `<span>Tipo: ${tipoNombre}</span><span>Cierre: ${cierreTexto}</span>`;
     mensajeEl.textContent = '';
     actualizarBotones();
     actualizarAnimaciones();
@@ -863,30 +917,10 @@
       alert('El sorteo ya se encuentra en una fase posterior.');
       return;
     }
-    const sorteoDate = obtenerFechaSorteo(currentSorteoData);
-    if(!sorteoDate){ alert('Datos de fecha y hora inválidos.'); return; }
-    const cierreVal = parseInt(currentSorteoData.cierreMinutos || currentSorteoData.cierre || 0, 10);
-    const cierre = isNaN(cierreVal) ? 0 : cierreVal;
-    const inicioSellado = new Date(sorteoDate.getTime() - cierre * 60000);
-    if(isNaN(inicioSellado.getTime())){
-      alert('No se pudo calcular el inicio de sellado del sorteo.');
-      return;
-    }
-    const ahora = getServerNow();
-    if(ahora < inicioSellado){
-      alert('Aún el sorteo no se puede sellar, no esta en los minutos previos al sorteo');
-      return;
-    }
-    if(ahora > sorteoDate){
-      alert('El sorteo ya superó la hora programada.');
-      return;
-    }
-    if(ahora.toDateString() !== sorteoDate.toDateString()){
-      alert('Solo puedes sellar el día del sorteo.');
-      return;
-    }
+    const confirmarSellado = confirm('¿Deseas sellar el sorteo seleccionado?');
+    if(!confirmarSellado) return;
     try {
-      await db.collection('sorteos').doc(currentSorteoId).update({ estado: 'Sellado' });
+      await db.collection('sorteos').doc(currentSorteoId).update({ estado: 'Sellado', pdf: 'no' });
       mensajeEl.textContent = 'El sorteo fue sellado correctamente.';
       sellarBtn.classList.remove('attention');
     } catch (err) {
@@ -917,14 +951,7 @@
       alert('Debes generar el PDF antes de iniciar el juego.');
       return;
     }
-    const sorteoDate = obtenerFechaSorteo(currentSorteoData);
-    if(!sorteoDate){ alert('Datos de fecha y hora inválidos.'); return; }
-    const ahora = getServerNow();
-    if(ahora < sorteoDate){
-      alert('Aún el sorteo no ha llegado a su fecha y hora de sorteo');
-      return;
-    }
-    const confirmar = await confirm('¿Deseas cambiar el estado del sorteo a "Jugando"?');
+    const confirmar = confirm('¿Deseas cambiar el estado del sorteo a "Jugando"?');
     if(!confirmar) return;
     try {
       await db.collection('sorteos').doc(currentSorteoId).update({ estado: 'Jugando' });
@@ -942,7 +969,7 @@
       alert('El sorteo debe estar en estado Jugando para finalizar.');
       return;
     }
-    const confirmar = await confirm('¿Deseas finalizar el sorteo actual? No podrás deshacer esta acción.');
+    const confirmar = confirm('¿Deseas finalizar el sorteo actual? No podrás deshacer esta acción.');
     if(!confirmar) return;
     try {
       await db.collection('sorteos').doc(currentSorteoId).update({ estado: 'Finalizado' });
