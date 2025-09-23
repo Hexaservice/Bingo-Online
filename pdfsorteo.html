@@ -113,25 +113,26 @@
       margin: 10px 0 20px;
     }
     #formas-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 12px;
-      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: flex-start;
+      margin-top: 12px;
     }
-    .forma-card {
-      border: 2px solid #003c8f;
-      border-radius: 12px;
-      padding: 10px;
-      background: rgba(255,255,255,0.9);
-      box-shadow: 0 0 8px rgba(0,0,0,0.1);
-    }
-    .forma-card h3 {
-      margin: 0 0 6px;
+    .forma-linea {
       font-family: 'Bangers', cursive;
       font-size: 1.2rem;
-      color: #0b5394;
+      text-transform: uppercase;
     }
-    .forma-info { font-weight: 600; font-size: 0.95rem; color: #0b1d0b; }
+    .forma-detalles {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.9rem;
+      margin-left: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      color: #0b1d0b;
+    }
     #cartones-section h2 {
       font-family: 'Bangers', cursive;
       font-size: 1.6rem;
@@ -140,55 +141,72 @@
     }
     #cartones-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
     }
     .mini-carton-box {
       display: flex;
       flex-direction: column;
       align-items: center;
+      gap: 6px;
       padding: 6px;
-      border-radius: 12px;
-      background: linear-gradient(#0a8800,#dff5d8);
-      box-shadow: 0 0 6px rgba(0,0,0,0.15);
-    }
-    .mini-carton-box.gratis { background: linear-gradient(#0044cc,#cce0ff); }
-    .mini-info {
-      font-weight: 700;
-      font-size: 0.85rem;
-      margin: 4px 0;
-      text-align: center;
-      color: #1a1a1a;
     }
     .mini-carton-wrapper {
-      background: linear-gradient(#ffffff,#cccccc);
-      border-radius: 10px;
+      background: linear-gradient(green, yellow);
       padding: 4px;
+      border-radius: 12px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.3);
+    }
+    .mini-carton-wrapper.gratis {
+      background: linear-gradient(#0000ff, #ffff66);
     }
     .mini-carton {
       border-collapse: separate;
       border-spacing: 0;
-      border-radius: 8px;
+      background: linear-gradient(#ffffff,#cccccc);
+      border-radius: 10px;
       overflow: hidden;
     }
     .mini-carton th, .mini-carton td {
-      border: 1px solid #666;
-      width: 24px;
-      height: 24px;
+      border: 1px solid gray;
+      width: 28px;
+      height: 28px;
       text-align: center;
       font-weight: 700;
-      font-size: 0.75rem;
+      font-size: 0.8rem;
     }
     .mini-carton th {
-      background: radial-gradient(circle,#ffffff,#ffffff 60%,#00aa00);
+      font-size: 1.1rem;
       color: #ff6600;
-      font-size: 1rem;
+      background: radial-gradient(circle,#ffffff,#ffffff 60%,#00aa00);
       text-shadow: 1px 1px 0 #000;
     }
-    .mini-carton-box.gratis .mini-carton th {
-      background: radial-gradient(circle,#ffffff,#ffffff 60%,#0044cc);
+    .mini-carton-wrapper.gratis .mini-carton th {
+      background: radial-gradient(circle,#ffffff,#ffffff 60%,#0000ff);
     }
-    .mini-carton td.free { background: radial-gradient(circle,#ffffff,#ffff00); color: #e67e22; }
+    .mini-carton td.free {
+      background: radial-gradient(circle,#ffffff,#ffff00);
+      color: #e67e22;
+    }
+    .mini-carton td.free .estrella-libre {
+      font-size: 1rem;
+      color: #ff8c00;
+    }
+    .mini-inferior {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: #1a1a1a;
+      text-align: center;
+    }
+    .mini-inferior .alias {
+      font-size: 0.85rem;
+      color: #004488;
+    }
     #loading-overlay {
       position: fixed;
       top: 0;
@@ -250,9 +268,6 @@
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-storage-compat.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNa5H1L1MSQe6hw2yYB9H9n1tFoZT3zh0+BTtPlqvGjufH6G+jD/adJzi10BGSAdoo6gWQBaIj++ImQF0kGZ7Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-HqKj1iJt+uCQXDpUe1koRaSPoaqe7i0rGUNShUMHbOWcZH/5LiCFYl8aAkaI0s5momkGLumZ5qX6bi12PtD3ug==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="auth.js"></script>
   <script>
   ensureAuth('Administrador');
@@ -267,7 +282,6 @@
   const salirBtn = document.getElementById('salir-btn');
   const pdfBtn = document.getElementById('generar-pdf-btn');
   const loadingOverlay = document.getElementById('loading-overlay');
-  const loadingText = document.getElementById('loading-text');
   const nombreEl = document.getElementById('nombre-sorteo');
   const tipoEl = document.getElementById('tipo-sorteo');
   const fechaEl = document.getElementById('fecha-sorteo');
@@ -279,6 +293,9 @@
   let sorteoData = null;
   let formasData = [];
   let cartonesData = [];
+  let esperandoConfirmacionPDF = false;
+
+  const coloresFormas = ['#006400', '#b8860b', '#00008b', '#4b0082', '#8b4513', '#d2691e'];
 
   salirBtn.addEventListener('click', ()=>{ window.location.href = 'cantarsorteos.html'; });
   pdfBtn.addEventListener('click', generarPDF);
@@ -316,7 +333,7 @@
         const td = document.createElement('td');
         if(r===2 && c===2){
           td.classList.add('free');
-          td.textContent = '★';
+          td.innerHTML = '<span class="estrella-libre">★</span>';
         }else{
           const found = posiciones.find(p=>p.r===r && p.c===c);
           if(found){ td.textContent = found.valor; }
@@ -329,48 +346,54 @@
     return table;
   }
 
+  function obtenerColorForma(idx){
+    if(!idx) return '#0b5394';
+    const posicion = (idx - 1) % coloresFormas.length;
+    return coloresFormas[posicion] || '#0b5394';
+  }
+
   function renderFormas(){
     formasCont.innerHTML = '';
     const total = Number(sorteoData.totalPremios || 0);
     formasData.sort((a,b)=>(a.idx||0)-(b.idx||0));
     formasData.forEach(forma=>{
-      const card = document.createElement('div');
-      card.className = 'forma-card';
-      const titulo = document.createElement('h3');
-      titulo.textContent = `Forma ${forma.idx || ''} - ${forma.nombre || ''}`;
-      card.appendChild(titulo);
+      const color = obtenerColorForma(forma.idx || 1);
+      const titulo = document.createElement('div');
+      titulo.className = 'forma-linea';
+      titulo.style.color = color;
+      titulo.textContent = `Forma ${forma.idx || ''}: ${forma.nombre || ''}`;
+      formasCont.appendChild(titulo);
       const premioForma = Math.round(total * (parseFloat(forma.porcentaje || 0)/100));
-      const premioInfo = document.createElement('div');
-      premioInfo.className = 'forma-info';
-      premioInfo.textContent = `Premio: ${premioForma}`;
-      card.appendChild(premioInfo);
-      const cartonesInfo = document.createElement('div');
-      cartonesInfo.className = 'forma-info';
-      cartonesInfo.textContent = `Cartones gratis: ${forma.cartonesGratis || 0}`;
-      card.appendChild(cartonesInfo);
-      formasCont.appendChild(card);
+      const detalles = document.createElement('div');
+      detalles.className = 'forma-detalles';
+      detalles.innerHTML = `<span>Premio: ${premioForma}</span><span>Cartones gratis: ${forma.cartonesGratis || 0}</span>`;
+      formasCont.appendChild(detalles);
     });
   }
 
   function renderCartones(){
     cartonesGrid.innerHTML = '';
-    cartonesData.sort((a,b)=> (b.cartonNum || 0) - (a.cartonNum || 0));
+    cartonesData.sort((a,b)=> (Number(a.cartonNum) || 0) - (Number(b.cartonNum) || 0));
     cartonesData.forEach(data=>{
       const box = document.createElement('div');
       box.className = 'mini-carton-box';
-      if((data.tipocarton || '').toLowerCase() === 'gratis'){ box.classList.add('gratis'); }
-      const numero = document.createElement('div');
-      numero.className = 'mini-info';
-      numero.textContent = `Cartón ${String(data.cartonNum || 0).padStart(4,'0')}`;
-      box.appendChild(numero);
       const wrapper = document.createElement('div');
       wrapper.className = 'mini-carton-wrapper';
+      if((data.tipocarton || '').toLowerCase() === 'gratis'){ wrapper.classList.add('gratis'); }
       wrapper.appendChild(crearMiniCarton(data.posiciones || []));
       box.appendChild(wrapper);
+      const infoInferior = document.createElement('div');
+      infoInferior.className = 'mini-inferior';
+      const numero = document.createElement('div');
+      const numeroValor = Number(data.cartonNum);
+      const numeroFormateado = Number.isFinite(numeroValor) ? numeroValor : 0;
+      numero.textContent = `Cartón ${String(numeroFormateado).padStart(4,'0')}`;
+      infoInferior.appendChild(numero);
       const alias = document.createElement('div');
-      alias.className = 'mini-info';
-      alias.textContent = data.alias || '';
-      box.appendChild(alias);
+      alias.className = 'alias';
+      alias.textContent = data.alias ? `Alias: ${data.alias}` : 'Alias: -';
+      infoInferior.appendChild(alias);
+      box.appendChild(infoInferior);
       cartonesGrid.appendChild(box);
     });
   }
@@ -410,50 +433,30 @@
     }
   }
 
-  function normalizarTexto(texto){
-    return (texto || '').toString().normalize('NFD').replace(/[^\w\s-]/g,'').trim().replace(/\s+/g,'_');
-  }
-
-  async function generarPDF(){
-    if(!sorteoData){ return; }
-    loadingText.textContent = 'Generando PDF, por favor espera';
-    loadingOverlay.style.display = 'flex';
+  async function manejarConfirmacionGuardado(){
+    const confirmado = confirm('¿Se guardó correctamente el PDF en el dispositivo?');
+    if(!confirmado){
+      alert('Debes guardar el PDF para continuar con el sorteo.');
+      return;
+    }
     try {
       await db.collection('sorteos').doc(sorteoId).set({ pdf: 'si' }, { merge: true });
-      const { jsPDF } = window.jspdf;
-      const element = document.getElementById('pdf-wrapper');
-      const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p','pt','a4');
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pageWidth;
-      const imgHeight = canvas.height * imgWidth / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-      while(heightLeft > 0){
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-      const blob = pdf.output('blob');
-      const nombre = normalizarTexto(sorteoData.nombre || 'sorteo');
-      const fecha = normalizarTexto((sorteoData.fecha || '').replace(/\//g,'-'));
-      const hora = normalizarTexto((sorteoData.hora || '').replace(/:/g,'-'));
-      const archivo = `${nombre}_${fecha}_${hora}.pdf`;
-      const storageRef = firebase.storage().ref().child(`PDF sorteos/${archivo}`);
-      await storageRef.put(blob);
-      alert('PDF generado y guardado correctamente.');
+      alert('Se confirmó el guardado del PDF.');
     } catch (err) {
-      console.error('Error generando PDF', err);
-      alert('No fue posible generar el PDF.');
-    } finally {
-      loadingOverlay.style.display = 'none';
-      loadingText.textContent = 'Generando cartones del sorteo por favor espera';
+      console.error('Error actualizando estado del PDF', err);
+      alert('No fue posible actualizar la información del PDF. Intenta nuevamente.');
     }
+  }
+
+  function generarPDF(){
+    if(!sorteoData){ return; }
+    esperandoConfirmacionPDF = true;
+    window.addEventListener('afterprint', ()=>{
+      if(!esperandoConfirmacionPDF) return;
+      esperandoConfirmacionPDF = false;
+      manejarConfirmacionGuardado();
+    }, { once: true });
+    window.print();
   }
 
   cargarDatos();
