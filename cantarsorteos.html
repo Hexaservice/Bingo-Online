@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cantar Sorteo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)),
+                  url('https://img.freepik.com/vectores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg');
+      background-repeat: repeat;
+      background-size: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      text-align: center;
+      padding: 10px 5px 40px;
+      box-sizing: border-box;
+    }
+    h1 {
+      font-family: 'Bangers', cursive;
+      color: white;
+      text-shadow: 0 0 12px #1e3aa8;
+      margin: 5px 0 10px 0;
+      font-size: 2rem;
+    }
+    .menu-btn {
+      width: 250px;
+      height: 60px;
+      font-family: 'Bangers', cursive;
+      font-size: 1.4rem;
+      background: rgba(0, 170, 255, 0.8);
+      color: white;
+      border: 4px solid #FFD700;
+      border-radius: 10px;
+      text-shadow: 2px 2px 4px #000;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+    }
+    .menu-btn:hover { transform: scale(1.05); box-shadow: 0 0 15px rgba(255,215,0,0.8); }
+    .menu-btn:active { transform: scale(0.95); box-shadow: 0 0 5px rgba(255,215,0,0.8); }
+    #salir-btn {
+      position: fixed;
+      top: 5px;
+      left: 5px;
+      width: 120px;
+      height: 40px;
+      background: orange;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      font-size: 1.2rem;
+    }
+    #salir-btn .label { font-size: 1.1rem; }
+    @media (orientation: portrait) {
+      #salir-btn { width: 40px; }
+      #salir-btn .label { display: none; }
+    }
+    #sorteo-btn {
+      width: 240px;
+      font-size: 1.1rem;
+      padding: 6px 10px;
+      text-align: center;
+      border: 3px solid #FFD700;
+      border-radius: 10px;
+      background: linear-gradient(#dddddd, #ffffff);
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-transform: uppercase;
+      color: #000;
+      font-family: 'Bangers', cursive;
+      text-shadow: 1px 1px 2px #fff;
+    }
+    #sorteo-btn.diario { background: linear-gradient(#008000,#ffffff); }
+    #sorteo-btn.especial { background: linear-gradient(#ff8800,#ffffff); }
+    #sorteo-btn.finalizado { background: linear-gradient(#444,#bbbbbb); color: #fff; }
+    #sorteo-btn.jugando { background: linear-gradient(#6a0dad,#ffffff); color: #fff; }
+    .sorteo-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    #fecha-hora-sorteo {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      font-family: 'Bangers', cursive;
+      font-size: 1rem;
+    }
+    #fecha-sorteo, #hora-sorteo { display: flex; gap: 6px; align-items: center; justify-content: center; color: #0f2a0f; }
+    .datos-sorteo {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      justify-content: center;
+      margin-top: 5px;
+      font-family: 'Bangers', cursive;
+    }
+    #premio-repartir {
+      color: white;
+      font-family: 'Bangers', cursive;
+      font-size: 1.6rem;
+      text-shadow: 0 0 10px #004488;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    #premio-valor { text-shadow: 0 0 10px #004488; }
+    #stats-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    #valor-carton, #cartones-jugando {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #fff;
+      text-shadow: 0 0 6px #003300;
+      font-size: 1.3rem;
+    }
+    #valor-carton span.valor, #cartones-jugando span.valor { font-size: 1.6rem; }
+    #cartones-jugando span.extra { color: #00008b; text-shadow: 0 0 6px #fff; }
+    #detalle-container {
+      position: relative;
+      border: 2px solid #013220;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(0,60,0,0.85), rgba(255,255,255,0.95));
+      padding: 15px 10px 60px;
+      margin-top: 10px;
+      width: min(480px, 95vw);
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+    }
+    #sorteo-nombre {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      text-shadow: 0 0 6px #000;
+      margin-bottom: 6px;
+    }
+    #estado-actual {
+      font-family: 'Bangers', cursive;
+      font-size: 1.2rem;
+      color: #111;
+      text-shadow: 0 0 4px rgba(255,255,255,0.8);
+    }
+    #resumen-sorteo {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-family: 'Poppins', sans-serif;
+      color: #0b1d0b;
+      font-weight: 600;
+    }
+    #resumen-sorteo div { display: flex; justify-content: center; gap: 6px; align-items: center; }
+    .estado-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      border: 3px solid #FFD700;
+      background: linear-gradient(#0a8800,#ffffff);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: absolute;
+      bottom: 10px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.4);
+      transition: transform 0.2s;
+    }
+    .estado-btn:hover { transform: scale(1.05); }
+    #sellar-btn { left: 10px; }
+    #pdf-btn { left: 70px; background: linear-gradient(#003c71,#ffffff); }
+    #jugar-btn { right: 70px; background: linear-gradient(#4b0082,#ffffff); }
+    #finalizar-btn { right: 10px; background: linear-gradient(#8b0000,#ffffff); }
+    .estado-btn img { width: 28px; height: 28px; }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.75);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: #fff;
+      padding: 12px;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+      width: min(420px, 90vw);
+      max-height: 80vh;
+      overflow-y: auto;
+      font-family: 'Poppins', sans-serif;
+    }
+    .sorteo-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 2px solid transparent;
+    }
+    .sorteo-item:hover { border-color: #1e90ff; }
+    .sorteo-item.diario { background: linear-gradient(#b8ffb8, #ffffff); }
+    .sorteo-item.especial { background: linear-gradient(#ffd1a1,#ffffff); }
+    .sorteo-item.sellado { background: linear-gradient(#cccccc,#ffffff); color: #333; }
+    .sorteo-item.jugando { background: linear-gradient(#d8b0ff,#ffffff); color: #331155; }
+    .sorteo-item.finalizado { background: linear-gradient(#aaaaaa,#eeeeee); color: #222; }
+    .sorteo-header { display: flex; justify-content: space-between; font-weight: 700; font-size: 1rem; }
+    .sorteo-detalle { display: flex; gap: 6px; align-items: center; font-size: 0.85rem; }
+    .sorteo-extra { display: flex; flex-direction: column; gap: 3px; font-size: 0.8rem; color: #0f2a0f; }
+    .attention { animation: zoomInOut 1s infinite; }
+    @keyframes zoomInOut { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+    #mensaje-area {
+      margin-top: 10px;
+      font-family: 'Poppins', sans-serif;
+      color: #111;
+      font-size: 0.9rem;
+      background: rgba(255,255,255,0.6);
+      padding: 6px 10px;
+      border-radius: 8px;
+      max-width: 480px;
+    }
+    #footer {
+      margin-top: auto;
+      font-size: 0.7rem;
+      color: #000;
+      text-align: center;
+    }
+    #footer #derechos { font-size: 0.6rem; }
+  </style>
+</head>
+<body>
+  <button id="salir-btn" class="menu-btn"><span class="tri">&#9664;</span><span class="label">Salir</span></button>
+  <h1>CANTAR SORTEO</h1>
+  <section id="sorteo-section">
+    <div class="sorteo-info">
+      <button id="sorteo-btn">Selecciona Sorteo</button>
+      <div id="fecha-hora-sorteo">
+        <div id="fecha-sorteo"></div>
+        <div id="hora-sorteo"></div>
+      </div>
+    </div>
+    <div class="datos-sorteo">
+      <div id="premio-repartir"><span>PREMIO A REPARTIR:</span> <span id="premio-valor">0</span></div>
+      <div id="stats-row">
+        <div id="valor-carton"><span>💵</span> Cartón: <span class="valor" id="valor-carton-valor">0</span></div>
+        <div id="cartones-jugando">
+          <img src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" class="carton-icon" alt="Cartón" style="width:28px;height:28px;">
+          Jugando: <span class="valor" id="cartones-jugando-valor">0</span>
+          <span class="extra">+</span>
+          <span class="valor extra" id="cartones-gratis-jugando">0</span>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section id="detalle-container">
+    <div id="sorteo-nombre">Selecciona un sorteo para ver los detalles</div>
+    <div id="estado-actual">Estado actual: -</div>
+    <div id="resumen-sorteo">
+      <div id="tipo-sorteo"></div>
+      <div id="cierre-sorteo"></div>
+    </div>
+    <button id="sellar-btn" class="estado-btn" title="Sellar sorteo">
+      <img src="https://api.iconify.design/mdi/seal-variant.svg?color=white" alt="Sellar">
+    </button>
+    <button id="pdf-btn" class="estado-btn" title="Generar PDF">
+      <img src="https://api.iconify.design/mdi/book-open-page-variant.svg?color=white" alt="PDF">
+    </button>
+    <button id="jugar-btn" class="estado-btn" title="Cambiar a Jugando">
+      <img src="https://api.iconify.design/mdi/slot-machine.svg?color=white" alt="Jugar">
+    </button>
+    <button id="finalizar-btn" class="estado-btn" title="Finalizar sorteo">
+      <img src="https://api.iconify.design/mdi/flag-checkered.svg?color=white" alt="Finalizar">
+    </button>
+  </section>
+  <div id="mensaje-area">Selecciona un sorteo para administrar su estado.</div>
+  <div id="footer">
+    <div id="fecha-hora"></div>
+    <div id="derechos">Todos los derechos reservados ® Hexaservice 2025</div>
+  </div>
+  <div id="sorteos-modal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation();">
+      <h3 style="text-align:center;font-family:'Bangers',cursive;color:#1e3aa8;margin:0 0 6px 0;">Sorteos Disponibles</h3>
+      <div id="sorteos-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+  </div>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
+  <script src="auth.js"></script>
+  <script src="scripts/timezone.js"></script>
+  <script>
+  ensureAuth('Administrador');
+  initServerTime().then(()=>initFechaHora());
+
+  let sorteos = [];
+  let currentSorteoId = null;
+  let currentSorteoData = null;
+  let sorteoUnsub = null;
+
+  const btnSorteo = document.getElementById('sorteo-btn');
+  const fechaEl = document.getElementById('fecha-sorteo');
+  const horaEl = document.getElementById('hora-sorteo');
+  const premioEl = document.getElementById('premio-valor');
+  const valorCartonEl = document.getElementById('valor-carton-valor');
+  const cartonesPagosEl = document.getElementById('cartones-jugando-valor');
+  const cartonesGratisEl = document.getElementById('cartones-gratis-jugando');
+  const sorteoNombreEl = document.getElementById('sorteo-nombre');
+  const estadoActualEl = document.getElementById('estado-actual');
+  const tipoEl = document.getElementById('tipo-sorteo');
+  const cierreEl = document.getElementById('cierre-sorteo');
+  const mensajeEl = document.getElementById('mensaje-area');
+  const sellarBtn = document.getElementById('sellar-btn');
+  const pdfBtn = document.getElementById('pdf-btn');
+  const jugarBtn = document.getElementById('jugar-btn');
+  const finalizarBtn = document.getElementById('finalizar-btn');
+
+  document.getElementById('salir-btn').addEventListener('click',()=>{ window.location.href='admin.html'; });
+  btnSorteo.addEventListener('click', abrirModalSorteos);
+  sellarBtn.addEventListener('click', sellarSorteo);
+  pdfBtn.addEventListener('click', abrirPDF);
+  jugarBtn.addEventListener('click', cambiarAJugando);
+  finalizarBtn.addEventListener('click', finalizarSorteo);
+
+  function getServerNow(){
+    return new Date(Date.now() + (window.serverTime?.diferencia || 0));
+  }
+
+  function formatearFecha(fecha){
+    if(!fecha) return '';
+    const partes = fecha.split('/');
+    if(partes.length === 3){
+      return `${partes[0]}/${partes[1]}/${partes[2]}`;
+    }
+    return fecha;
+  }
+
+  function formatearHora(hora){
+    if(!hora) return '';
+    const [hh, mm] = hora.split(':');
+    if(hh===undefined) return hora;
+    let h = parseInt(hh, 10);
+    const sufijo = h >= 12 ? 'pm' : 'am';
+    h = h % 12 || 12;
+    return `${h.toString().padStart(2,'0')}:${mm} ${sufijo}`;
+  }
+
+  function obtenerFechaSorteo(data){
+    if(!data || !data.fecha || !data.hora) return null;
+    const [dia, mes, anio] = data.fecha.split('/').map(n=>parseInt(n,10));
+    const [hor, min] = data.hora.split(':').map(n=>parseInt(n,10));
+    if([dia, mes, anio, hor, min].some(n=>isNaN(n))) return null;
+    return new Date(anio, mes-1, dia, hor, min);
+  }
+
+  function actualizarAnimaciones(){
+    [sellarBtn, pdfBtn, jugarBtn].forEach(btn=>btn.classList.remove('attention'));
+    if(!currentSorteoData) return;
+    const ahora = getServerNow();
+    const sorteoDate = obtenerFechaSorteo(currentSorteoData);
+    const cierre = parseInt(currentSorteoData.cierreMinutos || currentSorteoData.cierre || 0, 10);
+    const inicioSellado = sorteoDate ? new Date(sorteoDate.getTime() - cierre * 60000) : null;
+
+    if(currentSorteoData.estado !== 'Sellado' && inicioSellado && ahora >= inicioSellado){
+      sellarBtn.classList.add('attention');
+    }
+    if(currentSorteoData.estado === 'Sellado' && (currentSorteoData.pdf || '').toLowerCase() !== 'si'){
+      pdfBtn.classList.add('attention');
+    }
+    if(currentSorteoData.estado !== 'Jugando' && sorteoDate && ahora >= sorteoDate){
+      jugarBtn.classList.add('attention');
+    }
+  }
+
+  function mostrarDatos(){
+    if(!currentSorteoData){
+      btnSorteo.textContent = 'Selecciona Sorteo';
+      fechaEl.textContent = '';
+      horaEl.textContent = '';
+      premioEl.textContent = '0';
+      valorCartonEl.textContent = '0';
+      cartonesPagosEl.textContent = '0';
+      cartonesGratisEl.textContent = '0';
+      sorteoNombreEl.textContent = 'Selecciona un sorteo para ver los detalles';
+      estadoActualEl.textContent = 'Estado actual: -';
+      tipoEl.textContent = '';
+      cierreEl.textContent = '';
+      mensajeEl.textContent = 'Selecciona un sorteo para administrar su estado.';
+      [sellarBtn, pdfBtn, jugarBtn, finalizarBtn].forEach(btn=>btn.disabled=true);
+      actualizarAnimaciones();
+      return;
+    }
+    const data = currentSorteoData;
+    btnSorteo.textContent = data.nombre || 'Sorteo';
+    btnSorteo.classList.remove('diario','especial','jugando','finalizado');
+    if(data.estado === 'Jugando') btnSorteo.classList.add('jugando');
+    else if(data.estado === 'Finalizado') btnSorteo.classList.add('finalizado');
+    else if(data.tipo === 'Sorteo Diario') btnSorteo.classList.add('diario');
+    else if(data.tipo === 'Sorteo Especial') btnSorteo.classList.add('especial');
+    fechaEl.innerHTML = data.fecha ? `📅 ${formatearFecha(data.fecha)}` : '';
+    horaEl.innerHTML = data.hora ? `⏰ ${formatearHora(data.hora)}` : '';
+    premioEl.textContent = Math.round(data.totalPremios || 0);
+    valorCartonEl.textContent = data.valorCarton || 0;
+    cartonesPagosEl.textContent = data.cartonesjugando || 0;
+    cartonesGratisEl.textContent = data.cartonesgratisjugando || 0;
+    sorteoNombreEl.textContent = data.nombre || '';
+    estadoActualEl.textContent = `Estado actual: ${data.estado || '-'}`;
+    tipoEl.textContent = data.tipo ? `Tipo: ${data.tipo}` : '';
+    const cierre = parseInt(data.cierreMinutos || data.cierre || 0, 10);
+    cierreEl.textContent = isNaN(cierre) ? '' : `Minutos previos de sellado: ${cierre}`;
+    mensajeEl.textContent = 'Gestiona el estado del sorteo usando los botones inferiores.';
+    [sellarBtn, pdfBtn, jugarBtn, finalizarBtn].forEach(btn=>btn.disabled=false);
+    if((data.estado || '') === 'Finalizado'){
+      jugarBtn.disabled = true;
+      sellarBtn.disabled = true;
+      pdfBtn.disabled = false;
+    }
+    actualizarAnimaciones();
+  }
+
+  async function cargarSorteos(){
+    sorteos = [];
+    try {
+      const snap = await db.collection('sorteos').get();
+      snap.forEach(doc=>{
+        const d = doc.data();
+        sorteos.push({
+          id: doc.id,
+          nombre: d.nombre || 'Sorteo',
+          fecha: d.fecha || '',
+          hora: d.hora || '',
+          tipo: d.tipo || '',
+          estado: d.estado || 'Activo',
+          valorCarton: d.valorCarton || 0,
+          cartonesjugando: d.cartonesjugando || 0,
+          cartonesgratisjugando: d.cartonesgratisjugando || 0,
+          totalPremios: d.totalPremios || 0,
+          cierreMinutos: d.cierreMinutos || d.cierre || 0,
+          pdf: d.pdf || 'no'
+        });
+      });
+    } catch (err) {
+      console.error('Error cargando sorteos', err);
+    }
+  }
+
+  async function abrirModalSorteos(){
+    await cargarSorteos();
+    if(!sorteos.length){
+      mensajeEl.textContent = 'No hay sorteos disponibles en este momento.';
+      return;
+    }
+    const cont = document.getElementById('sorteos-list');
+    cont.innerHTML = '';
+    const ordenados = [...sorteos].sort((a,b)=>{
+      const fechaA = obtenerFechaSorteo(a) || new Date(0);
+      const fechaB = obtenerFechaSorteo(b) || new Date(0);
+      return fechaB - fechaA;
+    });
+    ordenados.forEach((s, idx)=>{
+      const div = document.createElement('div');
+      div.className = `sorteo-item ${s.estado ? s.estado.toLowerCase() : ''} ${s.tipo === 'Sorteo Diario' ? 'diario' : s.tipo === 'Sorteo Especial' ? 'especial' : ''}`.trim();
+      const header = document.createElement('div');
+      header.className = 'sorteo-header';
+      header.innerHTML = `<span>${idx+1}. ${s.nombre}</span><span>${s.estado || ''}</span>`;
+      div.appendChild(header);
+      const detalle = document.createElement('div');
+      detalle.className = 'sorteo-detalle';
+      detalle.innerHTML = `${s.fecha ? `📅 ${formatearFecha(s.fecha)}` : ''} ${s.hora ? `⏰ ${formatearHora(s.hora)}` : ''}`;
+      div.appendChild(detalle);
+      const extra = document.createElement('div');
+      extra.className = 'sorteo-extra';
+      extra.innerHTML = `<span>Premio: ${Math.round(s.totalPremios || 0)}</span><span>Cartones: ${s.cartonesjugando || 0} + ${s.cartonesgratisjugando || 0}</span>`;
+      div.appendChild(extra);
+      div.addEventListener('click',()=>{
+        seleccionarSorteo(s.id);
+        document.getElementById('sorteos-modal').style.display = 'none';
+      });
+      cont.appendChild(div);
+    });
+    document.getElementById('sorteos-modal').style.display = 'flex';
+  }
+
+  function escucharSorteo(id){
+    if(sorteoUnsub){ sorteoUnsub(); sorteoUnsub = null; }
+    const ref = db.collection('sorteos').doc(id);
+    sorteoUnsub = ref.onSnapshot(doc=>{
+      if(!doc.exists){
+        currentSorteoData = null;
+        mostrarDatos();
+        return;
+      }
+      currentSorteoData = { id: doc.id, ...doc.data() };
+      const idx = sorteos.findIndex(s=>s.id===doc.id);
+      if(idx>=0){
+        sorteos[idx] = { ...sorteos[idx], ...doc.data() };
+      }
+      mostrarDatos();
+    }, err=>console.error('Error escuchando sorteo', err));
+  }
+
+  function seleccionarSorteo(id){
+    currentSorteoId = id;
+    const encontrado = sorteos.find(s=>s.id===id);
+    currentSorteoData = encontrado ? { ...encontrado } : null;
+    escucharSorteo(id);
+    mostrarDatos();
+  }
+
+  async function sellarSorteo(){
+    if(!currentSorteoId || !currentSorteoData){ alert('Selecciona un sorteo primero.'); return; }
+    if(currentSorteoData.estado === 'Sellado'){ alert('El sorteo ya está sellado.'); return; }
+    if(currentSorteoData.estado === 'Jugando' || currentSorteoData.estado === 'Finalizado'){
+      alert('El sorteo ya se encuentra en una fase posterior.');
+      return;
+    }
+    const sorteoDate = obtenerFechaSorteo(currentSorteoData);
+    if(!sorteoDate){ alert('Datos de fecha y hora inválidos.'); return; }
+    const cierre = parseInt(currentSorteoData.cierreMinutos || currentSorteoData.cierre || 0, 10);
+    const inicioSellado = new Date(sorteoDate.getTime() - cierre * 60000);
+    const ahora = getServerNow();
+    if(ahora < inicioSellado){
+      alert('Aún el sorteo no se puede sellar, no esta en los minutos previos al sorteo');
+      return;
+    }
+    try {
+      await db.collection('sorteos').doc(currentSorteoId).update({ estado: 'Sellado' });
+      mensajeEl.textContent = 'El sorteo fue sellado correctamente.';
+    } catch (err) {
+      console.error('Error sellando sorteo', err);
+      alert('No fue posible sellar el sorteo.');
+    }
+  }
+
+  function abrirPDF(){
+    if(!currentSorteoId || !currentSorteoData){ alert('Selecciona un sorteo primero.'); return; }
+    if((currentSorteoData.estado || '') !== 'Sellado'){
+      alert('Para generar el archivo PDF de sellado el sorteo debe estar Sellado primero');
+      return;
+    }
+    const url = `pdfsorteo.html?s=${currentSorteoId}`;
+    window.location.href = url;
+  }
+
+  async function cambiarAJugando(){
+    if(!currentSorteoId || !currentSorteoData){ alert('Selecciona un sorteo primero.'); return; }
+    if(currentSorteoData.estado === 'Jugando'){ alert('El sorteo ya está en estado Jugando.'); return; }
+    if(currentSorteoData.estado === 'Finalizado'){ alert('El sorteo ya finalizó.'); return; }
+    const sorteoDate = obtenerFechaSorteo(currentSorteoData);
+    if(!sorteoDate){ alert('Datos de fecha y hora inválidos.'); return; }
+    const ahora = getServerNow();
+    if(ahora < sorteoDate){
+      alert('Aún el sorteo no ha llegado a su fecha y hora de sorteo');
+      return;
+    }
+    try {
+      await db.collection('sorteos').doc(currentSorteoId).update({ estado: 'Jugando' });
+      mensajeEl.textContent = 'El sorteo cambió a estado Jugando.';
+    } catch (err) {
+      console.error('Error cambiando a Jugando', err);
+      alert('No fue posible cambiar el estado a Jugando.');
+    }
+  }
+
+  async function finalizarSorteo(){
+    if(!currentSorteoId || !currentSorteoData){ alert('Selecciona un sorteo primero.'); return; }
+    if(currentSorteoData.estado === 'Finalizado'){ alert('El sorteo ya está finalizado.'); return; }
+    const confirmar = await confirm('¿Desea cambiar el estado del sorteo a "Finalizado"?');
+    if(!confirmar) return;
+    try {
+      await db.collection('sorteos').doc(currentSorteoId).update({ estado: 'Finalizado' });
+      mensajeEl.textContent = 'El sorteo fue finalizado correctamente.';
+    } catch (err) {
+      console.error('Error finalizando sorteo', err);
+      alert('No fue posible finalizar el sorteo.');
+    }
+  }
+
+  async function inicializar(){
+    await cargarSorteos();
+    mostrarDatos();
+  }
+
+  inicializar();
+  </script>
+</body>
+</html>

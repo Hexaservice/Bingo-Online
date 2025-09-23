@@ -134,16 +134,6 @@
     <button id="gestionar-sorteos-btn" class="menu-btn">Gestionar Sorteos</button>
     <button id="publicar-resultados-btn" class="menu-btn">Cantar Sorteo</button>
   </div>
-  <div id="publicar-resultados-screen" class="view" style="display:none;">
-    <button id="resultados-admin-back" class="menu-btn back-btn">&#9664; Volver</button>
-    <h3>Resultados del Sorteo</h3>
-    <select id="sorteo-activo-select" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;">
-      <option value="" disabled selected>Seleccione Sorteo</option>
-      <option value="demo">Sorteo de Prueba</option>
-    </select>
-    <input type="text" id="numeros-sorteados" placeholder="Números (1-75 separados por coma)" style="font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:10px auto;" />
-    <button id="publicar-resultados-btn2" class="menu-btn" style="width:180px;">Cantar Sorteo</button>
-  </div>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
@@ -159,16 +149,8 @@
       btn.addEventListener('click',()=>{window.location.href='super.html';});
     }
   });
-  function hideViews(){document.querySelectorAll('.view').forEach(v=>v.style.display='none');}
-  async function cargarSorteosActivos(){
-    const select=document.getElementById('sorteo-activo-select');
-    select.innerHTML='<option value="" selected disabled>Seleccione Sorteo</option>';
-    const snap=await db.collection('sorteos').where('estado','==','Activo').get();
-    snap.forEach(doc=>{const opt=document.createElement('option');opt.value=doc.id;opt.textContent=doc.data().nombre;select.appendChild(opt);});}
   document.getElementById('gestionar-sorteos-btn').addEventListener('click',()=>{window.location.href='gestionsorteos.html';});
-  document.getElementById('publicar-resultados-btn').addEventListener('click',()=>{hideViews();document.getElementById('publicar-resultados-screen').style.display='block';cargarSorteosActivos();});
-  document.getElementById('resultados-admin-back').addEventListener('click',()=>{hideViews();document.getElementById('main-menu').style.display='block';});
-  document.getElementById('publicar-resultados-btn2').addEventListener('click',async()=>{const id=document.getElementById('sorteo-activo-select').value;const nums=document.getElementById('numeros-sorteados').value.split(',').map(n=>parseInt(n.trim())).filter(n=>n>=1&&n<=75);if(!id||nums.length===0){alert('Datos inválidos');return;}await db.collection('sorteos').doc(id).update({resultados:nums,estado:'Finalizado'});alert('Resultados publicados');});
+  document.getElementById('publicar-resultados-btn').addEventListener('click',()=>{window.location.href='cantarsorteos.html';});
   document.getElementById('config-btn').addEventListener('click',()=>{window.location.href='configuraciones.html';});
   </script>
 </body>
