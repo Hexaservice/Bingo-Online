@@ -80,7 +80,12 @@
     .sorteo-jugando{color:purple;}
     @keyframes zoomInOut{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
     .sorteo-jugando span,.sorteo-jugando .sorteo-detalle{display:inline-block;animation:zoomInOut 1s infinite;transform-origin:left center;}
-    .sorteo-info{display:flex;align-items:center;justify-content:center;gap:10px;}
+    .sorteo-info{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;}
+    #fecha-hora-sorteo{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:center;gap:12px;font-family:'Poppins',sans-serif;text-transform:none;}
+    #fecha-hora-sorteo .fecha-col{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:120px;}
+    #fecha-hora-sorteo .sorteo-line{display:flex;align-items:center;gap:4px;font-weight:600;font-size:1rem;}
+    #fecha-hora-sorteo .actual-line{font-size:0.85rem;color:#0b5394;font-weight:600;}
+    #fecha-hora-sorteo .cal-icon,#fecha-hora-sorteo .clock-icon{font-size:1.1rem;}
     .datos-sorteo{display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:center;margin-top:2px;flex-wrap:wrap;font-family:'Bangers',cursive;}
     #sorteo-section{margin-bottom:5px;}
     .datos-sorteo div{font-weight:bold;font-size:1.2rem;}
@@ -163,7 +168,7 @@
     .no-cartones{grid-column:1/-1;font-family:'Bangers',cursive;font-size:1rem;text-align:center;}
     @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.2);}100%{transform:scale(1);}}
     @keyframes wiggle{0%{transform:translateX(0);}33%{transform:translateX(5px);}66%{transform:translateX(-5px);}100%{transform:translateX(0);}}
-    #player-container{position:relative;border:2px solid green;border-radius:10px;background:linear-gradient(gray,white);padding:10px;margin-top:5px;}
+    #player-container{position:relative;border:2px solid green;border-radius:10px;background:linear-gradient(135deg,#d3d3d3,#ffffff);padding:10px;margin:10px auto 0;width:100%;max-width:320px;box-sizing:border-box;transition:background 0.3s ease,border-color 0.3s ease;}
     #alias-row{display:flex;align-items:center;justify-content:center;gap:5px;}
     #alias-jugador{font-size:1.2rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:220px;color:orange;}
     #editar-alias{background:none;border:none;color:#4B0082;font-size:1.5rem;cursor:pointer;border-radius:5px;text-shadow:0 0 4px #fff,0 0 8px #fff;}
@@ -191,6 +196,7 @@
     .premio-row .forma-nombre{font-family:'Poppins',sans-serif;font-weight:normal;font-size:0.6rem;display:block;margin-top:-2px;}
     .premio-row div,.premio-row span{ text-shadow:0 0 6px #fff,0 0 10px #fff; }
     #back-premios-content{display:flex;flex-direction:column;align-items:center;position:relative;z-index:1;}
+    @media (max-width:480px){#fecha-hora-sorteo .fecha-col{align-items:center;text-align:center;}}
   </style>
 </head>
 <body>
@@ -200,8 +206,14 @@
     <div class="sorteo-info">
       <button id="sorteo-btn">Selecciona Sorteo</button>
       <div id="fecha-hora-sorteo">
-        <div id="fecha-sorteo"></div>
-        <div id="hora-sorteo"></div>
+        <div class="fecha-col">
+          <div id="fecha-sorteo" class="sorteo-line"></div>
+          <div id="fecha-actual" class="actual-line"></div>
+        </div>
+        <div class="fecha-col">
+          <div id="hora-sorteo" class="sorteo-line"></div>
+          <div id="hora-actual" class="actual-line"></div>
+        </div>
       </div>
     </div>
     <div class="datos-sorteo">
@@ -330,6 +342,8 @@ let seleccionadoJugado=null;
 let seleccionadoGuardado=null;
 let consultando=false;
 let cookieKey='';
+let sorteoCookieKey='';
+let fechaActualInterval=null;
 let formasSorteo=[];
 let formaActiva=0;
 let premioActual=0;
@@ -342,7 +356,46 @@ let editandoTipo=null;
 let editandoId=null;
 
 function setCookie(name,value){document.cookie=`${name}=${encodeURIComponent(value)};path=/;max-age=31536000`;}
+function deleteCookie(name){document.cookie=`${name}=;path=/;max-age=0`;}
 function getCookie(name){const m=document.cookie.match(new RegExp('(?:^|; )'+name+'=([^;]*)'));return m?decodeURIComponent(m[1]):null;}
+function normalizarMeridiano(texto){return (texto||'').replace(/\s*a\.?\s*m\.?/ig,' AM').replace(/\s*p\.?\s*m\.?/ig,' PM');}
+function actualizarFechaHoraActual(){
+  const fechaActualEl=document.getElementById('fecha-actual');
+  if(fechaActualEl){
+    try{fechaActualEl.textContent=fechaServidor();}catch(e){fechaActualEl.textContent='';}
+  }
+  const horaActualEl=document.getElementById('hora-actual');
+  if(horaActualEl){
+    try{horaActualEl.textContent=normalizarMeridiano(horaServidor());}catch(e){horaActualEl.textContent='';}
+  }
+}
+function iniciarActualizacionFechaActual(){
+  actualizarFechaHoraActual();
+  if(fechaActualInterval) clearInterval(fechaActualInterval);
+  fechaActualInterval=setInterval(actualizarFechaHoraActual,1000);
+}
+function guardarSorteoSeleccionado(s){
+  if(!sorteoCookieKey||!s) return;
+  setCookie(sorteoCookieKey,JSON.stringify({id:s.id||'',tipo:s.tipo||''}));
+}
+async function restaurarSorteoSeleccionado(){
+  if(!sorteoCookieKey) return false;
+  const raw=getCookie(sorteoCookieKey);
+  if(!raw) return false;
+  try{
+    const data=JSON.parse(raw);
+    if(!data||!data.id) return false;
+    const encontrado=sorteosActivos.find(s=>s.id===data.id);
+    if(encontrado){
+      await seleccionarSorteo(encontrado);
+      return true;
+    }
+    deleteCookie(sorteoCookieKey);
+  }catch(e){
+    deleteCookie(sorteoCookieKey);
+  }
+  return false;
+}
 function saveToCookie(){
   if(!cookieKey||consultando) return;
   const posiciones=[];
@@ -619,7 +672,14 @@ function toggleForma(idx){
   }
 
   function formatearFecha(f){ if(!f) return ''; const [y,m,d]=f.split('-'); return `${d}/${m}/${y}`; }
-  function formatearHora(h){ if(!h) return ''; const [hh,mm]=h.split(':'); let n=parseInt(hh); const ampm=n>=12?'pm':'am'; n=n%12||12; return `${n}:${mm} ${ampm}`; }
+  function formatearHora(h){
+    if(!h) return '';
+    const [hh,mm]=h.split(':');
+    let n=parseInt(hh,10);
+    const ampm=n>=12?'PM':'AM';
+    n=n%12||12;
+    return `⏰ hora: ${String(n).padStart(2,'0')}:${mm} ${ampm}`;
+  }
 
   async function seleccionarSorteo(s){
     resetForma();
@@ -633,10 +693,12 @@ function toggleForma(idx){
     else if(s.tipo==='Sorteo Especial'){ btn.classList.add('especial'); }
     btn.style.fontSize = s.nombre.length>20?'0.8rem':'1.1rem';
     document.getElementById('fecha-sorteo').innerHTML=`<span class="cal-icon">📅</span> ${formatearFecha(s.fecha)}`;
-    document.getElementById('hora-sorteo').innerHTML=`<span class="clock-icon">⏰</span> ${formatearHora(s.hora)}`;
+    document.getElementById('hora-sorteo').innerHTML=formatearHora(s.hora);
+    actualizarFechaHoraActual();
     const jugarBtn=document.getElementById('jugar-carton-btn');
     if(s.estado==='Sellado' || s.estado==='Jugando') jugarBtn.disabled=true; else jugarBtn.disabled=false;
     actualizarFondoCarton();
+    guardarSorteoSeleccionado(s);
     await cargarFormasSorteo();
     await actualizarDatosSorteo();
     iniciarIntervalo();
@@ -934,10 +996,25 @@ function toggleForma(idx){
 
   function actualizarFondoCarton(){
     const back=document.querySelector('.carton-back');
-    let color='gray';
-    if(currentSorteoTipo==='Sorteo Diario') color='green';
-    else if(currentSorteoTipo==='Sorteo Especial') color='orange';
-    back.style.background=`linear-gradient(white,${color})`;
+    const player=document.getElementById('player-container');
+    let color='#808080';
+    let gradient='linear-gradient(135deg,#d3d3d3,#ffffff)';
+    let borde='#0b8a2a';
+    if(currentSorteoTipo==='Sorteo Diario'){
+      color='#0a8800';
+      gradient='linear-gradient(135deg,#0b8a2a,#a3f7a7)';
+    }else if(currentSorteoTipo==='Sorteo Especial'){
+      color='#ff8800';
+      gradient='linear-gradient(135deg,#ffb347,#ff7e00)';
+      borde='#ff8800';
+    }else{
+      borde='#0b8a2a';
+    }
+    if(back) back.style.background=`linear-gradient(white,${color})`;
+    if(player){
+      player.style.background=gradient;
+      player.style.borderColor=borde;
+    }
   }
 
   function renderPremios(prefijo){
@@ -1279,6 +1356,7 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
   });
 
   initFechaHora('fecha-hora');
+  iniciarActualizacionFechaActual();
 
   auth.onAuthStateChanged(async user=>{
     if(user){
@@ -1297,11 +1375,19 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
         document.getElementById('gratis-label').textContent='0';
       }
       cookieKey='jugarcarton_'+user.email.replace(/[^\w]/g,'_');
+      sorteoCookieKey=`${cookieKey}_sorteo`;
       loadFromCookie();
     }else{
+      cookieKey='';
+      sorteoCookieKey='';
       window.location.href='index.html';
+      return;
     }
-    cargarSorteosActivos();
+    await cargarSorteosActivos();
+    const restaurado=await restaurarSorteoSeleccionado();
+    if(!restaurado){
+      actualizarFondoCarton();
+    }
     await cargarCartonesGuardados();
   });
 

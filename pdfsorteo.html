@@ -294,6 +294,7 @@
   let formasData = [];
   let cartonesData = [];
   let esperandoConfirmacionPDF = false;
+  let pdfFileName = '';
 
   const coloresFormas = ['#006400', '#b8860b', '#00008b', '#4b0082', '#8b4513', '#d2691e'];
 
@@ -302,16 +303,61 @@
 
   function formatearFecha(fecha){
     if(!fecha) return '';
+    const partes = fecha.includes('-') ? fecha.split('-') : fecha.split('/');
+    if(partes.length===3){
+      const [anio, mes, dia] = partes[0].length===4 ? partes : [partes[2], partes[1], partes[0]];
+      return `📅 ${dia.padStart(2,'0')}/${mes.padStart(2,'0')}/${anio}`;
+    }
     return `📅 ${fecha}`;
   }
 
   function formatearHora(hora){
     if(!hora) return '';
-    const [hh, mm] = hora.split(':');
+    const [hh = '00', mm = '00'] = hora.split(':');
     let h = parseInt(hh, 10);
+    if(Number.isNaN(h)) h = 0;
+    const sufijo = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `⏰ Hora: ${h.toString().padStart(2,'0')}:${mm.padStart(2,'0')} ${sufijo}`;
+  }
+
+  function normalizarTextoArchivo(texto){
+    if(!texto) return 'sorteo';
+    const sinTildes = texto.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    return sinTildes.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'') || 'sorteo';
+  }
+
+  function formatearFechaArchivo(fecha){
+    if(!fecha) return '00-00-0000';
+    const partes = fecha.split('-');
+    if(partes.length===3){
+      const [anio, mes, dia] = partes;
+      return `${dia.padStart(2,'0')}-${mes.padStart(2,'0')}-${anio}`;
+    }
+    const partesSlash = fecha.split('/');
+    if(partesSlash.length===3){
+      const [dia, mes, anio] = partesSlash;
+      return `${dia.padStart(2,'0')}-${mes.padStart(2,'0')}-${anio}`;
+    }
+    return fecha.replace(/\//g,'-');
+  }
+
+  function formatearHoraArchivo(hora){
+    if(!hora) return '00-00-am';
+    const [hh = '00', mm = '00'] = hora.split(':');
+    let h = parseInt(hh, 10);
+    if(Number.isNaN(h)) h = 0;
     const sufijo = h >= 12 ? 'pm' : 'am';
     h = h % 12 || 12;
-    return `⏰ ${h.toString().padStart(2,'0')}:${mm} ${sufijo}`;
+    return `${h.toString().padStart(2,'0')}-${mm.padStart(2,'0')}-${sufijo}`;
+  }
+
+  function construirNombreArchivo(){
+    if(!sorteoData) return 'pdf-sorteo';
+    const nombre = normalizarTextoArchivo(sorteoData.nombre);
+    const fecha = formatearFechaArchivo(sorteoData.fecha || '');
+    const hora = formatearHoraArchivo(sorteoData.hora || '');
+    return `${nombre}_${fecha}_${hora}`;
   }
 
   function crearMiniCarton(posiciones){
@@ -412,6 +458,7 @@
       fechaEl.textContent = formatearFecha(sorteoData.fecha || '');
       horaEl.textContent = formatearHora(sorteoData.hora || '');
       totalPremiosEl.textContent = Math.round(sorteoData.totalPremios || 0);
+      pdfFileName = construirNombreArchivo();
 
       const formasSnap = await db.collection('formas').where('sorteoId','==',sorteoId).get();
       formasData = [];
@@ -450,13 +497,19 @@
 
   function generarPDF(){
     if(!sorteoData){ return; }
+    const tituloOriginal = document.title;
+    const nombreArchivo = pdfFileName || construirNombreArchivo();
+    document.title = nombreArchivo;
     esperandoConfirmacionPDF = true;
-    window.addEventListener('afterprint', ()=>{
+    const handler = ()=>{
+      document.title = tituloOriginal;
+      window.removeEventListener('afterprint', handler);
       if(!esperandoConfirmacionPDF) return;
       esperandoConfirmacionPDF = false;
-      manejarConfirmacionGuardado();
-    }, { once: true });
-    window.print();
+      setTimeout(manejarConfirmacionGuardado, 150);
+    };
+    window.addEventListener('afterprint', handler);
+    setTimeout(()=>{ window.print(); }, 200);
   }
 
   cargarDatos();
