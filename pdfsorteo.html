@@ -51,7 +51,7 @@
       font-size: 1.1rem;
       border-radius: 12px;
       border: 4px solid #FFD700;
-      background: linear-gradient(#003c8f, #ffffff);
+      background: linear-gradient(#008c3a, #66d17a);
       color: #ffffff;
       text-shadow: 1px 1px 2px #000;
       cursor: pointer;
@@ -236,6 +236,75 @@
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
     }
+    #confirmacion-guardado {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      box-sizing: border-box;
+      z-index: 1300;
+    }
+    #confirmacion-guardado.oculto { display: none; }
+    .confirmacion-contenido {
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 24px 20px;
+      max-width: 360px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+      font-family: 'Poppins', sans-serif;
+    }
+    .confirmacion-contenido h3 {
+      margin: 0 0 12px 0;
+      font-family: 'Bangers', cursive;
+      font-size: 1.4rem;
+      color: #0b5394;
+    }
+    .confirmacion-contenido p {
+      margin: 0;
+      font-size: 0.95rem;
+      color: #1a1a1a;
+    }
+    .confirmacion-acciones {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 18px;
+    }
+    .confirmacion-acciones button {
+      padding: 8px 16px;
+      border-radius: 10px;
+      border: 3px solid #FFD700;
+      font-family: 'Bangers', cursive;
+      font-size: 1rem;
+      cursor: pointer;
+      background: linear-gradient(#008c3a, #66d17a);
+      color: #ffffff;
+      text-shadow: 1px 1px 1px rgba(0,0,0,0.4);
+      box-shadow: 0 0 8px rgba(0,0,0,0.3);
+    }
+    .confirmacion-acciones button.secundario {
+      background: linear-gradient(#9c9c9c, #e0e0e0);
+      color: #222;
+    }
+    #mensaje-resultado {
+      margin: 20px auto 0;
+      max-width: 600px;
+      text-align: center;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 600;
+      color: #0b6623;
+    }
+    #mensaje-resultado.error { color: #8b0000; }
+    #mensaje-resultado.info { color: #0b5394; }
   </style>
 </head>
 <body>
@@ -265,6 +334,17 @@
       <div id="cartones-grid"></div>
     </section>
   </div>
+  <div id="mensaje-resultado" aria-live="polite"></div>
+  <div id="confirmacion-guardado" class="oculto" role="dialog" aria-modal="true">
+    <div class="confirmacion-contenido">
+      <h3>Guardar PDF</h3>
+      <p>¿Se guardó correctamente el PDF en el dispositivo?</p>
+      <div class="confirmacion-acciones">
+        <button id="confirmar-guardado-btn">Sí, se guardó</button>
+        <button id="reintentar-guardado-btn" class="secundario">Volver a intentar</button>
+      </div>
+    </div>
+  </div>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
@@ -289,17 +369,22 @@
   const totalPremiosEl = document.getElementById('total-premios');
   const formasCont = document.getElementById('formas-container');
   const cartonesGrid = document.getElementById('cartones-grid');
+  const confirmacionOverlay = document.getElementById('confirmacion-guardado');
+  const confirmarGuardadoBtn = document.getElementById('confirmar-guardado-btn');
+  const reintentarGuardadoBtn = document.getElementById('reintentar-guardado-btn');
+  const mensajeResultado = document.getElementById('mensaje-resultado');
 
   let sorteoData = null;
   let formasData = [];
   let cartonesData = [];
-  let esperandoConfirmacionPDF = false;
   let pdfFileName = '';
 
   const coloresFormas = ['#006400', '#b8860b', '#00008b', '#4b0082', '#8b4513', '#d2691e'];
 
   salirBtn.addEventListener('click', ()=>{ window.location.href = 'cantarsorteos.html'; });
   pdfBtn.addEventListener('click', generarPDF);
+  if(confirmarGuardadoBtn){ confirmarGuardadoBtn.addEventListener('click', confirmarGuardado); }
+  if(reintentarGuardadoBtn){ reintentarGuardadoBtn.addEventListener('click', reintentarGuardado); }
 
   function formatearFecha(fecha){
     if(!fecha) return '';
@@ -358,6 +443,48 @@
     const fecha = formatearFechaArchivo(sorteoData.fecha || '');
     const hora = formatearHoraArchivo(sorteoData.hora || '');
     return `${nombre}_${fecha}_${hora}`;
+  }
+
+  function limpiarMensaje(){
+    if(!mensajeResultado) return;
+    mensajeResultado.textContent = '';
+    mensajeResultado.classList.remove('error','info');
+  }
+
+  function mostrarMensaje(texto, tipo='exito'){
+    if(!mensajeResultado) return;
+    limpiarMensaje();
+    if(!texto) return;
+    if(tipo === 'error') mensajeResultado.classList.add('error');
+    else if(tipo === 'info') mensajeResultado.classList.add('info');
+    mensajeResultado.textContent = texto;
+  }
+
+  function mostrarConfirmacionGuardado(){
+    if(!confirmacionOverlay) return;
+    confirmacionOverlay.classList.remove('oculto');
+    if(confirmarGuardadoBtn){ confirmarGuardadoBtn.focus(); }
+  }
+
+  function ocultarConfirmacionGuardado(){
+    if(!confirmacionOverlay) return;
+    confirmacionOverlay.classList.add('oculto');
+  }
+
+  async function confirmarGuardado(){
+    ocultarConfirmacionGuardado();
+    try {
+      await db.collection('sorteos').doc(sorteoId).set({ pdf: 'si' }, { merge: true });
+      mostrarMensaje('Se confirmó el guardado del PDF.');
+    } catch (err) {
+      console.error('Error actualizando estado del PDF', err);
+      mostrarMensaje('No fue posible actualizar la información del PDF. Intenta nuevamente.', 'error');
+    }
+  }
+
+  function reintentarGuardado(){
+    ocultarConfirmacionGuardado();
+    mostrarMensaje('Cuando tengas el PDF guardado, vuelve a presionar "Generar PDF" para intentarlo nuevamente.', 'info');
   }
 
   function crearMiniCarton(posiciones){
@@ -480,36 +607,20 @@
     }
   }
 
-  async function manejarConfirmacionGuardado(){
-    const confirmado = confirm('¿Se guardó correctamente el PDF en el dispositivo?');
-    if(!confirmado){
-      alert('Debes guardar el PDF para continuar con el sorteo.');
-      return;
-    }
-    try {
-      await db.collection('sorteos').doc(sorteoId).set({ pdf: 'si' }, { merge: true });
-      alert('Se confirmó el guardado del PDF.');
-    } catch (err) {
-      console.error('Error actualizando estado del PDF', err);
-      alert('No fue posible actualizar la información del PDF. Intenta nuevamente.');
-    }
-  }
-
   function generarPDF(){
     if(!sorteoData){ return; }
+    limpiarMensaje();
+    ocultarConfirmacionGuardado();
     const tituloOriginal = document.title;
     const nombreArchivo = pdfFileName || construirNombreArchivo();
     document.title = nombreArchivo;
-    esperandoConfirmacionPDF = true;
     const handler = ()=>{
-      document.title = tituloOriginal;
       window.removeEventListener('afterprint', handler);
-      if(!esperandoConfirmacionPDF) return;
-      esperandoConfirmacionPDF = false;
-      setTimeout(manejarConfirmacionGuardado, 150);
+      document.title = tituloOriginal;
+      setTimeout(mostrarConfirmacionGuardado, 200);
     };
     window.addEventListener('afterprint', handler);
-    setTimeout(()=>{ window.print(); }, 200);
+    window.requestAnimationFrame(()=>window.print());
   }
 
   cargarDatos();
