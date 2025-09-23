@@ -169,9 +169,15 @@
       border-radius: 12px;
       background: linear-gradient(135deg, rgba(0,60,0,0.85), rgba(255,255,255,0.95));
       padding: 15px 14px 20px;
-      margin: 16px auto 0;
-      width: min(420px, 92vw);
+      margin: 16px 8px 0;
+      width: min(360px, calc(100% - 16px));
       box-shadow: 0 0 10px rgba(0,0,0,0.4);
+    }
+    #detalle-container.diario {
+      background: linear-gradient(135deg, rgba(0,128,0,0.85), rgba(255,255,255,0.95));
+    }
+    #detalle-container.especial {
+      background: linear-gradient(135deg, rgba(255,140,0,0.8), rgba(255,255,255,0.95));
     }
     #sorteo-nombre {
       font-size: 1rem;
@@ -239,8 +245,8 @@
     #finalizar-btn { background: linear-gradient(#8b0000,#ffffff); }
     .estado-btn img { width: 24px; height: 24px; }
     #tabla-cantos-wrapper {
-      margin: 16px auto 0;
-      width: min(420px, 92vw);
+      margin: 16px 8px 0;
+      width: min(360px, calc(100% - 16px));
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -444,7 +450,7 @@
   <script>
   ensureAuth('Administrador');
   initServerTime().then(()=>{
-    initFechaHora();
+    inicializarFechaHoraFooter();
     iniciarActualizacionesActuales();
   });
 
@@ -462,6 +468,7 @@
   const valorCartonEl = document.getElementById('valor-carton-valor');
   const cartonesPagosEl = document.getElementById('cartones-jugando-valor');
   const cartonesGratisEl = document.getElementById('cartones-gratis-jugando');
+  const detalleContainer = document.getElementById('detalle-container');
   const sorteoNombreEl = document.getElementById('sorteo-nombre');
   const estadoActualEl = document.getElementById('estado-actual');
   const tipoEl = document.getElementById('tipo-sorteo');
@@ -501,23 +508,70 @@
       const st = obtenerServerTime();
       const diferencia = st?.diferencia || 0;
       const ahora = new Date(Date.now() + diferencia);
-      const locale = st?.locale || 'es-ES';
       const zona = st?.zonaIana;
-      const opcionesFecha = { year: 'numeric', month: 'long', day: 'numeric' };
+      const opcionesFecha = { day: '2-digit', month: '2-digit', year: 'numeric' };
       const opcionesHora = { hour: '2-digit', minute: '2-digit', hour12: true };
       if(zona){
         opcionesFecha.timeZone = zona;
         opcionesHora.timeZone = zona;
       }
-      const pais = st?.Pais ? `${st.Pais}, ` : '';
-      const fechaStr = ahora.toLocaleDateString(locale, opcionesFecha);
-      let horaStr = ahora.toLocaleTimeString(locale, opcionesHora);
-      horaStr = horaStr.replace(' a. m.', ' am').replace(' p. m.', ' pm');
-      fechaActualValorEl.textContent = `${pais}${fechaStr}`.trim();
-      horaActualValorEl.textContent = `${pais}${horaStr}`.trim();
+      const fechaFormatter = new Intl.DateTimeFormat('es-ES', opcionesFecha);
+      const horaFormatter = new Intl.DateTimeFormat('en-US', opcionesHora);
+      const fechaStr = fechaFormatter.format(ahora);
+      const horaStr = horaFormatter.format(ahora).toUpperCase();
+      fechaActualValorEl.textContent = fechaStr;
+      horaActualValorEl.textContent = horaStr;
     } catch (err) {
       console.error('Error actualizando fecha y hora actuales', err);
     }
+  }
+
+  function inicializarFechaHoraFooter(){
+    const footerEl = document.getElementById('fecha-hora');
+    if(!footerEl) return;
+    function renderFooter(){
+      try {
+        const st = obtenerServerTime();
+        const diferencia = st?.diferencia || 0;
+        const ahora = new Date(Date.now() + diferencia);
+        const locale = st?.locale || 'es-ES';
+        const zona = st?.zonaIana;
+        const opcionesFecha = { year: 'numeric', month: 'long', day: 'numeric' };
+        const opcionesHora = { hour: '2-digit', minute: '2-digit', hour12: true };
+        if(zona){
+          opcionesFecha.timeZone = zona;
+          opcionesHora.timeZone = zona;
+        }
+        const fechaStr = ahora.toLocaleDateString(locale, opcionesFecha);
+        let horaStr = ahora.toLocaleTimeString(locale, opcionesHora);
+        horaStr = horaStr
+          .replace(/\s*a\.?\s*m\.?/gi, ' AM')
+          .replace(/\s*p\.?\s*m\.?/gi, ' PM');
+        footerEl.textContent = '';
+        const fragment = document.createDocumentFragment();
+        if(st?.Pais){
+          const paisSpan = document.createElement('span');
+          paisSpan.className = 'pais-actual';
+          paisSpan.textContent = `${st.Pais} |`;
+          fragment.appendChild(paisSpan);
+          fragment.appendChild(document.createTextNode(' '));
+        }
+        const fechaSpan = document.createElement('span');
+        fechaSpan.className = 'fecha-actual-texto';
+        fechaSpan.textContent = fechaStr;
+        fragment.appendChild(fechaSpan);
+        fragment.appendChild(document.createTextNode(' '));
+        const horaSpan = document.createElement('span');
+        horaSpan.className = 'hora-actual-texto';
+        horaSpan.textContent = horaStr;
+        fragment.appendChild(horaSpan);
+        footerEl.appendChild(fragment);
+      } catch (error) {
+        console.error('Error actualizando fecha y hora del footer', error);
+      }
+    }
+    renderFooter();
+    setInterval(renderFooter, 1000);
   }
 
   function iniciarActualizacionesActuales(){
@@ -767,6 +821,7 @@
       sorteoNombreEl.textContent = 'Selecciona un sorteo para ver los detalles';
       actualizarEstadoVisual(null);
       tipoEl.innerHTML = '';
+      if(detalleContainer) detalleContainer.classList.remove('diario','especial');
       mensajeEl.textContent = 'Selecciona un sorteo para administrar su estado.';
       [sellarBtn, pdfBtn, jugarBtn, finalizarBtn].forEach(btn=>btn.disabled=true);
       actualizarAnimaciones();
@@ -777,10 +832,19 @@
     const data = currentSorteoData;
     btnSorteo.textContent = data.nombre || 'Sorteo';
     btnSorteo.classList.remove('diario','especial','jugando','finalizado');
-    if(data.estado === 'Jugando') btnSorteo.classList.add('jugando');
-    else if(data.estado === 'Finalizado') btnSorteo.classList.add('finalizado');
-    else if(data.tipo === 'Sorteo Diario') btnSorteo.classList.add('diario');
-    else if(data.tipo === 'Sorteo Especial') btnSorteo.classList.add('especial');
+    const estadoActual = data.estado || '';
+    const tipoActual = (data.tipo || '').toLowerCase();
+    const esDiario = tipoActual.includes('diario');
+    const esEspecial = tipoActual.includes('especial') || tipoActual.includes('espacial');
+    if(estadoActual === 'Jugando') btnSorteo.classList.add('jugando');
+    else if(estadoActual === 'Finalizado') btnSorteo.classList.add('finalizado');
+    else if(esDiario) btnSorteo.classList.add('diario');
+    else if(esEspecial) btnSorteo.classList.add('especial');
+    if(detalleContainer){
+      detalleContainer.classList.remove('diario','especial');
+      if(esDiario) detalleContainer.classList.add('diario');
+      else if(esEspecial) detalleContainer.classList.add('especial');
+    }
     if(fechaProgramadaEl) fechaProgramadaEl.textContent = data.fecha ? formatearFecha(data.fecha) : '';
     if(horaProgramadaEl) horaProgramadaEl.textContent = data.hora ? formatearHora(data.hora) : '';
     premioEl.textContent = Math.round(data.totalPremios || 0);
