@@ -240,10 +240,17 @@
       transition: transform 0.2s;
     }
     .estado-btn:hover { transform: scale(1.05); }
-    #pdf-btn { background: linear-gradient(#003c71,#ffffff); }
+    #sellar-btn { background: linear-gradient(#707070,#d9d9d9); }
+    #pdf-btn { background: linear-gradient(#008c3a,#66d17a); }
     #jugar-btn { background: linear-gradient(#4b0082,#ffffff); }
     #finalizar-btn { background: linear-gradient(#8b0000,#ffffff); }
     .estado-btn img { width: 24px; height: 24px; }
+    #sellar-btn .stop-icon {
+      font-family: 'Bangers', cursive;
+      font-size: 0.95rem;
+      letter-spacing: 1px;
+      color: #ffffff;
+    }
     #tabla-cantos-wrapper {
       margin: 16px 8px 0;
       width: min(360px, calc(100% - 16px));
@@ -414,7 +421,7 @@
     </div>
     <div id="acciones-sorteo">
       <button id="sellar-btn" class="estado-btn" title="Sellar sorteo">
-        <img src="https://api.iconify.design/mdi/seal-variant.svg?color=white" alt="Sellar">
+        <span class="stop-icon">STOP</span>
       </button>
       <button id="pdf-btn" class="estado-btn" title="Generar PDF">
         <img src="https://api.iconify.design/mdi/file-pdf-box.svg?color=white" alt="PDF">
@@ -664,11 +671,19 @@
     cantosUnsub = ref.onSnapshot(doc=>{
       if(!doc.exists){
         actualizarCantosSeleccionados([]);
+        if(currentSorteoData) currentSorteoData.cantos = [];
         return;
       }
       const data = doc.data() || {};
       const numeros = Array.isArray(data.numeros) ? data.numeros : [];
       actualizarCantosSeleccionados(numeros);
+      if(currentSorteoData){
+        currentSorteoData.cantos = numeros;
+      }
+      const idx = sorteos.findIndex(s=>s.id===id);
+      if(idx>=0){
+        sorteos[idx].cantos = numeros;
+      }
     }, err=>console.error('Error escuchando cantos', err));
   }
 
@@ -869,30 +884,42 @@
     try {
       const snap = await db.collection('sorteos').get();
       const pendientesPdf = [];
+      const cantosPromises = [];
       snap.forEach(doc=>{
         const d = doc.data();
-        sorteos.push({
-          id: doc.id,
-          nombre: d.nombre || 'Sorteo',
-          fecha: d.fecha || '',
-          hora: d.hora || '',
-          tipo: d.tipo || '',
-          estado: d.estado || 'Activo',
-          valorCarton: d.valorCarton || 0,
-          cartonesjugando: d.cartonesjugando || 0,
-          cartonesgratisjugando: d.cartonesgratisjugando || 0,
-          totalPremios: d.totalPremios || 0,
-          cierreMinutos: d.cierreMinutos || d.cierre || 0,
-          pdf: d.pdf || 'no'
-        });
+        const registro = { id: doc.id, ...d, pdf: d.pdf || 'no', cantos: [] };
+        registro.nombre = registro.nombre || 'Sorteo';
+        registro.estado = registro.estado || 'Activo';
+        registro.fecha = registro.fecha || '';
+        registro.hora = registro.hora || '';
+        registro.tipo = registro.tipo || '';
+        registro.valorCarton = registro.valorCarton || 0;
+        registro.cartonesjugando = registro.cartonesjugando || 0;
+        registro.cartonesgratisjugando = registro.cartonesgratisjugando || 0;
+        registro.totalPremios = registro.totalPremios || 0;
+        if(typeof registro.cierreMinutos === 'undefined'){ registro.cierreMinutos = registro.cierre || 0; }
+        sorteos.push(registro);
         if(typeof d.pdf === 'undefined' || d.pdf === null || d.pdf === ''){
           pendientesPdf.push(doc.id);
         }
+        cantosPromises.push(
+          db.collection('cantos').doc(doc.id).get().then(cantoDoc=>{
+            if(!cantoDoc.exists){
+              registro.cantos = [];
+              return;
+            }
+            const dataCantos = cantoDoc.data() || {};
+            registro.cantos = Array.isArray(dataCantos.numeros) ? dataCantos.numeros : [];
+          }).catch(err=>console.error('Error cargando cantos de sorteo', err))
+        );
       });
       if(pendientesPdf.length){
         await Promise.all(pendientesPdf.map(id=>
           db.collection('sorteos').doc(id).set({ pdf: 'no' }, { merge: true })
         )).catch(err=>console.error('Error asegurando pdf en sorteos', err));
+      }
+      if(cantosPromises.length){
+        await Promise.all(cantosPromises);
       }
     } catch (err) {
       console.error('Error cargando sorteos', err);
@@ -905,20 +932,27 @@
       mensajeEl.textContent = 'No hay sorteos disponibles en este momento.';
       return;
     }
+    mensajeEl.textContent = '';
     const cont = document.getElementById('sorteos-list');
     cont.innerHTML = '';
+    const estadoOrden = { jugando: 0, sellado: 1, activo: 2, finalizado: 3 };
+    const ahora = getServerNow() || new Date();
+    const referencia = ahora instanceof Date && !isNaN(ahora.getTime()) ? ahora : new Date();
     const ordenados = [...sorteos].sort((a,b)=>{
-      const fechaA = obtenerFechaSorteo(a) || new Date(0);
-      const fechaB = obtenerFechaSorteo(b) || new Date(0);
-      return fechaB - fechaA;
+      const estadoA = (a.estado || '').toString().toLowerCase();
+      const estadoB = (b.estado || '').toString().toLowerCase();
+      const prioridadA = estadoOrden.hasOwnProperty(estadoA) ? estadoOrden[estadoA] : 4;
+      const prioridadB = estadoOrden.hasOwnProperty(estadoB) ? estadoOrden[estadoB] : 4;
+      if(prioridadA !== prioridadB) return prioridadA - prioridadB;
+      const fechaA = obtenerFechaSorteo(a);
+      const fechaB = obtenerFechaSorteo(b);
+      const diffA = fechaA ? Math.abs(fechaA - referencia) : Number.MAX_SAFE_INTEGER;
+      const diffB = fechaB ? Math.abs(fechaB - referencia) : Number.MAX_SAFE_INTEGER;
+      if(diffA !== diffB) return diffA - diffB;
+      if(fechaA && fechaB && fechaA.getTime() !== fechaB.getTime()) return fechaA - fechaB;
+      return (a.nombre || '').localeCompare(b.nombre || '');
     });
-    const activos = ordenados.filter(s=> (s.estado || '').toLowerCase() === 'activo');
-    if(!activos.length){
-      mensajeEl.textContent = 'No hay sorteos activos disponibles en este momento.';
-      document.getElementById('sorteos-modal').style.display = 'none';
-      return;
-    }
-    activos.forEach((s, idx)=>{
+    ordenados.forEach((s, idx)=>{
       const div = document.createElement('div');
       div.className = `sorteo-item ${s.estado ? s.estado.toLowerCase() : ''} ${s.tipo === 'Sorteo Diario' ? 'diario' : s.tipo === 'Sorteo Especial' ? 'especial' : ''}`.trim();
       const header = document.createElement('div');
@@ -931,7 +965,8 @@
       div.appendChild(detalle);
       const extra = document.createElement('div');
       extra.className = 'sorteo-extra';
-      extra.innerHTML = `<span>Premio: ${Math.round(s.totalPremios || 0)}</span><span>Cartones: ${s.cartonesjugando || 0} + ${s.cartonesgratisjugando || 0}</span>`;
+      const cantosRegistrados = Array.isArray(s.cantos) ? s.cantos.length : 0;
+      extra.innerHTML = `<span>Premio: ${Math.round(s.totalPremios || 0)}</span><span>Cartones: ${s.cartonesjugando || 0} + ${s.cartonesgratisjugando || 0}</span><span>Cantos: ${cantosRegistrados}</span>`;
       div.appendChild(extra);
       div.addEventListener('click',()=>{
         seleccionarSorteo(s.id);
@@ -952,11 +987,13 @@
         detenerCantos();
         return;
       }
-      currentSorteoData = { id: doc.id, ...doc.data() };
+      const cantosPrevios = currentSorteoData?.cantos || sorteos.find(s=>s.id===doc.id)?.cantos || [];
+      currentSorteoData = { id: doc.id, ...doc.data(), cantos: cantosPrevios };
       asegurarCampoPdf(doc.id, currentSorteoData);
       const idx = sorteos.findIndex(s=>s.id===doc.id);
       if(idx>=0){
-        sorteos[idx] = { ...sorteos[idx], ...doc.data() };
+        const cantosExistentes = sorteos[idx].cantos || [];
+        sorteos[idx] = { ...sorteos[idx], ...doc.data(), cantos: cantosExistentes };
       }
       mostrarDatos();
     }, err=>console.error('Error escuchando sorteo', err));
@@ -968,6 +1005,7 @@
     currentSorteoData = encontrado ? { ...encontrado } : null;
     if(currentSorteoData){
       asegurarCampoPdf(currentSorteoId, currentSorteoData);
+      actualizarCantosSeleccionados(currentSorteoData.cantos || []);
     }
     escucharSorteo(id);
     escucharCantos(id);
