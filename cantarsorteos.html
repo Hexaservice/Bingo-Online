@@ -413,21 +413,113 @@
     .sorteo-item {
       display: flex;
       flex-direction: column;
-      gap: 2px;
-      padding: 6px 8px;
-      border-radius: 8px;
+      gap: 4px;
+      padding: 8px 10px;
+      border-radius: 10px;
       cursor: pointer;
       border: 2px solid transparent;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    .sorteo-item:hover { border-color: #1e90ff; }
-    .sorteo-item.diario { background: linear-gradient(#b8ffb8, #ffffff); }
-    .sorteo-item.especial { background: linear-gradient(#ffd1a1,#ffffff); }
-    .sorteo-item.sellado { background: linear-gradient(#cccccc,#ffffff); color: #333; }
-    .sorteo-item.jugando { background: linear-gradient(#d8b0ff,#ffffff); color: #331155; }
-    .sorteo-item.finalizado { background: linear-gradient(#aaaaaa,#eeeeee); color: #222; }
-    .sorteo-header { display: flex; justify-content: space-between; font-weight: 700; font-size: 1rem; }
-    .sorteo-detalle { display: flex; gap: 6px; align-items: center; font-size: 0.85rem; }
-    .sorteo-extra { display: flex; flex-direction: column; gap: 3px; font-size: 0.8rem; color: #0f2a0f; }
+    .sorteo-item:hover { border-color: #1e90ff; box-shadow: 0 4px 12px rgba(0,0,0,0.18); transform: translateY(-1px); }
+    .sorteo-item.activo { background: linear-gradient(135deg, #0f9d58, #66bb6a); color: #e9f8ec; }
+    .sorteo-item.inactivo { background: linear-gradient(135deg, #c62828, #ff6f60); color: #fff1f1; }
+    .sorteo-item.sellado { background: linear-gradient(135deg, #a8a8a8, #e0e0e0); color: #222; }
+    .sorteo-item.jugando { background: linear-gradient(135deg, #6a0dad, #b57edc); color: #f4ebff; }
+    .sorteo-item.finalizado { background: linear-gradient(135deg, #8b4513, #d2b48c); color: #fff6ee; }
+    .sorteo-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 700;
+      font-size: 1rem;
+      gap: 8px;
+    }
+    .sorteo-header .titulo {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .sorteo-header .estado { text-transform: uppercase; }
+    .tipo-tag {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.85);
+    }
+    .tipo-tag.diario { color: #0d7a28; border: 1px solid rgba(13,122,40,0.4); }
+    .tipo-tag.especial { color: #ff7b00; border: 1px solid rgba(255,123,0,0.4); }
+    .sorteo-detalle {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      font-size: 0.85rem;
+      flex-wrap: wrap;
+    }
+    .sorteo-detalle span { display: inline-flex; align-items: center; gap: 4px; }
+    .cierre-minutos {
+      font-weight: 700;
+      color: #0b4dda;
+      text-shadow: 0 0 4px rgba(255,255,255,0.6);
+    }
+    .sorteo-extra {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.82rem;
+      color: inherit;
+      text-align: left;
+    }
+    .extra-premio {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .extra-premio-main {
+      font-weight: 700;
+      color: #ffffff;
+      text-shadow: 0 0 6px #072968;
+    }
+    .extra-premio-subtotales {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 0.7rem;
+    }
+    .forma-subtotal {
+      font-weight: 700;
+      text-shadow: 0 0 4px rgba(0,0,0,0.2);
+    }
+    .forma-subtotal.forma1 { color: #1b8f3a; }
+    .forma-subtotal.forma2 { color: #b8860b; }
+    .forma-subtotal.forma3 { color: #1160c9; }
+    .forma-subtotal.forma4 { color: #6a0dad; }
+    .forma-subtotal.forma5 { color: #d2691e; }
+    .extra-cartones,
+    .extra-cantos { font-weight: 700; display: flex; align-items: center; gap: 4px; }
+    .extra-cartones-pagos {
+      color: #6a0dad;
+      text-shadow: 0 0 4px rgba(255,255,255,0.9);
+    }
+    .extra-cartones-gratis {
+      color: #001f54;
+      text-shadow: 0 0 4px rgba(255,255,255,0.9);
+    }
+    .extra-cartones-mas {
+      font-weight: 700;
+      color: #ffffff;
+      text-shadow: 0 0 4px rgba(0,0,0,0.3);
+    }
+    .extra-cantos-valor {
+      color: #0db050;
+      text-shadow: 0 0 4px rgba(255,215,0,0.9);
+    }
+    .extra-premio-main .valor-premio,
+    .extra-cartones span,
+    .extra-cantos span { font-weight: 700; }
     .attention { animation: zoomInOut 1s infinite; }
     @keyframes zoomInOut { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
     #mensaje-area {
@@ -946,6 +1038,35 @@
     return `${hora12.toString().padStart(2,'0')}:${minuto.toString().padStart(2,'0')} ${sufijo}`;
   }
 
+  const formatoNumeroES = new Intl.NumberFormat('es-ES');
+
+  function formatearNumero(valor){
+    const numero = Number(valor) || 0;
+    return formatoNumeroES.format(Math.round(numero));
+  }
+
+  function obtenerCierreMinutosRegistro(sorteo){
+    if(!sorteo) return null;
+    const posible = sorteo.cierreMinutos ?? sorteo.cierre ?? sorteo.cierreminutos;
+    const valor = parseInt(posible, 10);
+    return isNaN(valor) ? null : valor;
+  }
+
+  function generarSubtotalesFormas(formas, totalPremios){
+    if(!Array.isArray(formas) || !formas.length) return '';
+    const totales = [];
+    const premioBase = Number(totalPremios) || 0;
+    formas.forEach(forma=>{
+      const idx = parseInt(forma.idx, 10);
+      const porcentaje = parseFloat(forma.porcentaje);
+      if(!idx || isNaN(porcentaje) || porcentaje <= 0) return;
+      const subtotal = premioBase > 0 ? (premioBase * (porcentaje / 100)) : 0;
+      const clase = `forma${Math.min(idx,5)}`;
+      totales.push(`<span class="forma-subtotal ${clase}">F${idx}: ${formatearNumero(subtotal)}</span>`);
+    });
+    return totales.join(' ');
+  }
+
   function obtenerFechaSorteo(data){
     if(!data) return null;
     const fechaBase = obtenerFechaDesdeValor(data.fecha);
@@ -1061,9 +1182,12 @@
       const snap = await db.collection('sorteos').get();
       const pendientesPdf = [];
       const cantosPromises = [];
+      const formasPromises = [];
+      const registrosMap = new Map();
       snap.forEach(doc=>{
         const d = doc.data();
-        const registro = { id: doc.id, ...d, pdf: d.pdf || 'no', cantos: [] };
+        if((d?.condicion || '').toString().toUpperCase() === 'ARCHIVADO') return;
+        const registro = { id: doc.id, ...d, pdf: d.pdf || 'no', cantos: [], formas: [] };
         registro.nombre = registro.nombre || 'Sorteo';
         registro.estado = registro.estado || 'Activo';
         registro.fecha = registro.fecha || '';
@@ -1074,7 +1198,7 @@
         registro.cartonesgratisjugando = registro.cartonesgratisjugando || 0;
         registro.totalPremios = registro.totalPremios || 0;
         if(typeof registro.cierreMinutos === 'undefined'){ registro.cierreMinutos = registro.cierre || 0; }
-        sorteos.push(registro);
+        registrosMap.set(doc.id, registro);
         if(typeof d.pdf === 'undefined' || d.pdf === null || d.pdf === ''){
           pendientesPdf.push(doc.id);
         }
@@ -1088,15 +1212,33 @@
             registro.cantos = Array.isArray(dataCantos.numeros) ? dataCantos.numeros : [];
           }).catch(err=>console.error('Error cargando cantos de sorteo', err))
         );
+        formasPromises.push(
+          db.collection('formas').where('sorteoId','==',doc.id).get().then(formasSnap=>{
+            const arr = [];
+            formasSnap.forEach(fdoc=>{
+              const dataForma = fdoc.data() || {};
+              arr.push({
+                idx: dataForma.idx || dataForma.indice || arr.length + 1,
+                nombre: dataForma.nombre || '',
+                porcentaje: dataForma.porcentaje ?? dataForma.porcentajePremio ?? 0,
+                cartonesGratis: dataForma.cartonesGratis ?? dataForma.cartones || 0
+              });
+            });
+            arr.sort((a,b)=>(parseInt(a.idx,10)||0)-(parseInt(b.idx,10)||0));
+            registro.formas = arr;
+          }).catch(err=>console.error('Error cargando formas de sorteo', err))
+        );
       });
+      sorteos = Array.from(registrosMap.values());
       if(pendientesPdf.length){
         await Promise.all(pendientesPdf.map(id=>
           db.collection('sorteos').doc(id).set({ pdf: 'no' }, { merge: true })
         )).catch(err=>console.error('Error asegurando pdf en sorteos', err));
       }
-      if(cantosPromises.length){
-        await Promise.all(cantosPromises);
-      }
+      const espera = [];
+      if(cantosPromises.length) espera.push(Promise.all(cantosPromises));
+      if(formasPromises.length) espera.push(Promise.all(formasPromises));
+      if(espera.length) await Promise.all(espera);
       if(restauracionPendiente){
         const restaurado = intentarRestaurarSorteo();
         restauracionPendiente = !restaurado;
@@ -1118,7 +1260,14 @@
     const estadoOrden = { jugando: 0, sellado: 1, activo: 2, finalizado: 3 };
     const ahora = getServerNow() || new Date();
     const referencia = ahora instanceof Date && !isNaN(ahora.getTime()) ? ahora : new Date();
-    const ordenados = [...sorteos].sort((a,b)=>{
+    const unicos = [];
+    const vistos = new Set();
+    sorteos.forEach(reg=>{
+      if(!reg || !reg.id || vistos.has(reg.id)) return;
+      vistos.add(reg.id);
+      unicos.push(reg);
+    });
+    const ordenados = unicos.sort((a,b)=>{
       const estadoA = (a.estado || '').toString().toLowerCase();
       const estadoB = (b.estado || '').toString().toLowerCase();
       const prioridadA = estadoOrden.hasOwnProperty(estadoA) ? estadoOrden[estadoA] : 4;
@@ -1134,19 +1283,52 @@
     });
     ordenados.forEach((s, idx)=>{
       const div = document.createElement('div');
-      div.className = `sorteo-item ${s.estado ? s.estado.toLowerCase() : ''} ${s.tipo === 'Sorteo Diario' ? 'diario' : s.tipo === 'Sorteo Especial' ? 'especial' : ''}`.trim();
+      const estadoLower = (s.estado || '').toString().toLowerCase().replace(/\s+/g,'-');
+      div.className = ['sorteo-item', estadoLower].filter(Boolean).join(' ');
       const header = document.createElement('div');
       header.className = 'sorteo-header';
-      header.innerHTML = `<span>${idx+1}. ${s.nombre}</span><span>${s.estado || ''}</span>`;
+      const tipoTexto = (s.tipo || '').toString().toLowerCase();
+      let tipoEtiqueta = '';
+      if(tipoTexto.includes('especial')) tipoEtiqueta = '<span class="tipo-tag especial">ESPECIAL</span>';
+      else if(tipoTexto.includes('diario')) tipoEtiqueta = '<span class="tipo-tag diario">DIARIO</span>';
+      const nombreMostrar = (s.nombre || 'Sorteo').toString();
+      const estadoMostrar = (s.estado || '-').toString();
+      header.innerHTML = `<span class="titulo">${idx+1}. ${nombreMostrar}${tipoEtiqueta ? ` ${tipoEtiqueta}` : ''}</span><span class="estado">${estadoMostrar}</span>`;
       div.appendChild(header);
       const detalle = document.createElement('div');
       detalle.className = 'sorteo-detalle';
-      detalle.innerHTML = `${s.fecha ? `📅 ${formatearFecha(s.fecha)}` : ''} ${s.hora ? `⏰ ${formatearHora(s.hora)}` : ''}`;
+      const fechaTexto = s.fecha ? `<span class="detalle-fecha">📅 ${formatearFecha(s.fecha)}</span>` : '';
+      const cierreValor = obtenerCierreMinutosRegistro(s);
+      const cierreHtml = cierreValor !== null ? `<span class="cierre-minutos">${cierreValor} min</span>` : '';
+      const horaBase = s.hora ? `⏰ ${formatearHora(s.hora)}` : '';
+      let horaTexto = '';
+      if(horaBase){
+        horaTexto = `<span class="detalle-hora">${horaBase}${cierreHtml ? ` ${cierreHtml}` : ''}</span>`;
+      } else if(cierreHtml){
+        horaTexto = `<span class="detalle-hora">${cierreHtml}</span>`;
+      }
+      detalle.innerHTML = [fechaTexto, horaTexto].filter(Boolean).join(' ');
       div.appendChild(detalle);
       const extra = document.createElement('div');
       extra.className = 'sorteo-extra';
       const cantosRegistrados = Array.isArray(s.cantos) ? s.cantos.length : 0;
-      extra.innerHTML = `<span>Premio: ${Math.round(s.totalPremios || 0)}</span><span>Cartones: ${s.cartonesjugando || 0} + ${s.cartonesgratisjugando || 0}</span><span>Cantos: ${cantosRegistrados}</span>`;
+      const totalPremios = Number(s.totalPremios) || 0;
+      const subtotalesHtml = generarSubtotalesFormas(s.formas, totalPremios);
+      const cartonesPagos = formatearNumero(s.cartonesjugando || 0);
+      const cartonesGratis = formatearNumero(s.cartonesgratisjugando || 0);
+      const cantosTexto = formatearNumero(cantosRegistrados);
+      extra.innerHTML = `
+        <div class="extra-premio">
+          <span class="extra-premio-main">Premio: <span class="valor-premio">${formatearNumero(totalPremios)}</span></span>
+          ${subtotalesHtml ? `<span class="extra-premio-subtotales">${subtotalesHtml}</span>` : ''}
+        </div>
+        <div class="extra-cartones">
+          Cartones: <span class="extra-cartones-pagos">${cartonesPagos}</span>
+          <span class="extra-cartones-mas">+</span>
+          <span class="extra-cartones-gratis">${cartonesGratis}</span>
+        </div>
+        <div class="extra-cantos">Cantos: <span class="extra-cantos-valor">${cantosTexto}</span></div>
+      `;
       div.appendChild(extra);
       div.addEventListener('click',()=>{
         seleccionarSorteo(s.id);
