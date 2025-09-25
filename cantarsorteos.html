@@ -721,16 +721,46 @@
   const pdfConfirmNoBtn = document.getElementById('pdf-confirm-no');
 
   function setCookie(name, value){
-    document.cookie = `${name}=${encodeURIComponent(value)};path=/;max-age=31536000`;
+    try {
+      document.cookie = `${name}=${encodeURIComponent(value)};path=/;max-age=31536000`;
+    } catch (err) {
+      console.warn('No fue posible establecer la cookie para el sorteo seleccionado.', err);
+    }
+    try {
+      localStorage.setItem(name, value);
+    } catch (err) {
+      console.warn('No fue posible almacenar el sorteo seleccionado en localStorage.', err);
+    }
   }
 
   function getCookie(name){
-    const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/[.$?*|{}()\[\]\\\/\+^]/g, '\\$&') + '=([^;]*)'));
-    return match ? decodeURIComponent(match[1]) : null;
+    try {
+      const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/[.$?*|{}()\[\]\\\/\+^]/g, '\\$&') + '=([^;]*)'));
+      if(match){
+        return decodeURIComponent(match[1]);
+      }
+    } catch (err) {
+      console.warn('No fue posible leer la cookie del sorteo seleccionado.', err);
+    }
+    try {
+      return localStorage.getItem(name);
+    } catch (err) {
+      console.warn('No fue posible recuperar el sorteo seleccionado desde localStorage.', err);
+      return null;
+    }
   }
 
   function deleteCookie(name){
-    document.cookie = `${name}=;path=/;max-age=0`;
+    try {
+      document.cookie = `${name}=;path=/;max-age=0`;
+    } catch (err) {
+      console.warn('No fue posible eliminar la cookie del sorteo seleccionado.', err);
+    }
+    try {
+      localStorage.removeItem(name);
+    } catch (err) {
+      console.warn('No fue posible eliminar el sorteo seleccionado de localStorage.', err);
+    }
   }
 
   function esSorteoVisible(info){
