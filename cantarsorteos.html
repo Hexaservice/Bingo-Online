@@ -123,10 +123,11 @@
       font-size: 1rem;
     }
     .valor-actual {
-      font-family: 'Poppins', sans-serif;
-      font-size: 0.7rem;
+      font-family: 'Bangers', cursive;
+      font-size: 1rem;
       color: #0b4dda;
       font-weight: 600;
+      letter-spacing: 1px;
     }
     .datos-sorteo {
       display: flex;
@@ -414,25 +415,28 @@
       display: flex;
       flex-direction: column;
       gap: 4px;
-      padding: 8px 10px;
+      padding: 10px 12px 52px 12px;
       border-radius: 10px;
       cursor: pointer;
       border: 2px solid transparent;
       transition: transform 0.2s ease, box-shadow 0.2s ease;
+      position: relative;
+      overflow: hidden;
     }
     .sorteo-item:hover { border-color: #1e90ff; box-shadow: 0 4px 12px rgba(0,0,0,0.18); transform: translateY(-1px); }
-    .sorteo-item.activo { background: linear-gradient(135deg, #0f9d58, #66bb6a); color: #e9f8ec; }
-    .sorteo-item.inactivo { background: linear-gradient(135deg, #c62828, #ff6f60); color: #fff1f1; }
-    .sorteo-item.sellado { background: linear-gradient(135deg, #a8a8a8, #e0e0e0); color: #222; }
-    .sorteo-item.jugando { background: linear-gradient(135deg, #6a0dad, #b57edc); color: #f4ebff; }
-    .sorteo-item.finalizado { background: linear-gradient(135deg, #8b4513, #d2b48c); color: #fff6ee; }
+    .sorteo-item.activo { background: linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(15,157,88,0.95)); color: #0c3f1d; }
+    .sorteo-item.inactivo { background: linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(198,40,40,0.92)); color: #4f0909; }
+    .sorteo-item.sellado { background: linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(168,168,168,0.95)); color: #1f1f1f; }
+    .sorteo-item.jugando { background: linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(106,13,173,0.92)); color: #2d0f44; }
+    .sorteo-item.finalizado { background: linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(139,69,19,0.92)); color: #40210a; }
     .sorteo-header {
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-start;
       align-items: center;
       font-weight: 700;
       font-size: 1rem;
       gap: 8px;
+      padding-right: 70px;
     }
     .sorteo-header .titulo {
       display: flex;
@@ -440,7 +444,6 @@
       gap: 6px;
       flex-wrap: wrap;
     }
-    .sorteo-header .estado { text-transform: uppercase; }
     .tipo-tag {
       font-size: 0.75rem;
       font-weight: 700;
@@ -491,7 +494,7 @@
     }
     .forma-subtotal {
       font-weight: 700;
-      text-shadow: 0 0 4px rgba(0,0,0,0.2);
+      text-shadow: 0 0 6px rgba(255,255,255,0.9), 0 0 12px rgba(255,255,255,0.8);
     }
     .forma-subtotal.forma1 { color: #1b8f3a; }
     .forma-subtotal.forma2 { color: #b8860b; }
@@ -520,6 +523,52 @@
     .extra-premio-main .valor-premio,
     .extra-cartones span,
     .extra-cantos span { font-weight: 700; }
+
+    .sorteo-corner-info {
+      position: absolute;
+      right: 10px;
+      bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      pointer-events: none;
+    }
+
+    .corner-cantos {
+      font-family: 'Bangers', cursive;
+      font-size: 1.2rem;
+      color: #ffffff;
+      text-shadow: 0 0 6px rgba(96,0,128,0.9), 0 0 14px rgba(128,0,192,0.8);
+      letter-spacing: 1px;
+    }
+
+    .corner-cantos-valor {
+      color: #ffffff;
+      text-shadow: 0 0 8px rgba(96,0,128,0.95), 0 0 16px rgba(128,0,192,0.85);
+    }
+
+    .corner-estado {
+      font-family: 'Bangers', cursive;
+      font-size: 1rem;
+      text-transform: uppercase;
+      background: rgba(255,255,255,0.85);
+      padding: 2px 10px;
+      border-radius: 999px;
+      color: #111;
+      box-shadow: 0 0 6px rgba(0,0,0,0.15);
+      letter-spacing: 1px;
+    }
+
+    .corner-estado.activo { color: #0f8b0f; }
+    .corner-estado.inactivo { color: #c62828; }
+    .corner-estado.sellado { color: #555555; }
+    .corner-estado.jugando { color: #6a0dad; }
+    .corner-estado.finalizado { color: #8b4513; }
+
+    .corner-cantos.jugando {
+      animation: zoomInOut 1.2s ease-in-out infinite;
+    }
     .attention { animation: zoomInOut 1s infinite; }
     @keyframes zoomInOut { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
     #mensaje-area {
@@ -684,15 +733,31 @@
     document.cookie = `${name}=;path=/;max-age=0`;
   }
 
+  function esSorteoVisible(info){
+    if(!info) return false;
+    const condicionTexto = (info.condicion ?? info['condición'] ?? '').toString().trim().toUpperCase();
+    return condicionTexto === 'VISIBLE';
+  }
+
   function guardarSorteoSeleccionado(info){
     if(!sorteoCookieKey || !info) return;
     let payload;
+    let referencia = null;
     if(typeof info === 'string'){
       if(!info) return;
-      payload = { id: info, tipo: '' };
+      referencia = sorteos.find(s=>s.id===info) || null;
+      if(!referencia || !esSorteoVisible(referencia)){
+        deleteCookie(sorteoCookieKey);
+        return;
+      }
+      payload = { id: info, tipo: referencia.tipo || '' };
     }else{
       const id = info.id || '';
       if(!id) return;
+      if(!esSorteoVisible(info)){
+        deleteCookie(sorteoCookieKey);
+        return;
+      }
       payload = { id, tipo: info.tipo || '' };
     }
     setCookie(sorteoCookieKey, JSON.stringify(payload));
@@ -701,7 +766,10 @@
   function intentarRestaurarSorteo(){
     if(!sorteoCookieKey) return false;
     const guardado = getCookie(sorteoCookieKey);
-    if(!guardado) return false;
+    if(!guardado){
+      restauracionPendiente = false;
+      return false;
+    }
     let idRestaurar = guardado;
     try {
       const data = JSON.parse(guardado);
@@ -711,11 +779,15 @@
     } catch (err) {
       idRestaurar = guardado;
     }
-    if(!idRestaurar) return false;
+    if(!idRestaurar){
+      restauracionPendiente = false;
+      return false;
+    }
     if(idRestaurar === currentSorteoId) return true;
     const existe = sorteos.find(s=>s.id===idRestaurar);
-    if(!existe){
+    if(!existe || !esSorteoVisible(existe)){
       deleteCookie(sorteoCookieKey);
+      restauracionPendiente = false;
       return false;
     }
     seleccionarSorteo(idRestaurar);
@@ -1186,8 +1258,10 @@
       const registrosMap = new Map();
       snap.forEach(doc=>{
         const d = doc.data();
-        if((d?.condicion || '').toString().toUpperCase() === 'ARCHIVADO') return;
+        const condicionRaw = (d?.condicion || '').toString().trim().toUpperCase();
+        if(condicionRaw === 'ARCHIVADO') return;
         const registro = { id: doc.id, ...d, pdf: d.pdf || 'no', cantos: [], formas: [] };
+        registro.condicion = condicionRaw || 'VISIBLE';
         registro.nombre = registro.nombre || 'Sorteo';
         registro.estado = registro.estado || 'Activo';
         registro.fecha = registro.fecha || '';
@@ -1293,7 +1367,7 @@
       else if(tipoTexto.includes('diario')) tipoEtiqueta = '<span class="tipo-tag diario">DIARIO</span>';
       const nombreMostrar = (s.nombre || 'Sorteo').toString();
       const estadoMostrar = (s.estado || '-').toString();
-      header.innerHTML = `<span class="titulo">${idx+1}. ${nombreMostrar}${tipoEtiqueta ? ` ${tipoEtiqueta}` : ''}</span><span class="estado">${estadoMostrar}</span>`;
+      header.innerHTML = `<span class="titulo">${idx+1}. ${nombreMostrar}${tipoEtiqueta ? ` ${tipoEtiqueta}` : ''}</span>`;
       div.appendChild(header);
       const detalle = document.createElement('div');
       detalle.className = 'sorteo-detalle';
@@ -1327,9 +1401,22 @@
           <span class="extra-cartones-mas">+</span>
           <span class="extra-cartones-gratis">${cartonesGratis}</span>
         </div>
-        <div class="extra-cantos">Cantos: <span class="extra-cantos-valor">${cantosTexto}</span></div>
       `;
       div.appendChild(extra);
+      const corner = document.createElement('div');
+      corner.className = 'sorteo-corner-info';
+      const cornerCantos = document.createElement('div');
+      cornerCantos.className = 'corner-cantos';
+      cornerCantos.innerHTML = `Cantos: <span class="corner-cantos-valor">${cantosTexto}</span>`;
+      if(estadoLower === 'jugando'){
+        cornerCantos.classList.add('jugando');
+      }
+      const cornerEstado = document.createElement('div');
+      cornerEstado.className = ['corner-estado', estadoLower].filter(Boolean).join(' ');
+      cornerEstado.textContent = estadoMostrar;
+      corner.appendChild(cornerCantos);
+      corner.appendChild(cornerEstado);
+      div.appendChild(corner);
       div.addEventListener('click',()=>{
         seleccionarSorteo(s.id);
         document.getElementById('sorteos-modal').style.display = 'none';
@@ -1344,6 +1431,7 @@
     const ref = db.collection('sorteos').doc(id);
     sorteoUnsub = ref.onSnapshot(doc=>{
       if(!doc.exists){
+        if(sorteoCookieKey){ deleteCookie(sorteoCookieKey); }
         currentSorteoData = null;
         mostrarDatos();
         detenerCantos();
@@ -1351,12 +1439,17 @@
       }
       const cantosPrevios = currentSorteoData?.cantos || sorteos.find(s=>s.id===doc.id)?.cantos || [];
       currentSorteoData = { id: doc.id, ...doc.data(), cantos: cantosPrevios };
+      if(currentSorteoData){
+        currentSorteoData.condicion = (currentSorteoData.condicion || currentSorteoData['condición'] || '').toString().trim().toUpperCase() || 'VISIBLE';
+      }
       asegurarCampoPdf(doc.id, currentSorteoData);
       const idx = sorteos.findIndex(s=>s.id===doc.id);
       if(idx>=0){
         const cantosExistentes = sorteos[idx].cantos || [];
         sorteos[idx] = { ...sorteos[idx], ...doc.data(), cantos: cantosExistentes };
+        sorteos[idx].condicion = (sorteos[idx].condicion || sorteos[idx]['condición'] || '').toString().trim().toUpperCase() || 'VISIBLE';
       }
+      guardarSorteoSeleccionado(currentSorteoData);
       mostrarDatos();
     }, err=>console.error('Error escuchando sorteo', err));
   }
@@ -1368,6 +1461,7 @@
     const encontrado = sorteos.find(s=>s.id===id);
     currentSorteoData = encontrado ? { ...encontrado } : null;
     if(currentSorteoData){
+      currentSorteoData.condicion = (currentSorteoData.condicion || currentSorteoData['condición'] || '').toString().trim().toUpperCase() || 'VISIBLE';
       guardarSorteoSeleccionado(currentSorteoData);
       asegurarCampoPdf(currentSorteoId, currentSorteoData);
       actualizarCantosSeleccionados(currentSorteoData.cantos || []);
