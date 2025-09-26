@@ -196,14 +196,18 @@
     }
     #estado-actual {
       font-family: 'Bangers', cursive;
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       color: #111;
       text-shadow: 0 0 4px rgba(255,255,255,0.8);
       display: flex;
-      justify-content: center;
-      gap: 6px;
       align-items: center;
+      justify-content: center;
       flex-wrap: wrap;
+      gap: 8px;
+      width: 100%;
+    }
+    #estado-actual .estado-etiqueta {
+      letter-spacing: 1px;
     }
     .estado-badge {
       padding: 2px 10px;
@@ -230,20 +234,25 @@
     #acciones-sorteo {
       margin-top: 14px;
       display: flex;
-      justify-content: flex-start;
+      justify-content: center;
       align-items: flex-end;
       gap: 12px;
       flex-wrap: wrap;
     }
     #modo-toggle-container {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 4px 10px 4px 0;
+      gap: 6px;
+      padding: 2px 8px;
+      background: rgba(255,255,255,0.55);
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.08);
+      flex-shrink: 0;
+      margin-left: 4px;
     }
     #modo-manual-estado {
       font-family: 'Bangers', cursive;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       color: #0b1d0b;
       text-shadow: 0 0 4px rgba(255,255,255,0.9);
       white-space: nowrap;
@@ -251,8 +260,8 @@
     .modo-switch {
       position: relative;
       display: inline-block;
-      width: 54px;
-      height: 28px;
+      width: 42px;
+      height: 22px;
     }
     .modo-switch input {
       opacity: 0;
@@ -271,9 +280,9 @@
     .modo-slider:before {
       position: absolute;
       content: '';
-      height: 22px;
-      width: 22px;
-      left: 4px;
+      height: 16px;
+      width: 16px;
+      left: 3px;
       bottom: 3px;
       background-color: #ffffff;
       border-radius: 50%;
@@ -284,7 +293,7 @@
       background: linear-gradient(135deg, #06b406, #8bff8b);
     }
     .modo-switch input:checked + .modo-slider:before {
-      transform: translateX(26px);
+      transform: translateX(18px);
     }
     .estado-btn {
       width: 52px;
@@ -680,18 +689,21 @@
   </section>
   <section id="detalle-container">
     <div id="sorteo-nombre">Selecciona un sorteo para ver los detalles</div>
-    <div id="estado-actual">Estado: <span class="estado-badge">-</span></div>
-    <div id="resumen-sorteo">
-      <div id="tipo-sorteo"></div>
-    </div>
-    <div id="acciones-sorteo">
+    <div id="estado-actual">
+      <span class="estado-etiqueta">Estado:</span>
+      <span id="estado-valor" class="estado-badge">-</span>
       <div id="modo-toggle-container">
         <label class="modo-switch" title="Cambiar modo Manual/Automático">
           <input type="checkbox" id="modo-manual-switch" aria-label="Interruptor de modo manual">
           <span class="modo-slider"></span>
         </label>
-        <span id="modo-manual-estado">Modo Automático</span>
+        <span id="modo-manual-estado">Automático</span>
       </div>
+    </div>
+    <div id="resumen-sorteo">
+      <div id="tipo-sorteo"></div>
+    </div>
+    <div id="acciones-sorteo">
       <button id="sellar-btn" class="estado-btn" title="Sellar sorteo">
         <span class="stop-icon">STOP</span>
       </button>
@@ -760,6 +772,7 @@
   const detalleContainer = document.getElementById('detalle-container');
   const sorteoNombreEl = document.getElementById('sorteo-nombre');
   const estadoActualEl = document.getElementById('estado-actual');
+  const estadoValorEl = document.getElementById('estado-valor');
   const tipoEl = document.getElementById('tipo-sorteo');
   const mensajeEl = document.getElementById('mensaje-area');
   const sellarBtn = document.getElementById('sellar-btn');
@@ -773,7 +786,8 @@
   const cantoCeldas = new Map();
   let cantosSeleccionados = new Set();
   let cantosUnsub = null;
-  let sorteoCookieKey = '';
+  const sorteoCookieDefaultKey = 'cantarsorteos_default';
+  let sorteoCookieKey = sorteoCookieDefaultKey;
   let restauracionPendiente = false;
   let pdfDestinoUrl = '';
   let pdfAccionEnCurso = false;
@@ -825,6 +839,15 @@
     }
   }
 
+  function limpiarSorteoSeleccionado(){
+    if(sorteoCookieKey){
+      deleteCookie(sorteoCookieKey);
+    }
+    if(sorteoCookieKey !== sorteoCookieDefaultKey){
+      deleteCookie(sorteoCookieDefaultKey);
+    }
+  }
+
   function esSorteoVisible(info){
     if(!info) return false;
     const condicionTexto = (info.condicion ?? info['condición'] ?? '').toString().trim().toUpperCase();
@@ -839,7 +862,7 @@
       if(!info) return;
       referencia = sorteos.find(s=>s.id===info) || null;
       if(!referencia || !esSorteoVisible(referencia)){
-        deleteCookie(sorteoCookieKey);
+        limpiarSorteoSeleccionado();
         return;
       }
       payload = { id: info, tipo: referencia.tipo || '' };
@@ -847,16 +870,22 @@
       const id = info.id || '';
       if(!id) return;
       if(!esSorteoVisible(info)){
-        deleteCookie(sorteoCookieKey);
+        limpiarSorteoSeleccionado();
         return;
       }
       payload = { id, tipo: info.tipo || '' };
     }
     setCookie(sorteoCookieKey, JSON.stringify(payload));
+    if(sorteoCookieKey !== sorteoCookieDefaultKey){
+      setCookie(sorteoCookieDefaultKey, JSON.stringify(payload));
+    }
   }
 
   function intentarRestaurarSorteo(){
-    if(!sorteoCookieKey) return false;
+    if(!sorteoCookieKey){
+      restauracionPendiente = false;
+      return false;
+    }
     const guardado = getCookie(sorteoCookieKey);
     if(!guardado){
       restauracionPendiente = false;
@@ -875,24 +904,38 @@
       restauracionPendiente = false;
       return false;
     }
-    if(idRestaurar === currentSorteoId) return true;
+    if(!sorteos || !sorteos.length){
+      return false;
+    }
+    if(idRestaurar === currentSorteoId){
+      restauracionPendiente = false;
+      return true;
+    }
     const existe = sorteos.find(s=>s.id===idRestaurar);
     if(!existe || !esSorteoVisible(existe)){
-      deleteCookie(sorteoCookieKey);
+      limpiarSorteoSeleccionado();
       restauracionPendiente = false;
       return false;
     }
     seleccionarSorteo(idRestaurar);
+    restauracionPendiente = false;
     return true;
   }
 
   auth.onAuthStateChanged(user=>{
     if(!user){
-      sorteoCookieKey = '';
+      sorteoCookieKey = sorteoCookieDefaultKey;
       restauracionPendiente = false;
       return;
     }
-    sorteoCookieKey = `cantarsorteos_${user.email.replace(/[^\w]/g,'_')}`;
+    const nuevoKey = `cantarsorteos_${user.email.replace(/[^\w]/g,'_')}`;
+    if(!getCookie(nuevoKey)){
+      const general = getCookie(sorteoCookieDefaultKey);
+      if(general){
+        setCookie(nuevoKey, general);
+      }
+    }
+    sorteoCookieKey = nuevoKey;
     restauracionPendiente = true;
     if(intentarRestaurarSorteo()){
       restauracionPendiente = false;
@@ -947,7 +990,7 @@
 
   function actualizarEstadoModo(){
     if(modoManualEstadoEl){
-      modoManualEstadoEl.textContent = modoManual ? 'Modo Manual' : 'Modo Automático';
+      modoManualEstadoEl.textContent = modoManual ? 'Manual' : 'Automático';
     }
   }
 
@@ -1306,7 +1349,10 @@
     else if(estadoNormalizado === 'sellado') clase = 'sellado';
     else if(estadoNormalizado === 'jugando') clase = 'jugando';
     else if(estadoNormalizado === 'finalizado') clase = 'finalizado';
-    estadoActualEl.innerHTML = `Estado: <span class="estado-badge ${clase}">${estadoTexto}</span>`;
+    if(estadoValorEl){
+      estadoValorEl.textContent = estadoTexto;
+      estadoValorEl.className = ['estado-badge', clase].filter(Boolean).join(' ');
+    }
   }
 
   function actualizarBotones(){
@@ -1565,7 +1611,7 @@
     const ref = db.collection('sorteos').doc(id);
     sorteoUnsub = ref.onSnapshot(doc=>{
       if(!doc.exists){
-        if(sorteoCookieKey){ deleteCookie(sorteoCookieKey); }
+        limpiarSorteoSeleccionado();
         currentSorteoData = null;
         mostrarDatos();
         detenerCantos();
@@ -1617,7 +1663,7 @@
     if(esModoManual()){
       const confirmarManual = confirm('¿Deseas sellar el sorteo seleccionado?');
       if(!confirmarManual) return;
-      await ejecutarSellado();
+      await ejecutarSellado({ confirmadoManual: true });
       return;
     }
 
@@ -1654,14 +1700,20 @@
     await ejecutarSellado();
   }
 
-  async function ejecutarSellado(){
+  async function ejecutarSellado(opciones = {}){
+    if(esModoManual() && !opciones.confirmadoManual){
+      const confirmar = confirm('¿Deseas sellar el sorteo seleccionado?');
+      if(!confirmar) return false;
+    }
     try {
       await db.collection('sorteos').doc(currentSorteoId).update({ estado: 'Sellado', pdf: 'no' });
       mensajeEl.textContent = 'El sorteo fue sellado correctamente.';
       sellarBtn.classList.remove('attention');
+      return true;
     } catch (err) {
       console.error('Error sellando sorteo', err);
       alert('No fue posible sellar el sorteo.');
+      return false;
     }
   }
 
@@ -1750,7 +1802,7 @@
     if(esModoManual()){
       const confirmarManual = confirm('¿Deseas cambiar el estado del sorteo a "Jugando"?');
       if(!confirmarManual) return;
-      await actualizarEstadoJugando();
+      await actualizarEstadoJugando({ confirmadoManual: true });
       return;
     }
 
@@ -1773,14 +1825,20 @@
     await actualizarEstadoJugando();
   }
 
-  async function actualizarEstadoJugando(){
+  async function actualizarEstadoJugando(opciones = {}){
+    if(esModoManual() && !opciones.confirmadoManual){
+      const confirmar = confirm('¿Deseas cambiar el estado del sorteo a "Jugando"?');
+      if(!confirmar) return false;
+    }
     try {
       await db.collection('sorteos').doc(currentSorteoId).update({ estado: 'Jugando' });
       mensajeEl.textContent = 'El sorteo cambió a estado Jugando.';
       jugarBtn.classList.remove('attention');
+      return true;
     } catch (err) {
       console.error('Error cambiando a Jugando', err);
       alert('No fue posible cambiar el estado a Jugando.');
+      return false;
     }
   }
 
