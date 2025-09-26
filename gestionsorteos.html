@@ -399,6 +399,19 @@
     return `${hnum}:${mm} ${ampm}`;
   }
 
+  function formatoValorCierre(valor){
+    if(valor===null || typeof valor==='undefined') return '';
+    if(typeof valor==='number' && !isNaN(valor)){
+      return `${valor} min`;
+    }
+    const texto=valor.toString().trim();
+    if(!texto) return '';
+    if(/^\d+$/.test(texto)){
+      return `${texto} min`;
+    }
+    return formatoHora12(texto);
+  }
+
   function mostrarPremios(formas){
     const modal=document.getElementById('modal-premios');
     const cont=document.getElementById('modal-premios-content');
@@ -433,7 +446,7 @@
     cont.innerHTML=`<div style="font-weight:bold;color:darkgreen;">Tipo de Sorteo: ${d.tipo||''}</div>`+
                    `<div style="font-weight:bold;color:darkblue;">Valor Cartón: ${d.valorCarton||''}</div>`+
                    `<div style="font-weight:bold;color:darkorange;">Hora Sorteo: ${formatoHora12(d.hora)}</div>`+
-                   `<div style="font-weight:bold;color:darkorange;">Minutos cierre: ${d.cierreMinutos||''}</div>`;
+                   `<div style="font-weight:bold;color:darkorange;">Hora cierre: ${formatoValorCierre(d.horacierre||d.cierre||d.cierreMinutos||'')}</div>`;
     modal.style.display='flex';
   }
 

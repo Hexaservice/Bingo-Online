@@ -132,8 +132,8 @@
     #fecha-sorteo{color:#4b0082;font-weight:bold;}
     #hora-label{font-size:1rem;color:purple;text-shadow:0 0 1px #fff,1px 1px 1px #000;}
     #hora-sorteo{color:purple;font-weight:bold;}
-    #minutos-label{font-size:1rem;color:#ff8c00;text-shadow:0 0 1px #fff,1px 1px 1px #000;}
-    #cierre-minutos{color:#ff8c00;font-weight:bold;}
+    #cierre-label{font-size:1rem;color:#ff8c00;text-shadow:0 0 1px #fff,1px 1px 1px #000;}
+    #hora-cierre{color:#ff8c00;font-weight:bold;}
     #max-carton-gratis{width:40px;text-align:center;font-weight:bold;}
     #max-carton-gratis::placeholder{font-size:0.6rem;}
     #valor-label{font-size:1rem;color:#006400;text-shadow:0 0 1px #fff,1px 1px 1px #000;}
@@ -182,7 +182,7 @@
     <div class="input-wrapper"><input id="hora-sorteo" type="time"><span class="label-right" id="hora-label">Hora</span></div>
   </div>
   <div class="row">
-    <div class="input-wrapper"><span class="label-left" id="minutos-label">MINUTOS</span><input id="cierre-minutos" type="number" placeholder="Minutos antes de cerrar jugadas"></div>
+    <div class="input-wrapper"><span class="label-left" id="cierre-label">CIERRE</span><input id="hora-cierre" type="time" placeholder="Hora de cierre de jugadas"></div>
     <div class="input-wrapper"><input id="max-carton-gratis" type="number" min="0" max="99" placeholder="Max CG" style="width:40px;text-align:center;"></div>
     <div class="input-wrapper"><input id="valor-carton" type="number" placeholder="Valor del Cartón"><span class="label-right" id="valor-label">VALOR CARTÓN</span></div>
   </div>
@@ -214,7 +214,7 @@
     const nombre=document.getElementById('nombre-sorteo').value.trim();
     const fecha=document.getElementById('fecha-sorteo').value;
     const hora=document.getElementById('hora-sorteo').value;
-    const cierre=document.getElementById('cierre-minutos').value;
+    const cierre=document.getElementById('hora-cierre').value;
     const maxcg=document.getElementById('max-carton-gratis').value;
     const valor=document.getElementById('valor-carton').value;
     const tipoBtn=document.querySelector('#tipo-sorteo-group button.active');
@@ -250,7 +250,7 @@
       document.getElementById('nombre-sorteo').value=data.nombre||'';
       document.getElementById('fecha-sorteo').value=data.fecha||'';
       document.getElementById('hora-sorteo').value=data.hora||'';
-      document.getElementById('cierre-minutos').value=data.cierre||'';
+      document.getElementById('hora-cierre').value=data.cierre||'';
       document.getElementById('max-carton-gratis').value=data.maxcg||'';
       document.getElementById('valor-carton').value=data.valor||'';
       if(data.tipo){
@@ -304,7 +304,7 @@
     document.getElementById('nombre-sorteo').addEventListener('input',saveState);
     document.getElementById('fecha-sorteo').addEventListener('input',saveState);
     document.getElementById('hora-sorteo').addEventListener('input',saveState);
-    document.getElementById('cierre-minutos').addEventListener('input',saveState);
+    document.getElementById('hora-cierre').addEventListener('input',saveState);
     document.getElementById('max-carton-gratis').addEventListener('input',saveState);
     document.getElementById('valor-carton').addEventListener('input',saveState);
     document.querySelectorAll('.tab-content .nombre-forma,.tab-content .porcentaje-forma,.tab-content .cartones-forma,.tab-content .imagen-url').forEach(i=>i.addEventListener('input',e=>{
@@ -584,7 +584,7 @@
     const nombreInput=document.getElementById('nombre-sorteo');
     const fechaInput=document.getElementById('fecha-sorteo');
     const horaInput=document.getElementById('hora-sorteo');
-    const cierreInput=document.getElementById('cierre-minutos');
+    const cierreInput=document.getElementById('hora-cierre');
     const maxcgInput=document.getElementById('max-carton-gratis');
     const valorInput=document.getElementById('valor-carton');
     const nombre=nombreInput.value.trim();
@@ -601,9 +601,9 @@
     if(!tipo){alert('Elije un tipo de sorteo');return;}
     if(!fecha){alert('Elige una fecha para el Sorteo');fechaInput.focus();return;}
     if(!hora){alert('Debes elegir una hora para el Sorteo');horaInput.focus();return;}
-    if(!cierreVal){alert('Elije una cantidad de minutos para cierre previo de Jugadas');cierreInput.focus();return;}
+    if(!cierreVal){alert('Elije una hora de cierre previo de Jugadas');cierreInput.focus();return;}
     if(!valorVal){alert('Coloca un valor para el cartón');valorInput.focus();return;}
-    const cierre=parseInt(cierreVal);
+    const cierre=cierreVal;
     const maxcartongratis=parseInt(maxcgVal)||0;
     const valor=parseFloat(valorVal);
     const condicion = estado==='Archivado'?'ARCHIVADO':'VISIBLE';
@@ -646,7 +646,7 @@
     }
     if(conPorcentaje>0 && total!==100){alert('La suma de porcentajes debe ser exactamente 100%');return;}
     try{
-      const sorteoRef=await db.collection('sorteos').add({nombre,tipo,fecha,hora,cierreMinutos:cierre,maxcartongratis:maxcartongratis,cartonesgratisjugando:0,valorCarton:valor,estado,condicion});
+      const sorteoRef=await db.collection('sorteos').add({nombre,tipo,fecha,hora,horacierre:cierre,maxcartongratis:maxcartongratis,cartonesgratisjugando:0,valorCarton:valor,estado,condicion});
       const batch=db.batch();
       formas.forEach(f=>{const ref=db.collection('formas').doc();batch.set(ref,{sorteoId:sorteoRef.id,...f});});
         await batch.commit();
