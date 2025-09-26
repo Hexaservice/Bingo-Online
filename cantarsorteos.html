@@ -523,7 +523,7 @@
       flex-wrap: wrap;
     }
     .sorteo-detalle span { display: inline-flex; align-items: center; gap: 4px; }
-    .cierre-minutos {
+    .cierre-hora {
       font-weight: 700;
       color: #0b4dda;
       text-shadow: 0 0 4px rgba(255,255,255,0.6);
@@ -1269,11 +1269,58 @@
     return formatoNumeroES.format(Math.round(numero));
   }
 
-  function obtenerCierreMinutosRegistro(sorteo){
+  function obtenerValorHoraCierre(sorteo){
     if(!sorteo) return null;
-    const posible = sorteo.cierreMinutos ?? sorteo.cierre ?? sorteo.cierreminutos;
-    const valor = parseInt(posible, 10);
-    return isNaN(valor) ? null : valor;
+    const claves=['horacierre','horaCierre','hora_cierre','cierre','cierreHora','cierrehora'];
+    for(const clave of claves){
+      const valor=sorteo?.[clave];
+      if(valor===undefined || valor===null || valor==='') continue;
+      if(typeof valor==='string'){
+        const texto=valor.trim();
+        if(!texto) continue;
+        if(!/[0-9]:/.test(texto) && !/[ap]\.?m\.?/i.test(texto) && /^\d+$/.test(texto)){
+          continue;
+        }
+        return texto;
+      }
+      return valor;
+    }
+    return null;
+  }
+
+  function obtenerFechaHoraCierre(data){
+    if(!data) return null;
+    const fechaBase=obtenerFechaDesdeValor(data.fecha);
+    if(!fechaBase || isNaN(fechaBase.getTime())) return null;
+    const valorHora=obtenerValorHoraCierre(data);
+    if(valorHora){
+      const info=obtenerHoraDesdeValor(valorHora);
+      if(info){
+        return new Date(fechaBase.getFullYear(),fechaBase.getMonth(),fechaBase.getDate(),info.hora,info.minuto);
+      }
+      if(valorHora instanceof Date && !isNaN(valorHora.getTime())){
+        return new Date(fechaBase.getFullYear(),fechaBase.getMonth(),fechaBase.getDate(),valorHora.getHours(),valorHora.getMinutes());
+      }
+    }
+    const minutosFallback=parseInt(data.cierreMinutos ?? data.cierre ?? data.cierreminutos,10);
+    if(!isNaN(minutosFallback)){
+      const fechaSorteo=obtenerFechaSorteo(data);
+      if(fechaSorteo && !isNaN(fechaSorteo.getTime())){
+        return new Date(fechaSorteo.getTime()-minutosFallback*60000);
+      }
+    }
+    return null;
+  }
+
+  function obtenerTextoHoraCierre(data){
+    const valor=obtenerValorHoraCierre(data);
+    if(valor){
+      const texto=formatearHora(valor);
+      if(texto) return texto;
+    }
+    const minutos=parseInt(data?.cierreMinutos ?? data?.cierre ?? data?.cierreminutos,10);
+    if(!isNaN(minutos)) return `${minutos} min.`;
+    return '';
   }
 
   function generarSubtotalesFormas(formas, totalPremios){
@@ -1313,12 +1360,6 @@
     const tiempoB = fechaB.getTime();
     if(tiempoA === tiempoB) return 0;
     return tiempoA < tiempoB ? -1 : 1;
-  }
-
-  function restarMinutos(fecha, minutos){
-    if(!(fecha instanceof Date) || isNaN(fecha.getTime())) return null;
-    const valorMinutos = Number(minutos) || 0;
-    return new Date(fecha.getTime() - valorMinutos * 60000);
   }
 
   function obtenerNombreSorteoActual(){
@@ -1417,11 +1458,9 @@
     cartonesGratisEl.textContent = data.cartonesgratisjugando || 0;
     sorteoNombreEl.textContent = data.nombre || '';
     actualizarEstadoVisual(data.estado);
-    const cierreVal = parseInt(data.cierreMinutos || data.cierre || 0, 10);
-    const cierreMin = isNaN(cierreVal) ? null : cierreVal;
     const tipoNombre = ((data.tipo || '').replace(/^Sorteo\s+/i,'') || 'N/D').toUpperCase();
-    const cierreTexto = cierreMin !== null ? `${cierreMin} min.` : 'N/D';
-    tipoEl.innerHTML = `<span>Tipo: ${tipoNombre}</span><span>Cierre: ${cierreTexto}</span>`;
+    const cierreTexto = obtenerTextoHoraCierre(data) || 'N/D';
+    tipoEl.innerHTML = `<span>Tipo: ${tipoNombre}</span><span>CIERRE: ${cierreTexto}</span>`;
     mensajeEl.textContent = '';
     actualizarBotones();
     actualizarAnimaciones();
@@ -1451,7 +1490,9 @@
         registro.cartonesjugando = registro.cartonesjugando || 0;
         registro.cartonesgratisjugando = registro.cartonesgratisjugando || 0;
         registro.totalPremios = registro.totalPremios || 0;
-        if(typeof registro.cierreMinutos === 'undefined'){ registro.cierreMinutos = registro.cierre || 0; }
+        if((registro.horacierre === undefined || registro.horacierre === null || registro.horacierre==='') && registro.cierre){
+          registro.horacierre = registro.cierre;
+        }
         registrosMap.set(doc.id, registro);
         if(typeof d.pdf === 'undefined' || d.pdf === null || d.pdf === ''){
           pendientesPdf.push(doc.id);
@@ -1552,8 +1593,8 @@
       const detalle = document.createElement('div');
       detalle.className = 'sorteo-detalle';
       const fechaTexto = s.fecha ? `<span class="detalle-fecha">📅 ${formatearFecha(s.fecha)}</span>` : '';
-      const cierreValor = obtenerCierreMinutosRegistro(s);
-      const cierreHtml = cierreValor !== null ? `<span class="cierre-minutos">${cierreValor} min</span>` : '';
+      const cierreTexto = obtenerTextoHoraCierre(s);
+      const cierreHtml = cierreTexto ? `<span class="cierre-hora">CIERRE: ${cierreTexto}</span>` : '';
       const horaBase = s.hora ? `⏰ ${formatearHora(s.hora)}` : '';
       let horaTexto = '';
       if(horaBase){
@@ -1687,9 +1728,11 @@
       return;
     }
 
-    const cierreMinutos = obtenerCierreMinutosRegistro(currentSorteoData) ?? 0;
-    const horaCierre = restarMinutos(fechaProgramada, cierreMinutos);
-    if(horaCierre && (comparacionFecha === 0 || comparacionFecha > 0) && ahora < horaCierre){
+    let fechaHoraCierre = obtenerFechaHoraCierre(currentSorteoData);
+    if(fechaHoraCierre && fechaProgramada && fechaHoraCierre.getTime() > fechaProgramada.getTime()){
+      fechaHoraCierre = new Date(fechaProgramada.getTime());
+    }
+    if(fechaHoraCierre && comparacionFecha === 0 && ahora < fechaHoraCierre){
       alert('Hoy es el día del sorteo pero aún no ha llegado la hora de cierre');
       return;
     }
@@ -1813,7 +1856,16 @@
     }
 
     const ahora = getServerNow() || new Date();
-    if(ahora < fechaProgramada){
+    const comparacionFecha = compararFechasCalendario(ahora, fechaProgramada);
+    if(comparacionFecha === null){
+      alert('No se pudo determinar la fecha actual para validar el inicio.');
+      return;
+    }
+    if(comparacionFecha < 0){
+      alert('Aún no es la fecha del sorteo, no puedes iniciar el juego.');
+      return;
+    }
+    if(comparacionFecha === 0 && ahora <= fechaProgramada){
       alert('Aún no ha llegado la hora programada para iniciar el juego.');
       return;
     }
