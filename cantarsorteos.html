@@ -197,6 +197,10 @@
       text-shadow: none;
       filter: brightness(0.9);
     }
+    .estado-tiempo-finalizado {
+      color: #8b4513;
+      text-shadow: 0 0 6px rgba(0,0,0,0.45);
+    }
     .datos-sorteo {
       display: flex;
       flex-direction: column;
@@ -1710,6 +1714,12 @@
 
   function actualizarColoresFechas(ahoraParam){
     const ahora = (ahoraParam instanceof Date && !isNaN(ahoraParam.getTime())) ? ahoraParam : (getServerNow() || new Date());
+    const esFinalizado = currentSorteoData && (currentSorteoData.estado || '').toString().toLowerCase() === 'finalizado';
+    [fechaProgramadaEl, horaProgramadaEl, fechaCierreEl, horaCierreEl].forEach(elemento=>{
+      if(elemento){
+        elemento.classList.toggle('estado-tiempo-finalizado', Boolean(esFinalizado));
+      }
+    });
     if(!(ahora instanceof Date) || isNaN(ahora.getTime())){
       aplicarResaltadoTiempo(fechaProgramadaEl, false);
       aplicarResaltadoTiempo(horaProgramadaEl, false);
