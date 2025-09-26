@@ -1589,29 +1589,48 @@
     }
   }
 
-  function estadoFechaRespectoAhora(fechaReferencia, ahora){
+  function estadoFechaRespectoAhora(fechaReferencia, ahora, opciones = {}){
     if(!(fechaReferencia instanceof Date) || isNaN(fechaReferencia.getTime())){
       return 'estado-tiempo-sin-dato';
     }
     const comparacion = compararFechasCalendario(ahora, fechaReferencia);
     if(comparacion === null) return 'estado-tiempo-sin-dato';
+    if(opciones.validacionesActivas){
+      if(comparacion < 0) return 'estado-tiempo-futuro';
+      if(opciones.actualSoloCuandoMayor){
+        return comparacion > 0 ? 'estado-tiempo-actual' : 'estado-tiempo-futuro';
+      }
+      return 'estado-tiempo-actual';
+    }
     if(comparacion < 0) return 'estado-tiempo-futuro';
     if(comparacion > 0) return 'estado-tiempo-pasado';
     return 'estado-tiempo-proximo';
   }
 
-  function estadoHoraRespectoAhora(fechaReferencia, horaInfo, ahora){
+  function estadoHoraRespectoAhora(fechaReferencia, horaInfo, ahora, opciones = {}){
     if(!horaInfo || typeof horaInfo.hora !== 'number' || typeof horaInfo.minuto !== 'number'){
       return 'estado-tiempo-sin-dato';
     }
     let comparacionFecha = null;
     if(fechaReferencia instanceof Date && !isNaN(fechaReferencia.getTime())){
       comparacionFecha = compararFechasCalendario(ahora, fechaReferencia);
-      if(comparacionFecha < 0) return 'estado-tiempo-futuro';
-      if(comparacionFecha > 0) return 'estado-tiempo-pasado';
+      if(opciones.validacionesActivas){
+        if(comparacionFecha < 0) return 'estado-tiempo-futuro';
+        if(comparacionFecha > 0) return 'estado-tiempo-actual';
+      } else {
+        if(comparacionFecha < 0) return 'estado-tiempo-futuro';
+        if(comparacionFecha > 0) return 'estado-tiempo-pasado';
+      }
     }
     const comparacionHora = compararHoraActualConInfo(ahora, horaInfo);
     if(comparacionHora === null) return 'estado-tiempo-sin-dato';
+    if(opciones.validacionesActivas){
+      if(comparacionHora < 0) return 'estado-tiempo-futuro';
+      if(comparacionHora === 0){
+        return opciones.actualCuandoCoincide ? 'estado-tiempo-actual' : 'estado-tiempo-futuro';
+      }
+      return 'estado-tiempo-actual';
+    }
     const mismoDia = comparacionFecha === 0 || comparacionFecha === null;
     if(comparacionHora < 0) return mismoDia ? 'estado-tiempo-proximo' : 'estado-tiempo-futuro';
     if(comparacionHora === 0) return 'estado-tiempo-actual';
@@ -1648,11 +1667,17 @@
       return;
     }
 
-    const estadoFechaProgramada = estadoFechaRespectoAhora(infoTiempoSorteo.fecha, ahora);
-    const estadoHoraProgramada = estadoHoraRespectoAhora(infoTiempoSorteo.fecha, infoTiempoSorteo.hora, ahora);
-    const estadoFechaCierre = estadoFechaRespectoAhora(infoTiempoSorteo.fechaCierre, ahora);
+    const validacionesActivas = !esModoManual();
+    const opcionesFechaProgramada = validacionesActivas ? { validacionesActivas: true, actualSoloCuandoMayor: true } : undefined;
+    const opcionesHoraProgramada = validacionesActivas ? { validacionesActivas: true } : undefined;
+    const opcionesFechaCierre = validacionesActivas ? { validacionesActivas: true } : undefined;
+    const opcionesHoraCierre = validacionesActivas ? { validacionesActivas: true, actualCuandoCoincide: true } : undefined;
+
+    const estadoFechaProgramada = estadoFechaRespectoAhora(infoTiempoSorteo.fecha, ahora, opcionesFechaProgramada);
+    const estadoHoraProgramada = estadoHoraRespectoAhora(infoTiempoSorteo.fecha, infoTiempoSorteo.hora, ahora, opcionesHoraProgramada);
+    const estadoFechaCierre = estadoFechaRespectoAhora(infoTiempoSorteo.fechaCierre, ahora, opcionesFechaCierre);
     const referenciaHoraCierre = infoTiempoSorteo.fechaCierre || infoTiempoSorteo.fecha;
-    const estadoHoraCierre = estadoHoraRespectoAhora(referenciaHoraCierre, infoTiempoSorteo.horaCierre, ahora);
+    const estadoHoraCierre = estadoHoraRespectoAhora(referenciaHoraCierre, infoTiempoSorteo.horaCierre, ahora, opcionesHoraCierre);
 
     aplicarEstadoTiempo(fechaProgramadaEl, estadoFechaProgramada);
     aplicarEstadoTiempo(horaProgramadaEl, estadoHoraProgramada);
@@ -1661,30 +1686,21 @@
     aplicarEstadoTiempo(fechaActualValorEl, 'estado-tiempo-actual');
     aplicarEstadoTiempo(horaActualValorEl, 'estado-tiempo-actual');
 
-    const comparacionFechaSorteo = infoTiempoSorteo.fecha ? compararFechasCalendario(infoTiempoSorteo.fecha, ahora) : null;
-    const comparacionFechaCierre = infoTiempoSorteo.fechaCierre ? compararFechasCalendario(infoTiempoSorteo.fechaCierre, ahora) : null;
+    const resaltarFechaSorteo = validacionesActivas
+      ? estadoFechaProgramada === 'estado-tiempo-actual'
+      : (estadoFechaProgramada !== 'estado-tiempo-futuro' && estadoFechaProgramada !== 'estado-tiempo-sin-dato');
 
-    const resaltarFechaSorteo = comparacionFechaSorteo !== null && comparacionFechaSorteo <= 0;
-    let resaltarHoraSorteo = false;
-    if(infoTiempoSorteo.hora && comparacionFechaSorteo !== null){
-      if(comparacionFechaSorteo < 0){
-        resaltarHoraSorteo = true;
-      } else if(comparacionFechaSorteo === 0){
-        const comparacionHora = compararHoraActualConInfo(ahora, infoTiempoSorteo.hora);
-        resaltarHoraSorteo = comparacionHora !== null && comparacionHora >= 0;
-      }
-    }
+    const resaltarHoraSorteo = validacionesActivas
+      ? estadoHoraProgramada === 'estado-tiempo-actual'
+      : (estadoHoraProgramada === 'estado-tiempo-actual' || estadoHoraProgramada === 'estado-tiempo-pasado');
 
-    const resaltarFechaCierre = comparacionFechaCierre !== null && comparacionFechaCierre <= 0;
-    let resaltarHoraCierre = false;
-    if(infoTiempoSorteo.horaCierre && comparacionFechaCierre !== null){
-      if(comparacionFechaCierre < 0){
-        resaltarHoraCierre = true;
-      } else if(comparacionFechaCierre === 0){
-        const comparacionHora = compararHoraActualConInfo(ahora, infoTiempoSorteo.horaCierre);
-        resaltarHoraCierre = comparacionHora !== null && comparacionHora >= 0;
-      }
-    }
+    const resaltarFechaCierre = validacionesActivas
+      ? estadoFechaCierre === 'estado-tiempo-actual'
+      : (estadoFechaCierre !== 'estado-tiempo-futuro' && estadoFechaCierre !== 'estado-tiempo-sin-dato');
+
+    const resaltarHoraCierre = validacionesActivas
+      ? estadoHoraCierre === 'estado-tiempo-actual'
+      : (estadoHoraCierre === 'estado-tiempo-actual' || estadoHoraCierre === 'estado-tiempo-pasado');
 
     aplicarResaltadoTiempo(fechaProgramadaEl, resaltarFechaSorteo);
     aplicarResaltadoTiempo(horaProgramadaEl, resaltarHoraSorteo);
