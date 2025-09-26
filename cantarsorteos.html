@@ -92,38 +92,48 @@
     }
     #fecha-hora-sorteo {
       display: flex;
-      flex-wrap: wrap;
-      align-items: flex-start;
       justify-content: center;
-      gap: 12px;
+      width: 100%;
       font-family: 'Bangers', cursive;
       font-size: 1rem;
     }
-    .dato-programado {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      color: #0f2a0f;
+    #tabla-fechas {
+      border-collapse: collapse;
+      margin: 0 auto;
+    }
+    #tabla-fechas td {
+      border: none;
+      padding: 2px 6px;
+      vertical-align: middle;
       white-space: nowrap;
     }
-    .dato-programado .icono {
+    #tabla-fechas .celda-icono {
+      width: 34px;
+      text-align: right;
+      padding: 2px 0;
+    }
+    #tabla-fechas .celda-valor {
+      text-align: left;
+      padding-left: 4px;
+    }
+    #tabla-fechas .celda-icono span,
+    #tabla-fechas .celda-icono img {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-width: 28px;
-      font-size: 1.1rem;
+      width: 24px;
+      height: 24px;
     }
-    .dato-programado .contenedor-valores {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 2px;
+    #tabla-fechas .celda-icono img {
+      width: 24px;
+      height: 24px;
+    }
+    #tabla-fechas .fila-fecha.oculta {
+      display: none;
     }
     .valor-programado,
     .valor-actual,
-    .valor-cierre,
-    .etiqueta-hoy,
-    .etiqueta-cierre {
+    .valor-cierre {
       font-size: 1.05rem;
     }
     .valor-programado {
@@ -141,36 +151,10 @@
     }
     .valor-cierre {
       font-family: 'Bangers', cursive;
-      color: #666666;
+      color: #ffffff;
       font-weight: 600;
-      text-shadow: 0 0 4px rgba(0,0,0,0.7);
+      text-shadow: 0 0 6px rgba(0,0,0,0.9);
       letter-spacing: 1px;
-    }
-    .etiqueta-cierre {
-      font-family: 'Bangers', cursive;
-      color: #333333;
-      text-shadow: 0 0 3px rgba(255,255,255,0.9);
-      letter-spacing: 1px;
-    }
-    .etiqueta-hoy {
-      font-family: 'Bangers', cursive;
-      color: #0a2774;
-      text-shadow: 0 0 3px rgba(255,255,255,0.95);
-      letter-spacing: 1px;
-    }
-    .linea-cierre,
-    .linea-actual {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      white-space: nowrap;
-    }
-    .linea-cierre {
-      color: #3c3c3c;
-    }
-    .linea-cierre.oculto,
-    .linea-actual.oculto {
-      display: none;
     }
     .resaltado-actual {
       color: #0b4dda !important;
@@ -715,30 +699,52 @@
     <div class="sorteo-info">
       <button id="sorteo-btn">Selecciona Sorteo</button>
       <div id="fecha-hora-sorteo">
-        <div id="fecha-sorteo" class="dato-programado">
-          <span class="icono">📅</span>
-          <div class="contenedor-valores">
-            <span id="fecha-cierre-linea" class="linea-cierre oculto">
-              <span class="etiqueta-cierre">CIERRE:</span>
-              <span id="fecha-cierre" class="valor-cierre"></span>
-            </span>
-            <span id="fecha-programada" class="valor-programado"></span>
-            <span class="linea-actual">
-              <span class="etiqueta-hoy">HOY:</span>
-              <span id="fecha-actual" class="valor-actual resaltado-actual"></span>
-            </span>
-          </div>
-        </div>
-        <div id="hora-sorteo" class="dato-programado">
-          <span class="icono">⏰</span>
-          <div class="contenedor-valores">
-            <span id="hora-cierre-linea" class="linea-cierre oculto">
-              <span id="hora-cierre" class="valor-cierre"></span>
-            </span>
-            <span id="hora-programada" class="valor-programado"></span>
-            <span id="hora-actual" class="valor-actual resaltado-actual"></span>
-          </div>
-        </div>
+        <table id="tabla-fechas">
+          <tbody>
+            <tr id="fila-cierre" class="fila-fecha oculta">
+              <td class="celda-icono">
+                <img src="https://api.iconify.design/mdi/stop-circle.svg?color=%23ff3b30" alt="Cierre" loading="lazy">
+              </td>
+              <td class="celda-valor">
+                <span id="fecha-cierre" class="valor-cierre"></span>
+              </td>
+              <td class="celda-icono">
+                <img src="https://api.iconify.design/mdi/clock-time-ten-outline.svg?color=%23888888" alt="Hora de cierre" loading="lazy">
+              </td>
+              <td class="celda-valor">
+                <span id="hora-cierre" class="valor-cierre"></span>
+              </td>
+            </tr>
+            <tr class="fila-fecha">
+              <td class="celda-icono">
+                <img src="https://api.iconify.design/mdi/calendar.svg?color=%23ffb300" alt="Fecha programada" loading="lazy">
+              </td>
+              <td class="celda-valor">
+                <span id="fecha-programada" class="valor-programado"></span>
+              </td>
+              <td class="celda-icono">
+                <img src="https://api.iconify.design/mdi/clock-alert.svg?color=%23d32f2f" alt="Hora programada" loading="lazy">
+              </td>
+              <td class="celda-valor">
+                <span id="hora-programada" class="valor-programado"></span>
+              </td>
+            </tr>
+            <tr class="fila-fecha">
+              <td class="celda-icono">
+                <img src="https://api.iconify.design/mdi/calendar.svg?color=%23006ad4" alt="Fecha actual" loading="lazy">
+              </td>
+              <td class="celda-valor">
+                <span id="fecha-actual" class="valor-actual resaltado-actual"></span>
+              </td>
+              <td class="celda-icono">
+                <img src="https://api.iconify.design/mdi/clock-time-five.svg?color=%23006ad4" alt="Hora actual" loading="lazy">
+              </td>
+              <td class="celda-valor">
+                <span id="hora-actual" class="valor-actual resaltado-actual"></span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
     <div class="datos-sorteo">
@@ -833,9 +839,8 @@
   const horaProgramadaEl = document.getElementById('hora-programada');
   const fechaActualValorEl = document.getElementById('fecha-actual');
   const horaActualValorEl = document.getElementById('hora-actual');
-  const fechaCierreLineaEl = document.getElementById('fecha-cierre-linea');
+  const filaCierre = document.getElementById('fila-cierre');
   const fechaCierreEl = document.getElementById('fecha-cierre');
-  const horaCierreLineaEl = document.getElementById('hora-cierre-linea');
   const horaCierreEl = document.getElementById('hora-cierre');
   const premioEl = document.getElementById('premio-valor');
   const valorCartonEl = document.getElementById('valor-carton-valor');
@@ -1464,10 +1469,12 @@
     else elemento.classList.remove('resaltado-actual');
   }
 
-  function actualizarLineaVisible(elemento, tieneValor){
-    if(!elemento) return;
-    if(tieneValor) elemento.classList.remove('oculto');
-    else elemento.classList.add('oculto');
+  function actualizarVisibilidadFilaCierre(fechaTexto, horaTexto){
+    if(!filaCierre) return;
+    const fechaValida = typeof fechaTexto === 'string' ? fechaTexto.trim() : '';
+    const horaValida = typeof horaTexto === 'string' ? horaTexto.trim() : '';
+    const hayValor = Boolean(fechaValida || horaValida);
+    filaCierre.classList.toggle('oculta', !hayValor);
   }
 
   function actualizarColoresFechas(ahoraParam){
@@ -1483,18 +1490,26 @@
     const comparacionFechaSorteo = infoTiempoSorteo.fecha ? compararFechasCalendario(infoTiempoSorteo.fecha, ahora) : null;
     const comparacionFechaCierre = infoTiempoSorteo.fechaCierre ? compararFechasCalendario(infoTiempoSorteo.fechaCierre, ahora) : null;
 
-    const resaltarFechaSorteo = comparacionFechaSorteo === -1;
+    const resaltarFechaSorteo = comparacionFechaSorteo !== null && comparacionFechaSorteo <= 0;
     let resaltarHoraSorteo = false;
-    if(infoTiempoSorteo.hora){
-      if(resaltarFechaSorteo) resaltarHoraSorteo = true;
-      else if(comparacionFechaSorteo === 0) resaltarHoraSorteo = compararHoraActualConInfo(ahora, infoTiempoSorteo.hora) === 1;
+    if(infoTiempoSorteo.hora && comparacionFechaSorteo !== null){
+      if(comparacionFechaSorteo < 0){
+        resaltarHoraSorteo = true;
+      } else if(comparacionFechaSorteo === 0){
+        const comparacionHora = compararHoraActualConInfo(ahora, infoTiempoSorteo.hora);
+        resaltarHoraSorteo = comparacionHora !== null && comparacionHora >= 0;
+      }
     }
 
-    const resaltarFechaCierre = comparacionFechaCierre === -1;
+    const resaltarFechaCierre = comparacionFechaCierre !== null && comparacionFechaCierre <= 0;
     let resaltarHoraCierre = false;
-    if(infoTiempoSorteo.horaCierre){
-      if(resaltarFechaCierre) resaltarHoraCierre = true;
-      else if(comparacionFechaCierre === 0) resaltarHoraCierre = compararHoraActualConInfo(ahora, infoTiempoSorteo.horaCierre) === 1;
+    if(infoTiempoSorteo.horaCierre && comparacionFechaCierre !== null){
+      if(comparacionFechaCierre < 0){
+        resaltarHoraCierre = true;
+      } else if(comparacionFechaCierre === 0){
+        const comparacionHora = compararHoraActualConInfo(ahora, infoTiempoSorteo.horaCierre);
+        resaltarHoraCierre = comparacionHora !== null && comparacionHora >= 0;
+      }
     }
 
     aplicarResaltadoTiempo(fechaProgramadaEl, resaltarFechaSorteo);
@@ -1558,8 +1573,7 @@
       if(horaProgramadaEl) horaProgramadaEl.textContent = '';
       if(fechaCierreEl) fechaCierreEl.textContent = '';
       if(horaCierreEl) horaCierreEl.textContent = '';
-      actualizarLineaVisible(fechaCierreLineaEl, false);
-      actualizarLineaVisible(horaCierreLineaEl, false);
+      actualizarVisibilidadFilaCierre('', '');
       premioEl.textContent = '0';
       valorCartonEl.textContent = '0';
       cartonesPagosEl.textContent = '0';
@@ -1622,21 +1636,21 @@
     }
     if(fechaProgramadaEl) fechaProgramadaEl.textContent = fechaSorteoBase ? formatearFecha(fechaSorteoBase) : '';
     if(horaProgramadaEl) horaProgramadaEl.textContent = data.hora ? formatearHora(data.hora) : '';
+    let textoFechaCierre = '';
     if(fechaCierreEl){
-      const textoFechaCierre = fechaCierreBase ? formatearFecha(fechaCierreBase) : '';
+      textoFechaCierre = fechaCierreBase ? formatearFecha(fechaCierreBase) : '';
       fechaCierreEl.textContent = textoFechaCierre;
-      actualizarLineaVisible(fechaCierreLineaEl, Boolean(textoFechaCierre));
     }
+    let textoHoraCierre = '';
     if(horaCierreEl){
-      let textoHoraCierre = '';
       if(valorHoraCierre){
         textoHoraCierre = formatearHora(valorHoraCierre);
       } else if(fechaHoraCierreCompleta instanceof Date && !isNaN(fechaHoraCierreCompleta.getTime())){
         textoHoraCierre = formatearHora(fechaHoraCierreCompleta);
       }
       horaCierreEl.textContent = textoHoraCierre;
-      actualizarLineaVisible(horaCierreLineaEl, Boolean(textoHoraCierre));
     }
+    actualizarVisibilidadFilaCierre(textoFechaCierre, textoHoraCierre);
     premioEl.textContent = Math.round(data.totalPremios || 0);
     valorCartonEl.textContent = data.valorCarton || 0;
     cartonesPagosEl.textContent = data.cartonesjugando || 0;
@@ -1644,12 +1658,12 @@
     sorteoNombreEl.textContent = data.nombre || '';
     actualizarEstadoVisual(data.estado);
     if(tipoEstadoEl){
-      const tipoTextoOriginal = (data.tipo || '').toString().trim();
-      const tipoMostrar = tipoTextoOriginal ? tipoTextoOriginal.toUpperCase() : '';
+      let tipoMostrar = '';
+      if(esEspecial) tipoMostrar = 'ESPECIAL';
+      else if(esDiario) tipoMostrar = 'DIARIO';
       const clases = ['tipo-estado'];
       if(esEspecial) clases.push('especial');
       else if(esDiario) clases.push('diario');
-      else if(tipoMostrar) clases.push('default');
       tipoEstadoEl.className = clases.join(' ');
       tipoEstadoEl.textContent = tipoMostrar;
     }
