@@ -1449,13 +1449,41 @@
     if(/p\s*\.?m\.?/.test(texto)) sufijo = 'pm';
     texto = texto.replace(/[^0-9:]/g, '');
     if(!texto) return null;
+    if(!/[0-9]/.test(texto)) return null;
+    if(!texto.includes(':') && /^\d+$/.test(texto)){
+      if(texto.length === 3){
+        texto = `0${texto}`;
+      }
+      if(texto.length === 4){
+        texto = `${texto.slice(0,2)}:${texto.slice(2,4)}`;
+      } else if(texto.length > 4){
+        return null;
+      }
+    }
     const partes = texto.split(':');
-    const horas = parseInt(partes[0] || '0', 10);
-    const minutos = parseInt((partes[1] || '0').slice(0,2), 10);
-    if(isNaN(horas) || isNaN(minutos)) return null;
+    if(partes.length === 0 || partes.length > 2) return null;
+    const horasTextoCompleto = partes[0] || '';
+    if(horasTextoCompleto.length > 2) return null;
+    const horasTexto = horasTextoCompleto || '0';
+    let minutosTexto = partes[1] || '';
+    if(minutosTexto.length > 2) return null;
+    if(!minutosTexto && partes.length > 1){
+      minutosTexto = '0';
+    }
+    const horas = parseInt(horasTexto, 10);
+    const minutos = parseInt(minutosTexto || '0', 10);
+    if(!isFinite(horas) || !isFinite(minutos)) return null;
+    if(minutos < 0 || minutos > 59) return null;
     let hora24 = horas;
-    if(sufijo === 'pm' && hora24 < 12) hora24 += 12;
-    if(sufijo === 'am' && hora24 === 12) hora24 = 0;
+    if(sufijo === 'pm'){
+      if(hora24 < 0 || hora24 > 12) return null;
+      if(hora24 < 12) hora24 += 12;
+    } else if(sufijo === 'am'){
+      if(hora24 < 0 || hora24 > 12) return null;
+      if(hora24 === 12) hora24 = 0;
+    }
+    if(sufijo === null && (hora24 < 0 || hora24 > 23)) return null;
+    if(sufijo !== null && (hora24 < 0 || hora24 > 23)) return null;
     return { hora: hora24, minuto: minutos };
   }
 
