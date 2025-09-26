@@ -112,6 +112,9 @@
       text-align: right;
       padding: 2px 0;
     }
+    #tabla-fechas .celda-icono.placeholder {
+      visibility: hidden;
+    }
     #tabla-fechas .celda-valor {
       text-align: left;
       padding-left: 4px;
@@ -148,6 +151,7 @@
       color: #0f2a0f;
       text-shadow: 0 0 3px rgba(255,255,255,0.85);
       letter-spacing: 1px;
+      font-weight: 600;
     }
     .valor-actual {
       font-family: 'Bangers', cursive;
@@ -482,7 +486,7 @@
       overflow-y: auto;
       font-family: 'Poppins', sans-serif;
     }
-    #pdf-confirm-modal {
+    .confirm-modal {
       position: fixed;
       top: 0;
       left: 0;
@@ -496,7 +500,7 @@
       box-sizing: border-box;
       z-index: 1200;
     }
-    #pdf-confirm-modal.activo { display: flex; }
+    .confirm-modal.activo { display: flex; }
     .pdf-confirm-box {
       background: #ffffff;
       border-radius: 14px;
@@ -731,10 +735,16 @@
         <table id="tabla-fechas">
           <tbody>
             <tr id="fila-cierre" class="fila-fecha oculta">
-              <td class="celda-valor" colspan="2">
+              <td class="celda-icono placeholder">
+                <span class="icono-emoji" aria-hidden="true">📅</span>
+              </td>
+              <td class="celda-valor">
                 <span id="fecha-cierre" class="valor-cierre estado-tiempo"></span>
               </td>
-              <td class="celda-valor" colspan="2">
+              <td class="celda-icono placeholder">
+                <span class="icono-emoji" aria-hidden="true">⏰</span>
+              </td>
+              <td class="celda-valor">
                 <span id="hora-cierre" class="valor-cierre estado-tiempo"></span>
               </td>
             </tr>
@@ -753,10 +763,16 @@
               </td>
             </tr>
             <tr class="fila-fecha">
-              <td class="celda-valor" colspan="2">
+              <td class="celda-icono placeholder">
+                <span class="icono-emoji" aria-hidden="true">📅</span>
+              </td>
+              <td class="celda-valor">
                 <span id="fecha-actual" class="valor-actual resaltado-actual estado-tiempo"></span>
               </td>
-              <td class="celda-valor" colspan="2">
+              <td class="celda-icono placeholder">
+                <span class="icono-emoji" aria-hidden="true">⏰</span>
+              </td>
+              <td class="celda-valor">
                 <span id="hora-actual" class="valor-actual resaltado-actual estado-tiempo"></span>
               </td>
             </tr>
@@ -824,13 +840,23 @@
       <div id="sorteos-list" style="display:flex;flex-direction:column;gap:6px;"></div>
     </div>
   </div>
-  <div id="pdf-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="pdf-confirm-title">
+  <div id="pdf-confirm-modal" class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="pdf-confirm-title">
     <div class="pdf-confirm-box">
       <h3 id="pdf-confirm-title">Guardar PDF</h3>
       <p>¿Ya se guardó el archivo PDF de este sorteo?</p>
       <div class="pdf-confirm-actions">
         <button id="pdf-confirm-si">Sí</button>
         <button id="pdf-confirm-no" class="secundario">No</button>
+      </div>
+    </div>
+  </div>
+  <div id="estado-confirm-modal" class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="estado-confirm-title">
+    <div class="pdf-confirm-box">
+      <h3 id="estado-confirm-title">Confirmar acción</h3>
+      <p id="estado-confirm-mensaje">¿Deseas continuar con esta acción?</p>
+      <div class="pdf-confirm-actions">
+        <button id="estado-confirm-si">Sí</button>
+        <button id="estado-confirm-no" class="secundario">No</button>
       </div>
     </div>
   </div>
@@ -904,6 +930,48 @@
   const pdfConfirmModal = document.getElementById('pdf-confirm-modal');
   const pdfConfirmSiBtn = document.getElementById('pdf-confirm-si');
   const pdfConfirmNoBtn = document.getElementById('pdf-confirm-no');
+  const estadoConfirmModal = document.getElementById('estado-confirm-modal');
+  const estadoConfirmMensajeEl = document.getElementById('estado-confirm-mensaje');
+  const estadoConfirmSiBtn = document.getElementById('estado-confirm-si');
+  const estadoConfirmNoBtn = document.getElementById('estado-confirm-no');
+  let resolverConfirmacionEstado = null;
+
+  function completarConfirmacionEstado(valor){
+    if(estadoConfirmModal){
+      estadoConfirmModal.classList.remove('activo');
+    }
+    const resolver = resolverConfirmacionEstado;
+    resolverConfirmacionEstado = null;
+    if(typeof resolver === 'function'){
+      resolver(valor);
+    }
+  }
+
+  function mostrarConfirmacionEstado(mensaje){
+    if(!estadoConfirmModal){
+      return Promise.resolve(window.confirm(mensaje));
+    }
+    if(estadoConfirmMensajeEl){
+      estadoConfirmMensajeEl.textContent = mensaje;
+    }
+    if(estadoConfirmModal){
+      estadoConfirmModal.classList.add('activo');
+    }
+    const foco = estadoConfirmSiBtn || estadoConfirmNoBtn;
+    if(foco){
+      foco.focus();
+    }
+    return new Promise(resolve => {
+      resolverConfirmacionEstado = resolve;
+    });
+  }
+
+  function preguntarAccionEstado(mensaje){
+    if(estadoConfirmModal){
+      return mostrarConfirmacionEstado(mensaje);
+    }
+    return Promise.resolve(window.confirm(mensaje));
+  }
 
   function setCookie(name, value){
     try {
@@ -1075,10 +1143,34 @@
       }
     });
   }
+  if(estadoConfirmSiBtn){
+    estadoConfirmSiBtn.addEventListener('click', ()=>completarConfirmacionEstado(true));
+  }
+  if(estadoConfirmNoBtn){
+    estadoConfirmNoBtn.addEventListener('click', ()=>completarConfirmacionEstado(false));
+  }
+  if(estadoConfirmModal){
+    estadoConfirmModal.addEventListener('click', evento=>{
+      if(evento.target === estadoConfirmModal){
+        completarConfirmacionEstado(false);
+      }
+    });
+  }
   document.addEventListener('keydown', evento=>{
-    if(evento.key === 'Escape' && pdfConfirmModal && pdfConfirmModal.classList.contains('activo')){
-      cerrarPdfConfirmacion();
-      pdfDestinoUrl = '';
+    if(evento.key === 'Escape'){
+      let cerrado = false;
+      if(pdfConfirmModal && pdfConfirmModal.classList.contains('activo')){
+        cerrarPdfConfirmacion();
+        pdfDestinoUrl = '';
+        cerrado = true;
+      }
+      if(estadoConfirmModal && estadoConfirmModal.classList.contains('activo')){
+        completarConfirmacionEstado(false);
+        cerrado = true;
+      }
+      if(cerrado){
+        evento.preventDefault();
+      }
     }
   });
 
@@ -1999,7 +2091,7 @@
     }
 
     if(esModoManual()){
-      const confirmarManual = confirm('¿Deseas sellar el sorteo seleccionado?');
+      const confirmarManual = await preguntarAccionEstado('¿Deseas sellar el sorteo seleccionado?');
       if(!confirmarManual) return;
       await ejecutarSellado({ confirmadoManual: true, confirmado: true });
       return;
@@ -2055,13 +2147,13 @@
         return;
       }
     } else {
-      const confirmarSinFecha = confirm('No se pudo determinar la fecha programada del sorteo. ¿Deseas sellarlo de todos modos?');
+      const confirmarSinFecha = await preguntarAccionEstado('No se pudo determinar la fecha programada del sorteo. ¿Deseas sellarlo de todos modos?');
       if(!confirmarSinFecha) return;
       await ejecutarSellado({ confirmado: true });
       return;
     }
 
-    const confirmarSellado = confirm('¿Estas seguro de Sellar el sorteo?');
+    const confirmarSellado = await preguntarAccionEstado('¿Estas seguro de Sellar el sorteo?');
     if(!confirmarSellado) return;
 
     await ejecutarSellado({ confirmado: true });
@@ -2070,12 +2162,13 @@
   async function ejecutarSellado(opciones = {}){
     const confirmadoManual = opciones.confirmadoManual === true;
     const confirmado = opciones.confirmado === true;
-    if(!confirmado && !confirmadoManual){
-      return false;
-    }
     if(esModoManual() && !confirmadoManual){
-      const confirmar = confirm('¿Deseas sellar el sorteo seleccionado?');
+      const confirmar = await preguntarAccionEstado('¿Deseas sellar el sorteo seleccionado?');
       if(!confirmar) return false;
+    }
+    if(!confirmado && !confirmadoManual){
+      const confirmarSellado = await preguntarAccionEstado('¿Estas seguro de Sellar el sorteo?');
+      if(!confirmarSellado) return false;
     }
     try {
       await db.collection('sorteos').doc(currentSorteoId).update({ estado: 'Sellado', pdf: 'no' });
@@ -2172,7 +2265,7 @@
     }
 
     if(esModoManual()){
-      const confirmarManual = confirm('¿Deseas cambiar el estado del sorteo a "Jugando"?');
+      const confirmarManual = await preguntarAccionEstado('¿Deseas cambiar el estado del sorteo a "Jugando"?');
       if(!confirmarManual) return;
       await actualizarEstadoJugando({ confirmadoManual: true, confirmado: true });
       return;
@@ -2200,7 +2293,7 @@
     }
 
     const nombre = obtenerNombreSorteoActual();
-    const confirmar = confirm(`¿Deseas iniciar el juego del sorteo: ${nombre}?`);
+    const confirmar = await preguntarAccionEstado(`¿Deseas iniciar el juego del sorteo: ${nombre}?`);
     if(!confirmar) return;
 
     await actualizarEstadoJugando({ confirmado: true });
@@ -2209,12 +2302,13 @@
   async function actualizarEstadoJugando(opciones = {}){
     const confirmadoManual = opciones.confirmadoManual === true;
     const confirmado = opciones.confirmado === true;
-    if(!confirmado && !confirmadoManual){
-      return false;
-    }
     if(esModoManual() && !confirmadoManual){
-      const confirmar = confirm('¿Deseas cambiar el estado del sorteo a "Jugando"?');
+      const confirmar = await preguntarAccionEstado('¿Deseas cambiar el estado del sorteo a "Jugando"?');
       if(!confirmar) return false;
+    }
+    if(!confirmado && !confirmadoManual){
+      const confirmarGeneral = await preguntarAccionEstado('¿Deseas cambiar el estado del sorteo a "Jugando"?');
+      if(!confirmarGeneral) return false;
     }
     try {
       await db.collection('sorteos').doc(currentSorteoId).update({ estado: 'Jugando' });
@@ -2235,7 +2329,7 @@
       return;
     }
     const nombre = obtenerNombreSorteoActual();
-    const confirmar = confirm(`¿Estas seguro de Finalizar el sorteo: ${nombre}?`);
+    const confirmar = await preguntarAccionEstado(`¿Estas seguro de Finalizar el sorteo: ${nombre}?`);
     if(!confirmar) return;
     try {
       await db.collection('sorteos').doc(currentSorteoId).update({ estado: 'Finalizado' });
