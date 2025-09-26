@@ -180,6 +180,10 @@
       color: #f57c00;
       text-shadow: 0 0 4px rgba(255,255,255,0.85);
     }
+    .estado-tiempo-pasado-lejano {
+      color: #f57c00;
+      text-shadow: 0 0 4px rgba(255,255,255,0.85);
+    }
     .estado-tiempo-actual {
       color: #0b4dda;
       text-shadow: 0 0 4px rgba(255,255,255,0.9);
@@ -924,9 +928,13 @@
     'estado-tiempo-proximo',
     'estado-tiempo-actual',
     'estado-tiempo-pasado',
+    'estado-tiempo-pasado-lejano',
     'estado-tiempo-sin-dato'
   ];
   const setClasesEstadoTiempo = new Set(clasesEstadoTiempo);
+  const CLASE_TIEMPO_PASADO_LEJANO = 'estado-tiempo-pasado-lejano';
+  const MILISEGUNDOS_EN_DIA = 24 * 60 * 60 * 1000;
+  const MINUTOS_EN_DIA = 24 * 60;
   const pdfConfirmModal = document.getElementById('pdf-confirm-modal');
   const pdfConfirmSiBtn = document.getElementById('pdf-confirm-si');
   const pdfConfirmNoBtn = document.getElementById('pdf-confirm-no');
@@ -1599,6 +1607,29 @@
     return minutosActualTotales < minutosReferencia ? -1 : 1;
   }
 
+  function calcularDiferenciaEnDias(ahora, referencia){
+    if(!(ahora instanceof Date) || isNaN(ahora.getTime())) return null;
+    if(!(referencia instanceof Date) || isNaN(referencia.getTime())) return null;
+    return (ahora.getTime() - referencia.getTime()) / MILISEGUNDOS_EN_DIA;
+  }
+
+  function construirFechaConHora(fechaBase, horaInfo){
+    if(!(fechaBase instanceof Date) || isNaN(fechaBase.getTime())) return null;
+    if(!horaInfo || typeof horaInfo.hora !== 'number' || typeof horaInfo.minuto !== 'number') return null;
+    const fechaCompleta = new Date(fechaBase.getTime());
+    fechaCompleta.setHours(Number(horaInfo.hora), Number(horaInfo.minuto), 0, 0);
+    return fechaCompleta;
+  }
+
+  function calcularDiferenciaEnMinutos(ahora, fechaReferencia, horaInfo){
+    if(!(ahora instanceof Date) || isNaN(ahora.getTime())) return null;
+    const fechaBase = (fechaReferencia instanceof Date && !isNaN(fechaReferencia.getTime())) ? fechaReferencia : null;
+    if(!fechaBase) return null;
+    const fechaHoraReferencia = construirFechaConHora(fechaBase, horaInfo);
+    if(!(fechaHoraReferencia instanceof Date) || isNaN(fechaHoraReferencia.getTime())) return null;
+    return (ahora.getTime() - fechaHoraReferencia.getTime()) / 60000;
+  }
+
   function aplicarEstadoTiempo(elemento, estado){
     if(!elemento) return;
     elemento.classList.remove(...clasesEstadoTiempo);
@@ -1613,15 +1644,18 @@
     }
     const comparacion = compararFechasCalendario(ahora, fechaReferencia);
     if(comparacion === null) return 'estado-tiempo-sin-dato';
+    const diferenciaDias = calcularDiferenciaEnDias(ahora, fechaReferencia);
+    const esPasadoLejano = typeof diferenciaDias === 'number' && diferenciaDias >= 1;
     if(opciones.validacionesActivas){
       if(comparacion < 0) return 'estado-tiempo-futuro';
+      if(esPasadoLejano) return CLASE_TIEMPO_PASADO_LEJANO;
       if(opciones.actualSoloCuandoMayor){
         return comparacion >= 0 ? 'estado-tiempo-actual' : 'estado-tiempo-futuro';
       }
       return 'estado-tiempo-actual';
     }
     if(comparacion < 0) return 'estado-tiempo-futuro';
-    if(comparacion > 0) return 'estado-tiempo-pasado';
+    if(comparacion > 0) return esPasadoLejano ? CLASE_TIEMPO_PASADO_LEJANO : 'estado-tiempo-pasado';
     return 'estado-tiempo-proximo';
   }
 
@@ -1629,15 +1663,18 @@
     if(!horaInfo || typeof horaInfo.hora !== 'number' || typeof horaInfo.minuto !== 'number'){
       return 'estado-tiempo-sin-dato';
     }
+    const diferenciaMinutos = calcularDiferenciaEnMinutos(ahora, fechaReferencia, horaInfo);
+    const esPasadoLejano = typeof diferenciaMinutos === 'number' && diferenciaMinutos >= MINUTOS_EN_DIA;
     let comparacionFecha = null;
     if(fechaReferencia instanceof Date && !isNaN(fechaReferencia.getTime())){
       comparacionFecha = compararFechasCalendario(ahora, fechaReferencia);
       if(opciones.validacionesActivas){
         if(comparacionFecha < 0) return 'estado-tiempo-futuro';
+        if(esPasadoLejano) return CLASE_TIEMPO_PASADO_LEJANO;
         if(comparacionFecha > 0) return 'estado-tiempo-actual';
       } else {
         if(comparacionFecha < 0) return 'estado-tiempo-futuro';
-        if(comparacionFecha > 0) return 'estado-tiempo-pasado';
+        if(comparacionFecha > 0) return esPasadoLejano ? CLASE_TIEMPO_PASADO_LEJANO : 'estado-tiempo-pasado';
       }
     }
     const comparacionHora = compararHoraActualConInfo(ahora, horaInfo);
@@ -1647,8 +1684,10 @@
       if(comparacionHora === 0){
         return opciones.actualCuandoCoincide ? 'estado-tiempo-actual' : 'estado-tiempo-futuro';
       }
+      if(esPasadoLejano) return CLASE_TIEMPO_PASADO_LEJANO;
       return 'estado-tiempo-actual';
     }
+    if(esPasadoLejano) return CLASE_TIEMPO_PASADO_LEJANO;
     const mismoDia = comparacionFecha === 0 || comparacionFecha === null;
     if(comparacionHora < 0) return mismoDia ? 'estado-tiempo-proximo' : 'estado-tiempo-futuro';
     if(comparacionHora === 0) return 'estado-tiempo-actual';
@@ -1691,11 +1730,20 @@
     const opcionesFechaCierre = validacionesActivas ? { validacionesActivas: true, actualSoloCuandoMayor: true } : undefined;
     const opcionesHoraCierre = validacionesActivas ? { validacionesActivas: true, actualCuandoCoincide: true } : undefined;
 
-    const estadoFechaProgramada = estadoFechaRespectoAhora(infoTiempoSorteo.fecha, ahora, opcionesFechaProgramada);
-    const estadoHoraProgramada = estadoHoraRespectoAhora(infoTiempoSorteo.fecha, infoTiempoSorteo.hora, ahora, opcionesHoraProgramada);
-    const estadoFechaCierre = estadoFechaRespectoAhora(infoTiempoSorteo.fechaCierre, ahora, opcionesFechaCierre);
+    let estadoFechaProgramada = estadoFechaRespectoAhora(infoTiempoSorteo.fecha, ahora, opcionesFechaProgramada);
+    let estadoHoraProgramada = estadoHoraRespectoAhora(infoTiempoSorteo.fecha, infoTiempoSorteo.hora, ahora, opcionesHoraProgramada);
+    let estadoFechaCierre = estadoFechaRespectoAhora(infoTiempoSorteo.fechaCierre, ahora, opcionesFechaCierre);
     const referenciaHoraCierre = infoTiempoSorteo.fechaCierre || infoTiempoSorteo.fecha;
-    const estadoHoraCierre = estadoHoraRespectoAhora(referenciaHoraCierre, infoTiempoSorteo.horaCierre, ahora, opcionesHoraCierre);
+    let estadoHoraCierre = estadoHoraRespectoAhora(referenciaHoraCierre, infoTiempoSorteo.horaCierre, ahora, opcionesHoraCierre);
+
+    if(estadoFechaProgramada === CLASE_TIEMPO_PASADO_LEJANO || estadoHoraProgramada === CLASE_TIEMPO_PASADO_LEJANO){
+      estadoFechaProgramada = CLASE_TIEMPO_PASADO_LEJANO;
+      estadoHoraProgramada = CLASE_TIEMPO_PASADO_LEJANO;
+    }
+    if(estadoFechaCierre === CLASE_TIEMPO_PASADO_LEJANO || estadoHoraCierre === CLASE_TIEMPO_PASADO_LEJANO){
+      estadoFechaCierre = CLASE_TIEMPO_PASADO_LEJANO;
+      estadoHoraCierre = CLASE_TIEMPO_PASADO_LEJANO;
+    }
 
     aplicarEstadoTiempo(fechaProgramadaEl, estadoFechaProgramada);
     aplicarEstadoTiempo(horaProgramadaEl, estadoHoraProgramada);
@@ -1710,7 +1758,7 @@
 
     const resaltarHoraSorteo = validacionesActivas
       ? estadoHoraProgramada === 'estado-tiempo-actual'
-      : (estadoHoraProgramada === 'estado-tiempo-actual' || estadoHoraProgramada === 'estado-tiempo-pasado');
+      : (estadoHoraProgramada === 'estado-tiempo-actual' || estadoHoraProgramada === 'estado-tiempo-pasado' || estadoHoraProgramada === CLASE_TIEMPO_PASADO_LEJANO);
 
     const resaltarFechaCierre = validacionesActivas
       ? estadoFechaCierre === 'estado-tiempo-actual'
@@ -1718,7 +1766,7 @@
 
     const resaltarHoraCierre = validacionesActivas
       ? estadoHoraCierre === 'estado-tiempo-actual'
-      : (estadoHoraCierre === 'estado-tiempo-actual' || estadoHoraCierre === 'estado-tiempo-pasado');
+      : (estadoHoraCierre === 'estado-tiempo-actual' || estadoHoraCierre === 'estado-tiempo-pasado' || estadoHoraCierre === CLASE_TIEMPO_PASADO_LEJANO);
 
     aplicarResaltadoTiempo(fechaProgramadaEl, resaltarFechaSorteo);
     aplicarResaltadoTiempo(horaProgramadaEl, resaltarHoraSorteo);
