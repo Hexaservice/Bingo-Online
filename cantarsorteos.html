@@ -230,9 +230,61 @@
     #acciones-sorteo {
       margin-top: 14px;
       display: flex;
-      justify-content: center;
+      justify-content: flex-start;
+      align-items: flex-end;
       gap: 12px;
       flex-wrap: wrap;
+    }
+    #modo-toggle-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 10px 4px 0;
+    }
+    #modo-manual-estado {
+      font-family: 'Bangers', cursive;
+      font-size: 0.9rem;
+      color: #0b1d0b;
+      text-shadow: 0 0 4px rgba(255,255,255,0.9);
+      white-space: nowrap;
+    }
+    .modo-switch {
+      position: relative;
+      display: inline-block;
+      width: 54px;
+      height: 28px;
+    }
+    .modo-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .modo-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #c9c9c9;
+      border-radius: 34px;
+      transition: background-color 0.3s ease;
+      box-shadow: inset 0 0 4px rgba(0,0,0,0.3);
+    }
+    .modo-slider:before {
+      position: absolute;
+      content: '';
+      height: 22px;
+      width: 22px;
+      left: 4px;
+      bottom: 3px;
+      background-color: #ffffff;
+      border-radius: 50%;
+      transition: transform 0.3s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .modo-switch input:checked + .modo-slider {
+      background: linear-gradient(135deg, #06b406, #8bff8b);
+    }
+    .modo-switch input:checked + .modo-slider:before {
+      transform: translateX(26px);
     }
     .estado-btn {
       width: 52px;
@@ -633,6 +685,13 @@
       <div id="tipo-sorteo"></div>
     </div>
     <div id="acciones-sorteo">
+      <div id="modo-toggle-container">
+        <label class="modo-switch" title="Cambiar modo Manual/Automático">
+          <input type="checkbox" id="modo-manual-switch" aria-label="Interruptor de modo manual">
+          <span class="modo-slider"></span>
+        </label>
+        <span id="modo-manual-estado">Modo Automático</span>
+      </div>
       <button id="sellar-btn" class="estado-btn" title="Sellar sorteo">
         <span class="stop-icon">STOP</span>
       </button>
@@ -707,6 +766,8 @@
   const pdfBtn = document.getElementById('pdf-btn');
   const jugarBtn = document.getElementById('jugar-btn');
   const finalizarBtn = document.getElementById('finalizar-btn');
+  const modoManualSwitch = document.getElementById('modo-manual-switch');
+  const modoManualEstadoEl = document.getElementById('modo-manual-estado');
   const tablaCantosContainer = document.getElementById('tabla-cantos-container');
   const tablaCantosTitulo = document.getElementById('tabla-cantos-titulo');
   const cantoCeldas = new Map();
@@ -716,6 +777,7 @@
   let restauracionPendiente = false;
   let pdfDestinoUrl = '';
   let pdfAccionEnCurso = false;
+  let modoManual = false;
   const pdfConfirmModal = document.getElementById('pdf-confirm-modal');
   const pdfConfirmSiBtn = document.getElementById('pdf-confirm-si');
   const pdfConfirmNoBtn = document.getElementById('pdf-confirm-no');
@@ -843,6 +905,13 @@
   pdfBtn.addEventListener('click', abrirPDF);
   jugarBtn.addEventListener('click', cambiarAJugando);
   finalizarBtn.addEventListener('click', finalizarSorteo);
+  if(modoManualSwitch){
+    modoManualSwitch.addEventListener('change', ()=>{
+      modoManual = modoManualSwitch.checked;
+      actualizarEstadoModo();
+    });
+    actualizarEstadoModo();
+  }
   construirTablaCantos();
   if(pdfConfirmSiBtn){ pdfConfirmSiBtn.addEventListener('click', marcarPdfGuardado); }
   if(pdfConfirmNoBtn){ pdfConfirmNoBtn.addEventListener('click', irAGenerarPdf); }
@@ -870,6 +939,16 @@
   function getServerNow(){
     const st = obtenerServerTime();
     return new Date(Date.now() + (st?.diferencia || 0));
+  }
+
+  function esModoManual(){
+    return modoManual === true;
+  }
+
+  function actualizarEstadoModo(){
+    if(modoManualEstadoEl){
+      modoManualEstadoEl.textContent = modoManual ? 'Modo Manual' : 'Modo Automático';
+    }
   }
 
   function actualizarValoresActuales(){
@@ -1176,6 +1255,31 @@
     if(!fechaBase || !horaInfo) return null;
     const { hora, minuto } = horaInfo;
     return new Date(fechaBase.getFullYear(), fechaBase.getMonth(), fechaBase.getDate(), hora, minuto);
+  }
+
+  function truncarFecha(fecha){
+    if(!(fecha instanceof Date) || isNaN(fecha.getTime())) return null;
+    return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+  }
+
+  function compararFechasCalendario(a, b){
+    const fechaA = truncarFecha(a);
+    const fechaB = truncarFecha(b);
+    if(!fechaA || !fechaB) return null;
+    const tiempoA = fechaA.getTime();
+    const tiempoB = fechaB.getTime();
+    if(tiempoA === tiempoB) return 0;
+    return tiempoA < tiempoB ? -1 : 1;
+  }
+
+  function restarMinutos(fecha, minutos){
+    if(!(fecha instanceof Date) || isNaN(fecha.getTime())) return null;
+    const valorMinutos = Number(minutos) || 0;
+    return new Date(fecha.getTime() - valorMinutos * 60000);
+  }
+
+  function obtenerNombreSorteoActual(){
+    return (currentSorteoData && currentSorteoData.nombre) ? currentSorteoData.nombre : 'este sorteo';
   }
 
   function actualizarAnimaciones(){
@@ -1503,13 +1607,54 @@
 
   async function sellarSorteo(){
     if(!currentSorteoId || !currentSorteoData){ alert('Selecciona un sorteo primero.'); return; }
-    if(currentSorteoData.estado === 'Sellado'){ alert('El sorteo ya está sellado.'); return; }
-    if(currentSorteoData.estado === 'Jugando' || currentSorteoData.estado === 'Finalizado'){
+    const estadoActual = (currentSorteoData.estado || '').toString().toLowerCase();
+    if(estadoActual === 'sellado'){ alert('El sorteo ya está sellado.'); return; }
+    if(estadoActual === 'jugando' || estadoActual === 'finalizado'){
       alert('El sorteo ya se encuentra en una fase posterior.');
       return;
     }
-    const confirmarSellado = confirm('¿Deseas sellar el sorteo seleccionado?');
+
+    if(esModoManual()){
+      const confirmarManual = confirm('¿Deseas sellar el sorteo seleccionado?');
+      if(!confirmarManual) return;
+      await ejecutarSellado();
+      return;
+    }
+
+    if(estadoActual !== 'activo'){
+      alert('El sorteo debe estar en estado Activo para poder ser sellado.');
+      return;
+    }
+
+    const fechaProgramada = obtenerFechaSorteo(currentSorteoData);
+    if(!fechaProgramada || isNaN(fechaProgramada.getTime())){
+      const confirmarSinFecha = confirm('No se pudo determinar la fecha programada del sorteo. ¿Deseas sellarlo de todos modos?');
+      if(!confirmarSinFecha) return;
+      await ejecutarSellado();
+      return;
+    }
+
+    const ahora = getServerNow() || new Date();
+    const comparacionFecha = compararFechasCalendario(ahora, fechaProgramada);
+    if(comparacionFecha !== null && comparacionFecha < 0){
+      alert('Aún no es la fecha del sorteo, no puede ser Sellado');
+      return;
+    }
+
+    const cierreMinutos = obtenerCierreMinutosRegistro(currentSorteoData) ?? 0;
+    const horaCierre = restarMinutos(fechaProgramada, cierreMinutos);
+    if(horaCierre && (comparacionFecha === 0 || comparacionFecha > 0) && ahora < horaCierre){
+      alert('Hoy es el día del sorteo pero aún no ha llegado la hora de cierre');
+      return;
+    }
+
+    const confirmarSellado = confirm('¿Estas seguro de Sellar el sorteo?');
     if(!confirmarSellado) return;
+
+    await ejecutarSellado();
+  }
+
+  async function ejecutarSellado(){
     try {
       await db.collection('sorteos').doc(currentSorteoId).update({ estado: 'Sellado', pdf: 'no' });
       mensajeEl.textContent = 'El sorteo fue sellado correctamente.';
@@ -1570,8 +1715,13 @@
 
   async function abrirPDF(){
     if(!currentSorteoId || !currentSorteoData){ alert('Selecciona un sorteo primero.'); return; }
-    if((currentSorteoData.estado || '') !== 'Sellado'){
-      alert('Para generar el archivo PDF de sellado el sorteo debe estar Sellado primero');
+    const estadoActual = (currentSorteoData.estado || '').toString().toLowerCase();
+    if(estadoActual !== 'sellado'){
+      if(esModoManual()){
+        alert('Para generar el archivo PDF de sellado el sorteo debe estar Sellado primero');
+      } else {
+        alert('Aún no has sellado el sorteo, no se puede generar el PDF');
+      }
       return;
     }
     pdfDestinoUrl = `pdfsorteo.html?s=${currentSorteoId}`;
@@ -1580,18 +1730,50 @@
 
   async function cambiarAJugando(){
     if(!currentSorteoId || !currentSorteoData){ alert('Selecciona un sorteo primero.'); return; }
-    if(currentSorteoData.estado === 'Jugando'){ alert('El sorteo ya está en estado Jugando.'); return; }
-    if(currentSorteoData.estado === 'Finalizado'){ alert('El sorteo ya finalizó.'); return; }
-    if((currentSorteoData.estado || '').toLowerCase() !== 'sellado'){
+    const estadoActual = (currentSorteoData.estado || '').toString().toLowerCase();
+    if(estadoActual === 'jugando'){ alert('El sorteo ya está en estado Jugando.'); return; }
+    if(estadoActual === 'finalizado'){ alert('El sorteo ya finalizó.'); return; }
+    if(estadoActual !== 'sellado'){
       alert('El sorteo debe estar Sellado para iniciar el juego.');
       return;
     }
-    if((currentSorteoData.pdf || '').toString().toLowerCase() !== 'si'){
-      alert('Debes generar el PDF antes de iniciar el juego.');
+    const pdfEstado = (currentSorteoData.pdf || '').toString().toLowerCase();
+    if(pdfEstado !== 'si'){
+      if(esModoManual()){
+        alert('Debes generar el PDF antes de iniciar el juego.');
+      } else {
+        alert('Aún no has generado el pdf de las jugadas, antes de cantar las jugadas debes generar, descargar y compartir el pdf de cierre de jugadas');
+      }
       return;
     }
-    const confirmar = confirm('¿Deseas cambiar el estado del sorteo a "Jugando"?');
+
+    if(esModoManual()){
+      const confirmarManual = confirm('¿Deseas cambiar el estado del sorteo a "Jugando"?');
+      if(!confirmarManual) return;
+      await actualizarEstadoJugando();
+      return;
+    }
+
+    const fechaProgramada = obtenerFechaSorteo(currentSorteoData);
+    if(!fechaProgramada || isNaN(fechaProgramada.getTime())){
+      alert('No se pudo determinar la fecha y hora programada del sorteo.');
+      return;
+    }
+
+    const ahora = getServerNow() || new Date();
+    if(ahora < fechaProgramada){
+      alert('Aún no ha llegado la hora programada para iniciar el juego.');
+      return;
+    }
+
+    const nombre = obtenerNombreSorteoActual();
+    const confirmar = confirm(`¿Deseas iniciar el juego del sorteo: ${nombre}?`);
     if(!confirmar) return;
+
+    await actualizarEstadoJugando();
+  }
+
+  async function actualizarEstadoJugando(){
     try {
       await db.collection('sorteos').doc(currentSorteoId).update({ estado: 'Jugando' });
       mensajeEl.textContent = 'El sorteo cambió a estado Jugando.';
@@ -1608,7 +1790,8 @@
       alert('El sorteo debe estar en estado Jugando para finalizar.');
       return;
     }
-    const confirmar = confirm('¿Deseas finalizar el sorteo actual? No podrás deshacer esta acción.');
+    const nombre = obtenerNombreSorteoActual();
+    const confirmar = confirm(`¿Estas seguro de Finalizar el sorteo: ${nombre}?`);
     if(!confirmar) return;
     try {
       await db.collection('sorteos').doc(currentSorteoId).update({ estado: 'Finalizado' });
