@@ -116,6 +116,9 @@
       text-align: left;
       padding-left: 4px;
     }
+    #tabla-fechas .celda-valor[colspan="2"] {
+      padding-left: 6px;
+    }
     #tabla-fechas .celda-icono span,
     #tabla-fechas .celda-icono img {
       display: inline-flex;
@@ -127,6 +130,10 @@
     #tabla-fechas .celda-icono img {
       width: 24px;
       height: 24px;
+    }
+    .icono-emoji {
+      font-size: 1.2rem;
+      line-height: 1;
     }
     #tabla-fechas .fila-fecha.oculta {
       display: none;
@@ -157,8 +164,30 @@
       letter-spacing: 1px;
     }
     .resaltado-actual {
-      color: #0b4dda !important;
-      text-shadow: 0 0 4px rgba(255,255,255,0.95) !important;
+      text-shadow: 0 0 4px rgba(255,255,255,0.95);
+    }
+    .estado-tiempo {
+      transition: color 0.3s ease, text-shadow 0.3s ease, filter 0.3s ease;
+    }
+    .estado-tiempo-futuro {
+      filter: brightness(1);
+    }
+    .estado-tiempo-proximo {
+      color: #f57c00;
+      text-shadow: 0 0 4px rgba(255,255,255,0.85);
+    }
+    .estado-tiempo-actual {
+      color: #0b4dda;
+      text-shadow: 0 0 4px rgba(255,255,255,0.9);
+    }
+    .estado-tiempo-pasado {
+      color: #b71c1c;
+      text-shadow: 0 0 6px rgba(0,0,0,0.6);
+    }
+    .estado-tiempo-sin-dato {
+      color: #4a4a4a;
+      text-shadow: none;
+      filter: brightness(0.9);
     }
     .datos-sorteo {
       display: flex;
@@ -702,45 +731,33 @@
         <table id="tabla-fechas">
           <tbody>
             <tr id="fila-cierre" class="fila-fecha oculta">
-              <td class="celda-icono">
-                <img src="https://api.iconify.design/mdi/stop-circle.svg?color=%23ff3b30" alt="Cierre" loading="lazy">
+              <td class="celda-valor" colspan="2">
+                <span id="fecha-cierre" class="valor-cierre estado-tiempo"></span>
               </td>
-              <td class="celda-valor">
-                <span id="fecha-cierre" class="valor-cierre"></span>
-              </td>
-              <td class="celda-icono">
-                <img src="https://api.iconify.design/mdi/clock-time-ten-outline.svg?color=%23888888" alt="Hora de cierre" loading="lazy">
-              </td>
-              <td class="celda-valor">
-                <span id="hora-cierre" class="valor-cierre"></span>
+              <td class="celda-valor" colspan="2">
+                <span id="hora-cierre" class="valor-cierre estado-tiempo"></span>
               </td>
             </tr>
             <tr class="fila-fecha">
               <td class="celda-icono">
-                <img src="https://api.iconify.design/mdi/calendar.svg?color=%23ffb300" alt="Fecha programada" loading="lazy">
+                <span class="icono-emoji" aria-hidden="true">📅</span>
               </td>
               <td class="celda-valor">
-                <span id="fecha-programada" class="valor-programado"></span>
+                <span id="fecha-programada" class="valor-programado estado-tiempo"></span>
               </td>
               <td class="celda-icono">
-                <img src="https://api.iconify.design/mdi/clock-alert.svg?color=%23d32f2f" alt="Hora programada" loading="lazy">
+                <span class="icono-emoji" aria-hidden="true">⏰</span>
               </td>
               <td class="celda-valor">
-                <span id="hora-programada" class="valor-programado"></span>
+                <span id="hora-programada" class="valor-programado estado-tiempo"></span>
               </td>
             </tr>
             <tr class="fila-fecha">
-              <td class="celda-icono">
-                <img src="https://api.iconify.design/mdi/calendar.svg?color=%23006ad4" alt="Fecha actual" loading="lazy">
+              <td class="celda-valor" colspan="2">
+                <span id="fecha-actual" class="valor-actual resaltado-actual estado-tiempo"></span>
               </td>
-              <td class="celda-valor">
-                <span id="fecha-actual" class="valor-actual resaltado-actual"></span>
-              </td>
-              <td class="celda-icono">
-                <img src="https://api.iconify.design/mdi/clock-time-five.svg?color=%23006ad4" alt="Hora actual" loading="lazy">
-              </td>
-              <td class="celda-valor">
-                <span id="hora-actual" class="valor-actual resaltado-actual"></span>
+              <td class="celda-valor" colspan="2">
+                <span id="hora-actual" class="valor-actual resaltado-actual estado-tiempo"></span>
               </td>
             </tr>
           </tbody>
@@ -876,6 +893,14 @@
     hora: null,
     horaCierre: null
   };
+  const clasesEstadoTiempo = [
+    'estado-tiempo-futuro',
+    'estado-tiempo-proximo',
+    'estado-tiempo-actual',
+    'estado-tiempo-pasado',
+    'estado-tiempo-sin-dato'
+  ];
+  const setClasesEstadoTiempo = new Set(clasesEstadoTiempo);
   const pdfConfirmModal = document.getElementById('pdf-confirm-modal');
   const pdfConfirmSiBtn = document.getElementById('pdf-confirm-si');
   const pdfConfirmNoBtn = document.getElementById('pdf-confirm-no');
@@ -1154,6 +1179,7 @@
   function iniciarActualizacionesActuales(){
     actualizarValoresActuales();
     setInterval(actualizarValoresActuales, 1000);
+    setInterval(()=>actualizarColoresFechas(), 15000);
   }
 
   function construirTablaCantos(){
@@ -1463,6 +1489,43 @@
     return minutosActual < minutosReferencia ? -1 : 1;
   }
 
+  function aplicarEstadoTiempo(elemento, estado){
+    if(!elemento) return;
+    elemento.classList.remove(...clasesEstadoTiempo);
+    if(estado && setClasesEstadoTiempo.has(estado)){
+      elemento.classList.add(estado);
+    }
+  }
+
+  function estadoFechaRespectoAhora(fechaReferencia, ahora){
+    if(!(fechaReferencia instanceof Date) || isNaN(fechaReferencia.getTime())){
+      return 'estado-tiempo-sin-dato';
+    }
+    const comparacion = compararFechasCalendario(ahora, fechaReferencia);
+    if(comparacion === null) return 'estado-tiempo-sin-dato';
+    if(comparacion < 0) return 'estado-tiempo-futuro';
+    if(comparacion > 0) return 'estado-tiempo-pasado';
+    return 'estado-tiempo-proximo';
+  }
+
+  function estadoHoraRespectoAhora(fechaReferencia, horaInfo, ahora){
+    if(!horaInfo || typeof horaInfo.hora !== 'number' || typeof horaInfo.minuto !== 'number'){
+      return 'estado-tiempo-sin-dato';
+    }
+    let comparacionFecha = null;
+    if(fechaReferencia instanceof Date && !isNaN(fechaReferencia.getTime())){
+      comparacionFecha = compararFechasCalendario(ahora, fechaReferencia);
+      if(comparacionFecha < 0) return 'estado-tiempo-futuro';
+      if(comparacionFecha > 0) return 'estado-tiempo-pasado';
+    }
+    const comparacionHora = compararHoraActualConInfo(ahora, horaInfo);
+    if(comparacionHora === null) return 'estado-tiempo-sin-dato';
+    const mismoDia = comparacionFecha === 0 || comparacionFecha === null;
+    if(comparacionHora < 0) return mismoDia ? 'estado-tiempo-proximo' : 'estado-tiempo-futuro';
+    if(comparacionHora === 0) return 'estado-tiempo-actual';
+    return 'estado-tiempo-pasado';
+  }
+
   function aplicarResaltadoTiempo(elemento, resaltar){
     if(!elemento) return;
     if(resaltar) elemento.classList.add('resaltado-actual');
@@ -1484,8 +1547,27 @@
       aplicarResaltadoTiempo(horaProgramadaEl, false);
       aplicarResaltadoTiempo(fechaCierreEl, false);
       aplicarResaltadoTiempo(horaCierreEl, false);
+      aplicarEstadoTiempo(fechaProgramadaEl, 'estado-tiempo-sin-dato');
+      aplicarEstadoTiempo(horaProgramadaEl, 'estado-tiempo-sin-dato');
+      aplicarEstadoTiempo(fechaCierreEl, 'estado-tiempo-sin-dato');
+      aplicarEstadoTiempo(horaCierreEl, 'estado-tiempo-sin-dato');
+      aplicarEstadoTiempo(fechaActualValorEl, 'estado-tiempo-actual');
+      aplicarEstadoTiempo(horaActualValorEl, 'estado-tiempo-actual');
       return;
     }
+
+    const estadoFechaProgramada = estadoFechaRespectoAhora(infoTiempoSorteo.fecha, ahora);
+    const estadoHoraProgramada = estadoHoraRespectoAhora(infoTiempoSorteo.fecha, infoTiempoSorteo.hora, ahora);
+    const estadoFechaCierre = estadoFechaRespectoAhora(infoTiempoSorteo.fechaCierre, ahora);
+    const referenciaHoraCierre = infoTiempoSorteo.fechaCierre || infoTiempoSorteo.fecha;
+    const estadoHoraCierre = estadoHoraRespectoAhora(referenciaHoraCierre, infoTiempoSorteo.horaCierre, ahora);
+
+    aplicarEstadoTiempo(fechaProgramadaEl, estadoFechaProgramada);
+    aplicarEstadoTiempo(horaProgramadaEl, estadoHoraProgramada);
+    aplicarEstadoTiempo(fechaCierreEl, estadoFechaCierre);
+    aplicarEstadoTiempo(horaCierreEl, estadoHoraCierre);
+    aplicarEstadoTiempo(fechaActualValorEl, 'estado-tiempo-actual');
+    aplicarEstadoTiempo(horaActualValorEl, 'estado-tiempo-actual');
 
     const comparacionFechaSorteo = infoTiempoSorteo.fecha ? compararFechasCalendario(infoTiempoSorteo.fecha, ahora) : null;
     const comparacionFechaCierre = infoTiempoSorteo.fechaCierre ? compararFechasCalendario(infoTiempoSorteo.fechaCierre, ahora) : null;
@@ -1919,7 +2001,7 @@
     if(esModoManual()){
       const confirmarManual = confirm('¿Deseas sellar el sorteo seleccionado?');
       if(!confirmarManual) return;
-      await ejecutarSellado({ confirmadoManual: true });
+      await ejecutarSellado({ confirmadoManual: true, confirmado: true });
       return;
     }
 
@@ -1975,18 +2057,23 @@
     } else {
       const confirmarSinFecha = confirm('No se pudo determinar la fecha programada del sorteo. ¿Deseas sellarlo de todos modos?');
       if(!confirmarSinFecha) return;
-      await ejecutarSellado();
+      await ejecutarSellado({ confirmado: true });
       return;
     }
 
     const confirmarSellado = confirm('¿Estas seguro de Sellar el sorteo?');
     if(!confirmarSellado) return;
 
-    await ejecutarSellado();
+    await ejecutarSellado({ confirmado: true });
   }
 
   async function ejecutarSellado(opciones = {}){
-    if(esModoManual() && !opciones.confirmadoManual){
+    const confirmadoManual = opciones.confirmadoManual === true;
+    const confirmado = opciones.confirmado === true;
+    if(!confirmado && !confirmadoManual){
+      return false;
+    }
+    if(esModoManual() && !confirmadoManual){
       const confirmar = confirm('¿Deseas sellar el sorteo seleccionado?');
       if(!confirmar) return false;
     }
@@ -2087,7 +2174,7 @@
     if(esModoManual()){
       const confirmarManual = confirm('¿Deseas cambiar el estado del sorteo a "Jugando"?');
       if(!confirmarManual) return;
-      await actualizarEstadoJugando({ confirmadoManual: true });
+      await actualizarEstadoJugando({ confirmadoManual: true, confirmado: true });
       return;
     }
 
@@ -2116,11 +2203,16 @@
     const confirmar = confirm(`¿Deseas iniciar el juego del sorteo: ${nombre}?`);
     if(!confirmar) return;
 
-    await actualizarEstadoJugando();
+    await actualizarEstadoJugando({ confirmado: true });
   }
 
   async function actualizarEstadoJugando(opciones = {}){
-    if(esModoManual() && !opciones.confirmadoManual){
+    const confirmadoManual = opciones.confirmadoManual === true;
+    const confirmado = opciones.confirmado === true;
+    if(!confirmado && !confirmadoManual){
+      return false;
+    }
+    if(esModoManual() && !confirmadoManual){
       const confirmar = confirm('¿Deseas cambiar el estado del sorteo a "Jugando"?');
       if(!confirmar) return false;
     }
