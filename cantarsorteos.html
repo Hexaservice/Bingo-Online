@@ -1575,10 +1575,28 @@
     const horaNumero = Number(horaInfo.hora);
     const minutoNumero = Number(horaInfo.minuto);
     if(isNaN(horaNumero) || isNaN(minutoNumero)) return null;
-    const minutosActual = actual.getHours() * 60 + actual.getMinutes();
+    const zona = obtenerServerTime()?.zonaIana;
+    let horasActual = actual.getHours();
+    let minutosActual = actual.getMinutes();
+    if(zona){
+      try {
+        const partes = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: zona }).formatToParts(actual);
+        const parteHora = partes.find(({ type }) => type === 'hour');
+        const parteMinuto = partes.find(({ type }) => type === 'minute');
+        const horaZona = Number(parteHora?.value);
+        const minutoZona = Number(parteMinuto?.value);
+        if(!isNaN(horaZona) && !isNaN(minutoZona)){
+          horasActual = horaZona;
+          minutosActual = minutoZona;
+        }
+      } catch (error) {
+        // Ignorar y mantener los valores locales
+      }
+    }
+    const minutosActualTotales = (horasActual * 60) + minutosActual;
     const minutosReferencia = (horaNumero * 60) + minutoNumero;
-    if(minutosActual === minutosReferencia) return 0;
-    return minutosActual < minutosReferencia ? -1 : 1;
+    if(minutosActualTotales === minutosReferencia) return 0;
+    return minutosActualTotales < minutosReferencia ? -1 : 1;
   }
 
   function aplicarEstadoTiempo(elemento, estado){
