@@ -61,6 +61,22 @@ Puede programarse con `cron` del sistema o desplegarse como una Cloud Function c
 
 El archivo `index.html` contiene toda la lógica de la aplicación. Sólo es necesario servirlo desde cualquier servidor web estático. El inicio de sesión se realiza con cuentas de Google y se redirige automáticamente al menú correspondiente según el rol almacenado en Firestore.
 
+### Configuración de targets de Firebase Hosting
+
+El archivo `firebase.json` define tres targets de Hosting que reutilizan la misma configuración de archivos estáticos:
+
+- `dev`: desplegado desde la rama `develop`.
+- `staging`: desplegado desde la rama `staging`.
+- `prod`: desplegado desde la rama `main`.
+
+Después de modificar la configuración recuerde enlazar cada target con su sitio o canal correspondiente ejecutando:
+
+```bash
+firebase target:apply hosting <target> <site>
+```
+
+Realice este comando para cada target (`dev`, `staging` y `prod`) utilizando el identificador del sitio o canal adecuado.
+
 ### Dominio y cookies
 
 A partir de las últimas versiones de los navegadores se bloquean las cookies de terceros por defecto. Si la aplicación se aloja en un dominio distinto al configurado en `authDomain` (por ejemplo GitHub Pages), Firebase no puede completar el inicio de sesión y la página queda cargando indefinidamente.
