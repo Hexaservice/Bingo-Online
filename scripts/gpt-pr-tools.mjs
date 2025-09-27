@@ -11,7 +11,7 @@ const {
   GITHUB_REPOSITORY,    // owner/repo (lo inyecta Actions)
   INPUT_TASK,           // qué cambio quieres
   INPUT_FILES,          // "a,b,c" para dar contexto
-  INPUT_BASE = "main",
+  INPUT_BASE = "dev",
   INPUT_BRANCH          // opcional
 } = process.env;
 
@@ -23,6 +23,12 @@ if (!INPUT_TASK) throw new Error("Falta INPUT_TASK");
 const [owner, repo] = GITHUB_REPOSITORY.split("/");
 const files = (INPUT_FILES || "").split(",").map(s => s.trim()).filter(Boolean);
 if (files.length === 0) files.push("README.md");
+
+const SUPPORTED_BASES = new Set(["dev", "staging", "main"]);
+if (!SUPPORTED_BASES.has(INPUT_BASE)) {
+  throw new Error(`INPUT_BASE debe ser una de: ${Array.from(SUPPORTED_BASES).join(", ")}. Valor recibido: "${INPUT_BASE}"`);
+}
+const baseBranch = INPUT_BASE;
 
 const blobs = files.map(fp => {
   const abs = path.resolve(process.cwd(), fp);
@@ -39,7 +45,7 @@ Rutas relativas a la raíz. No incluyas comentarios ni explicaciones.`;
 
 const usr = [
   `Tarea: ${INPUT_TASK}`,
-  `Base: ${INPUT_BASE}`,
+  `Base: ${baseBranch}`,
   `Archivos de contexto:`,
   ...blobs.map(f => `--- START ${f.path} ---\n${f.content}\n--- END ${f.path} ---`)
 ].join("\n\n");
@@ -116,7 +122,7 @@ const followUp = [
   { role: "user", content:
 `Se aplicó la tarea y se subió la rama.
 Repositorio: ${owner}/${repo}
-Rama base: ${INPUT_BASE}
+Rama base: ${baseBranch}
 Rama head: ${branch}
 Redacta un título breve y un body con puntos claros. Luego LLAMA a createPullRequest.` }
 ];
@@ -138,7 +144,7 @@ if (tool?.function?.name === "createPullRequest") {
   args.owner ||= owner;
   args.repo  ||= repo;
   args.head  ||= branch;
-  args.base  ||= INPUT_BASE;
+  args.base  ||= baseBranch;
   args.title ||= `LLM: ${INPUT_TASK.slice(0,80)}`;
   args.body  ||= `Cambio generado automáticamente por GPT-5.\n\nTarea:\n${INPUT_TASK}\n\nRama: ${branch}`;
   const pr = await createPR(args);
@@ -147,6 +153,6 @@ if (tool?.function?.name === "createPullRequest") {
   // Fallback: crear PR nosotros si el modelo no invocó la herramienta
   const title = `LLM: ${INPUT_TASK.slice(0,80)}`;
   const body  = `Cambio generado automáticamente por GPT-5.\n\nTarea:\n${INPUT_TASK}\n\nRama: ${branch}`;
-  const pr = await createPR({ owner, repo, head: branch, base: INPUT_BASE, title, body });
+  const pr = await createPR({ owner, repo, head: branch, base: baseBranch, title, body });
   console.log(`PR_URL=${pr.html_url}`);
 }
