@@ -143,6 +143,7 @@
     #sorteos-list div{display:block;font-weight:bold;font-size:1rem;cursor:pointer;font-family:'Poppins',sans-serif;margin-bottom:2px;}
     #sorteos-list .sorteo-index{display:inline-block;width:30px;margin-right:2px;}
     #sorteos-list div .sorteo-detalle{display:flex;align-items:center;gap:4px;font-size:0.6rem;font-weight:normal;pointer-events:none;color:inherit;font-family:'Poppins',sans-serif;margin-top:-2px;padding-left:30px;}
+    #sorteos-list div .hora-cierre{color:#ff0000;}
     #number-modal-title{font-size:0.8rem;text-align:center;width:100%;text-shadow:0 0 5px blue;margin-bottom:5px;font-family:'Poppins',sans-serif;}
     #number-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;justify-items:center;}
     #number-grid div{width:60px;height:60px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;text-shadow:0 0 5px green;cursor:pointer;}
@@ -672,13 +673,84 @@ function toggleForma(idx){
   }
 
   function formatearFecha(f){ if(!f) return ''; const [y,m,d]=f.split('-'); return `${d}/${m}/${y}`; }
+  function normalizarHoraValor(valor){
+    if(valor===undefined || valor===null) return '';
+    if(typeof valor==='object'){
+      if(valor instanceof Date){
+        return `${String(valor.getHours()).padStart(2,'0')}:${String(valor.getMinutes()).padStart(2,'0')}`;
+      }
+      if(typeof valor.seconds==='number'){
+        const fecha=new Date(valor.seconds*1000);
+        return `${String(fecha.getHours()).padStart(2,'0')}:${String(fecha.getMinutes()).padStart(2,'0')}`;
+      }
+      if(typeof valor.toDate==='function'){
+        const fecha=valor.toDate();
+        if(fecha instanceof Date && !Number.isNaN(fecha.getTime())){
+          return `${String(fecha.getHours()).padStart(2,'0')}:${String(fecha.getMinutes()).padStart(2,'0')}`;
+        }
+      }
+    }
+    if(typeof valor==='string'){
+      const texto=valor.trim();
+      if(!texto) return '';
+      const match=texto.match(/(\d{1,2})[:.](\d{2})/);
+      if(!match) return '';
+      let horas=parseInt(match[1],10);
+      const minutos=parseInt(match[2],10);
+      if(Number.isNaN(horas)||Number.isNaN(minutos)) return '';
+      const lower=texto.toLowerCase();
+      if(lower.includes('pm') && horas<12) horas+=12;
+      if(lower.includes('am') && horas===12) horas=0;
+      return `${String(horas).padStart(2,'0')}:${String(minutos).padStart(2,'0')}`;
+    }
+    if(typeof valor==='number' && Number.isFinite(valor)){
+      const horas=Math.floor(valor/100);
+      const minutos=valor%100;
+      if(horas>=0 && horas<24 && minutos>=0 && minutos<60){
+        return `${String(horas).padStart(2,'0')}:${String(minutos).padStart(2,'0')}`;
+      }
+    }
+    return '';
+  }
   function formatearHora(h){
-    if(!h) return '';
-    const [hh,mm]=h.split(':');
+    const normalizado=normalizarHoraValor(h);
+    if(!normalizado) return '';
+    const [hh,mm]=normalizado.split(':');
     let n=parseInt(hh,10);
+    if(Number.isNaN(n)) return '';
     const ampm=n>=12?'PM':'AM';
     n=n%12||12;
-    return `⏰ ${String(n).padStart(2,'0')}:${mm} ${ampm}`;
+    return `${String(n).padStart(2,'0')}:${mm} ${ampm}`;
+  }
+  function obtenerHoraCierre(d){
+    if(!d) return '';
+    const claves=['horacierre','horaCierre','hora_cierre','cierre','cierreHora','cierrehora'];
+    for(const clave of claves){
+      const hora=normalizarHoraValor(d[clave]);
+      if(hora) return hora;
+    }
+    const cierreMin=parseInt(d?.cierreMinutos,10);
+    if(!Number.isNaN(cierreMin) && cierreMin>0){
+      const fecha=d?.fecha;
+      const horaInicio=normalizarHoraValor(d?.hora);
+      if(fecha && horaInicio){
+        const partesFecha=fecha.split('-').map(n=>parseInt(n,10));
+        if(partesFecha.length===3 && partesFecha.every(n=>!Number.isNaN(n))){
+          const [anio,mes,dia]=partesFecha;
+          const [hInicio,mInicio]=horaInicio.split(':').map(n=>parseInt(n,10));
+          if(![anio,mes,dia,hInicio,mInicio].some(n=>Number.isNaN(n))){
+            const sorteoDate=new Date(anio,mes-1,dia,hInicio,mInicio,0,0);
+            if(!Number.isNaN(sorteoDate.getTime())){
+              const cierreDate=new Date(sorteoDate.getTime()-cierreMin*60000);
+              const hh=String(cierreDate.getHours()).padStart(2,'0');
+              const mm=String(cierreDate.getMinutes()).padStart(2,'0');
+              return `${hh}:${mm}`;
+            }
+          }
+        }
+      }
+    }
+    return '';
   }
 
   async function seleccionarSorteo(s){
@@ -693,7 +765,8 @@ function toggleForma(idx){
     else if(s.tipo==='Sorteo Especial'){ btn.classList.add('especial'); }
     btn.style.fontSize = s.nombre.length>20?'0.8rem':'1.1rem';
     document.getElementById('fecha-sorteo').innerHTML=`<span class="cal-icon">📅</span> ${formatearFecha(s.fecha)}`;
-    document.getElementById('hora-sorteo').innerHTML=formatearHora(s.hora);
+    const horaTexto=formatearHora(s.hora);
+    document.getElementById('hora-sorteo').innerHTML=horaTexto?`<span class="clock-icon">⏰</span> ${horaTexto}`:'';
     actualizarFechaHoraActual();
     const jugarBtn=document.getElementById('jugar-carton-btn');
     if(s.estado==='Sellado' || s.estado==='Jugando') jugarBtn.disabled=true; else jugarBtn.disabled=false;
@@ -722,7 +795,11 @@ function toggleForma(idx){
       div.appendChild(nombreSpan);
       const detalle=document.createElement('div');
       detalle.className='sorteo-detalle';
-      detalle.innerHTML=`<span class=\"cal-icon\">📅</span><span>${formatearFecha(s.fecha)}</span><span class=\"clock-icon\">⏰</span><span>${formatearHora(s.hora)}</span>`;
+      const horaCierreTexto=formatearHora(s.horacierre);
+      const cierreHtml=horaCierreTexto?`<span class=\"clock-icon\">⏰</span><span class=\"hora-cierre\">${horaCierreTexto}</span>`:'';
+      const horaInicioTexto=formatearHora(s.hora);
+      const inicioHtml=horaInicioTexto?`<span class=\"clock-icon\">⏰</span><span>${horaInicioTexto}</span>`:'';
+      detalle.innerHTML=`<span class=\"cal-icon\">📅</span><span>${formatearFecha(s.fecha)}</span>${cierreHtml}${inicioHtml}`;
       div.appendChild(detalle);
       div.addEventListener('click',()=>{
         if(s.estado==='Jugando') window.location.href='juegoactivo.html';
@@ -740,7 +817,7 @@ function toggleForma(idx){
       const snap=await db.collection('sorteos').where('estado','in',['Activo','Sellado','Jugando']).get();
       snap.forEach(doc=>{
         const d=doc.data();
-        sorteosActivos.push({id:doc.id,nombre:d.nombre,fecha:d.fecha,hora:d.hora,tipo:d.tipo,estado:d.estado});
+        sorteosActivos.push({id:doc.id,nombre:d.nombre,fecha:d.fecha,hora:d.hora,horacierre:obtenerHoraCierre(d),tipo:d.tipo,estado:d.estado});
       });
     }catch(e){ console.warn('No se pudieron cargar sorteos'); }
   }
