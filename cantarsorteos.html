@@ -464,6 +464,21 @@
       box-shadow: 0 0 8px rgba(255,255,0,0.8);
       transform: scale(1.03);
     }
+    .canto-texto {
+      display: inline-flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 4px;
+      width: 100%;
+    }
+    .canto-letra {
+      font-size: 1.2rem;
+    }
+    .canto-numero {
+      font-size: 1.6rem;
+      font-weight: 700;
+      line-height: 1;
+    }
     #tabla-cantos-container.disabled .canto-cell,
     #tabla-cantos-container.bloqueado .canto-cell {
       pointer-events: none;
@@ -529,6 +544,19 @@
       margin: 0;
       font-size: 1rem;
       color: #1a1a1a;
+    }
+    .canto-confirm-box {
+      max-width: 340px;
+      padding-top: 28px;
+      padding-bottom: 28px;
+    }
+    #canto-confirm-valor {
+      font-family: 'Bangers', cursive;
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: #1e3aa8;
+      text-shadow: 0 0 8px rgba(0,0,0,0.15);
+      margin: 6px 0 18px;
     }
     .pdf-confirm-actions {
       display: flex;
@@ -848,6 +876,17 @@
       <div id="sorteos-list" style="display:flex;flex-direction:column;gap:6px;"></div>
     </div>
   </div>
+  <div id="canto-confirm-modal" class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="canto-confirm-titulo">
+    <div class="pdf-confirm-box canto-confirm-box">
+      <h3 id="canto-confirm-titulo">Confirmar canto</h3>
+      <p id="canto-confirm-mensaje">¿Deseas cantar?</p>
+      <div id="canto-confirm-valor"></div>
+      <div class="pdf-confirm-actions">
+        <button id="canto-confirm-aceptar">Aceptar</button>
+        <button id="canto-confirm-cancelar" class="secundario">Cancelar</button>
+      </div>
+    </div>
+  </div>
   <div id="pdf-confirm-modal" class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="pdf-confirm-title">
     <div class="pdf-confirm-box">
       <h3 id="pdf-confirm-title">Guardar PDF</h3>
@@ -946,7 +985,13 @@
   const estadoConfirmMensajeEl = document.getElementById('estado-confirm-mensaje');
   const estadoConfirmSiBtn = document.getElementById('estado-confirm-si');
   const estadoConfirmNoBtn = document.getElementById('estado-confirm-no');
+  const cantoConfirmModal = document.getElementById('canto-confirm-modal');
+  const cantoConfirmMensajeEl = document.getElementById('canto-confirm-mensaje');
+  const cantoConfirmValorEl = document.getElementById('canto-confirm-valor');
+  const cantoConfirmAceptarBtn = document.getElementById('canto-confirm-aceptar');
+  const cantoConfirmCancelarBtn = document.getElementById('canto-confirm-cancelar');
   let resolverConfirmacionEstado = null;
+  let resolverConfirmacionCanto = null;
 
   function completarConfirmacionEstado(valor){
     if(estadoConfirmModal){
@@ -983,6 +1028,35 @@
       return mostrarConfirmacionEstado(mensaje);
     }
     return Promise.resolve(window.confirm(mensaje));
+  }
+
+  function cerrarConfirmacionCanto(valor){
+    if(cantoConfirmModal){
+      cantoConfirmModal.classList.remove('activo');
+    }
+    const resolver = resolverConfirmacionCanto;
+    resolverConfirmacionCanto = null;
+    if(typeof resolver === 'function'){
+      resolver(valor === true);
+    }
+  }
+
+  function mostrarConfirmacionCanto(clave){
+    if(!cantoConfirmModal){
+      return Promise.resolve(window.confirm(`Confirmas la jugada de ${clave}?`));
+    }
+    if(cantoConfirmMensajeEl){
+      cantoConfirmMensajeEl.textContent = '¿Deseas cantar?';
+    }
+    if(cantoConfirmValorEl){
+      cantoConfirmValorEl.textContent = clave;
+    }
+    cantoConfirmModal.classList.add('activo');
+    const foco = cantoConfirmAceptarBtn || cantoConfirmCancelarBtn;
+    if(foco){ foco.focus(); }
+    return new Promise(resolve=>{
+      resolverConfirmacionCanto = resolve;
+    });
   }
 
   function setCookie(name, value){
@@ -1155,6 +1229,19 @@
       }
     });
   }
+  if(cantoConfirmAceptarBtn){
+    cantoConfirmAceptarBtn.addEventListener('click', ()=>cerrarConfirmacionCanto(true));
+  }
+  if(cantoConfirmCancelarBtn){
+    cantoConfirmCancelarBtn.addEventListener('click', ()=>cerrarConfirmacionCanto(false));
+  }
+  if(cantoConfirmModal){
+    cantoConfirmModal.addEventListener('click', evento=>{
+      if(evento.target === cantoConfirmModal){
+        cerrarConfirmacionCanto(false);
+      }
+    });
+  }
   if(estadoConfirmSiBtn){
     estadoConfirmSiBtn.addEventListener('click', ()=>completarConfirmacionEstado(true));
   }
@@ -1174,6 +1261,10 @@
       if(pdfConfirmModal && pdfConfirmModal.classList.contains('activo')){
         cerrarPdfConfirmacion();
         pdfDestinoUrl = '';
+        cerrado = true;
+      }
+      if(cantoConfirmModal && cantoConfirmModal.classList.contains('activo')){
+        cerrarConfirmacionCanto(false);
         cerrado = true;
       }
       if(estadoConfirmModal && estadoConfirmModal.classList.contains('activo')){
@@ -1313,7 +1404,17 @@
         const td = document.createElement('td');
         td.className = 'canto-cell';
         td.dataset.key = clave;
-        td.textContent = clave;
+        const wrapper = document.createElement('span');
+        wrapper.className = 'canto-texto';
+        const letraSpan = document.createElement('span');
+        letraSpan.className = 'canto-letra';
+        letraSpan.textContent = `${letra}-`;
+        const numeroSpan = document.createElement('span');
+        numeroSpan.className = 'canto-numero';
+        numeroSpan.textContent = numeroTexto;
+        wrapper.appendChild(letraSpan);
+        wrapper.appendChild(numeroSpan);
+        td.appendChild(wrapper);
         td.addEventListener('click', ()=>manejarCantoClick(clave));
         cantoCeldas.set(clave, td);
         tr.appendChild(td);
@@ -1329,7 +1430,7 @@
     if(tablaCantosContainer.classList.contains('disabled')) return;
     if(tablaCantosContainer.classList.contains('bloqueado')) return;
     if(cantosSeleccionados.has(clave)) return;
-    const confirmar = confirm(`Confirmas la jugada de ${clave}?`);
+    const confirmar = await mostrarConfirmacionCanto(clave);
     if(!confirmar) return;
     try {
       await db.collection('cantos').doc(currentSorteoId).set({
@@ -1503,6 +1604,24 @@
     const sufijo = hora >= 12 ? 'pm' : 'am';
     const hora12 = hora % 12 || 12;
     return `${hora12.toString().padStart(2,'0')}:${minuto.toString().padStart(2,'0')} ${sufijo}`;
+  }
+
+  function obtenerTextoFechaPreferido(...valores){
+    for(const valor of valores){
+      if(typeof valor === 'undefined' || valor === null) continue;
+      const texto = formatearFecha(valor);
+      if(texto) return texto;
+    }
+    return 'la fecha indicada';
+  }
+
+  function obtenerTextoHoraPreferido(...valores){
+    for(const valor of valores){
+      if(typeof valor === 'undefined' || valor === null) continue;
+      const texto = formatearHora(valor);
+      if(texto) return texto.toUpperCase();
+    }
+    return 'la hora indicada';
   }
 
   const formatoNumeroES = new Intl.NumberFormat('es-ES');
@@ -2211,6 +2330,14 @@
     }
 
     if(esModoManual()){
+      const ahoraManual = getServerNow() || new Date();
+      const fechaHoraCierreManual = obtenerFechaHoraCierre(currentSorteoData);
+      if(fechaHoraCierreManual instanceof Date && !isNaN(fechaHoraCierreManual.getTime()) && ahoraManual < fechaHoraCierreManual){
+        const fechaTexto = obtenerTextoFechaPreferido(currentSorteoData.fechacierre, fechaHoraCierreManual, currentSorteoData.fecha);
+        const horaTexto = obtenerTextoHoraPreferido(currentSorteoData.horacierre, fechaHoraCierreManual, currentSorteoData.hora);
+        alert(`Aun no se puede sellar el sorteo debe ser despues de ${fechaTexto} a las ${horaTexto}`);
+        return;
+      }
       const confirmarManual = await preguntarAccionEstado('¿Deseas sellar el sorteo seleccionado?');
       if(!confirmarManual) return;
       await ejecutarSellado({ confirmadoManual: true, confirmado: true });
@@ -2397,6 +2524,16 @@
     }
 
     if(esModoManual()){
+      const fechaJuego = obtenerFechaSorteo(currentSorteoData);
+      if(fechaJuego instanceof Date && !isNaN(fechaJuego.getTime())){
+        const ahoraManual = getServerNow() || new Date();
+        if(ahoraManual < fechaJuego){
+          const fechaTexto = obtenerTextoFechaPreferido(currentSorteoData.fecha, fechaJuego);
+          const horaTexto = obtenerTextoHoraPreferido(currentSorteoData.hora, fechaJuego);
+          alert(`Aun no se puede Jugar el sorteo debe ser despues de ${fechaTexto} a las ${horaTexto}`);
+          return;
+        }
+      }
       const confirmarManual = await preguntarAccionEstado('¿Deseas cambiar el estado del sorteo a "Jugando"?');
       if(!confirmarManual) return;
       await actualizarEstadoJugando({ confirmadoManual: true, confirmado: true });
