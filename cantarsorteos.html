@@ -2225,6 +2225,7 @@
     const fechaProgramada = obtenerFechaSorteo(currentSorteoData);
     const fechaCierreBase = obtenerFechaCierre(currentSorteoData);
     const fechaHoraCierreOriginal = obtenerFechaHoraCierre(currentSorteoData);
+    const valorHoraCierre = obtenerValorHoraCierre(currentSorteoData);
     const ahora = getServerNow() || new Date();
     const fechaProgramadaValida = fechaProgramada instanceof Date && !isNaN(fechaProgramada.getTime());
     const fechaCierreValida = fechaCierreBase instanceof Date && !isNaN(fechaCierreBase.getTime());
@@ -2233,6 +2234,10 @@
       fechaHoraCierreNormalizada = new Date(fechaProgramada.getTime());
     }
     const fechaHoraCierreValida = fechaHoraCierreNormalizada instanceof Date && !isNaN(fechaHoraCierreNormalizada.getTime());
+    let horaCierreInfo = infoTiempoSorteo?.horaCierre || obtenerHoraDesdeValor(valorHoraCierre);
+    if(!horaCierreInfo && fechaHoraCierreValida){
+      horaCierreInfo = obtenerHoraDesdeValor(fechaHoraCierreNormalizada);
+    }
 
     if(fechaCierreValida){
       const comparacionCierre = compararFechasCalendario(ahora, fechaCierreBase);
@@ -2244,13 +2249,20 @@
         alert('Aún no es la fecha de cierre del sorteo, no puede ser Sellado');
         return;
       }
-      if(fechaHoraCierreValida && ahora < fechaHoraCierreNormalizada){
-        alert('Hoy es el día del sorteo pero aún no ha llegado la hora de cierre');
-        return;
-      }
-      if(!fechaHoraCierreValida && comparacionCierre === 0 && fechaProgramadaValida && ahora < fechaProgramada){
-        alert('Hoy es el día del sorteo pero aún no ha llegado la hora de cierre');
-        return;
+      if(comparacionCierre === 0){
+        if(horaCierreInfo){
+          const comparacionHoraCierre = compararHoraActualConInfo(ahora, horaCierreInfo);
+          if(comparacionHoraCierre !== null && comparacionHoraCierre < 0){
+            alert('Hoy es el día del sorteo pero aún no ha llegado la hora de cierre');
+            return;
+          }
+        } else if(fechaHoraCierreValida && ahora < fechaHoraCierreNormalizada){
+          alert('Hoy es el día del sorteo pero aún no ha llegado la hora de cierre');
+          return;
+        } else if(!fechaHoraCierreValida && fechaProgramadaValida && ahora < fechaProgramada){
+          alert('Hoy es el día del sorteo pero aún no ha llegado la hora de cierre');
+          return;
+        }
       }
     } else if(fechaProgramadaValida){
       const comparacionFecha = compararFechasCalendario(ahora, fechaProgramada);
