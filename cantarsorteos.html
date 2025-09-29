@@ -996,13 +996,66 @@
   const estadoConfirmMensajeEl = document.getElementById('estado-confirm-mensaje');
   const estadoConfirmSiBtn = document.getElementById('estado-confirm-si');
   const estadoConfirmNoBtn = document.getElementById('estado-confirm-no');
-  const cantoConfirmModal = document.getElementById('canto-confirm-modal');
-  const cantoConfirmMensajeEl = document.getElementById('canto-confirm-mensaje');
-  const cantoConfirmValorEl = document.getElementById('canto-confirm-valor');
-  const cantoConfirmAceptarBtn = document.getElementById('canto-confirm-aceptar');
-  const cantoConfirmCancelarBtn = document.getElementById('canto-confirm-cancelar');
+  let cantoConfirmModal = document.getElementById('canto-confirm-modal');
+  let cantoConfirmMensajeEl = document.getElementById('canto-confirm-mensaje');
+  let cantoConfirmValorEl = document.getElementById('canto-confirm-valor');
+  let cantoConfirmAceptarBtn = document.getElementById('canto-confirm-aceptar');
+  let cantoConfirmCancelarBtn = document.getElementById('canto-confirm-cancelar');
   let resolverConfirmacionEstado = null;
   let resolverConfirmacionCanto = null;
+
+  function manejarAceptarConfirmacionCanto(){
+    cerrarConfirmacionCanto(true);
+  }
+
+  function manejarCancelarConfirmacionCanto(){
+    cerrarConfirmacionCanto(false);
+  }
+
+  function manejarFondoConfirmacionCanto(evento){
+    if(evento.target === cantoConfirmModal){
+      cerrarConfirmacionCanto(false);
+    }
+  }
+
+  function asegurarModalConfirmacionCanto(){
+    if(!cantoConfirmModal){
+      const modal = document.createElement('div');
+      modal.id = 'canto-confirm-modal';
+      modal.className = 'confirm-modal';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      modal.setAttribute('aria-labelledby', 'canto-confirm-mensaje');
+      modal.innerHTML = `
+        <div class="pdf-confirm-box canto-confirm-box">
+          <p id="canto-confirm-mensaje" class="canto-confirm-mensaje">¿Este es el Canto a guardar?</p>
+          <div id="canto-confirm-valor"></div>
+          <div class="pdf-confirm-actions canto-confirm-actions">
+            <button id="canto-confirm-aceptar">Aceptar</button>
+            <button id="canto-confirm-cancelar" class="secundario">Cancelar</button>
+          </div>
+        </div>`;
+      document.body.appendChild(modal);
+    }
+    cantoConfirmModal = document.getElementById('canto-confirm-modal');
+    cantoConfirmMensajeEl = document.getElementById('canto-confirm-mensaje');
+    cantoConfirmValorEl = document.getElementById('canto-confirm-valor');
+    cantoConfirmAceptarBtn = document.getElementById('canto-confirm-aceptar');
+    cantoConfirmCancelarBtn = document.getElementById('canto-confirm-cancelar');
+
+    if(cantoConfirmAceptarBtn){
+      cantoConfirmAceptarBtn.removeEventListener('click', manejarAceptarConfirmacionCanto);
+      cantoConfirmAceptarBtn.addEventListener('click', manejarAceptarConfirmacionCanto);
+    }
+    if(cantoConfirmCancelarBtn){
+      cantoConfirmCancelarBtn.removeEventListener('click', manejarCancelarConfirmacionCanto);
+      cantoConfirmCancelarBtn.addEventListener('click', manejarCancelarConfirmacionCanto);
+    }
+    if(cantoConfirmModal){
+      cantoConfirmModal.removeEventListener('click', manejarFondoConfirmacionCanto);
+      cantoConfirmModal.addEventListener('click', manejarFondoConfirmacionCanto);
+    }
+  }
 
   function completarConfirmacionEstado(valor){
     if(estadoConfirmModal){
@@ -1056,8 +1109,9 @@
   }
 
   function mostrarConfirmacionCanto(clave){
-    if(!cantoConfirmModal){
-      return Promise.resolve(window.confirm(`¿Este es el canto a guardar?\n${clave}`));
+    asegurarModalConfirmacionCanto();
+    if(!cantoConfirmModal || !cantoConfirmMensajeEl || !cantoConfirmValorEl){
+      return Promise.resolve(false);
     }
     if(cantoConfirmMensajeEl){
       cantoConfirmMensajeEl.textContent = '¿Este es el Canto a guardar?';
@@ -1244,17 +1298,13 @@
     });
   }
   if(cantoConfirmAceptarBtn){
-    cantoConfirmAceptarBtn.addEventListener('click', ()=>cerrarConfirmacionCanto(true));
+    cantoConfirmAceptarBtn.addEventListener('click', manejarAceptarConfirmacionCanto);
   }
   if(cantoConfirmCancelarBtn){
-    cantoConfirmCancelarBtn.addEventListener('click', ()=>cerrarConfirmacionCanto(false));
+    cantoConfirmCancelarBtn.addEventListener('click', manejarCancelarConfirmacionCanto);
   }
   if(cantoConfirmModal){
-    cantoConfirmModal.addEventListener('click', evento=>{
-      if(evento.target === cantoConfirmModal){
-        cerrarConfirmacionCanto(false);
-      }
-    });
+    cantoConfirmModal.addEventListener('click', manejarFondoConfirmacionCanto);
   }
   if(estadoConfirmSiBtn){
     estadoConfirmSiBtn.addEventListener('click', ()=>completarConfirmacionEstado(true));
