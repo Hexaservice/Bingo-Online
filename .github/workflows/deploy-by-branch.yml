@@ -9,18 +9,9 @@ permissions:
   id-token: write
 
 jobs:
-  deploy:
+  deploy-dev:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - branch: dev
-            target: dev
-          - branch: staging
-            target: stg
-          - branch: main
-            target: prod
-    if: github.ref_name == matrix.branch
+    if: github.ref == 'refs/heads/dev'
     steps:
       - uses: actions/checkout@v4
 
@@ -30,5 +21,35 @@ jobs:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_231FD }}
           projectId: bingo-online-231fd
-          target: ${{ matrix.target }}
+          target: dev
+          channelId: live
+
+  deploy-staging:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_231FD }}
+          projectId: bingo-online-231fd
+          target: stg
+          channelId: live
+
+  deploy-prod:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_231FD }}
+          projectId: bingo-online-231fd
+          target: prod
           channelId: live
