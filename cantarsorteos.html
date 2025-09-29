@@ -2430,42 +2430,47 @@
       horaCierreInfo = obtenerHoraDesdeValor(fechaHoraCierreNormalizada);
     }
 
-    if(fechaCierreValida){
-      const comparacionCierre = compararFechasCalendario(ahora, fechaCierreBase);
-      if(comparacionCierre === null){
+    const fechaReferenciaCierre = fechaCierreValida ? fechaCierreBase : (fechaProgramadaValida ? fechaProgramada : null);
+    let fechaHoraCierreComparacion = null;
+    if(fechaReferenciaCierre){
+      fechaHoraCierreComparacion = construirFechaConHora(fechaReferenciaCierre, horaCierreInfo);
+    }
+    if(!(fechaHoraCierreComparacion instanceof Date) || isNaN(fechaHoraCierreComparacion.getTime())){
+      if(fechaHoraCierreValida){
+        fechaHoraCierreComparacion = new Date(fechaHoraCierreNormalizada.getTime());
+      } else if(fechaReferenciaCierre instanceof Date && !isNaN(fechaReferenciaCierre.getTime())){
+        fechaHoraCierreComparacion = new Date(fechaReferenciaCierre.getTime());
+      }
+    }
+
+    let diferenciaMinutosCierre = null;
+    if(fechaReferenciaCierre instanceof Date && !isNaN(fechaReferenciaCierre.getTime())){
+      diferenciaMinutosCierre = calcularDiferenciaEnMinutos(ahora, fechaReferenciaCierre, horaCierreInfo);
+    }
+    if(diferenciaMinutosCierre === null && fechaHoraCierreComparacion instanceof Date && !isNaN(fechaHoraCierreComparacion.getTime())){
+      diferenciaMinutosCierre = (ahora.getTime() - fechaHoraCierreComparacion.getTime()) / 60000;
+    }
+
+    if(fechaReferenciaCierre instanceof Date && !isNaN(fechaReferenciaCierre.getTime())){
+      const comparacionReferencia = compararFechasCalendario(ahora, fechaReferenciaCierre);
+      if(comparacionReferencia === null){
         alert('No se pudo determinar la fecha actual para validar el cierre.');
         return;
       }
-      if(comparacionCierre < 0){
-        alert('Aún no es la fecha de cierre del sorteo, no puede ser Sellado');
-        return;
-      }
-      if(comparacionCierre === 0){
-        if(horaCierreInfo){
-          const comparacionHoraCierre = compararHoraActualConInfo(ahora, horaCierreInfo);
-          if(comparacionHoraCierre !== null && comparacionHoraCierre < 0){
-            alert('Hoy es el día del sorteo pero aún no ha llegado la hora de cierre');
-            return;
-          }
-        } else if(fechaHoraCierreValida && ahora < fechaHoraCierreNormalizada){
-          alert('Hoy es el día del sorteo pero aún no ha llegado la hora de cierre');
-          return;
-        } else if(!fechaHoraCierreValida && fechaProgramadaValida && ahora < fechaProgramada){
-          alert('Hoy es el día del sorteo pero aún no ha llegado la hora de cierre');
-          return;
+      if(comparacionReferencia < 0){
+        if(fechaCierreValida){
+          alert('Aún no es la fecha de cierre del sorteo, no puede ser Sellado');
+        } else {
+          alert('Aún no es la fecha del sorteo, no puede ser Sellado');
         }
-      }
-    } else if(fechaProgramadaValida){
-      const comparacionFecha = compararFechasCalendario(ahora, fechaProgramada);
-      if(comparacionFecha === null){
-        alert('No se pudo determinar la fecha actual para validar el cierre.');
         return;
       }
-      if(comparacionFecha < 0){
-        alert('Aún no es la fecha del sorteo, no puede ser Sellado');
+      if(typeof diferenciaMinutosCierre === 'number' && diferenciaMinutosCierre < 0){
+        alert('Hoy es el día del sorteo pero aún no ha llegado la hora de cierre');
         return;
       }
-      if(ahora < fechaProgramada){
+    } else if(fechaHoraCierreComparacion instanceof Date && !isNaN(fechaHoraCierreComparacion.getTime())){
+      if(typeof diferenciaMinutosCierre === 'number' && diferenciaMinutosCierre < 0){
         alert('Hoy es el día del sorteo pero aún no ha llegado la hora de cierre');
         return;
       }
