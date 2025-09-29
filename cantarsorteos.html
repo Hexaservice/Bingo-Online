@@ -1354,6 +1354,104 @@
     return new Date(Date.now() + (st?.diferencia || 0));
   }
 
+  function obtenerZonaConfigurada(){
+    const st = obtenerServerTime();
+    return st?.zonaIana || null;
+  }
+
+  function extraerPartesDesdeFormato(partes){
+    if(!Array.isArray(partes)) return null;
+    const resultado = {};
+    for(const parte of partes){
+      if(!parte || typeof parte !== 'object') continue;
+      const { type, value } = parte;
+      if(type && type !== 'literal'){ resultado[type] = value; }
+    }
+    return resultado;
+  }
+
+  function obtenerOffsetZonaParaFecha(fecha, zona){
+    if(!(fecha instanceof Date) || isNaN(fecha.getTime()) || !zona) return null;
+    try {
+      const partes = new Intl.DateTimeFormat('en-US', {
+        timeZone: zona,
+        hour12: false,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      }).formatToParts(fecha);
+      const datos = extraerPartesDesdeFormato(partes);
+      if(!datos?.year || !datos?.month || !datos?.day || !datos?.hour || !datos?.minute || !datos?.second){
+        return null;
+      }
+      const iso = `${datos.year}-${datos.month}-${datos.day}T${datos.hour}:${datos.minute}:${datos.second}.000Z`;
+      const fechaZonaComoUtc = new Date(iso);
+      if(isNaN(fechaZonaComoUtc.getTime())) return null;
+      return fechaZonaComoUtc.getTime() - fecha.getTime();
+    } catch (error) {
+      console.error('Error obteniendo offset de zona', error);
+      return null;
+    }
+  }
+
+  function crearFechaEnZona(anio, mes, dia, hora = 0, minuto = 0){
+    if(!isFinite(anio) || !isFinite(mes) || !isFinite(dia)) return null;
+    const zona = obtenerZonaConfigurada();
+    if(!zona){
+      return new Date(anio, (mes || 1) - 1, dia || 1, hora || 0, minuto || 0);
+    }
+    const baseUtc = new Date(Date.UTC(anio, (mes || 1) - 1, dia || 1, hora || 0, minuto || 0));
+    const offset = obtenerOffsetZonaParaFecha(baseUtc, zona);
+    if(typeof offset === 'number' && isFinite(offset)){
+      return new Date(baseUtc.getTime() - offset);
+    }
+    return new Date(anio, (mes || 1) - 1, dia || 1, hora || 0, minuto || 0);
+  }
+
+  function obtenerComponentesFechaZona(fecha){
+    if(!(fecha instanceof Date) || isNaN(fecha.getTime())) return null;
+    const zona = obtenerZonaConfigurada();
+    if(!zona){
+      return {
+        anio: fecha.getFullYear(),
+        mes: fecha.getMonth() + 1,
+        dia: fecha.getDate()
+      };
+    }
+    try {
+      const partes = new Intl.DateTimeFormat('en-US', {
+        timeZone: zona,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).formatToParts(fecha);
+      const datos = extraerPartesDesdeFormato(partes);
+      const anio = Number(datos?.year);
+      const mes = Number(datos?.month);
+      const dia = Number(datos?.day);
+      if(!isFinite(anio) || !isFinite(mes) || !isFinite(dia)){
+        throw new Error('Datos de fecha incompletos');
+      }
+      return { anio, mes, dia };
+    } catch (error) {
+      console.error('Error obteniendo componentes de fecha en zona', error);
+      return {
+        anio: fecha.getFullYear(),
+        mes: fecha.getMonth() + 1,
+        dia: fecha.getDate()
+      };
+    }
+  }
+
+  function construirFechaZonaDesdeComponentes(fechaBase, hora = 0, minuto = 0){
+    const componentes = obtenerComponentesFechaZona(fechaBase);
+    if(!componentes) return null;
+    return crearFechaEnZona(componentes.anio, componentes.mes, componentes.dia, hora, minuto);
+  }
+
   function esModoManual(){
     return modoManual === true;
   }
@@ -1587,12 +1685,26 @@
     if(limpio.includes('/')){
       const [dia, mes, anio] = limpio.split('/').map(num=>parseInt(num,10));
       if([dia, mes, anio].some(n=>isNaN(n))) return null;
-      return new Date(anio, (mes||1)-1, dia||1);
+      return crearFechaEnZona(anio, mes, dia);
+    }
+    if(/^[0-9]{4}-[0-9]{2}-[0-9]{2}t[0-9]{2}:[0-9]{2}(:[0-9]{2})?$/i.test(limpio)){
+      const [fechaParte, horaParteRaw] = limpio.split('T');
+      const [anio, mes, dia] = fechaParte.split('-').map(num=>parseInt(num,10));
+      const horaPartes = horaParteRaw.split(':').map(num=>parseInt(num,10));
+      if([anio, mes, dia, horaPartes[0], horaPartes[1]].some(n=>isNaN(n))) return null;
+      const hora = horaPartes[0] ?? 0;
+      const minuto = horaPartes[1] ?? 0;
+      const segundo = horaPartes[2] ?? 0;
+      const fechaZona = crearFechaEnZona(anio, mes, dia, hora, minuto);
+      if(fechaZona && isFinite(segundo) && segundo){
+        fechaZona.setSeconds(segundo, 0);
+      }
+      return fechaZona;
     }
     if(limpio.includes('-')){
       const [anio, mes, dia] = limpio.split('-').map(num=>parseInt(num,10));
       if([dia, mes, anio].some(n=>isNaN(n))) return null;
-      return new Date(anio, (mes||1)-1, dia||1);
+      return crearFechaEnZona(anio, mes, dia);
     }
     const timestamp = Date.parse(limpio);
     if(!isNaN(timestamp)) return new Date(timestamp);
@@ -1657,9 +1769,10 @@
   function formatearFecha(valor){
     const fecha = obtenerFechaDesdeValor(valor);
     if(!fecha || isNaN(fecha.getTime())) return '';
-    const dia = String(fecha.getDate()).padStart(2,'0');
-    const mes = String(fecha.getMonth()+1).padStart(2,'0');
-    const anio = fecha.getFullYear();
+    const componentes = obtenerComponentesFechaZona(fecha) || {};
+    const dia = String(componentes.dia ?? fecha.getDate()).padStart(2,'0');
+    const mes = String((componentes.mes ?? (fecha.getMonth()+1))).padStart(2,'0');
+    const anio = componentes.anio ?? fecha.getFullYear();
     return `${dia}/${mes}/${anio}`;
   }
 
@@ -1729,10 +1842,10 @@
     if(valorHora){
       const info=obtenerHoraDesdeValor(valorHora);
       if(info){
-        return new Date(fechaBase.getFullYear(),fechaBase.getMonth(),fechaBase.getDate(),info.hora,info.minuto);
+        return construirFechaZonaDesdeComponentes(fechaBase, info.hora, info.minuto);
       }
       if(valorHora instanceof Date && !isNaN(valorHora.getTime())){
-        return new Date(fechaBase.getFullYear(),fechaBase.getMonth(),fechaBase.getDate(),valorHora.getHours(),valorHora.getMinutes());
+        return construirFechaZonaDesdeComponentes(fechaBase, valorHora.getHours(), valorHora.getMinutes());
       }
     }
     const minutosFallback=parseInt(data.cierreMinutos ?? data.cierre ?? data.cierreminutos,10);
@@ -1777,12 +1890,14 @@
     const horaInfo = obtenerHoraDesdeValor(data.hora);
     if(!fechaBase || !horaInfo) return null;
     const { hora, minuto } = horaInfo;
-    return new Date(fechaBase.getFullYear(), fechaBase.getMonth(), fechaBase.getDate(), hora, minuto);
+    return construirFechaZonaDesdeComponentes(fechaBase, hora, minuto);
   }
 
   function truncarFecha(fecha){
     if(!(fecha instanceof Date) || isNaN(fecha.getTime())) return null;
-    return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+    const componentes = obtenerComponentesFechaZona(fecha);
+    if(!componentes) return null;
+    return crearFechaEnZona(componentes.anio, componentes.mes, componentes.dia);
   }
 
   function compararFechasCalendario(a, b){
@@ -1833,9 +1948,7 @@
   function construirFechaConHora(fechaBase, horaInfo){
     if(!(fechaBase instanceof Date) || isNaN(fechaBase.getTime())) return null;
     if(!horaInfo || typeof horaInfo.hora !== 'number' || typeof horaInfo.minuto !== 'number') return null;
-    const fechaCompleta = new Date(fechaBase.getTime());
-    fechaCompleta.setHours(Number(horaInfo.hora), Number(horaInfo.minuto), 0, 0);
-    return fechaCompleta;
+    return construirFechaZonaDesdeComponentes(fechaBase, Number(horaInfo.hora), Number(horaInfo.minuto));
   }
 
   function calcularDiferenciaEnMinutos(ahora, fechaReferencia, horaInfo){
