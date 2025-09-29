@@ -13,21 +13,27 @@ permissions:
   pull-requests: write
 jobs:
   build_and_preview:
-    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.base_ref == matrix.branch }}
-    strategy:
-      matrix:
-        include:
-          - branch: dev
-            channel: dev-preview
-          - branch: staging
-            channel: staging-preview
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-    
-      - uses: FirebaseExtended/action-hosting-deploy@v0
+      - name: Checkout repository
+        if: ${{ github.base_ref == 'dev' || github.base_ref == 'staging' }}
+        uses: actions/checkout@v4
+
+      - name: Deploy to Firebase Hosting (dev)
+        if: ${{ github.base_ref == 'dev' }}
+        uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_231FD }}
           projectId: bingo-online-231fd
-          channelId: ${{ matrix.channel }}
+          channelId: dev-preview
+
+      - name: Deploy to Firebase Hosting (staging)
+        if: ${{ github.base_ref == 'staging' }}
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_231FD }}
+          projectId: bingo-online-231fd
+          channelId: staging-preview
