@@ -2432,54 +2432,94 @@
       horaCierreInfo = obtenerHoraDesdeValor(fechaHoraCierreNormalizada);
     }
 
-    const fechaReferenciaCierre = fechaCierreValida ? fechaCierreBase : (fechaProgramadaValida ? fechaProgramada : null);
-    let fechaHoraCierreComparacion = null;
-    if(fechaReferenciaCierre){
-      fechaHoraCierreComparacion = construirFechaConHora(fechaReferenciaCierre, horaCierreInfo);
+    const horaCierreValida = horaCierreInfo && !isNaN(Number(horaCierreInfo.hora)) && !isNaN(Number(horaCierreInfo.minuto));
+    const candidatosCierre = [];
+    if(fechaCierreValida){
+      candidatosCierre.push({
+        tipoMensaje: 'cierre',
+        fechaCalendario: fechaCierreBase,
+        obtenerFechaHora: ()=> horaCierreValida ? construirFechaConHora(fechaCierreBase, horaCierreInfo) : null,
+        obtenerDiferencia: ()=> horaCierreValida ? calcularDiferenciaEnMinutos(ahora, fechaCierreBase, horaCierreInfo) : null
+      });
+    } else if(fechaProgramadaValida){
+      candidatosCierre.push({
+        tipoMensaje: 'sorteo',
+        fechaCalendario: fechaProgramada,
+        obtenerFechaHora: ()=> horaCierreValida ? construirFechaConHora(fechaProgramada, horaCierreInfo) : null,
+        obtenerDiferencia: ()=> horaCierreValida ? calcularDiferenciaEnMinutos(ahora, fechaProgramada, horaCierreInfo) : null
+      });
     }
-    if(!(fechaHoraCierreComparacion instanceof Date) || isNaN(fechaHoraCierreComparacion.getTime())){
-      if(fechaHoraCierreValida){
-        fechaHoraCierreComparacion = new Date(fechaHoraCierreNormalizada.getTime());
-      } else if(fechaReferenciaCierre instanceof Date && !isNaN(fechaReferenciaCierre.getTime())){
-        fechaHoraCierreComparacion = new Date(fechaReferenciaCierre.getTime());
-      }
+    if(fechaHoraCierreValida){
+      const tipoFallback = fechaCierreValida ? 'cierre' : 'sorteo';
+      candidatosCierre.push({
+        tipoMensaje: tipoFallback,
+        fechaCalendario: fechaHoraCierreNormalizada,
+        obtenerFechaHora: ()=> new Date(fechaHoraCierreNormalizada.getTime()),
+        obtenerDiferencia: ()=> (ahora.getTime() - fechaHoraCierreNormalizada.getTime()) / 60000
+      });
     }
 
-    let diferenciaMinutosCierre = null;
-    if(fechaReferenciaCierre instanceof Date && !isNaN(fechaReferenciaCierre.getTime())){
-      diferenciaMinutosCierre = calcularDiferenciaEnMinutos(ahora, fechaReferenciaCierre, horaCierreInfo);
-    }
-    if(diferenciaMinutosCierre === null && fechaHoraCierreComparacion instanceof Date && !isNaN(fechaHoraCierreComparacion.getTime())){
-      diferenciaMinutosCierre = (ahora.getTime() - fechaHoraCierreComparacion.getTime()) / 60000;
+    let evaluacionCierre = null;
+    for(const candidato of candidatosCierre){
+      let fechaHoraEvaluacion = null;
+      if(typeof candidato.obtenerFechaHora === 'function'){
+        try {
+          fechaHoraEvaluacion = candidato.obtenerFechaHora();
+        } catch (error) {
+          fechaHoraEvaluacion = null;
+        }
+      }
+      if(!(fechaHoraEvaluacion instanceof Date) || isNaN(fechaHoraEvaluacion.getTime())){
+        continue;
+      }
+      let diferenciaMinutos = null;
+      if(typeof candidato.obtenerDiferencia === 'function'){
+        try {
+          diferenciaMinutos = candidato.obtenerDiferencia();
+        } catch (error) {
+          diferenciaMinutos = null;
+        }
+      }
+      if(typeof diferenciaMinutos !== 'number' || isNaN(diferenciaMinutos)){
+        diferenciaMinutos = (ahora.getTime() - fechaHoraEvaluacion.getTime()) / 60000;
+      }
+      if(typeof diferenciaMinutos !== 'number' || isNaN(diferenciaMinutos)){
+        continue;
+      }
+      evaluacionCierre = {
+        tipoMensaje: candidato.tipoMensaje,
+        fechaCalendario: candidato.fechaCalendario,
+        fechaHoraEvaluacion,
+        diferenciaMinutos
+      };
+      break;
     }
 
-    if(fechaReferenciaCierre instanceof Date && !isNaN(fechaReferenciaCierre.getTime())){
-      const comparacionReferencia = compararFechasCalendario(ahora, fechaReferenciaCierre);
-      if(comparacionReferencia === null){
-        alert('No se pudo determinar la fecha actual para validar el cierre.');
-        return;
-      }
-      if(comparacionReferencia < 0){
-        if(fechaCierreValida){
+    if(!evaluacionCierre){
+      const confirmarSinFecha = await preguntarAccionEstado('No se pudo determinar la fecha programada del sorteo. ¿Deseas sellarlo de todos modos?');
+      if(!confirmarSinFecha) return;
+      await ejecutarSellado({ confirmado: true });
+      return;
+    }
+
+    const fechaComparacionBase = evaluacionCierre.fechaCalendario instanceof Date && !isNaN(evaluacionCierre.fechaCalendario.getTime())
+      ? evaluacionCierre.fechaCalendario
+      : evaluacionCierre.fechaHoraEvaluacion;
+    const comparacionCalendario = compararFechasCalendario(ahora, fechaComparacionBase);
+    if(comparacionCalendario === null){
+      alert('No se pudo determinar la fecha actual para validar el cierre.');
+      return;
+    }
+    if(evaluacionCierre.diferenciaMinutos < 0){
+      if(comparacionCalendario < 0){
+        if(evaluacionCierre.tipoMensaje === 'cierre'){
           alert('Aún no es la fecha de cierre del sorteo, no puede ser Sellado');
         } else {
           alert('Aún no es la fecha del sorteo, no puede ser Sellado');
         }
-        return;
-      }
-      if(typeof diferenciaMinutosCierre === 'number' && diferenciaMinutosCierre < 0){
+      } else {
         alert('Hoy es el día del sorteo pero aún no ha llegado la hora de cierre');
-        return;
       }
-    } else if(fechaHoraCierreComparacion instanceof Date && !isNaN(fechaHoraCierreComparacion.getTime())){
-      if(typeof diferenciaMinutosCierre === 'number' && diferenciaMinutosCierre < 0){
-        alert('Hoy es el día del sorteo pero aún no ha llegado la hora de cierre');
-        return;
-      }
-    } else {
-      const confirmarSinFecha = await preguntarAccionEstado('No se pudo determinar la fecha programada del sorteo. ¿Deseas sellarlo de todos modos?');
-      if(!confirmarSinFecha) return;
-      await ejecutarSellado({ confirmado: true });
       return;
     }
 
