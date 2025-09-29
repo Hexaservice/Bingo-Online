@@ -550,13 +550,21 @@
       padding-top: 28px;
       padding-bottom: 28px;
     }
+    .canto-confirm-mensaje {
+      font-family: 'Bangers', cursive;
+      font-size: 1.5rem;
+      color: #0b5394;
+      text-shadow: 0 0 6px rgba(255,255,255,0.8);
+      margin-bottom: 12px;
+    }
     #canto-confirm-valor {
       font-family: 'Bangers', cursive;
-      font-size: 2.4rem;
+      font-size: 3rem;
       font-weight: 700;
       color: #1e3aa8;
-      text-shadow: 0 0 8px rgba(0,0,0,0.15);
-      margin: 6px 0 18px;
+      text-shadow: 0 0 10px rgba(0,0,0,0.2);
+      margin: 0 0 18px;
+      text-transform: uppercase;
     }
     .pdf-confirm-actions {
       display: flex;
@@ -564,6 +572,10 @@
       gap: 12px;
       justify-content: center;
       margin-top: 18px;
+    }
+    .canto-confirm-actions button {
+      font-size: 1.1rem;
+      min-width: 130px;
     }
     .pdf-confirm-actions button {
       padding: 8px 18px;
@@ -876,12 +888,11 @@
       <div id="sorteos-list" style="display:flex;flex-direction:column;gap:6px;"></div>
     </div>
   </div>
-  <div id="canto-confirm-modal" class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="canto-confirm-titulo">
+  <div id="canto-confirm-modal" class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="canto-confirm-mensaje">
     <div class="pdf-confirm-box canto-confirm-box">
-      <h3 id="canto-confirm-titulo">Confirmar canto</h3>
-      <p id="canto-confirm-mensaje">¿Deseas cantar?</p>
+      <p id="canto-confirm-mensaje" class="canto-confirm-mensaje">¿Este es el Canto a guardar?</p>
       <div id="canto-confirm-valor"></div>
-      <div class="pdf-confirm-actions">
+      <div class="pdf-confirm-actions canto-confirm-actions">
         <button id="canto-confirm-aceptar">Aceptar</button>
         <button id="canto-confirm-cancelar" class="secundario">Cancelar</button>
       </div>
@@ -1034,6 +1045,9 @@
     if(cantoConfirmModal){
       cantoConfirmModal.classList.remove('activo');
     }
+    if(cantoConfirmValorEl){
+      cantoConfirmValorEl.textContent = '';
+    }
     const resolver = resolverConfirmacionCanto;
     resolverConfirmacionCanto = null;
     if(typeof resolver === 'function'){
@@ -1043,10 +1057,10 @@
 
   function mostrarConfirmacionCanto(clave){
     if(!cantoConfirmModal){
-      return Promise.resolve(window.confirm(`Confirmas la jugada de ${clave}?`));
+      return Promise.resolve(window.confirm(`¿Este es el canto a guardar?\n${clave}`));
     }
     if(cantoConfirmMensajeEl){
-      cantoConfirmMensajeEl.textContent = '¿Deseas cantar?';
+      cantoConfirmMensajeEl.textContent = '¿Este es el Canto a guardar?';
     }
     if(cantoConfirmValorEl){
       cantoConfirmValorEl.textContent = clave;
@@ -1881,7 +1895,7 @@
       return;
     }
 
-    const validacionesActivas = !esModoManual();
+    const validacionesActivas = true; // Las validaciones visuales aplican en ambos modos
     const opcionesFechaProgramada = validacionesActivas ? { validacionesActivas: true, actualSoloCuandoMayor: true } : undefined;
     const opcionesHoraProgramada = validacionesActivas ? { validacionesActivas: true } : undefined;
     const opcionesFechaCierre = validacionesActivas ? { validacionesActivas: true, actualSoloCuandoMayor: true } : undefined;
