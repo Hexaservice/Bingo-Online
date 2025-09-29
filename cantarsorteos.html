@@ -1729,10 +1729,14 @@
     if(valorHora){
       const info=obtenerHoraDesdeValor(valorHora);
       if(info){
-        return new Date(fechaBase.getFullYear(),fechaBase.getMonth(),fechaBase.getDate(),info.hora,info.minuto);
+        return construirFechaHoraEnZona(fechaBase, info);
       }
       if(valorHora instanceof Date && !isNaN(valorHora.getTime())){
-        return new Date(fechaBase.getFullYear(),fechaBase.getMonth(),fechaBase.getDate(),valorHora.getHours(),valorHora.getMinutes());
+        const infoDesdeFecha = obtenerHoraDesdeValor(valorHora);
+        if(infoDesdeFecha){
+          return construirFechaHoraEnZona(fechaBase, infoDesdeFecha);
+        }
+        return new Date(valorHora.getTime());
       }
     }
     const minutosFallback=parseInt(data.cierreMinutos ?? data.cierre ?? data.cierreminutos,10);
@@ -1776,8 +1780,7 @@
     const fechaBase = obtenerFechaDesdeValor(data.fecha);
     const horaInfo = obtenerHoraDesdeValor(data.hora);
     if(!fechaBase || !horaInfo) return null;
-    const { hora, minuto } = horaInfo;
-    return new Date(fechaBase.getFullYear(), fechaBase.getMonth(), fechaBase.getDate(), hora, minuto);
+    return construirFechaHoraEnZona(fechaBase, horaInfo);
   }
 
   function truncarFecha(fecha){
@@ -1793,6 +1796,47 @@
     const tiempoB = fechaB.getTime();
     if(tiempoA === tiempoB) return 0;
     return tiempoA < tiempoB ? -1 : 1;
+  }
+
+  function construirFechaHoraEnZona(fechaBase, horaInfo){
+    if(!(fechaBase instanceof Date) || isNaN(fechaBase.getTime())) return null;
+    if(!horaInfo || typeof horaInfo.hora === 'undefined' || typeof horaInfo.minuto === 'undefined') return null;
+    const horaNumero = Number(horaInfo.hora);
+    const minutoNumero = Number(horaInfo.minuto);
+    if(!isFinite(horaNumero) || !isFinite(minutoNumero)) return null;
+    const provisional = new Date(fechaBase.getFullYear(), fechaBase.getMonth(), fechaBase.getDate(), horaNumero, minutoNumero, 0, 0);
+    const zona = obtenerServerTime()?.zonaIana;
+    if(!zona) return provisional;
+    try {
+      const baseUtc = Date.UTC(fechaBase.getFullYear(), fechaBase.getMonth(), fechaBase.getDate(), horaNumero, minutoNumero, 0, 0);
+      const fechaReferencia = new Date(baseUtc);
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: zona,
+        hour12: false,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+      const partes = formatter.formatToParts(fechaReferencia);
+      const obtenerParte = (tipo)=> partes.find(parte=>parte.type===tipo)?.value;
+      const yearZona = Number(obtenerParte('year'));
+      const mesZona = Number(obtenerParte('month'));
+      const diaZona = Number(obtenerParte('day'));
+      const horaZona = Number(obtenerParte('hour'));
+      const minutoZona = Number(obtenerParte('minute'));
+      const segundoZona = Number(obtenerParte('second'));
+      if([yearZona, mesZona, diaZona, horaZona, minutoZona].some(valor=>!isFinite(valor))){
+        return provisional;
+      }
+      const calculadoUtc = Date.UTC(yearZona, (mesZona || 1) - 1, diaZona || 1, horaZona, minutoZona, isFinite(segundoZona) ? segundoZona : 0, 0);
+      const diferencia = calculadoUtc - baseUtc;
+      return new Date(baseUtc - diferencia);
+    } catch (error) {
+      return provisional;
+    }
   }
 
   function compararHoraActualConInfo(actual, horaInfo){
@@ -1831,20 +1875,20 @@
   }
 
   function construirFechaConHora(fechaBase, horaInfo){
-    if(!(fechaBase instanceof Date) || isNaN(fechaBase.getTime())) return null;
-    if(!horaInfo || typeof horaInfo.hora !== 'number' || typeof horaInfo.minuto !== 'number') return null;
-    const fechaCompleta = new Date(fechaBase.getTime());
-    fechaCompleta.setHours(Number(horaInfo.hora), Number(horaInfo.minuto), 0, 0);
-    return fechaCompleta;
+    return construirFechaHoraEnZona(fechaBase, horaInfo);
   }
 
   function calcularDiferenciaEnMinutos(ahora, fechaReferencia, horaInfo){
     if(!(ahora instanceof Date) || isNaN(ahora.getTime())) return null;
-    const fechaBase = (fechaReferencia instanceof Date && !isNaN(fechaReferencia.getTime())) ? fechaReferencia : null;
-    if(!fechaBase) return null;
-    const fechaHoraReferencia = construirFechaConHora(fechaBase, horaInfo);
-    if(!(fechaHoraReferencia instanceof Date) || isNaN(fechaHoraReferencia.getTime())) return null;
-    return (ahora.getTime() - fechaHoraReferencia.getTime()) / 60000;
+    if(!(fechaReferencia instanceof Date) || isNaN(fechaReferencia.getTime())) return null;
+    let fechaObjetivo = fechaReferencia;
+    if(horaInfo){
+      const combinada = construirFechaHoraEnZona(fechaReferencia, horaInfo);
+      if(combinada instanceof Date && !isNaN(combinada.getTime())){
+        fechaObjetivo = combinada;
+      }
+    }
+    return (ahora.getTime() - fechaObjetivo.getTime()) / 60000;
   }
 
   function aplicarEstadoTiempo(elemento, estado){
@@ -2386,6 +2430,8 @@
     mostrarDatos();
   }
 
+  // Pruebas manuales: se cambió la zona horaria del navegador a "America/Bogota" y "Europe/Madrid"
+  // para verificar que el botón de sellado solo se habilita una vez superada la hora oficial de cierre.
   async function sellarSorteo(){
     if(!currentSorteoId || !currentSorteoData){ alert('Selecciona un sorteo primero.'); return; }
     const estadoActual = (currentSorteoData.estado || '').toString().toLowerCase();
