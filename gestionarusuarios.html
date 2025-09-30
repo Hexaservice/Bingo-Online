@@ -464,10 +464,20 @@
         if(res.ok){
           alert('Estado actualizado');
           cargarDatos();
-        }else{
-          const err = await res.json().catch(()=>({error:'Error'}));
-          alert('Error: '+(err.message||err.error));
+          return;
         }
+
+        if(res.status === 403){
+          alert('Acceso denegado: solo los roles Superadmin y Administrador pueden modificar el estado de otras cuentas.');
+          return;
+        }
+
+        const err = await res.json().catch(()=>({error:'Error'}));
+        if(res.status === 401){
+          alert('Autenticación requerida: vuelva a iniciar sesión.');
+          return;
+        }
+        alert('Error: '+(err.message||err.error));
       }catch(e){
         alert('No se pudo conectar con el servicio: '+e.message);
       }
