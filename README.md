@@ -43,7 +43,9 @@ variable `UPLOAD_ENDPOINT` exportada en `config.js`. Por defecto apunta a
 definirse la variable de entorno `UPLOAD_ENDPOINT` o asignarse
 `window.UPLOAD_ENDPOINT` antes de cargar los scripts.
 
-Para utilizar el botón de habilitar/deshabilitar usuarios en `gestionarusuarios.html` este servicio debe estar activo y accesible desde la URL indicada. El cliente envía un *ID token* de Firebase, por lo que se debe iniciar sesión con un usuario con rol **Superadmin** para realizar estos cambios.
+Para utilizar el botón de habilitar/deshabilitar usuarios en `gestionarusuarios.html` este servicio debe estar activo y accesible desde la URL indicada. El cliente envía un *ID token* de Firebase y el middleware `verificarToken` comprueba la colección `users/{email}` en Firestore: solo los roles **Superadmin** y **Administrador** pueden invocar `/toggleUser`.
+
+Para otorgar estos permisos puede asignarse el rol directamente desde la consola de Firebase editando el documento correspondiente en `users/{email}` (campo `role`) o incluyendo el correo en la colección `roles` (por ejemplo en `roles/Administrador.emails`). Los scripts `initUsers.js` e `initRoles.js` ofrecen ejemplos de cómo poblar estos datos de manera inicial.
 
 ## Actualización automática de estados de sorteos
 

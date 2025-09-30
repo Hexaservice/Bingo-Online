@@ -29,12 +29,34 @@ const upload = multer({ storage: multer.memoryStorage() });
 async function verificarToken(req, res, next) {
   const authHeader = req.headers.authorization || '';
   const match = authHeader.match(/^Bearer (.+)$/);
-  if (!match) return res.status(401).json({ error: 'No autorizado' });
+  if (!match) {
+    return res.status(401).json({ error: 'No autorizado' });
+  }
+
+  let decoded;
   try {
-    await admin.auth().verifyIdToken(match[1]);
+    decoded = await admin.auth().verifyIdToken(match[1]);
+  } catch (e) {
+    console.error('Error verificando token', e);
+    return res.status(401).json({ error: 'Token inválido' });
+  }
+
+  const email = decoded.email;
+  if (!email) {
+    return res.status(401).json({ error: 'Token sin correo asociado' });
+  }
+
+  try {
+    const doc = await admin.firestore().collection('users').doc(email).get();
+    const role = doc.exists ? doc.data().role : undefined;
+    if (!['Superadmin', 'Administrador'].includes(role)) {
+      return res.status(403).json({ error: 'Acceso restringido a roles administrativos' });
+    }
+    req.user = { email, role };
     next();
   } catch (e) {
-    return res.status(401).json({ error: 'Token inválido' });
+    console.error('Error obteniendo el rol del usuario', e);
+    return res.status(500).json({ error: 'Error verificando permisos', message: e.message });
   }
 }
 
@@ -50,7 +72,9 @@ app.post('/toggleUser', verificarToken, async (req, res) => {
     res.json({ status: 'ok' });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: 'Error actualizando usuario', message: e.message });
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Error actualizando usuario', message: e.message });
+    }
   }
 });
 
