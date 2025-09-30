@@ -38,10 +38,18 @@ npm start
 ```
 
 El formulario de nuevo sorteo obtiene la URL de este servicio desde la
-variable `UPLOAD_ENDPOINT` exportada en `config.js`. Por defecto apunta a
-`http://localhost:3000/upload`. Para entornos distintos a localhost puede
-definirse la variable de entorno `UPLOAD_ENDPOINT` o asignarse
-`window.UPLOAD_ENDPOINT` antes de cargar los scripts.
+variable `UPLOAD_ENDPOINT` exportada en `config.js`. En navegadores que se
+ejecutan bajo HTTPS la URL por defecto se deriva automáticamente del origen
+actual (`${window.location.origin}/upload`) para evitar contenido mixto. En
+otros escenarios el valor por defecto continúa siendo `http://localhost:3000/upload`.
+
+Para despliegues productivos exponga el servicio auxiliar bajo HTTPS y
+defina explícitamente la URL del endpoint, ya sea mediante la variable de
+entorno `UPLOAD_ENDPOINT` (por ejemplo `UPLOAD_ENDPOINT=https://api.midominio.com/upload`)
+o estableciendo `window.UPLOAD_ENDPOINT` antes de cargar los scripts del
+frontend. Esto permite separar el hosting estático del backend de subida y
+garantiza que las páginas servidas por HTTPS no disparen advertencias por
+contenido inseguro.
 
 Para utilizar el botón de habilitar/deshabilitar usuarios en `gestionarusuarios.html` este servicio debe estar activo y accesible desde la URL indicada. El cliente envía un *ID token* de Firebase y el middleware `verificarToken` comprueba la colección `users/{email}` en Firestore: solo los roles **Superadmin** y **Administrador** pueden invocar `/toggleUser`.
 
