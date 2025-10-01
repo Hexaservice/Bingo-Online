@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Superadmin - Bingo Online</title>
+  <title>Acceder como Usuario - Bingo Online</title>
   <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
   <style>
     body {
@@ -33,10 +33,10 @@
       cursor: pointer;
       transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
       margin: 5px;
-    }
-    .view {
-      position: relative;
-      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
     }
     .menu-btn:hover {
       transform: scale(1.05);
@@ -63,9 +63,7 @@
     #user-name, #user-email {
       font-family: Calibri, Arial, sans-serif;
       color: #333;
-      cursor: pointer;
     }
-
     #user-pic {
       width: 40px;
       height: 40px;
@@ -78,7 +76,6 @@
       color: #007bff;
       text-decoration: underline;
     }
-
     .back-btn {
       position: fixed;
       top: 5px;
@@ -91,11 +88,15 @@
       justify-content:center;
       gap:5px;
     }
+    .menu-btn img {
+      width: 40px;
+      height: 40px;
+    }
   </style>
 </head>
 <body>
   <img id="logo-bingo" src="https://i.imgur.com/twjhNtZ.png" alt="logo" />
-  <h2>Menú Superadmin</h2>
+  <h2>Acceder como Usuario</h2>
   <div id="session-info">
     <div id="user-data">
       <div id="user-name"></div>
@@ -105,31 +106,22 @@
     <a href="#" id="logout-link">Cerrar sesión</a>
   </div>
   <div id="main-menu">
-    <button id="acceder-usuario-btn" class="menu-btn">Acceder como Usuario</button>
-    <button id="gestionar-usuarios-btn" class="menu-btn">Gestionar Usuarios</button>
-    <button id="reportes-btn" class="menu-btn">Reportes Generales</button>
+    <button id="admin-btn" class="menu-btn"><img src="https://img.icons8.com/color/48/admin-settings-male.png" alt="Administrador"/>Administrador</button>
+    <button id="collab-btn" class="menu-btn"><img src="https://img.icons8.com/color/48/conference.png" alt="Colaborador"/>Colaborador</button>
+    <button id="player-btn" class="menu-btn"><img src="https://img.icons8.com/color/48/controller.png" alt="Jugador"/>Jugador</button>
   </div>
+  <button id="back-btn" class="menu-btn back-btn">&#9664; Volver</button>
 
-
-
-  <div id="reportes-screen" class="view" style="display:none;">
-    <button id="reportes-back" class="menu-btn back-btn">&#9664; Volver</button>
-    <h3>Reportes Generales</h3>
-    <div id="contenido-reportes"></div>
-  </div>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
-  <script src="auth.js"></script>
+  <script src="js/auth.js"></script>
   <script>
-  ensureAuth('Superadmin');
-  function hideViews(){document.querySelectorAll('.view').forEach(v=>v.style.display='none');}
-  document.getElementById("acceder-usuario-btn").addEventListener("click",()=>{window.location.href="accederusuario.html";});
-  document.getElementById("gestionar-usuarios-btn").addEventListener("click",()=>{window.location.href="gestionarusuarios.html";});
-  document.getElementById('reportes-btn').addEventListener('click',()=>{hideViews();document.getElementById('reportes-screen').style.display='block';});
-  document.getElementById('reportes-back').addEventListener('click',()=>{hideViews();document.getElementById('main-menu').style.display='block';});
-  document.getElementById('user-name').addEventListener('click',()=>{window.location.href='parametros.html';});
-  document.getElementById('user-email').addEventListener('click',()=>{window.location.href='parametros.html';});
+    ensureAuth('Superadmin');
+    document.getElementById('admin-btn').addEventListener('click', () => { window.location.href = 'admin.html'; });
+    document.getElementById('collab-btn').addEventListener('click', () => { window.location.href = 'collab.html'; });
+    document.getElementById('player-btn').addEventListener('click', () => { window.location.href = 'player.html'; });
+    document.getElementById('back-btn').addEventListener('click', () => { window.location.href = 'super.html'; });
   </script>
 </body>
 </html>
