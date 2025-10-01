@@ -13,7 +13,7 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-// ----- Lógica de sincronización de hora (adaptado de scripts/timezone.js) -----
+// ----- Lógica de sincronización de hora (adaptado de public/js/timezone.js) -----
 const serverTime = { zonaIana: '', diferencia: 0 };
 
 function parseZona(zona) {
