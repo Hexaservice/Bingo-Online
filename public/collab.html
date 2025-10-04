@@ -124,6 +124,10 @@
   <script src="js/auth.js"></script>
   <script>
   ensureAuth('Colaborador');
+  const mainMenu=document.getElementById('main-menu');
+  const verificarScreen=document.getElementById('verificar-recargas-screen');
+  const detalleRecarga=document.getElementById('detalle-recarga');
+  let recargaActual=null;
   auth.onAuthStateChanged(async user=>{
     if(!user) return;
     const role = await getUserRole(user);
@@ -136,7 +140,18 @@
   function hideViews(){
     document.querySelectorAll('.view').forEach(v=>v.style.display='none');
   }
-  let recargaActual=null;
+  function mostrarMenuPrincipal(){
+    hideViews();
+    mainMenu.style.display='block';
+    recargaActual=null;
+    detalleRecarga.innerHTML='';
+  }
+  function mostrarGestionRecargas(){
+    hideViews();
+    mainMenu.style.display='none';
+    verificarScreen.style.display='block';
+    cargarRecargas();
+  }
   async function cargarRecargas(){
     const tabla=document.getElementById('tabla-recargas');
     tabla.innerHTML="<tr><th>N° Recarga</th><th>Nombre</th><th>Monto</th><th>Banco Origen</th><th>Referencia</th><th>Fecha</th><th>Estatus</th></tr>";
@@ -156,16 +171,16 @@
     const doc=snap.docs[0];
     recargaActual=doc.id;
     const d=doc.data();
-    document.getElementById('detalle-recarga').innerHTML=`Banco origen: ${d.banco_origen||''}<br>Banco destino: ${d.banco_destino||''}<br>Monto: ${d.monto}<br>Referencia de pago: ${d.referencia}<br>Comentario: ${d.comentario||''}`; }
+    detalleRecarga.innerHTML=`Banco origen: ${d.banco_origen||''}<br>Banco destino: ${d.banco_destino||''}<br>Monto: ${d.monto}<br>Referencia de pago: ${d.referencia}<br>Comentario: ${d.comentario||''}`; }
   async function verificarRecarga(){
     if(!recargaActual) return;
     await db.collection('recargas').doc(recargaActual).update({estatus:'VERIFICADA',colaborador:auth.currentUser.email,gestion:firebase.firestore.FieldValue.serverTimestamp()});
     alert('Verificacion completada exitosamente');
     recargaActual=null;
     await cargarRecargas();
-    document.getElementById('detalle-recarga').innerHTML=''; }
-  document.getElementById('ver-recargas-btn').addEventListener('click',()=>{window.location.href='transacciones.html';});
-  document.getElementById('ver-recargas-back').addEventListener('click',()=>{hideViews();document.getElementById('main-menu').style.display='block';});
+    detalleRecarga.innerHTML=''; }
+  document.getElementById('ver-recargas-btn').addEventListener('click',mostrarGestionRecargas);
+  document.getElementById('ver-recargas-back').addEventListener('click',mostrarMenuPrincipal);
   document.getElementById('cargar-recarga-btn').addEventListener('click',cargarRecargaSeleccion);
   document.getElementById('verificar-recarga-btn').addEventListener('click',verificarRecarga);
   </script>

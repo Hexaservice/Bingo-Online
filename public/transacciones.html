@@ -167,6 +167,20 @@
   <script>
     ensureAuth('Colaborador');
     initServerTime();
+    function volverConFallback(){
+      if(window.history.length>1){
+        window.history.back();
+        return;
+      }
+      const role=(window.currentRole)||'';
+      if(role==='Administrador'){
+        window.location.href='admin.html';
+      }else if(role==='Superadmin'){
+        window.location.href='super.html';
+      }else{
+        window.location.href='collab.html';
+      }
+    }
     const transRef=db.collection('transacciones');
     const datosRec=[];const datosRet=[];
     function loadRefCookies(){
@@ -610,7 +624,7 @@
     document.getElementById('filtro-ret-estado').addEventListener('change',e=>{filtrosRet.estado=e.target.value;renderRet();});
     actualizarPendientes();
     setInterval(actualizarPendientes,10000);
-    document.getElementById('volver-btn').addEventListener('click',()=>{history.back();});
+    document.getElementById('volver-btn').addEventListener('click',volverConFallback);
     actualizarArchivarRecBtn();
     actualizarArchivarRetBtn();
     cargarBancos();
