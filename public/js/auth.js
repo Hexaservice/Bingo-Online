@@ -286,6 +286,44 @@ function redirectByRole(role){
   }
 }
 
+function setupSuperadminExit(buttonSelector = '#salir-super-btn', redirect = 'super.html'){
+  if(!hasWindow()) return;
+  initFirebase()
+    .then(()=>{
+      const button = typeof buttonSelector === 'string' ? document.querySelector(buttonSelector) : buttonSelector;
+      if(!button) return;
+      if(button.dataset.superExitReady === 'true') return;
+      button.dataset.superExitReady = 'true';
+      const bindRedirect = ()=>{
+        if(button.dataset.superExitBound === 'true') return;
+        button.addEventListener('click', ()=>{ window.location.href = redirect; });
+        button.dataset.superExitBound = 'true';
+      };
+      auth.onAuthStateChanged(async user=>{
+        if(!user){
+          button.style.display = 'none';
+          return;
+        }
+        try{
+          const role = await getUserRole(user);
+          if(role === 'Superadmin'){
+            bindRedirect();
+            button.style.display = 'flex';
+            button.style.backgroundColor = '#d32f2f';
+            button.style.borderColor = '#8b0000';
+          }else{
+            button.style.display = 'none';
+          }
+        }catch(err){
+          console.error('No se pudo determinar si el usuario es Superadmin', err);
+        }
+      });
+    })
+    .catch(err=>{
+      console.error('No se pudo configurar el botón de retorno a Superadmin', err);
+    });
+}
+
 function ensureAuth(roleExpected){
   initFirebase()
     .then(() => {
@@ -341,4 +379,4 @@ function startUserStatusWatcher(){
   },60000);
 }
 
-if (typeof module !== "undefined") { module.exports = { redirectByRole, ensureAuth }; }
+if (typeof module !== "undefined") { module.exports = { redirectByRole, ensureAuth, setupSuperadminExit }; }
