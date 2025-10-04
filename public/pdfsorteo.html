@@ -42,24 +42,40 @@
       #salir-btn { width: 40px; }
       #salir-btn .label { display: none; }
     }
-    #generar-pdf-btn {
+    #acciones-fixed {
       position: fixed;
       top: 10px;
       right: 10px;
+      display: flex;
+      gap: 10px;
+      z-index: 1001;
+    }
+    #acciones-fixed button {
       padding: 10px 18px;
       font-family: 'Bangers', cursive;
       font-size: 1.1rem;
       border-radius: 12px;
       border: 4px solid #FFD700;
-      background: linear-gradient(#008c3a, #66d17a);
       color: #ffffff;
       text-shadow: 1px 1px 2px #000;
       cursor: pointer;
       box-shadow: 0 0 10px rgba(0,0,0,0.3);
-      display: none;
-      z-index: 1001;
+      transition: transform 0.3s, box-shadow 0.3s;
     }
-    #generar-pdf-btn:hover { transform: scale(1.05); }
+    #acciones-fixed button:hover { transform: scale(1.05); }
+    #acciones-fixed button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    #generar-cartones-btn {
+      background: linear-gradient(#005bb5, #33a0ff);
+    }
+    #generar-pdf-btn {
+      background: linear-gradient(#008c3a, #66d17a);
+      display: none;
+    }
     #pdf-wrapper {
       max-width: 900px;
       margin: 0 auto;
@@ -224,6 +240,8 @@
       gap: 12px;
       z-index: 1200;
     }
+    #loading-overlay { display: none; }
+    #loading-overlay.activo { display: flex; }
     .spinner {
       width: 50px;
       height: 50px;
@@ -236,15 +254,26 @@
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
     }
+    .cartones-placeholder {
+      grid-column: 1 / -1;
+      font-family: 'Poppins', sans-serif;
+      font-size: 1rem;
+      color: #1a1a1a;
+      text-align: center;
+      padding: 20px 10px;
+    }
   </style>
 </head>
 <body>
   <div id="loading-overlay">
     <div class="spinner"></div>
-    <div id="loading-text">Generando cartones del sorteo por favor espera</div>
+    <div id="loading-text">Preparando información del sorteo, por favor espera</div>
   </div>
   <button id="salir-btn"><span class="tri">&#9664;</span><span class="label">Salir</span></button>
-  <button id="generar-pdf-btn">Generar PDF</button>
+  <div id="acciones-fixed">
+    <button id="generar-cartones-btn">Generar cartones</button>
+    <button id="generar-pdf-btn">Generar PDF</button>
+  </div>
   <div id="pdf-wrapper">
     <img id="logo" src="https://i.imgur.com/twjhNtZ.png" alt="Bingo Online">
     <div id="info-basica">
@@ -280,8 +309,10 @@
   }
 
   const salirBtn = document.getElementById('salir-btn');
+  const generarCartonesBtn = document.getElementById('generar-cartones-btn');
   const pdfBtn = document.getElementById('generar-pdf-btn');
   const loadingOverlay = document.getElementById('loading-overlay');
+  const loadingText = document.getElementById('loading-text');
   const nombreEl = document.getElementById('nombre-sorteo');
   const tipoEl = document.getElementById('tipo-sorteo');
   const fechaEl = document.getElementById('fecha-sorteo');
@@ -294,11 +325,28 @@
   let formasData = [];
   let cartonesData = [];
   let pdfFileName = '';
+  let cartonesCargados = false;
 
   const coloresFormas = ['#006400', '#b8860b', '#00008b', '#4b0082', '#8b4513', '#d2691e'];
 
   salirBtn.addEventListener('click', ()=>{ window.location.href = 'cantarsorteos.html'; });
+  if(generarCartonesBtn){ generarCartonesBtn.disabled = true; }
+  if(generarCartonesBtn){ generarCartonesBtn.addEventListener('click', manejarGenerarCartones); }
   pdfBtn.addEventListener('click', generarPDF);
+
+  function mostrarLoading(mensaje){
+    if(loadingText && mensaje){ loadingText.textContent = mensaje; }
+    if(loadingOverlay){ loadingOverlay.classList.add('activo'); }
+  }
+
+  function ocultarLoading(){
+    if(loadingOverlay){ loadingOverlay.classList.remove('activo'); }
+  }
+
+  function mostrarMensajeCartonesPendientes(){
+    if(!cartonesGrid) return;
+    cartonesGrid.innerHTML = '<div class="cartones-placeholder">Haz clic en "Generar cartones" para cargar los cartones del sorteo.</div>';
+  }
 
   function formatearFecha(fecha){
     if(!fecha) return '';
@@ -418,6 +466,10 @@
 
   function renderCartones(){
     cartonesGrid.innerHTML = '';
+    if(!cartonesData.length){
+      cartonesGrid.innerHTML = '<div class="cartones-placeholder">No se encontraron cartones generados para este sorteo.</div>';
+      return;
+    }
     cartonesData.sort((a,b)=> (Number(a.cartonNum) || 0) - (Number(b.cartonNum) || 0));
     cartonesData.forEach(data=>{
       const box = document.createElement('div');
@@ -443,7 +495,8 @@
     });
   }
 
-  async function cargarDatos(){
+  async function cargarDatosBasicos(){
+    mostrarLoading('Cargando información del sorteo, por favor espera');
     try {
       const sorteoDoc = await db.collection('sorteos').doc(sorteoId).get();
       if(!sorteoDoc.exists){
@@ -463,24 +516,50 @@
       formasData = [];
       formasSnap.forEach(doc=>formasData.push(doc.data()));
       renderFormas();
-
-      const cartonesSnap = await db.collection('CartonJugado').where('sorteoId','==',sorteoId).get();
-      cartonesData = [];
-      cartonesSnap.forEach(doc=>cartonesData.push(doc.data()));
-      renderCartones();
-
-      pdfBtn.style.display = 'block';
+      mostrarMensajeCartonesPendientes();
+      if(generarCartonesBtn){ generarCartonesBtn.disabled = false; }
     } catch (err) {
       console.error('Error cargando datos', err);
       alert('Ocurrió un error cargando la información del sorteo.');
       window.location.href = 'cantarsorteos.html';
     } finally {
-      loadingOverlay.style.display = 'none';
+      ocultarLoading();
     }
+  }
+
+  async function cargarCartones(){
+    mostrarLoading('Generando cartones del sorteo, por favor espera');
+    try {
+      const cartonesSnap = await db.collection('CartonJugado').where('sorteoId','==',sorteoId).get();
+      cartonesData = [];
+      cartonesSnap.forEach(doc=>cartonesData.push(doc.data()));
+      renderCartones();
+      cartonesCargados = true;
+      pdfBtn.style.display = 'block';
+      if(generarCartonesBtn){ generarCartonesBtn.textContent = 'Regenerar cartones'; }
+    } catch (err) {
+      cartonesCargados = false;
+      console.error('Error cargando cartones', err);
+      alert('Ocurrió un error al generar los cartones del sorteo.');
+      mostrarMensajeCartonesPendientes();
+      pdfBtn.style.display = 'none';
+    } finally {
+      ocultarLoading();
+    }
+  }
+
+  async function manejarGenerarCartones(){
+    if(!sorteoData){ alert('La información del sorteo aún no está disponible.'); return; }
+    if(!generarCartonesBtn) return;
+    if(generarCartonesBtn.disabled) return;
+    generarCartonesBtn.disabled = true;
+    await cargarCartones();
+    generarCartonesBtn.disabled = false;
   }
 
   function generarPDF(){
     if(!sorteoData){ return; }
+    if(!cartonesCargados){ alert('Primero debes generar los cartones del sorteo.'); return; }
     const tituloOriginal = document.title;
     const nombreArchivo = pdfFileName || construirNombreArchivo();
     document.title = nombreArchivo;
@@ -492,7 +571,7 @@
     window.requestAnimationFrame(()=>window.print());
   }
 
-  cargarDatos();
+  cargarDatosBasicos();
   </script>
 </body>
 </html>
