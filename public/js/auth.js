@@ -1,30 +1,93 @@
 let app, auth, db, provider, appName = 'BingOnline';
 const DISABLED_MSG = "Tu cuenta ha sido deshabilitada, Motivado posiblemente a que has incumplido una o más clausulas en nuestros Terminos y condiciones. Contacta con un administrador del sistema si necesitas información.";
-function initFirebase(){
-  const firebaseConfig =
-    (typeof window !== 'undefined' && window.firebaseConfig) ||
-    (typeof window !== 'undefined' && window.__FIREBASE_CONFIG__) ||
-    null;
+let firebaseInitPromise = null;
+let firebaseConfigLoadPromise = null;
 
-  if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
-    throw new Error('Firebase config no disponible. Genere public/firebase-config.js antes de cargar auth.js.');
+function hasWindow(){
+  return typeof window !== 'undefined';
+}
+
+function getConfigFromWindow(){
+  if(!hasWindow()) return null;
+  const cfg = window.firebaseConfig || window.__FIREBASE_CONFIG__;
+  if(cfg && Object.keys(cfg).length > 0) return cfg;
+  return null;
+}
+
+function ensureFirebaseConfigScript(){
+  if(!hasWindow()) return Promise.resolve();
+  if(getConfigFromWindow()) return Promise.resolve();
+  if(!firebaseConfigLoadPromise){
+    firebaseConfigLoadPromise = new Promise((resolve, reject)=>{
+      if(typeof document === 'undefined'){
+        resolve();
+        return;
+      }
+      const existing = document.querySelector('script[data-firebase-config]');
+      if(existing){
+        if(getConfigFromWindow()){
+          resolve();
+          return;
+        }
+        existing.addEventListener('load', ()=>resolve(), { once: true });
+        existing.addEventListener('error', ()=>reject(new Error('No se pudo cargar firebase-config.js')), { once: true });
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'firebase-config.js';
+      script.async = false;
+      script.dataset.firebaseConfig = 'true';
+      script.onload = ()=>resolve();
+      script.onerror = ()=>reject(new Error('No se pudo cargar firebase-config.js'));
+      document.head.appendChild(script);
+    });
   }
-  app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
-  db = firebase.firestore();
-  auth = firebase.auth();
-  provider = new firebase.auth.GoogleAuthProvider();
-  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+  return firebaseConfigLoadPromise;
 }
 
-try {
-  initFirebase();
-} catch (e) {
-  console.error('No se pudo inicializar Firebase al cargar auth.js', e);
+async function initFirebase(){
+  if(app) return app;
+  if(firebaseInitPromise) return firebaseInitPromise;
+
+  firebaseInitPromise = (async ()=>{
+    if(typeof firebase === 'undefined'){
+      throw new Error('Firebase SDK no disponible.');
+    }
+    try{
+      await ensureFirebaseConfigScript();
+    }catch(loadErr){
+      console.error('No se pudo cargar firebase-config.js', loadErr);
+      throw loadErr;
+    }
+
+    const firebaseConfig = getConfigFromWindow();
+    if (!firebaseConfig) {
+      throw new Error('Firebase config no disponible. Genere public/firebase-config.js antes de cargar auth.js.');
+    }
+    app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    auth = firebase.auth();
+    provider = new firebase.auth.GoogleAuthProvider();
+    await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+    return app;
+  })();
+
+  return firebaseInitPromise;
 }
-initAppName();
+
+initFirebase()
+  .then(() => initAppName())
+  .catch(e => {
+    console.error('No se pudo inicializar Firebase al cargar auth.js', e);
+  });
 overrideDialogs();
 
 async function initAppName(){
+  try{
+    await initFirebase();
+  }catch(e){
+    return;
+  }
   try{
     const doc = await db.collection('Variablesglobales').doc('Parametros').get();
     if(doc.exists && doc.data().Aplicacion){
@@ -120,14 +183,12 @@ function overrideDialogs(){
 }
 
 async function loginGoogle(){
-  if(!app){
-    try{
-      initFirebase();
-    }catch(e){
-      console.error('No se pudo inicializar Firebase', e);
-      alert('Error de inicialización de Firebase');
-      return;
-    }
+  try {
+    await initFirebase();
+  } catch(initErr){
+    console.error('No se pudo inicializar Firebase', initErr);
+    alert('Error de inicialización de Firebase');
+    return;
   }
   try {
     await auth.signInWithPopup(provider);
@@ -158,6 +219,12 @@ function logout(){
 
 async function handleRedirect(){
   try {
+    await initFirebase();
+  }catch(initErr){
+    console.error('No se pudo inicializar Firebase al procesar el inicio de sesión con redirección', initErr);
+    return;
+  }
+  try {
     const result = await auth.getRedirectResult();
     if(result.user){
       const role = await getUserRole(result.user);
@@ -172,6 +239,12 @@ async function handleRedirect(){
 }
 
 async function getUserRole(user){
+  try{
+    await initFirebase();
+  }catch(e){
+    console.error('No se pudo inicializar Firebase al obtener el rol de usuario', e);
+    throw e;
+  }
   let persistentRole = null;
   try{
     const rolesSnap = await db.collection('roles').get();
@@ -214,32 +287,41 @@ function redirectByRole(role){
 }
 
 function ensureAuth(roleExpected){
-  initFirebase();
-  auth.onAuthStateChanged(async user => {
-    if(!user){ window.location.href='index.html'; return; }
-    const role = await getUserRole(user);
-    if(roleExpected && role !== roleExpected && role !== 'Superadmin'){
-      redirectByRole(role);
-      return;
-    }
-    window.currentRole = role;
-    const nameEl = document.getElementById('user-name');
-    if (nameEl) nameEl.textContent = user.displayName;
-    const emailEl = document.getElementById('user-email');
-    if (emailEl) emailEl.textContent = user.email;
-    const picEl = document.getElementById('user-pic');
-    if (picEl) picEl.src = user.photoURL;
-    const infoEl = document.getElementById('session-info');
-    if (infoEl) infoEl.style.display = 'flex';
-    const logoutEl = document.getElementById('logout-link');
-    if (logoutEl) {
-      logoutEl.addEventListener('click', e => {
-        e.preventDefault();
-        logout();
+  initFirebase()
+    .then(() => {
+      auth.onAuthStateChanged(async user => {
+        if(!user){ window.location.href='index.html'; return; }
+        const role = await getUserRole(user);
+        if(roleExpected && role !== roleExpected && role !== 'Superadmin'){
+          redirectByRole(role);
+          return;
+        }
+        window.currentRole = role;
+        const nameEl = document.getElementById('user-name');
+        if (nameEl) nameEl.textContent = user.displayName;
+        const emailEl = document.getElementById('user-email');
+        if (emailEl) emailEl.textContent = user.email;
+        const picEl = document.getElementById('user-pic');
+        if (picEl) picEl.src = user.photoURL;
+        const infoEl = document.getElementById('session-info');
+        if (infoEl) infoEl.style.display = 'flex';
+        const logoutEl = document.getElementById('logout-link');
+        if (logoutEl) {
+          logoutEl.addEventListener('click', e => {
+            e.preventDefault();
+            logout();
+          });
+        }
+        startUserStatusWatcher();
       });
-    }
-    startUserStatusWatcher();
-  });
+    })
+    .catch(err => {
+      console.error('No se pudo iniciar la autenticación', err);
+      alert('Error de inicialización de Firebase. Intente más tarde.');
+      if(hasWindow()){
+        window.location.href = 'index.html';
+      }
+    });
 }
 
 let statusWatcher = null;
