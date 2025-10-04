@@ -71,11 +71,35 @@ Puede programarse con `cron` del sistema o desplegarse como una Cloud Function c
 
 El archivo `index.html` contiene toda la lógica de la aplicación. Sólo es necesario servirlo desde cualquier servidor web estático. El inicio de sesión se realiza con cuentas de Google y se redirige automáticamente al menú correspondiente según el rol almacenado en Firestore.
 
+### Configuración de `firebase-config`
+
+El repositorio incluye la plantilla `public/firebase-config.template.js`. Antes de ejecutar el sitio debe copiarse a `public/firebase-config.js` y reemplazar los marcadores `__FIREBASE_*__` por los valores reales de Firebase:
+
+```bash
+cp public/firebase-config.template.js public/firebase-config.js
+```
+
+Luego edite el archivo resultante y actualice cada propiedad (`apiKey`, `authDomain`, `databaseURL`, `projectId`, `storageBucket`, `messagingSenderId`, `appId`). Este archivo contiene credenciales sensibles y está excluido del control de versiones mediante `.gitignore`.
+
 ### Dominio y cookies
 
 A partir de las últimas versiones de los navegadores se bloquean las cookies de terceros por defecto. Si la aplicación se aloja en un dominio distinto al configurado en `authDomain` (por ejemplo GitHub Pages), Firebase no puede completar el inicio de sesión y la página queda cargando indefinidamente.
 
 Para evitarlo, despliegue el sitio en Firebase Hosting utilizando el dominio del proyecto (`bingo-online-231fd.web.app` o un dominio personalizado asociado). Así las cookies son del mismo sitio y la autenticación funciona de forma correcta.
+
+### Despliegues automáticos (GitHub Actions)
+
+Los flujos definidos en `.github/workflows/` generan `public/firebase-config.js` a partir de la plantilla antes de invocar a Firebase Hosting. Configure los siguientes secretos en el repositorio para que la sustitución se realice correctamente:
+
+- `FIREBASE_WEB_API_KEY`
+- `FIREBASE_AUTH_DOMAIN`
+- `FIREBASE_DATABASE_URL`
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_STORAGE_BUCKET`
+- `FIREBASE_MESSAGING_SENDER_ID`
+- `FIREBASE_APP_ID`
+
+Cada secreto debe contener el valor correspondiente del proyecto de Firebase. Si utiliza otras herramientas de despliegue, replique el mismo proceso de copiado y reemplazo de marcadores antes de publicar los archivos.
 
 ## Directrices de desarrollo
 
