@@ -147,6 +147,28 @@
     .valor-cierre {
       font-size: 1.05rem;
     }
+    #tabla-fechas .fila-datos-sorteo td {
+      background-color: #ffffff;
+    }
+    #tabla-fechas .fila-datos-sorteo td:first-child {
+      border-top-left-radius: 6px;
+      border-bottom-left-radius: 6px;
+    }
+    #tabla-fechas .fila-datos-sorteo td:last-child {
+      border-top-right-radius: 6px;
+      border-bottom-right-radius: 6px;
+    }
+    #tabla-fechas .fila-datos-sorteo .celda-valor span {
+      display: inline-block;
+    }
+    @keyframes pulso-destacado {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+    .fila-datos-sorteo.en-animacion .celda-icono span,
+    .fila-datos-sorteo.en-animacion .celda-valor span {
+      animation: pulso-destacado 1.6s ease-in-out infinite;
+    }
     .valor-programado {
       font-family: 'Bangers', cursive;
       color: #0f2a0f;
@@ -797,7 +819,7 @@
                 <span id="hora-cierre" class="valor-cierre estado-tiempo"></span>
               </td>
             </tr>
-            <tr class="fila-fecha">
+            <tr id="fila-programada" class="fila-fecha fila-datos-sorteo">
               <td class="celda-icono">
                 <span class="icono-emoji" aria-hidden="true">📅</span>
               </td>
@@ -941,6 +963,7 @@
   const horaProgramadaEl = document.getElementById('hora-programada');
   const fechaActualValorEl = document.getElementById('fecha-actual');
   const horaActualValorEl = document.getElementById('hora-actual');
+  const filaProgramada = document.getElementById('fila-programada');
   const filaCierre = document.getElementById('fila-cierre');
   const fechaCierreEl = document.getElementById('fecha-cierre');
   const horaCierreEl = document.getElementById('hora-cierre');
@@ -1962,6 +1985,15 @@
     else elemento.classList.remove('resaltado-actual');
   }
 
+  function actualizarAnimacionFilaProgramada(){
+    if(!filaProgramada) return;
+    const estadoActual = (currentSorteoData && currentSorteoData.estado) ? currentSorteoData.estado.toString().toLowerCase() : '';
+    const estaJugando = estadoActual === 'jugando';
+    const fechaEnAzul = fechaProgramadaEl && fechaProgramadaEl.classList.contains('estado-tiempo-actual');
+    const horaEnAzul = horaProgramadaEl && horaProgramadaEl.classList.contains('estado-tiempo-actual');
+    filaProgramada.classList.toggle('en-animacion', Boolean(estaJugando && fechaEnAzul && horaEnAzul));
+  }
+
   function actualizarVisibilidadFilaCierre(fechaTexto, horaTexto){
     if(!filaCierre) return;
     const fechaValida = typeof fechaTexto === 'string' ? fechaTexto.trim() : '';
@@ -1989,6 +2021,7 @@
       aplicarEstadoTiempo(horaCierreEl, 'estado-tiempo-sin-dato');
       aplicarEstadoTiempo(fechaActualValorEl, 'estado-tiempo-actual');
       aplicarEstadoTiempo(horaActualValorEl, 'estado-tiempo-actual');
+      actualizarAnimacionFilaProgramada();
       return;
     }
 
@@ -2040,6 +2073,8 @@
     aplicarResaltadoTiempo(horaProgramadaEl, resaltarHoraSorteo);
     aplicarResaltadoTiempo(fechaCierreEl, resaltarFechaCierre);
     aplicarResaltadoTiempo(horaCierreEl, resaltarHoraCierre);
+
+    actualizarAnimacionFilaProgramada();
   }
 
   function obtenerNombreSorteoActual(){
