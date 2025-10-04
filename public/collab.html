@@ -90,7 +90,7 @@
       justify-content:center;
       gap:5px;
     }
-    #salir-super-btn { background: red; }
+    #salir-super-btn { background: red; border:4px solid orange; }
   </style>
 </head>
 <body>
@@ -109,72 +109,16 @@
     <button id="ver-recargas-btn" class="menu-btn">Gestionar transferencias</button>
   </div>
 
-  <div id="verificar-recargas-screen" class="view" style="display:none;">
-    <button id="ver-recargas-back" class="menu-btn back-btn">&#9664; Volver</button>
-    <h3 style="color:orange;text-shadow:1px 1px 2px black;">Solicitudes Recargas Actuales: <span id="recargas-pendientes">0</span> Solicitudes</h3>
-    <table id="tabla-recargas" style="width:90%;font-size:0.8rem;"></table>
-    <button id="cargar-recarga-btn" class="menu-btn">Cargar solicitud</button>
-    <div id="detalle-recarga" style="margin-top:10px;text-align:left;font-size:0.9rem;"></div>
-    <button id="verificar-recarga-btn" class="menu-btn">Verificar</button>
-  </div>
-
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
   <script src="js/auth.js"></script>
   <script>
   ensureAuth('Colaborador');
-  const mainMenu=document.getElementById('main-menu');
-  const verificarScreen=document.getElementById('verificar-recargas-screen');
-  const detalleRecarga=document.getElementById('detalle-recarga');
-  let recargaActual=null;
   setupSuperadminExit('#salir-super-btn');
-  function hideViews(){
-    document.querySelectorAll('.view').forEach(v=>v.style.display='none');
-  }
-  function mostrarMenuPrincipal(){
-    hideViews();
-    mainMenu.style.display='block';
-    recargaActual=null;
-    detalleRecarga.innerHTML='';
-  }
-  function mostrarGestionRecargas(){
-    hideViews();
-    mainMenu.style.display='none';
-    verificarScreen.style.display='block';
-    cargarRecargas();
-  }
-  async function cargarRecargas(){
-    const tabla=document.getElementById('tabla-recargas');
-    tabla.innerHTML="<tr><th>N° Recarga</th><th>Nombre</th><th>Monto</th><th>Banco Origen</th><th>Referencia</th><th>Fecha</th><th>Estatus</th></tr>";
-    const snap=await db.collection('recargas').orderBy('timestamp','desc').get();
-    let pendientes=0;
-    snap.forEach(doc=>{
-      const d=doc.data();
-      const tr=document.createElement('tr');
-      tr.dataset.id=doc.id;
-      tr.innerHTML=`<td>${doc.id}</td><td>${d.nombre||''} ${d.apellido||''}</td><td>${d.monto||''}</td><td>${d.banco_origen||''}</td><td>${d.referencia||''}</td><td>${d.fecha||''}</td><td>${d.estatus}</td>`;
-      tabla.appendChild(tr);
-      if(d.estatus==='PENDIENTE') pendientes++;});
-    document.getElementById('recargas-pendientes').textContent=pendientes; }
-  async function cargarRecargaSeleccion(){
-    const snap=await db.collection('recargas').where('estatus','==','PENDIENTE').limit(1).get();
-    if(snap.empty){alert('No hay solicitudes pendientes');return;}
-    const doc=snap.docs[0];
-    recargaActual=doc.id;
-    const d=doc.data();
-    detalleRecarga.innerHTML=`Banco origen: ${d.banco_origen||''}<br>Banco destino: ${d.banco_destino||''}<br>Monto: ${d.monto}<br>Referencia de pago: ${d.referencia}<br>Comentario: ${d.comentario||''}`; }
-  async function verificarRecarga(){
-    if(!recargaActual) return;
-    await db.collection('recargas').doc(recargaActual).update({estatus:'VERIFICADA',colaborador:auth.currentUser.email,gestion:firebase.firestore.FieldValue.serverTimestamp()});
-    alert('Verificacion completada exitosamente');
-    recargaActual=null;
-    await cargarRecargas();
-    detalleRecarga.innerHTML=''; }
-  document.getElementById('ver-recargas-btn').addEventListener('click',mostrarGestionRecargas);
-  document.getElementById('ver-recargas-back').addEventListener('click',mostrarMenuPrincipal);
-  document.getElementById('cargar-recarga-btn').addEventListener('click',cargarRecargaSeleccion);
-  document.getElementById('verificar-recarga-btn').addEventListener('click',verificarRecarga);
+  document.getElementById('ver-recargas-btn').addEventListener('click',()=>{
+    window.location.href='transacciones.html';
+  });
   </script>
 </body>
 </html>
