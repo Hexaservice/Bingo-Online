@@ -1,5 +1,6 @@
 // Copie este archivo a public/firebase-config.js y reemplace los valores
 // de los marcadores antes de desplegar.
+// Configuración validada para el proyecto bingo-online-231fd.
 window.__FIREBASE_CONFIG__ = {
   apiKey: "AIzaSyBztIl46s-vOOxrUVDilJNSN6zuzldeUWI",
   authDomain: "bingo-online-231fd.firebaseapp.com",
