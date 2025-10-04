@@ -1,15 +1,14 @@
 let app, auth, db, provider, appName = 'BingOnline';
 const DISABLED_MSG = "Tu cuenta ha sido deshabilitada, Motivado posiblemente a que has incumplido una o más clausulas en nuestros Terminos y condiciones. Contacta con un administrador del sistema si necesitas información.";
 function initFirebase(){
-  const firebaseConfig = {
-    apiKey: "AIzaSyBztIl46s-vOOxrUVDilJNSN6zuzldeUWI",
-    authDomain: "bingo-online-231fd.firebaseapp.com",
-    databaseURL: "https://bingo-online-231fd-default-rtdb.firebaseio.com",
-    projectId: "bingo-online-231fd",
-    storageBucket: "bingo-online-231fd.appspot.com",
-    messagingSenderId: "455917034653",
-    appId: "1:455917034653:web:ef3f7a1d14be86a1580874"
-  };
+  const firebaseConfig =
+    (typeof window !== 'undefined' && window.firebaseConfig) ||
+    (typeof window !== 'undefined' && window.__FIREBASE_CONFIG__) ||
+    null;
+
+  if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
+    throw new Error('Firebase config no disponible. Genere public/firebase-config.js antes de cargar auth.js.');
+  }
   app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
   db = firebase.firestore();
   auth = firebase.auth();
@@ -17,7 +16,11 @@ function initFirebase(){
   auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 }
 
-initFirebase();
+try {
+  initFirebase();
+} catch (e) {
+  console.error('No se pudo inicializar Firebase al cargar auth.js', e);
+}
 initAppName();
 overrideDialogs();
 
