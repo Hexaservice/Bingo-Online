@@ -438,43 +438,45 @@
       });
     });
 
-    auth.onAuthStateChanged(async user => {
-      if(!user) return;
-      cargarBancosBilletera();
-      cargarBancosBingo();
-      const paramDoc = await db.collection('Variablesglobales').doc('Parametros').get();
-      if(paramDoc.exists){
-        porcentajeRetiro = parseFloat(paramDoc.data().porcentajeretiro) || 0;
-        porcentajeAdministra = parseFloat(paramDoc.data().porcentajeadministra) || 0;
-        document.getElementById('porcentaje-retiro').textContent = porcentajeRetiro;
-        document.getElementById('porcentaje-admin').textContent = porcentajeAdministra;
-        actualizarMontoNeto();
-      }
-      const billeteraRef = db.collection('Billetera').doc(user.email);
-      const doc = await billeteraRef.get();
-      if(doc.exists){
-        const data = doc.data();
-        const valorEl=document.getElementById('creditos-valor');
-        valorEl.textContent=data.creditos||0;
-        valorEl.className=data.creditos>0?'verde':'rojo';
-        document.getElementById('cartones-valor').textContent = data.CartonesGratis || 0;
-        document.getElementById('cedula').value = data.cedula || '';
-        document.getElementById('pagomovil').value = data.pagomovil || '';
-        document.getElementById('banco').value = data.banco || '';
-        document.getElementById('cuenta').value = data.cuenta || '';
-        if(data.tipoCuenta){
-          const r=document.querySelector(`input[name='tipo-cuenta'][value='${data.tipoCuenta}']`);
-          if(r) r.checked=true;
+    initFirebase().then(() => {
+      auth.onAuthStateChanged(async user => {
+        if(!user) return;
+        cargarBancosBilletera();
+        cargarBancosBingo();
+        const paramDoc = await db.collection('Variablesglobales').doc('Parametros').get();
+        if(paramDoc.exists){
+          porcentajeRetiro = parseFloat(paramDoc.data().porcentajeretiro) || 0;
+          porcentajeAdministra = parseFloat(paramDoc.data().porcentajeadministra) || 0;
+          document.getElementById('porcentaje-retiro').textContent = porcentajeRetiro;
+          document.getElementById('porcentaje-admin').textContent = porcentajeAdministra;
+          actualizarMontoNeto();
         }
-        document.getElementById('banco-retiro').textContent = 'Banco donde recibirás: '+(data.banco||'');
-      } else {
-        await billeteraRef.set({creditos:0, CartonesGratis:0});
-        document.getElementById('creditos-valor').textContent='0';
-        document.getElementById('creditos-valor').className='rojo';
-        document.getElementById('cartones-valor').textContent='0';
-        document.getElementById('banco-retiro').textContent='Banco donde recibirás:';
-      }
-      cargarTransacciones();
+        const billeteraRef = db.collection('Billetera').doc(user.email);
+        const doc = await billeteraRef.get();
+        if(doc.exists){
+          const data = doc.data();
+          const valorEl=document.getElementById('creditos-valor');
+          valorEl.textContent=data.creditos||0;
+          valorEl.className=data.creditos>0?'verde':'rojo';
+          document.getElementById('cartones-valor').textContent = data.CartonesGratis || 0;
+          document.getElementById('cedula').value = data.cedula || '';
+          document.getElementById('pagomovil').value = data.pagomovil || '';
+          document.getElementById('banco').value = data.banco || '';
+          document.getElementById('cuenta').value = data.cuenta || '';
+          if(data.tipoCuenta){
+            const r=document.querySelector(`input[name='tipo-cuenta'][value='${data.tipoCuenta}']`);
+            if(r) r.checked=true;
+          }
+          document.getElementById('banco-retiro').textContent = 'Banco donde recibirás: '+(data.banco||'');
+        } else {
+          await billeteraRef.set({creditos:0, CartonesGratis:0});
+          document.getElementById('creditos-valor').textContent='0';
+          document.getElementById('creditos-valor').className='rojo';
+          document.getElementById('cartones-valor').textContent='0';
+          document.getElementById('banco-retiro').textContent='Banco donde recibirás:';
+        }
+        cargarTransacciones();
+      });
     });
 
     document.getElementById('guardar-datos').addEventListener('click', async () => {
@@ -749,21 +751,6 @@
 
     document.getElementById('volver-btn').addEventListener('click',()=>{
       window.location.href='player.html';
-    });
-
-    const camposLabels=[
-      {campo:'banco',label:'label-banco'},
-      {campo:'cuenta',label:'label-cuenta'},
-      {campo:'cedula',label:'label-cedula'},
-      {campo:'pagomovil',label:'label-pagomovil'}
-    ];
-    camposLabels.forEach(({campo,label})=>{
-      const c=document.getElementById(campo);
-      const l=document.getElementById(label);
-      function actualizar(){l.style.display=c.value?'block':'none';}
-      c.addEventListener('input',actualizar);
-      c.addEventListener('change',actualizar);
-      actualizar();
     });
 
     </script>
