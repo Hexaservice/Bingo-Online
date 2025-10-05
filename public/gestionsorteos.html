@@ -225,10 +225,13 @@
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
   <script src="js/auth.js"></script>
   <script>
-  ensureAuth('Administrador');
   const datos=[];
   const tbody=document.querySelector('#tabla-sorteos tbody');
   let mostrarArch=false;
+  const formasPorSorteo=new Map();
+  let cacheSorteos=[];
+  let unsubscribeSorteos=null;
+  let unsubscribeFormas=null;
 
   function actualizarArchivarBtn(){
     const btn=document.getElementById('archivar-btn');
@@ -247,27 +250,51 @@
     }
   }
 
-  async function cargarDatos(){
-    const [sorteosSnap, formasSnap] = await Promise.all([
-      db.collection('sorteos').get(),
-      db.collection('formas').get()
-    ]);
-    const mapaFormas={};
-    formasSnap.forEach(f=>{
-      const d=f.data();
-      const sid=d.sorteoId;
-      if(!mapaFormas[sid]) mapaFormas[sid]=[];
-      mapaFormas[sid].push(d);
-    });
+  function recomponerDatos(){
     datos.length=0;
-    sorteosSnap.forEach(doc=>{
-      const info={id:doc.id,...doc.data()};
+    cacheSorteos.forEach(item=>{
+      const info={id:item.id,...item.data};
       info.condicion=info.condicion||'VISIBLE';
-      info.formas=mapaFormas[doc.id]||[];
+      const formas=formasPorSorteo.get(item.id)||[];
+      info.formas=formas.slice();
       datos.push(info);
     });
-    datos.sort((a,b)=>{const fa=a.fecha||'';const fb=b.fecha||'';return fa>fb?-1:fa<fb?1:0;});
+    datos.sort((a,b)=>{
+      const fa=a.fecha||'';
+      const fb=b.fecha||'';
+      return fa>fb?-1:fa<fb?1:0;
+    });
     filtrar();
+  }
+
+  function iniciarMonitoreo(){
+    if(unsubscribeFormas) unsubscribeFormas();
+    if(unsubscribeSorteos) unsubscribeSorteos();
+
+    unsubscribeFormas=db.collection('formas').onSnapshot(snapshot=>{
+      formasPorSorteo.clear();
+      snapshot.forEach(doc=>{
+        const data=doc.data();
+        const sid=data.sorteoId;
+        if(!sid) return;
+        if(!formasPorSorteo.has(sid)) formasPorSorteo.set(sid,[]);
+        formasPorSorteo.get(sid).push(data);
+      });
+      recomponerDatos();
+    },err=>{
+      console.error('Error al escuchar las formas de premios',err);
+    });
+
+    unsubscribeSorteos=db.collection('sorteos').onSnapshot(snapshot=>{
+      cacheSorteos=[];
+      snapshot.forEach(doc=>{
+        cacheSorteos.push({id:doc.id,data:doc.data()});
+      });
+      recomponerDatos();
+    },err=>{
+      console.error('Error al escuchar los sorteos',err);
+      alert('No se pudieron cargar los sorteos. Intenta nuevamente más tarde.');
+    });
   }
 
   function renderTabla(lista){
@@ -364,7 +391,6 @@
     const batch=db.batch();
     ids.forEach(id=>batch.update(db.collection('sorteos').doc(id),{estado:'Inactivo'}));
     await batch.commit();
-    cargarDatos();
   });
   document.getElementById('archivar-btn').addEventListener('click',async ()=>{
     const chks=document.querySelectorAll('#tabla-sorteos input[type=checkbox]:checked');
@@ -387,7 +413,6 @@
       ids.forEach(id=>batch.update(db.collection('sorteos').doc(id),{condicion:'ARCHIVADO'}));
     }
     await batch.commit();
-    cargarDatos();
   });
 
   function formatoHora12(h){
@@ -460,7 +485,22 @@
 
   document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='admin.html';});
   actualizarArchivarBtn();
-  cargarDatos();
+  window.addEventListener('beforeunload',()=>{
+    if(unsubscribeFormas) unsubscribeFormas();
+    if(unsubscribeSorteos) unsubscribeSorteos();
+  });
+
+  (async ()=>{
+    try{
+      await initFirebase();
+    }catch(err){
+      console.error('No se pudo inicializar Firebase en gestionsorteos.html',err);
+      alert('No se pudieron cargar los datos de sorteos.');
+      return;
+    }
+    ensureAuth('Administrador');
+    iniciarMonitoreo();
+  })();
   </script>
 </body>
 </html>
