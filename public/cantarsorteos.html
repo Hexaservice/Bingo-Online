@@ -635,6 +635,10 @@
     .sorteo-item.sellado { background: linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(168,168,168,0.95)); color: #1f1f1f; }
     .sorteo-item.jugando { background: linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(106,13,173,0.92)); color: #2d0f44; }
     .sorteo-item.finalizado { background: linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(139,69,19,0.92)); color: #40210a; }
+    .sorteo-item.seleccionado {
+      box-shadow: 0 0 0 3px rgba(30,144,255,0.6);
+      transform: translateY(-1px);
+    }
     .sorteo-header {
       display: flex;
       justify-content: flex-start;
@@ -1027,6 +1031,8 @@
   let cantoConfirmCancelarBtn = document.getElementById('canto-confirm-cancelar');
   let resolverConfirmacionEstado = null;
   let resolverConfirmacionCanto = null;
+  let resolverAuthListo = null;
+  const authListoPromesa = new Promise(resolve=>{ resolverAuthListo = resolve; });
 
   function manejarAceptarConfirmacionCanto(){
     cerrarConfirmacionCanto(true);
@@ -1243,7 +1249,14 @@
       restauracionPendiente = false;
       return false;
     }
-    const guardado = getCookie(sorteoCookieKey);
+    let guardado = getCookie(sorteoCookieKey);
+    if((!guardado || guardado === 'undefined') && sorteoCookieKey !== sorteoCookieDefaultKey){
+      const respaldoGeneral = getCookie(sorteoCookieDefaultKey);
+      if(respaldoGeneral && respaldoGeneral !== 'undefined'){
+        setCookie(sorteoCookieKey, respaldoGeneral);
+        guardado = respaldoGeneral;
+      }
+    }
     if(!guardado){
       restauracionPendiente = false;
       return false;
@@ -1283,6 +1296,7 @@
     if(!user){
       sorteoCookieKey = sorteoCookieDefaultKey;
       restauracionPendiente = false;
+      if(resolverAuthListo){ resolverAuthListo(); resolverAuthListo = null; }
       return;
     }
     const nuevoKey = `cantarsorteos_${user.email.replace(/[^\w]/g,'_')}`;
@@ -1297,6 +1311,7 @@
     if(intentarRestaurarSorteo()){
       restauracionPendiente = false;
     }
+    if(resolverAuthListo){ resolverAuthListo(); resolverAuthListo = null; }
   });
 
   document.getElementById('salir-btn').addEventListener('click',()=>{ window.location.href='admin.html'; });
@@ -2350,10 +2365,13 @@
       if(fechaA && fechaB && fechaA.getTime() !== fechaB.getTime()) return fechaA - fechaB;
       return (a.nombre || '').localeCompare(b.nombre || '');
     });
+    const idSeleccionActual = currentSorteoId;
+    let itemSeleccionado = null;
     ordenados.forEach((s, idx)=>{
       const div = document.createElement('div');
       const estadoLower = (s.estado || '').toString().toLowerCase().replace(/\s+/g,'-');
       div.className = ['sorteo-item', estadoLower].filter(Boolean).join(' ');
+      div.dataset.sorteoId = s.id;
       const header = document.createElement('div');
       header.className = 'sorteo-header';
       const tipoTexto = (s.tipo || '').toString().toLowerCase();
@@ -2412,12 +2430,25 @@
       corner.appendChild(cornerCantos);
       corner.appendChild(cornerEstado);
       div.appendChild(corner);
+      if(idSeleccionActual && idSeleccionActual === s.id){
+        div.classList.add('seleccionado');
+        itemSeleccionado = div;
+      }
       div.addEventListener('click',()=>{
         seleccionarSorteo(s.id);
         document.getElementById('sorteos-modal').style.display = 'none';
       });
       cont.appendChild(div);
     });
+    if(itemSeleccionado){
+      setTimeout(()=>{
+        try {
+          itemSeleccionado.scrollIntoView({ block: 'center' });
+        } catch (err) {
+          console.warn('No fue posible centrar el sorteo seleccionado en la lista.', err);
+        }
+      }, 0);
+    }
     document.getElementById('sorteos-modal').style.display = 'flex';
   }
 
@@ -2807,8 +2838,14 @@
   }
 
   async function inicializar(){
-    await cargarSorteos();
+    try {
+      const esperaAuth = authListoPromesa.catch(()=>{});
+      await Promise.all([esperaAuth, cargarSorteos()]);
+    } catch (err) {
+      console.error('Error inicializando los sorteos', err);
+    }
     if(!intentarRestaurarSorteo()){
+      restauracionPendiente = false;
       mostrarDatos();
     }
   }
