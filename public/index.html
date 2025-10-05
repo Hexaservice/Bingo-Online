@@ -96,13 +96,19 @@
   <script src="js/auth.js"></script>
   <script src="js/timezone.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       if(typeof firebase === 'undefined'){
         console.error('Firebase no se cargó correctamente');
         return;
       }
-      initFirebase();
-      handleRedirect();
+      try{
+        await initFirebase();
+      }catch(e){
+        console.error('No se pudo inicializar Firebase al cargar index.html', e);
+        alert('No se pudo inicializar la sesión. Inténtalo nuevamente.');
+        return;
+      }
+      await handleRedirect();
       initFechaHora('fecha-hora');
       const termsContainer=document.getElementById('terms-container');
       const registerContainer=document.getElementById('register-container');
@@ -129,23 +135,26 @@
         });
       }
       document.getElementById('terms-link').addEventListener('click', e => { e.preventDefault(); window.location.href='terminos.html'; });
-    auth.onAuthStateChanged(async user => {
-      if(user){
-        const doc = await db.collection('users').doc(user.email).get();
-        if(doc.exists){
-          termsContainer.style.display='none';
-          registerContainer.style.display='none';
-          const role = doc.data().role || await getUserRole(user);
-          redirectByRole(role);
-        }else{
-          termsContainer.style.display='block';
-          registerContainer.style.display='block';
-          alert('Usuario no registrado, para poder jugar al Bingo debes registrarte con tu cuenta de Google y aceptando los Terminos y condiciones');
-          window.location.href='registrarse.html';
-          return;
+      auth.onAuthStateChanged(async user => {
+        if(user){
+          try{
+            const doc = await db.collection('users').doc(user.email).get();
+            if(doc.exists){
+              termsContainer.style.display='none';
+              registerContainer.style.display='none';
+              const role = doc.data().role || await getUserRole(user);
+              redirectByRole(role);
+            }else{
+              termsContainer.style.display='block';
+              registerContainer.style.display='block';
+              alert('Usuario no registrado, para poder jugar al Bingo debes registrarte con tu cuenta de Google y aceptando los Terminos y condiciones');
+              window.location.href='registrarse.html';
+            }
+          }catch(err){
+            console.error('No se pudo validar la sesión existente', err);
+          }
         }
-      }
-    });
+      });
     // Cerrar el manejador de DOMContentLoaded
   });
   </script>
