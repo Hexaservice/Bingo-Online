@@ -101,6 +101,10 @@ Los flujos definidos en `.github/workflows/` generan `public/firebase-config.js`
 
 Cada secreto debe contener el valor correspondiente del proyecto de Firebase. Si utiliza otras herramientas de despliegue, replique el mismo proceso de copiado y reemplazo de marcadores antes de publicar los archivos.
 
+### Protección con Firebase App Check
+
+Para reforzar la seguridad de Firestore y Storage se incorporó la inicialización automatizada de [Firebase App Check](docs/app-check-setup.md). Copie `public/firebase-app-check.template.js` a `public/firebase-app-check.js`, reemplácelo con el site key emitido por la consola de Firebase y despliegue las reglas actualizadas (`firestore.rules` y `storage.rules`). El archivo `public/js/auth.js` carga el SDK de App Check y bloquea el uso del frontend mientras no exista una configuración válida, asegurando que solo navegadores registrados puedan emitir operaciones contra el backend.
+
 ## Directrices de desarrollo
 
 - Toda obtención o cálculo de fechas y horas debe realizarse empleando el huso horario definido para el despliegue del sistema.
