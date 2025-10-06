@@ -1,0 +1,22 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function hasValidAppCheck() {
+      return request.auth != null &&
+             request.auth.token.firebase != null &&
+             request.auth.token.firebase['app_check'] == true;
+    }
+
+    function isSystemRequest() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if isSystemRequest() || (isSignedIn() && hasValidAppCheck());
+    }
+  }
+}
