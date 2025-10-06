@@ -65,7 +65,12 @@ async function initFirebase(){
       throw new Error('Firebase config no disponible. Genere public/firebase-config.js antes de cargar auth.js.');
     }
     app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore();
+    const rawDatabaseId =
+      firebaseConfig.firestoreDatabaseId && typeof firebaseConfig.firestoreDatabaseId === 'string'
+        ? firebaseConfig.firestoreDatabaseId.trim()
+        : '';
+    const databaseId = /^(default|\(default\))$/i.test(rawDatabaseId) ? '' : rawDatabaseId;
+    db = databaseId ? firebase.firestore(app, databaseId) : firebase.firestore(app);
     auth = firebase.auth();
     provider = new firebase.auth.GoogleAuthProvider();
     await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);

@@ -20,6 +20,11 @@ if (!admin.apps.length) {
   });
 }
 
+const rawDatabaseId = (process.env.FIRESTORE_DATABASE_ID || '').trim();
+const databaseId = /^(default|\(default\))$/i.test(rawDatabaseId) ? '' : rawDatabaseId;
+const adminApp = admin.app();
+const db = databaseId ? admin.firestore(adminApp, databaseId) : admin.firestore(adminApp);
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -47,7 +52,7 @@ async function verificarToken(req, res, next) {
   }
 
   try {
-    const doc = await admin.firestore().collection('users').doc(email).get();
+    const doc = await db.collection('users').doc(email).get();
     const role = doc.exists ? doc.data().role : undefined;
     if (!['Superadmin', 'Administrador'].includes(role)) {
       return res.status(403).json({ error: 'Acceso restringido a roles administrativos' });
@@ -68,7 +73,7 @@ app.post('/toggleUser', verificarToken, async (req, res) => {
   try {
     const user = await admin.auth().getUserByEmail(email);
     await admin.auth().updateUser(user.uid, { disabled });
-    await admin.firestore().collection('users').doc(email).set({ disabled }, { merge: true });
+    await db.collection('users').doc(email).set({ disabled }, { merge: true });
     res.json({ status: 'ok' });
   } catch (e) {
     console.error(e);

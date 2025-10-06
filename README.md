@@ -79,7 +79,7 @@ El repositorio incluye la plantilla `public/firebase-config.template.js`. Antes 
 cp public/firebase-config.template.js public/firebase-config.js
 ```
 
-Luego edite el archivo resultante y actualice cada propiedad (`apiKey`, `authDomain`, `databaseURL`, `projectId`, `storageBucket`, `messagingSenderId`, `appId`). Este archivo contiene credenciales sensibles y está excluido del control de versiones mediante `.gitignore`.
+Luego edite el archivo resultante y actualice cada propiedad (`apiKey`, `authDomain`, `databaseURL`, `projectId`, `storageBucket`, `messagingSenderId`, `appId`, `firestoreDatabaseId`). Este archivo contiene credenciales sensibles y está excluido del control de versiones mediante `.gitignore`.
 
 ### Dominio y cookies
 
@@ -98,8 +98,15 @@ Los flujos definidos en `.github/workflows/` generan `public/firebase-config.js`
 - `FIREBASE_STORAGE_BUCKET`
 - `FIREBASE_MESSAGING_SENDER_ID`
 - `FIREBASE_APP_ID`
+- `FIREBASE_FIRESTORE_DB`
 
 Cada secreto debe contener el valor correspondiente del proyecto de Firebase. Si utiliza otras herramientas de despliegue, replique el mismo proceso de copiado y reemplazo de marcadores antes de publicar los archivos.
+
+### Selección de base de datos de Firestore por entorno
+
+El proyecto utiliza el campo `firestoreDatabaseId` definido en `public/firebase-config.js` para elegir la instancia de Cloud Firestore que debe consumir cada despliegue. Para los entornos que usan la base `(default)` puede dejar el valor tal cual o una cadena vacía; para bases alternativas indique el ID configurado en Firebase (`devdb`, `stgdb`, etc.).
+
+Los scripts de Node que interactúan con Firestore (`initBanks.js`, `initRoles.js`, `initUsers.js`, `cronActualizarEstadosSorteos.js` y `uploadServer.js`) leen la variable de entorno `FIRESTORE_DATABASE_ID`. Ajuste su valor antes de ejecutar cada tarea o pipeline para que la escritura se realice en la base correspondiente al entorno (`dev`, `stg`, `prod`).
 
 ## Directrices de desarrollo
 

@@ -11,7 +11,10 @@ admin.initializeApp({
   credential: admin.credential.cert(require(credentialsPath)),
 });
 
-const db = admin.firestore();
+const rawDatabaseId = (process.env.FIRESTORE_DATABASE_ID || '').trim();
+const databaseId = /^(default|\(default\))$/i.test(rawDatabaseId) ? '' : rawDatabaseId;
+const app = admin.app();
+const db = databaseId ? admin.firestore(app, databaseId) : admin.firestore(app);
 
 async function main() {
   const rolesRef = db.collection('roles');
