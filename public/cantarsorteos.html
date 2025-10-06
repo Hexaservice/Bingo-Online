@@ -2363,6 +2363,19 @@
     actualizarTablaEstado();
   }
 
+  async function asegurarDbListo(){
+    if(db){
+      return db;
+    }
+    if(typeof initFirebase === 'function'){
+      await initFirebase();
+    }
+    if(!db){
+      throw new Error('Firestore no se inicializó correctamente.');
+    }
+    return db;
+  }
+
   async function cargarSorteos(opciones = {}){
     const forzar = opciones.forzar === true;
     const ahora = Date.now();
@@ -2382,6 +2395,7 @@
     }
     const ejecucion = (async()=>{
       try {
+        await asegurarDbListo();
         const snap = await db.collection('sorteos').get();
         const pendientesPdf = [];
         const cantosPromises = [];
@@ -2465,10 +2479,10 @@
         } else if(!currentSorteoId && sorteos.length){
           intentarRestaurarSorteo();
         }
+        ultimaCargaSorteos = Date.now();
       } catch (err) {
         console.error('Error cargando sorteos', err);
-      } finally {
-        ultimaCargaSorteos = Date.now();
+        throw err;
       }
       return sorteos;
     })();
@@ -2480,7 +2494,13 @@
   }
 
   async function abrirModalSorteos(){
-    await cargarSorteos();
+    try {
+      await cargarSorteos();
+    } catch (err) {
+      console.error('No se pudieron cargar los sorteos al abrir el selector', err);
+      mensajeEl.textContent = 'No se pudieron cargar los sorteos. Inténtalo nuevamente.';
+      return;
+    }
     if(!sorteos.length){
       mensajeEl.textContent = 'No hay sorteos disponibles en este momento.';
       return;
@@ -3022,15 +3042,34 @@
   }
 
   async function inicializar(){
+    let primerIntentoFallido = false;
+    let mensajePostCarga = '';
     try {
+      await initFirebase();
       const esperaAuth = authListoPromesa.catch(()=>{});
       await Promise.all([esperaAuth, cargarSorteos()]);
     } catch (err) {
+      primerIntentoFallido = true;
       console.error('Error inicializando los sorteos', err);
+      mensajeEl.textContent = 'No se pudieron cargar los sorteos en el primer intento. Reintentando...';
+    }
+    if(primerIntentoFallido){
+      try {
+        await initFirebase();
+        await cargarSorteos({ forzar: true });
+        mensajePostCarga = 'Los sorteos se cargaron tras un reintento.';
+      } catch (reintentoErr) {
+        console.error('Error recargando los sorteos tras fallo inicial', reintentoErr);
+        mensajeEl.textContent = 'No se pudieron cargar los sorteos. Refresca la página o inténtalo más tarde.';
+        return;
+      }
     }
     if(!intentarRestaurarSorteo()){
       restauracionPendiente = false;
       mostrarDatos();
+    }
+    if(mensajePostCarga){
+      mensajeEl.textContent = mensajePostCarga;
     }
   }
 
