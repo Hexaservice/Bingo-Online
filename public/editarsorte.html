@@ -629,6 +629,11 @@ firebase.auth().onAuthStateChanged(u=>{
     if(!hora){alert('Debes elegir una hora para el Sorteo');horaInput.focus();return;}
     if(!cierreVal){alert('Elije una hora de cierre previo de Jugadas');cierreInput.focus();return;}
     if(!valorVal){alert('Coloca un valor para el cartón');valorInput.focus();return;}
+    if(cierreVal && hora && cierreVal>hora){
+      alert('La hora de cierre no puede ser mayor a la hora del sorteo');
+      cierreInput.focus();
+      return;
+    }
     const cierre=cierreVal;
     const maxcartongratis=parseInt(maxcgVal)||0;
     const valor=parseFloat(valorVal);
@@ -681,7 +686,7 @@ firebase.auth().onAuthStateChanged(u=>{
       alert('Sorteo editado correctamente');
       if(cookieKey) setCookie(cookieKey,'',0);
       localStorage.removeItem('editSorteoId');
-      setTimeout(()=>{window.location.href='gestionsorteos.html';},100);
+      window.location.href='gestionsorteos.html';
     }catch(e){console.error(e);alert('Error al actualizar');}
     });
   </script>
