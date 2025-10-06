@@ -1069,6 +1069,9 @@
   let restauracionPendiente = false;
   let pdfDestinoUrl = '';
   let pdfAccionEnCurso = false;
+  let promesaCargaSorteos = null;
+  let ultimaCargaSorteos = 0;
+  const INTERVALO_CACHE_SORTEOS_MS = 30000;
   let modoManual = false;
   let infoTiempoSorteo = {
     fecha: null,
@@ -2368,81 +2371,120 @@
     actualizarTablaEstado();
   }
 
-  async function cargarSorteos(){
-    sorteos = [];
-    try {
-      const snap = await db.collection('sorteos').get();
-      const pendientesPdf = [];
-      const cantosPromises = [];
-      const formasPromises = [];
-      const registrosMap = new Map();
-      snap.forEach(doc=>{
-        const d = doc.data();
-        const condicionRaw = (d?.condicion || '').toString().trim().toUpperCase();
-        if(condicionRaw === 'ARCHIVADO') return;
-        const registro = { id: doc.id, ...d, pdf: d.pdf || 'no', cantos: [], formas: [] };
-        registro.condicion = condicionRaw || 'VISIBLE';
-        registro.nombre = registro.nombre || 'Sorteo';
-        registro.estado = registro.estado || 'Activo';
-        registro.fecha = registro.fecha || '';
-        registro.fechacierre = registro.fechacierre || registro.fecha || '';
-        registro.hora = registro.hora || '';
-        registro.tipo = registro.tipo || '';
-        registro.valorCarton = registro.valorCarton || 0;
-        registro.cartonesjugando = registro.cartonesjugando || 0;
-        registro.cartonesgratisjugando = registro.cartonesgratisjugando || 0;
-        registro.totalPremios = registro.totalPremios || 0;
-        if((registro.horacierre === undefined || registro.horacierre === null || registro.horacierre==='') && registro.cierre){
-          registro.horacierre = registro.cierre;
-        }
-        registrosMap.set(doc.id, registro);
-        if(typeof d.pdf === 'undefined' || d.pdf === null || d.pdf === ''){
-          pendientesPdf.push(doc.id);
-        }
-        cantosPromises.push(
-          db.collection('cantos').doc(doc.id).get().then(cantoDoc=>{
-            if(!cantoDoc.exists){
-              registro.cantos = [];
-              return;
-            }
-            const dataCantos = cantoDoc.data() || {};
-            registro.cantos = Array.isArray(dataCantos.numeros) ? dataCantos.numeros : [];
-          }).catch(err=>console.error('Error cargando cantos de sorteo', err))
-        );
-        formasPromises.push(
-          db.collection('formas').where('sorteoId','==',doc.id).get().then(formasSnap=>{
-            const arr = [];
-            formasSnap.forEach(fdoc=>{
-              const dataForma = fdoc.data() || {};
-              arr.push({
-                idx: dataForma.idx || dataForma.indice || arr.length + 1,
-                nombre: dataForma.nombre || '',
-                porcentaje: dataForma.porcentaje ?? dataForma.porcentajePremio ?? 0,
-                cartonesGratis: dataForma.cartonesGratis ?? (dataForma.cartones || 0)
-              });
-            });
-            arr.sort((a,b)=>(parseInt(a.idx,10)||0)-(parseInt(b.idx,10)||0));
-            registro.formas = arr;
-          }).catch(err=>console.error('Error cargando formas de sorteo', err))
-        );
-      });
-      sorteos = Array.from(registrosMap.values());
-      if(pendientesPdf.length){
-        await Promise.all(pendientesPdf.map(id=>
-          db.collection('sorteos').doc(id).set({ pdf: 'no' }, { merge: true })
-        )).catch(err=>console.error('Error asegurando pdf en sorteos', err));
+  async function cargarSorteos(opciones = {}){
+    const forzar = opciones.forzar === true;
+    const ahora = Date.now();
+    if(!forzar){
+      if(promesaCargaSorteos){
+        return promesaCargaSorteos;
       }
-      const espera = [];
-      if(cantosPromises.length) espera.push(Promise.all(cantosPromises));
-      if(formasPromises.length) espera.push(Promise.all(formasPromises));
-      if(espera.length) await Promise.all(espera);
-      if(restauracionPendiente){
-        const restaurado = intentarRestaurarSorteo();
-        restauracionPendiente = !restaurado;
+      const usoCacheValido = sorteos.length && (ahora - ultimaCargaSorteos) < INTERVALO_CACHE_SORTEOS_MS;
+      if(usoCacheValido){
+        if(restauracionPendiente){
+          if(intentarRestaurarSorteo()){
+            restauracionPendiente = false;
+          }
+        }
+        return sorteos;
       }
-    } catch (err) {
-      console.error('Error cargando sorteos', err);
     }
+    const ejecucion = (async()=>{
+      try {
+        const snap = await db.collection('sorteos').get();
+        const pendientesPdf = [];
+        const cantosPromises = [];
+        const formasPromises = [];
+        const registrosMap = new Map();
+        snap.forEach(doc=>{
+          const d = doc.data() || {};
+          const condicionRaw = (d?.condicion || '').toString().trim().toUpperCase();
+          if(condicionRaw === 'ARCHIVADO') return;
+          const registro = { id: doc.id, ...d, pdf: d.pdf || 'no', cantos: [], formas: [] };
+          registro.condicion = condicionRaw || 'VISIBLE';
+          registro.nombre = registro.nombre || 'Sorteo';
+          registro.estado = registro.estado || 'Activo';
+          registro.fecha = registro.fecha || '';
+          registro.fechacierre = registro.fechacierre || registro.fecha || '';
+          registro.hora = registro.hora || '';
+          registro.tipo = registro.tipo || '';
+          registro.valorCarton = registro.valorCarton || 0;
+          registro.cartonesjugando = registro.cartonesjugando || 0;
+          registro.cartonesgratisjugando = registro.cartonesgratisjugando || 0;
+          registro.totalPremios = registro.totalPremios || 0;
+          if((registro.horacierre === undefined || registro.horacierre === null || registro.horacierre==='') && registro.cierre){
+            registro.horacierre = registro.cierre;
+          }
+          registrosMap.set(doc.id, registro);
+          if(typeof d.pdf === 'undefined' || d.pdf === null || d.pdf === ''){
+            pendientesPdf.push(doc.id);
+          }
+          cantosPromises.push(
+            db.collection('cantos').doc(doc.id).get().then(cantoDoc=>{
+              if(!cantoDoc.exists){
+                registro.cantos = [];
+                return;
+              }
+              const dataCantos = cantoDoc.data() || {};
+              registro.cantos = Array.isArray(dataCantos.numeros) ? dataCantos.numeros : [];
+            }).catch(err=>console.error('Error cargando cantos de sorteo', err))
+          );
+          formasPromises.push(
+            db.collection('formas').where('sorteoId','==',doc.id).get().then(formasSnap=>{
+              const arr = [];
+              formasSnap.forEach(fdoc=>{
+                const dataForma = fdoc.data() || {};
+                arr.push({
+                  idx: dataForma.idx || dataForma.indice || arr.length + 1,
+                  nombre: dataForma.nombre || '',
+                  porcentaje: dataForma.porcentaje ?? dataForma.porcentajePremio ?? 0,
+                  cartonesGratis: dataForma.cartonesGratis ?? (dataForma.cartones || 0)
+                });
+              });
+              arr.sort((a,b)=>(parseInt(a.idx,10)||0)-(parseInt(b.idx,10)||0));
+              registro.formas = arr;
+            }).catch(err=>console.error('Error cargando formas de sorteo', err))
+          );
+        });
+        sorteos = Array.from(registrosMap.values());
+        if(pendientesPdf.length){
+          Promise.allSettled(pendientesPdf.map(id=>
+            db.collection('sorteos').doc(id).set({ pdf: 'no' }, { merge: true })
+          )).catch(err=>console.error('Error asegurando pdf en sorteos', err));
+        }
+        const cargasDetalles = [];
+        if(cantosPromises.length) cargasDetalles.push(Promise.allSettled(cantosPromises));
+        if(formasPromises.length) cargasDetalles.push(Promise.allSettled(formasPromises));
+        if(cargasDetalles.length){
+          Promise.allSettled(cargasDetalles).then(()=>{
+            if(!currentSorteoId) return;
+            const actualizado = sorteos.find(s=>s.id===currentSorteoId);
+            if(!actualizado) return;
+            if(currentSorteoData){
+              currentSorteoData = { ...currentSorteoData, ...actualizado };
+              if(Array.isArray(actualizado.cantos)){ currentSorteoData.cantos = [...actualizado.cantos]; }
+            }
+            mostrarDatos();
+          }).catch(err=>console.error('Error finalizando carga de sorteos', err));
+        }
+        if(restauracionPendiente){
+          if(intentarRestaurarSorteo()){
+            restauracionPendiente = false;
+          }
+        } else if(!currentSorteoId && sorteos.length){
+          intentarRestaurarSorteo();
+        }
+      } catch (err) {
+        console.error('Error cargando sorteos', err);
+      } finally {
+        ultimaCargaSorteos = Date.now();
+      }
+      return sorteos;
+    })();
+    promesaCargaSorteos = ejecucion;
+    ejecucion.finally(()=>{
+      promesaCargaSorteos = null;
+    });
+    return ejecucion;
   }
 
   async function abrirModalSorteos(){
@@ -2818,7 +2860,16 @@
   }
 
   function irAGenerarPdf(){
-    const destino = pdfDestinoUrl;
+    let destino = pdfDestinoUrl;
+    if((!destino || destino === '#') && currentSorteoId){
+      try {
+        const urlFallback = new URL('pdfsorteo.html', window.location.href);
+        urlFallback.searchParams.set('s', currentSorteoId);
+        destino = urlFallback.toString();
+      } catch (error) {
+        destino = `pdfsorteo.html?s=${encodeURIComponent(currentSorteoId)}`;
+      }
+    }
     pdfDestinoUrl = '';
     cerrarPdfConfirmacion();
     if(destino){
