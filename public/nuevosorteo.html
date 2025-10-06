@@ -656,11 +656,11 @@
       const sorteoRef=await db.collection('sorteos').add({nombre,tipo,fecha,hora,horacierre:cierre,maxcartongratis:maxcartongratis,cartonesgratisjugando:0,valorCarton:valor,estado,condicion});
       const batch=db.batch();
       formas.forEach(f=>{const ref=db.collection('formas').doc();batch.set(ref,{sorteoId:sorteoRef.id,...f});});
-        await batch.commit();
-        alert('Sorteo guardado');
-        if(cookieKey) setCookie(cookieKey,'',0);
-        window.location.href='admin.html';
-      }catch(e){console.error(e);alert('Error al guardar');}
+      await batch.commit();
+      alert('Sorteo creado exitosamente');
+      if(cookieKey) setCookie(cookieKey,'',0);
+      setTimeout(()=>{window.location.href='gestionsorteos.html';},100);
+    }catch(e){console.error(e);alert('Error al guardar');}
     });
   </script>
 </body>

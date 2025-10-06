@@ -412,6 +412,7 @@
       cursor: pointer;
       box-shadow: 0 0 8px rgba(0,0,0,0.4);
       transition: transform 0.2s;
+      position: relative;
     }
     .estado-btn:hover { transform: scale(1.05); }
     #sellar-btn { background: linear-gradient(#707070,#d9d9d9); }
@@ -419,6 +420,22 @@
     #jugar-btn { background: linear-gradient(#4b0082,#ffffff); }
     #finalizar-btn { background: linear-gradient(#8b0000,#ffffff); }
     .estado-btn img { width: 24px; height: 24px; }
+    #pdf-btn.pdf-disponible::after {
+      content: '\ud83d\udcc4';
+      position: absolute;
+      top: -6px;
+      left: -6px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 2px solid #FFD700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      box-shadow: 0 0 6px rgba(0,0,0,0.3);
+    }
     #sellar-btn .stop-icon {
       font-family: 'Bangers', cursive;
       font-size: 0.95rem;
@@ -1211,6 +1228,45 @@
     }
   }
 
+  function obtenerSorteoActivoMasReciente(){
+    if(!Array.isArray(sorteos) || !sorteos.length) return null;
+    const prioridadEstado = { jugando: 0, activo: 1, sellado: 2, finalizado: 3 };
+    let candidato = null;
+    sorteos.forEach(registro=>{
+      if(!registro || !registro.id) return;
+      if(!esSorteoVisible(registro)) return;
+      const estado = (registro.estado || '').toString().toLowerCase();
+      if(estado === 'inactivo' || estado === 'archivado') return;
+      const prioridad = Object.prototype.hasOwnProperty.call(prioridadEstado, estado)
+        ? prioridadEstado[estado]
+        : 4;
+      const fechaReferencia = obtenerFechaSorteo(registro)
+        || obtenerFechaDesdeValor(registro.fecha)
+        || obtenerFechaDesdeValor(registro.fechacierre);
+      const tiempo = (fechaReferencia instanceof Date && !isNaN(fechaReferencia.getTime()))
+        ? fechaReferencia.getTime()
+        : Number.NEGATIVE_INFINITY;
+      if(!candidato){
+        candidato = { registro, prioridad, tiempo };
+        return;
+      }
+      if(prioridad < candidato.prioridad
+        || (prioridad === candidato.prioridad && tiempo > candidato.tiempo)
+        || (prioridad === candidato.prioridad && tiempo === candidato.tiempo
+          && (registro.nombre || '').toString().localeCompare((candidato.registro.nombre || '').toString()) < 0)){
+        candidato = { registro, prioridad, tiempo };
+      }
+    });
+    return candidato ? candidato.registro : null;
+  }
+
+  function restaurarSorteoMasReciente(){
+    const candidato = obtenerSorteoActivoMasReciente();
+    if(!candidato) return false;
+    seleccionarSorteo(candidato.id);
+    return true;
+  }
+
   function esSorteoVisible(info){
     if(!info) return false;
     const condicionTexto = (info.condicion ?? info['condición'] ?? '').toString().trim().toUpperCase();
@@ -1247,7 +1303,7 @@
   function intentarRestaurarSorteo(){
     if(!sorteoCookieKey){
       restauracionPendiente = false;
-      return false;
+      return restaurarSorteoMasReciente();
     }
     let guardado = getCookie(sorteoCookieKey);
     if((!guardado || guardado === 'undefined') && sorteoCookieKey !== sorteoCookieDefaultKey){
@@ -1259,7 +1315,7 @@
     }
     if(!guardado){
       restauracionPendiente = false;
-      return false;
+      return restaurarSorteoMasReciente();
     }
     let idRestaurar = guardado;
     try {
@@ -1272,7 +1328,7 @@
     }
     if(!idRestaurar){
       restauracionPendiente = false;
-      return false;
+      return restaurarSorteoMasReciente();
     }
     if(!sorteos || !sorteos.length){
       return false;
@@ -1285,7 +1341,7 @@
     if(!existe || !esSorteoVisible(existe)){
       limpiarSorteoSeleccionado();
       restauracionPendiente = false;
-      return false;
+      return restaurarSorteoMasReciente();
     }
     seleccionarSorteo(idRestaurar);
     restauracionPendiente = false;
@@ -2129,6 +2185,7 @@
   function actualizarBotones(){
     if(!currentSorteoData){
       [sellarBtn, pdfBtn, jugarBtn, finalizarBtn].forEach(btn=>btn.disabled=true);
+      pdfBtn.classList.remove('pdf-disponible');
       return;
     }
     const estado = (currentSorteoData.estado || '').toLowerCase();
@@ -2138,6 +2195,7 @@
     pdfBtn.disabled = estado !== 'sellado';
     jugarBtn.disabled = estado !== 'sellado' || pdfEstado !== 'si';
     finalizarBtn.disabled = estado !== 'jugando';
+    pdfBtn.classList.toggle('pdf-disponible', pdfEstado === 'si');
   }
 
   function mostrarDatos(){
@@ -2162,6 +2220,7 @@
       if(detalleContainer) detalleContainer.classList.remove('estado-sellado','estado-pdf','estado-jugando','estado-finalizado');
       mensajeEl.textContent = 'Selecciona un sorteo para administrar su estado.';
       [sellarBtn, pdfBtn, jugarBtn, finalizarBtn].forEach(btn=>btn.disabled=true);
+      pdfBtn.classList.remove('pdf-disponible');
       actualizarAnimaciones();
       actualizarCantosSeleccionados([]);
       actualizarTablaEstado();
