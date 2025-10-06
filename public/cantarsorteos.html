@@ -1055,6 +1055,7 @@
   const mensajeEl = document.getElementById('mensaje-area');
   const sellarBtn = document.getElementById('sellar-btn');
   const pdfBtn = document.getElementById('pdf-btn');
+  const pdfFloatingIcon = pdfBtn ? pdfBtn.querySelector('.pdf-floating-icon') : null;
   const jugarBtn = document.getElementById('jugar-btn');
   const finalizarBtn = document.getElementById('finalizar-btn');
   const modoManualSwitch = document.getElementById('modo-manual-switch');
@@ -1068,7 +1069,6 @@
   let sorteoCookieKey = sorteoCookieDefaultKey;
   let restauracionPendiente = false;
   let pdfDestinoUrl = '';
-  let pdfAccionEnCurso = false;
   let promesaCargaSorteos = null;
   let ultimaCargaSorteos = 0;
   const INTERVALO_CACHE_SORTEOS_MS = 30000;
@@ -1091,9 +1091,6 @@
   const CLASE_TIEMPO_PASADO_LEJANO = 'estado-tiempo-pasado-lejano';
   const MILISEGUNDOS_EN_DIA = 24 * 60 * 60 * 1000;
   const MINUTOS_EN_DIA = 24 * 60;
-  const pdfConfirmModal = document.getElementById('pdf-confirm-modal');
-  const pdfConfirmSiBtn = document.getElementById('pdf-confirm-si');
-  const pdfConfirmNoBtn = document.getElementById('pdf-confirm-no');
   const estadoConfirmModal = document.getElementById('estado-confirm-modal');
   const estadoConfirmMensajeEl = document.getElementById('estado-confirm-mensaje');
   const estadoConfirmSiBtn = document.getElementById('estado-confirm-si');
@@ -1431,6 +1428,9 @@
   btnSorteo.addEventListener('click', abrirModalSorteos);
   sellarBtn.addEventListener('click', sellarSorteo);
   pdfBtn.addEventListener('click', abrirPDF);
+  if(pdfFloatingIcon){
+    pdfFloatingIcon.addEventListener('click', manejarClickPdfAlmacenado);
+  }
   jugarBtn.addEventListener('click', cambiarAJugando);
   finalizarBtn.addEventListener('click', finalizarSorteo);
   if(modoManualSwitch){
@@ -1441,16 +1441,6 @@
     actualizarEstadoModo();
   }
   construirTablaCantos();
-  if(pdfConfirmSiBtn){ pdfConfirmSiBtn.addEventListener('click', marcarPdfGuardado); }
-  if(pdfConfirmNoBtn){ pdfConfirmNoBtn.addEventListener('click', irAGenerarPdf); }
-  if(pdfConfirmModal){
-    pdfConfirmModal.addEventListener('click', evento=>{
-      if(evento.target === pdfConfirmModal){
-        cerrarPdfConfirmacion();
-        pdfDestinoUrl = '';
-      }
-    });
-  }
   if(cantoConfirmAceptarBtn){
     cantoConfirmAceptarBtn.addEventListener('click', manejarAceptarConfirmacionCanto);
   }
@@ -1476,11 +1466,6 @@
   document.addEventListener('keydown', evento=>{
     if(evento.key === 'Escape'){
       let cerrado = false;
-      if(pdfConfirmModal && pdfConfirmModal.classList.contains('activo')){
-        cerrarPdfConfirmacion();
-        pdfDestinoUrl = '';
-        cerrado = true;
-      }
       if(cantoConfirmModal && cantoConfirmModal.classList.contains('activo')){
         cerrarConfirmacionCanto(false);
         cerrado = true;
@@ -1726,6 +1711,13 @@
         console.error('Error estableciendo pdf predeterminado', err);
       });
       data.pdf = 'no';
+    }
+    if(id === currentSorteoId){
+      const urlPdf = typeof data.pdfUrl === 'string' ? data.pdfUrl.trim() : '';
+      pdfDestinoUrl = urlPdf;
+      if(currentSorteoData){
+        currentSorteoData.pdfUrl = urlPdf;
+      }
     }
   }
 
@@ -2820,65 +2812,26 @@
     }
   }
 
-  function mostrarPdfConfirmacion(){
-    if(!pdfConfirmModal) return;
-    pdfConfirmModal.classList.add('activo');
-    const foco = pdfConfirmSiBtn || pdfConfirmNoBtn;
-    if(foco){ foco.focus(); }
-  }
+  function sincronizarDatosPdf(datos = {}){
+    const estadoBruto = (datos.pdf || '').toString().toLowerCase();
+    const estadoNormalizado = estadoBruto === 'si' ? 'si' : 'no';
+    const urlPdf = typeof datos.pdfUrl === 'string' ? datos.pdfUrl.trim() : '';
 
-  function cerrarPdfConfirmacion(){
-    if(!pdfConfirmModal) return;
-    pdfConfirmModal.classList.remove('activo');
-  }
+    if(currentSorteoData){
+      currentSorteoData.pdf = estadoNormalizado;
+      currentSorteoData.pdfUrl = urlPdf;
+    }
+    const idx = sorteos.findIndex(s=>s.id===currentSorteoId);
+    if(idx>=0){
+      sorteos[idx] = { ...sorteos[idx], pdf: estadoNormalizado, pdfUrl: urlPdf };
+    }
+    pdfDestinoUrl = urlPdf;
+    guardarSorteoSeleccionado(currentSorteoData);
+    actualizarBotones();
+    actualizarAnimaciones();
+    mostrarDatos();
 
-  async function marcarPdfGuardado(){
-    if(!currentSorteoId || !currentSorteoData){
-      cerrarPdfConfirmacion();
-      pdfDestinoUrl = '';
-      return;
-    }
-    if(pdfAccionEnCurso) return;
-    pdfAccionEnCurso = true;
-    cerrarPdfConfirmacion();
-    try {
-      await db.collection('sorteos').doc(currentSorteoId).update({ pdf: 'si' });
-      currentSorteoData.pdf = 'si';
-      const idx = sorteos.findIndex(s=>s.id===currentSorteoId);
-      if(idx>=0) sorteos[idx].pdf = 'si';
-      actualizarBotones();
-      actualizarAnimaciones();
-      mostrarDatos();
-      mensajeEl.textContent = 'Se marcó el documento PDF como guardado.';
-    } catch (err) {
-      console.error('Error actualizando estado del PDF', err);
-      alert('No fue posible actualizar el estado del PDF.');
-    } finally {
-      pdfAccionEnCurso = false;
-      pdfDestinoUrl = '';
-    }
-  }
-
-  function irAGenerarPdf(){
-    let destino = pdfDestinoUrl;
-    if((!destino || destino === '#') && currentSorteoId){
-      try {
-        const urlFallback = new URL('pdfsorteo.html', window.location.href);
-        urlFallback.searchParams.set('s', currentSorteoId);
-        destino = urlFallback.toString();
-      } catch (error) {
-        destino = `pdfsorteo.html?s=${encodeURIComponent(currentSorteoId)}`;
-      }
-    }
-    pdfDestinoUrl = '';
-    cerrarPdfConfirmacion();
-    if(destino){
-      try {
-        window.location.assign(destino);
-      } catch (err) {
-        window.location.href = destino;
-      }
-    }
+    return { estado: estadoNormalizado, url: urlPdf };
   }
 
   async function abrirPDF(){
@@ -2892,10 +2845,74 @@
       }
       return;
     }
-    const destinoUrl = new URL('pdfsorteo.html', window.location.href);
-    destinoUrl.searchParams.set('s', currentSorteoId);
-    pdfDestinoUrl = destinoUrl.toString();
-    mostrarPdfConfirmacion();
+
+    try {
+      const docRef = await db.collection('sorteos').doc(currentSorteoId).get();
+      if(!docRef.exists){
+        alert('No fue posible obtener la información del sorteo seleccionado.');
+        return;
+      }
+      const datos = docRef.data() || {};
+      const { estado: pdfEstadoNormalizado } = sincronizarDatosPdf(datos);
+
+      if(pdfEstadoNormalizado === 'no'){
+        try {
+          const destinoUrl = new URL('pdfsorteo.html', window.location.href);
+          destinoUrl.searchParams.set('s', currentSorteoId);
+          window.location.assign(destinoUrl.toString());
+        } catch (err) {
+          const fallback = `pdfsorteo.html?s=${encodeURIComponent(currentSorteoId)}`;
+          window.location.href = fallback;
+        }
+        return;
+      }
+
+      alert('El documento pdf ya fue generado para este sorteo');
+    } catch (error) {
+      console.error('Error consultando el estado del PDF', error);
+      alert('Ocurrió un error al consultar el estado del documento PDF.');
+    }
+  }
+
+  async function manejarClickPdfAlmacenado(evento){
+    evento.preventDefault();
+    evento.stopPropagation();
+    if(!currentSorteoId || !currentSorteoData){
+      alert('Selecciona un sorteo primero.');
+      return;
+    }
+
+    let urlActual = (currentSorteoData.pdfUrl || pdfDestinoUrl || '').toString().trim();
+    if(!urlActual){
+      try {
+        const docRef = await db.collection('sorteos').doc(currentSorteoId).get();
+        if(docRef.exists){
+          const datos = docRef.data() || {};
+          const { url } = sincronizarDatosPdf(datos);
+          urlActual = url.toString().trim();
+        }
+      } catch (error) {
+        console.error('Error obteniendo la URL del PDF almacenado', error);
+      }
+    }
+
+    if(!urlActual){
+      alert('No hay un archivo PDF almacenado para este sorteo.');
+      return;
+    }
+
+    try {
+      const ventana = window.open(urlActual, '_blank', 'noopener');
+      if(!ventana){
+        window.location.assign(urlActual);
+      }
+    } catch (err) {
+      try {
+        window.location.assign(urlActual);
+      } catch (fallbackError) {
+        window.location.href = urlActual;
+      }
+    }
   }
 
   async function cambiarAJugando(){
