@@ -8,5 +8,6 @@ window.__FIREBASE_CONFIG__ = {
   projectId: "bingo-online-231fd",
   storageBucket: "bingo-online-231fd.firebasestorage.app",
   messagingSenderId: "455917034653",
-  appId: "1:455917034653:web:ef3f7a1d14be86a1580874"
+  appId: "1:455917034653:web:ef3f7a1d14be86a1580874",
+  firestoreDatabaseId: "(default)"
 };

@@ -11,7 +11,10 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-const db = admin.firestore();
+const rawDatabaseId = (process.env.FIRESTORE_DATABASE_ID || '').trim();
+const databaseId = /^(default|\(default\))$/i.test(rawDatabaseId) ? '' : rawDatabaseId;
+const app = admin.app();
+const db = databaseId ? admin.firestore(app, databaseId) : admin.firestore(app);
 
 // ----- Lógica de sincronización de hora (adaptado de public/js/timezone.js) -----
 const serverTime = { zonaIana: '', diferencia: 0 };

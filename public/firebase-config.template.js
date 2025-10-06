@@ -7,5 +7,9 @@ window.__FIREBASE_CONFIG__ = {
   projectId: "__FIREBASE_PROJECT_ID__",
   storageBucket: "__FIREBASE_STORAGE_BUCKET__",
   messagingSenderId: "__FIREBASE_MESSAGING_SENDER_ID__",
-  appId: "__FIREBASE_APP_ID__"
+  appId: "__FIREBASE_APP_ID__",
+  // Opcional: establece el ID de la base de datos de Cloud Firestore cuando
+  // el proyecto utiliza instancias distintas al valor "(default)".
+  // Por ejemplo: "devdb", "stgdb" o "(default)".
+  firestoreDatabaseId: "__FIREBASE_FIRESTORE_DB__"
 };
