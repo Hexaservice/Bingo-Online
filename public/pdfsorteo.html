@@ -330,6 +330,20 @@
   let pdfFileName = '';
   let cartonesCargados = false;
   let storage = null;
+  let firebaseReadyPromise = null;
+
+  function ensureFirebaseReady(){
+    if(firebaseReadyPromise) return firebaseReadyPromise;
+    if(typeof initFirebase !== 'function'){
+      firebaseReadyPromise = Promise.reject(new Error('initFirebase no disponible'));
+      return firebaseReadyPromise;
+    }
+    firebaseReadyPromise = initFirebase().catch(err => {
+      console.error('Fallo al inicializar Firebase', err);
+      throw err;
+    });
+    return firebaseReadyPromise;
+  }
 
   function obtenerStorage(){
     if(storage) return storage;
@@ -513,6 +527,7 @@
   async function cargarDatosBasicos(){
     mostrarLoading('Cargando información del sorteo, por favor espera');
     try {
+      await ensureFirebaseReady();
       const sorteoDoc = await db.collection('sorteos').doc(sorteoId).get();
       if(!sorteoDoc.exists){
         alert('No se encontró el sorteo.');
@@ -545,6 +560,7 @@
   async function cargarCartones(){
     mostrarLoading('Generando cartones del sorteo, por favor espera');
     try {
+      await ensureFirebaseReady();
       const cartonesSnap = await db.collection('CartonJugado').where('sorteoId','==',sorteoId).get();
       cartonesData = [];
       cartonesSnap.forEach(doc=>cartonesData.push(doc.data()));
@@ -586,6 +602,7 @@
     const textoOriginalCartones = generarCartonesBtn ? generarCartonesBtn.textContent : '';
 
     try {
+      await ensureFirebaseReady();
       if(generarCartonesBtn){ generarCartonesBtn.disabled = true; }
       if(pdfBtn){
         pdfBtn.disabled = true;
