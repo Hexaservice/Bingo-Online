@@ -348,7 +348,21 @@
   function obtenerStorage(){
     if(storage) return storage;
     try {
-      storage = firebase.storage();
+      const appInstance = firebase.app();
+      const opciones = (appInstance && appInstance.options) || {};
+      const bucketConfig = (opciones.storageBucket || '').trim();
+
+      if(bucketConfig){
+        const bucketUrl = bucketConfig.startsWith('gs://') ? bucketConfig : `gs://${bucketConfig}`;
+        try {
+          storage = appInstance.storage(bucketUrl);
+        } catch (bucketErr) {
+          console.warn('Fallo al inicializar Storage con el bucket configurado, se usará el predeterminado.', bucketErr);
+          storage = firebase.storage();
+        }
+      } else {
+        storage = firebase.storage();
+      }
     } catch (err) {
       console.error('No se pudo obtener la instancia de Firebase Storage', err);
       throw err;
