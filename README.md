@@ -107,6 +107,13 @@ Además, cada entorno despliega contra una instancia distinta de Cloud Firestore
 
 En los workflows se inserta automáticamente el secreto correspondiente en `public/firebase-config.js` según la rama (`dev`, `staging` o `main`). Si utiliza otras herramientas de despliegue, replique el mismo proceso de copiado y reemplazo de marcadores antes de publicar los archivos.
 
+### Promover cambios de `dev` a `staging`
+
+1. **Confirmar que el despliegue en `dev` fue exitoso.** Cada vez que se hace `push` a la rama `dev`, el workflow `deploy-by-branch.yml` publica automáticamente el sitio en el objetivo `dev` de Firebase Hosting y utiliza el secreto `FIREBASE_FIRESTORE_DB_DEV` para generar la configuración del entorno.【F:.github/workflows/deploy-by-branch.yml†L1-L41】【F:README.md†L94-L103】 Verifique en GitHub Actions que la ejecución finalizó sin errores.
+2. **Actualizar la rama `staging` con los cambios de `dev`.** Cree un Pull Request desde `dev` hacia `staging`, revise los cambios y apruebe la integración. También puede hacer `git checkout staging`, `git merge dev` y `git push origin staging` si prefiere una promoción directa desde la línea de comandos.
+3. **Esperar el despliegue automático en `staging`.** Al recibir un `push` en `staging`, el mismo workflow vuelve a generar `public/firebase-config.js`, esta vez usando el secreto `FIREBASE_FIRESTORE_DB_STG`, y despliega contra el objetivo `stg` de Firebase Hosting.【F:.github/workflows/deploy-by-branch.yml†L43-L83】 Cuando la acción termine, el entorno `staging` tendrá los mismos cambios que fueron validados en `dev`.
+4. **Sincronizar servicios auxiliares si aplica.** Si necesita ejecutar scripts o servicios Node que interactúan con Firestore (`initBanks.js`, `initRoles.js`, `initUsers.js`, `cronActualizarEstadosSorteos.js`, `uploadServer.js`), recuerde establecer la variable de entorno `FIRESTORE_DATABASE_ID` con el identificador correspondiente a `stg` antes de correrlos para que apunten a la misma base que el frontend.【F:README.md†L107-L118】
+
 ### Selección de base de datos de Firestore por entorno
 
 El proyecto utiliza el campo `firestoreDatabaseId` definido en `public/firebase-config.js` para elegir la instancia de Cloud Firestore que debe consumir cada despliegue. Para los entornos que usan la base `(default)` puede dejar el valor tal cual o una cadena vacía; para bases alternativas indique el ID configurado en Firebase (`devdb`, `stgdb`, etc.).
