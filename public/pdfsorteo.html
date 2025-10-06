@@ -296,7 +296,10 @@
   </div>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnJ8O3ilS+AJGEylh4G6dkprdFMn/hTyBC0bYKT1eZq9VHtV6nRvWmvMRGsiE9z1FMvx6bMpiKFF59sGyg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-v3Z7xZPAKqz/mdrIW6DCe4k74vNysGEKMluSleqrs9jwELyhl725LLJoPLD114F8CbnMD4HzyBbs6k8ZZr3GkQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="js/auth.js"></script>
   <script>
   ensureAuth('Administrador');
@@ -326,6 +329,18 @@
   let cartonesData = [];
   let pdfFileName = '';
   let cartonesCargados = false;
+  let storage = null;
+
+  function obtenerStorage(){
+    if(storage) return storage;
+    try {
+      storage = firebase.storage();
+    } catch (err) {
+      console.error('No se pudo obtener la instancia de Firebase Storage', err);
+      throw err;
+    }
+    return storage;
+  }
 
   const coloresFormas = ['#006400', '#b8860b', '#00008b', '#4b0082', '#8b4513', '#d2691e'];
 
@@ -557,18 +572,79 @@
     generarCartonesBtn.disabled = false;
   }
 
-  function generarPDF(){
+  async function generarPDF(){
     if(!sorteoData){ return; }
     if(!cartonesCargados){ alert('Primero debes generar los cartones del sorteo.'); return; }
-    const tituloOriginal = document.title;
     const nombreArchivo = pdfFileName || construirNombreArchivo();
-    document.title = nombreArchivo;
-    const handler = ()=>{
-      window.removeEventListener('afterprint', handler);
-      document.title = tituloOriginal;
-    };
-    window.addEventListener('afterprint', handler);
-    window.requestAnimationFrame(()=>window.print());
+    const wrapper = document.getElementById('pdf-wrapper');
+    if(!wrapper){
+      alert('No se encontró el contenido del sorteo para generar el PDF.');
+      return;
+    }
+
+    const textoOriginalPdf = pdfBtn ? pdfBtn.textContent : '';
+    const textoOriginalCartones = generarCartonesBtn ? generarCartonesBtn.textContent : '';
+
+    try {
+      if(generarCartonesBtn){ generarCartonesBtn.disabled = true; }
+      if(pdfBtn){
+        pdfBtn.disabled = true;
+        pdfBtn.textContent = 'Generando PDF...';
+      }
+      mostrarLoading('Generando PDF y cargándolo en la nube, por favor espera');
+
+      if(!window.html2canvas || !window.jspdf){
+        throw new Error('Dependencias para generar PDF no disponibles');
+      }
+
+      const canvas = await window.html2canvas(wrapper, {
+        scale: 2,
+        useCORS: true,
+        logging: false
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p', 'pt', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height);
+      const pdfWidth = canvas.width * ratio;
+      const pdfHeight = canvas.height * ratio;
+      const marginX = (pageWidth - pdfWidth) / 2;
+      const marginY = (pageHeight - pdfHeight) / 2;
+      pdf.addImage(imgData, 'PNG', marginX, marginY, pdfWidth, pdfHeight);
+
+      const pdfBlob = pdf.output('blob');
+      const storageInstance = obtenerStorage();
+      const nombreNormalizado = normalizarTextoArchivo(nombreArchivo || 'sorteo');
+      const fechaSubida = new Date().toISOString().replace(/[:.]/g,'-');
+      const ruta = `sorteos/${sorteoId}/${nombreNormalizado}_${fechaSubida}.pdf`;
+      const storageRef = storageInstance.ref().child(ruta);
+      const snapshot = await storageRef.put(pdfBlob, { contentType: 'application/pdf' });
+      const pdfUrl = await snapshot.ref.getDownloadURL();
+
+      const payload = { pdf: 'si', pdfUrl };
+      await Promise.all([
+        db.collection('sorteos').doc(sorteoId).set(payload, { merge: true }),
+        db.collection('cantarsorteos').doc(sorteoId).set(payload, { merge: true })
+      ]);
+
+      alert('El PDF del sorteo se generó y cargó correctamente.');
+    } catch (err) {
+      console.error('Error generando o subiendo el PDF', err);
+      alert('No se pudo generar o subir el PDF del sorteo. Intenta nuevamente.');
+    } finally {
+      if(pdfBtn){
+        pdfBtn.disabled = false;
+        pdfBtn.textContent = textoOriginalPdf || 'Generar PDF';
+      }
+      if(generarCartonesBtn){
+        generarCartonesBtn.disabled = false;
+        generarCartonesBtn.textContent = textoOriginalCartones || generarCartonesBtn.textContent;
+      }
+      ocultarLoading();
+    }
   }
 
   cargarDatosBasicos();
