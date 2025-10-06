@@ -310,7 +310,7 @@ function setupSuperadminExit(buttonSelector = '#salir-super-btn', redirect = 'su
             bindRedirect();
             button.style.display = 'flex';
             button.style.backgroundColor = '#d32f2f';
-            button.style.borderColor = '#8b0000';
+            button.style.borderColor = 'orange';
           }else{
             button.style.display = 'none';
           }
