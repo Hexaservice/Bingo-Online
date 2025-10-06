@@ -15,13 +15,28 @@ jobs:
   build_and_preview:
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
+    env:
+      HAS_FIREBASE_SECRETS: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_231FD != '' &&
+        secrets.FIREBASE_WEB_API_KEY != '' &&
+        secrets.FIREBASE_AUTH_DOMAIN != '' &&
+        secrets.FIREBASE_DATABASE_URL != '' &&
+        secrets.FIREBASE_PROJECT_ID != '' &&
+        secrets.FIREBASE_STORAGE_BUCKET != '' &&
+        secrets.FIREBASE_MESSAGING_SENDER_ID != '' &&
+        secrets.FIREBASE_APP_ID != '' }}
     steps:
       - name: Checkout repository
         if: ${{ github.base_ref == 'dev' || github.base_ref == 'staging' }}
         uses: actions/checkout@v4
 
+      - name: Saltar despliegue por falta de credenciales
+        if: env.HAS_FIREBASE_SECRETS != 'true'
+        run: |
+          echo "::warning::No se encontraron todas las credenciales de Firebase necesarias."
+          echo "::warning::Omite el despliegue de vista previa; configure los secretos para habilitarlo."
+
       - name: Generar firebase-config.js
-        if: ${{ github.base_ref == 'dev' || github.base_ref == 'staging' }}
+        if: ${{ (github.base_ref == 'dev' || github.base_ref == 'staging') && env.HAS_FIREBASE_SECRETS == 'true' }}
         run: |
           set -euo pipefail
           cp public/firebase-config.template.js public/firebase-config.js
@@ -42,7 +57,7 @@ jobs:
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
 
       - name: Deploy to Firebase Hosting (dev)
-        if: ${{ github.base_ref == 'dev' }}
+        if: ${{ github.base_ref == 'dev' && env.HAS_FIREBASE_SECRETS == 'true' }}
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
@@ -51,7 +66,7 @@ jobs:
           channelId: dev-preview
 
       - name: Deploy to Firebase Hosting (staging)
-        if: ${{ github.base_ref == 'staging' }}
+        if: ${{ github.base_ref == 'staging' && env.HAS_FIREBASE_SECRETS == 'true' }}
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
