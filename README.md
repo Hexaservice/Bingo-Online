@@ -98,9 +98,14 @@ Los flujos definidos en `.github/workflows/` generan `public/firebase-config.js`
 - `FIREBASE_STORAGE_BUCKET`
 - `FIREBASE_MESSAGING_SENDER_ID`
 - `FIREBASE_APP_ID`
-- `FIREBASE_FIRESTORE_DB`
 
-Cada secreto debe contener el valor correspondiente del proyecto de Firebase. Si utiliza otras herramientas de despliegue, replique el mismo proceso de copiado y reemplazo de marcadores antes de publicar los archivos.
+Además, cada entorno despliega contra una instancia distinta de Cloud Firestore mediante el campo `firestoreDatabaseId`. Defina secretos individuales por entorno con los valores adecuados del ID de base de datos:
+
+- `FIREBASE_FIRESTORE_DB_DEV`
+- `FIREBASE_FIRESTORE_DB_STG`
+- `FIREBASE_FIRESTORE_DB_PROD`
+
+En los workflows se inserta automáticamente el secreto correspondiente en `public/firebase-config.js` según la rama (`dev`, `staging` o `main`). Si utiliza otras herramientas de despliegue, replique el mismo proceso de copiado y reemplazo de marcadores antes de publicar los archivos.
 
 ### Selección de base de datos de Firestore por entorno
 
