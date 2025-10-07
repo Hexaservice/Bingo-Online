@@ -37,10 +37,29 @@ async function sincronizarHora() {
   }
 }
 
+async function asegurarDb() {
+  if (typeof db !== 'undefined' && db) {
+    return db;
+  }
+  if (typeof initFirebase === 'function') {
+    try {
+      await initFirebase();
+    } catch (err) {
+      console.error('No se pudo inicializar Firebase antes de obtener la hora del servidor', err);
+      throw err;
+    }
+  }
+  if (typeof db === 'undefined' || !db) {
+    throw new Error('Firestore no está disponible para obtener la hora del servidor');
+  }
+  return db;
+}
+
 async function initServerTime() {
   if (serverTime.zonaIana) return; // ya inicializado
   try {
-    const doc = await db.collection('Variablesglobales').doc('Parametros').get();
+    const database = await asegurarDb();
+    const doc = await database.collection('Variablesglobales').doc('Parametros').get();
     if (!doc.exists) throw new Error('Documento Parametros no existe');
     const { Pais = '', ZonaHoraria = '' } = doc.data();
     serverTime.Pais = Pais;
