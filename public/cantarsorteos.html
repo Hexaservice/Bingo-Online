@@ -1070,6 +1070,7 @@
   let restauracionPendiente = false;
   let pdfDestinoUrl = '';
   let promesaCargaSorteos = null;
+  let verificacionAutomaticaPromesa = null;
   let ultimaCargaSorteos = 0;
   const INTERVALO_CACHE_SORTEOS_MS = 30000;
   const TAM_MAX_CONSULTA_IN = 10;
@@ -1283,6 +1284,55 @@
     }
   }
 
+  async function verificarSorteoPersistidoAlEntrar(opciones = {}){
+    const mostrarFallback = opciones.mostrarFallback === true;
+    const esperarCargaActiva = opciones.esperarCargaActiva !== false;
+    if(verificacionAutomaticaPromesa){
+      return verificacionAutomaticaPromesa;
+    }
+    verificacionAutomaticaPromesa = (async()=>{
+      if(esperarCargaActiva && promesaCargaSorteos){
+        try {
+          await promesaCargaSorteos.catch(()=>{});
+        } catch (err) {
+          console.warn('No se pudo completar la carga previa al restaurar el sorteo guardado.', err);
+        }
+      }
+      if(!Array.isArray(sorteos) || !sorteos.length){
+        if(mostrarFallback){
+          restauracionPendiente = false;
+          try {
+            mostrarDatos();
+          } catch (err) {
+            console.error('Error mostrando los datos al no encontrar un sorteo previo.', err);
+          }
+        }
+        return false;
+      }
+      let restaurado = false;
+      try {
+        restaurado = intentarRestaurarSorteo();
+      } catch (err) {
+        console.error('Error intentando restaurar el sorteo guardado.', err);
+        restaurado = false;
+      }
+      if(!restaurado && mostrarFallback){
+        restauracionPendiente = false;
+        try {
+          mostrarDatos();
+        } catch (err) {
+          console.error('Error mostrando los datos luego de intentar restaurar el sorteo.', err);
+        }
+      }
+      return restaurado;
+    })();
+    try {
+      return await verificacionAutomaticaPromesa;
+    } finally {
+      verificacionAutomaticaPromesa = null;
+    }
+  }
+
   function obtenerSorteoActivoMasReciente(){
     if(!Array.isArray(sorteos) || !sorteos.length) return null;
     const prioridadEstado = { jugando: 0, activo: 1, sellado: 2, finalizado: 3 };
@@ -1403,7 +1453,7 @@
     return true;
   }
 
-  auth.onAuthStateChanged(user=>{
+  auth.onAuthStateChanged(async user=>{
     if(!user){
       sorteoCookieKey = sorteoCookieDefaultKey;
       restauracionPendiente = false;
@@ -1419,8 +1469,10 @@
     }
     sorteoCookieKey = nuevoKey;
     restauracionPendiente = true;
-    if(intentarRestaurarSorteo()){
-      restauracionPendiente = false;
+    try {
+      await verificarSorteoPersistidoAlEntrar({ mostrarFallback: false });
+    } catch (err) {
+      console.error('No se pudo restaurar el sorteo tras la autenticación.', err);
     }
     if(resolverAuthListo){ resolverAuthListo(); resolverAuthListo = null; }
   });
@@ -2476,10 +2528,8 @@
       }
       const usoCacheValido = sorteos.length && (ahora - ultimaCargaSorteos) < INTERVALO_CACHE_SORTEOS_MS;
       if(usoCacheValido){
-        if(restauracionPendiente){
-          if(intentarRestaurarSorteo()){
-            restauracionPendiente = false;
-          }
+        if(restauracionPendiente || (!currentSorteoId && sorteos.length)){
+          await verificarSorteoPersistidoAlEntrar({ mostrarFallback: false, esperarCargaActiva: false });
         }
         return sorteos;
       }
@@ -2538,12 +2588,8 @@
             mostrarDatos();
           }).catch(err=>console.error('Error finalizando carga de sorteos', err));
         }
-        if(restauracionPendiente){
-          if(intentarRestaurarSorteo()){
-            restauracionPendiente = false;
-          }
-        } else if(!currentSorteoId && sorteos.length){
-          intentarRestaurarSorteo();
+        if(restauracionPendiente || (!currentSorteoId && sorteos.length)){
+          await verificarSorteoPersistidoAlEntrar({ mostrarFallback: false, esperarCargaActiva: false });
         }
         ultimaCargaSorteos = Date.now();
       } catch (err) {
@@ -3130,10 +3176,7 @@
         return;
       }
     }
-    if(!intentarRestaurarSorteo()){
-      restauracionPendiente = false;
-      mostrarDatos();
-    }
+    await verificarSorteoPersistidoAlEntrar({ mostrarFallback: true });
     if(mensajePostCarga){
       mensajeEl.textContent = mensajePostCarga;
     }
