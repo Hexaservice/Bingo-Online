@@ -2,10 +2,6 @@ let app, auth, db, provider, appName = 'BingOnline';
 const DISABLED_MSG = "Tu cuenta ha sido deshabilitada, Motivado posiblemente a que has incumplido una o más clausulas en nuestros Terminos y condiciones. Contacta con un administrador del sistema si necesitas información.";
 let firebaseInitPromise = null;
 let firebaseConfigLoadPromise = null;
-let firebaseAppCheckInitPromise = null;
-let firebaseAppCheckConfigLoadPromise = null;
-let firebaseAppCheckSdkLoadPromise = null;
-let appCheckInstance = null;
 
 function hasWindow(){
   return typeof window !== 'undefined';
@@ -15,13 +11,6 @@ function getConfigFromWindow(){
   if(!hasWindow()) return null;
   const cfg = window.firebaseConfig || window.__FIREBASE_CONFIG__;
   if(cfg && Object.keys(cfg).length > 0) return cfg;
-  return null;
-}
-
-function getAppCheckConfigFromWindow(){
-  if(!hasWindow()) return null;
-  const cfg = window.firebaseAppCheckConfig || window.__FIREBASE_APP_CHECK_CONFIG__;
-  if(cfg && typeof cfg === 'object') return cfg;
   return null;
 }
 
@@ -56,163 +45,6 @@ function ensureFirebaseConfigScript(){
   return firebaseConfigLoadPromise;
 }
 
-function ensureFirebaseAppCheckConfigScript(){
-  if(!hasWindow()) return Promise.resolve();
-  if(getAppCheckConfigFromWindow()) return Promise.resolve();
-  if(!firebaseAppCheckConfigLoadPromise){
-    firebaseAppCheckConfigLoadPromise = new Promise((resolve, reject)=>{
-      if(typeof document === 'undefined'){
-        resolve();
-        return;
-      }
-      const existing = document.querySelector('script[data-firebase-app-check-config]');
-      if(existing){
-        if(getAppCheckConfigFromWindow()){
-          resolve();
-          return;
-        }
-        existing.addEventListener('load', ()=>resolve(), { once: true });
-        existing.addEventListener('error', ()=>reject(new Error('No se pudo cargar firebase-app-check.js')), { once: true });
-        return;
-      }
-      const script = document.createElement('script');
-      script.src = 'firebase-app-check.js';
-      script.async = false;
-      script.dataset.firebaseAppCheckConfig = 'true';
-      script.onload = ()=>resolve();
-      script.onerror = ()=>reject(new Error('No se pudo cargar firebase-app-check.js'));
-      document.head.appendChild(script);
-    });
-  }
-  return firebaseAppCheckConfigLoadPromise;
-}
-
-function ensureFirebaseAppCheckSdk(){
-  if(typeof firebase !== 'undefined' && firebase.appCheck) return Promise.resolve();
-  if(!hasWindow()) return Promise.resolve();
-  if(!firebaseAppCheckSdkLoadPromise){
-    firebaseAppCheckSdkLoadPromise = new Promise((resolve, reject)=>{
-      if(typeof document === 'undefined'){
-        resolve();
-        return;
-      }
-      const existing = document.querySelector('script[data-firebase-app-check-sdk]');
-      if(existing){
-        if(existing.dataset.loaded === 'true' || (typeof firebase !== 'undefined' && firebase.appCheck)){
-          resolve();
-          return;
-        }
-        existing.addEventListener('load', ()=>{
-          existing.dataset.loaded = 'true';
-          resolve();
-        }, { once: true });
-        existing.addEventListener('error', ()=>reject(new Error('No se pudo cargar Firebase App Check SDK')), { once: true });
-        return;
-      }
-      const script = document.createElement('script');
-      script.src = 'https://www.gstatic.com/firebasejs/11.5.0/firebase-app-check-compat.js';
-      script.async = false;
-      script.dataset.firebaseAppCheckSdk = 'true';
-      script.onload = ()=>{
-        script.dataset.loaded = 'true';
-        resolve();
-      };
-      script.onerror = ()=>reject(new Error('No se pudo cargar Firebase App Check SDK'));
-      document.head.appendChild(script);
-    });
-  }
-  return firebaseAppCheckSdkLoadPromise;
-}
-
-function isPlaceholderAppCheckSiteKey(siteKey){
-  if(typeof siteKey !== 'string') return true;
-  const trimmed = siteKey.trim();
-  if(!trimmed) return true;
-  if(trimmed === '__FIREBASE_APPCHECK_SITE_KEY__') return true;
-  if(/REEMPLAZA_CON_TU_SITE_KEY/i.test(trimmed)) return true;
-  return false;
-}
-
-function normalizeAppCheckProvider(provider){
-  if(typeof provider !== 'string') return 'recaptcha_v3';
-  return provider.toLowerCase().replace(/\s+/g, '').replace(/_/g, '-');
-}
-
-function applyAppCheckDebugConfig(config){
-  if(!hasWindow() || !config) return;
-  if(config.debugToken){
-    window.FIREBASE_APPCHECK_DEBUG_TOKEN = config.debugToken;
-  }else if(config.enableDebug === true){
-    window.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-  }
-}
-
-async function initAppCheck(){
-  if(appCheckInstance) return appCheckInstance;
-  if(firebaseAppCheckInitPromise) return firebaseAppCheckInitPromise;
-
-  firebaseAppCheckInitPromise = (async ()=>{
-    try{
-      await ensureFirebaseAppCheckSdk();
-    }catch(err){
-      console.warn('No se pudo cargar el SDK de Firebase App Check. Se continuará sin App Check.', err);
-      return null;
-    }
-
-    try{
-      await ensureFirebaseAppCheckConfigScript();
-    }catch(err){
-      console.warn('No se pudo cargar la configuración de Firebase App Check. Se continuará sin App Check.', err);
-      return null;
-    }
-
-    const config = getAppCheckConfigFromWindow();
-    if(!config){
-      console.warn('Firebase App Check no cuenta con configuración. Cree public/firebase-app-check.js para habilitarlo.');
-      return null;
-    }
-    if(isPlaceholderAppCheckSiteKey(config.siteKey)){
-      console.warn('Firebase App Check utiliza un site key de ejemplo. Reemplace el valor en public/firebase-app-check.js para activarlo.');
-      return null;
-    }
-
-    applyAppCheckDebugConfig(config);
-
-    const autoRefresh = config.isTokenAutoRefreshEnabled !== false;
-    const provider = normalizeAppCheckProvider(config.provider);
-    const siteKey = String(config.siteKey).trim();
-
-    if(hasWindow()){
-      window.FIREBASE_APPCHECK_SITE_KEY = siteKey;
-    }
-
-    if(!firebase.appCheck){
-      console.warn('Firebase App Check no está disponible en esta versión del SDK.');
-      return null;
-    }
-
-    const appCheck = firebase.appCheck();
-    if(!appCheck || typeof appCheck.activate !== 'function'){
-      console.warn('No se pudo inicializar Firebase App Check porque la API de activación no está disponible.');
-      return null;
-    }
-
-    if(provider === 'recaptcha-enterprise'){
-      appCheck.activate(siteKey, {
-        isTokenAutoRefreshEnabled: autoRefresh,
-        provider: 'recaptcha-enterprise'
-      });
-    }else{
-      appCheck.activate(siteKey, autoRefresh);
-    }
-
-    appCheckInstance = appCheck;
-    return appCheck;
-  })();
-
-  return firebaseAppCheckInitPromise;
-}
-
 async function initFirebase(){
   if(app) return app;
   if(firebaseInitPromise) return firebaseInitPromise;
@@ -233,12 +65,6 @@ async function initFirebase(){
       throw new Error('Firebase config no disponible. Genere public/firebase-config.js antes de cargar auth.js.');
     }
     app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
-
-    try{
-      await initAppCheck();
-    }catch(appCheckErr){
-      console.error('No se pudo inicializar Firebase App Check', appCheckErr);
-    }
 
     db = firebase.firestore();
     auth = firebase.auth();
