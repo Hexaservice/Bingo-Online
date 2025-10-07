@@ -152,12 +152,28 @@ async function initAppCheck(){
   if(firebaseAppCheckInitPromise) return firebaseAppCheckInitPromise;
 
   firebaseAppCheckInitPromise = (async ()=>{
-    await ensureFirebaseAppCheckSdk();
-    await ensureFirebaseAppCheckConfigScript();
+    try{
+      await ensureFirebaseAppCheckSdk();
+    }catch(err){
+      console.warn('No se pudo cargar el SDK de Firebase App Check. Se continuará sin App Check.', err);
+      return null;
+    }
+
+    try{
+      await ensureFirebaseAppCheckConfigScript();
+    }catch(err){
+      console.warn('No se pudo cargar la configuración de Firebase App Check. Se continuará sin App Check.', err);
+      return null;
+    }
 
     const config = getAppCheckConfigFromWindow();
-    if(!config || isPlaceholderAppCheckSiteKey(config.siteKey)){
-      throw new Error('Firebase App Check no está configurado. Cree o actualice public/firebase-app-check.js con el site key emitido por Firebase.');
+    if(!config){
+      console.warn('Firebase App Check no cuenta con configuración. Cree public/firebase-app-check.js para habilitarlo.');
+      return null;
+    }
+    if(isPlaceholderAppCheckSiteKey(config.siteKey)){
+      console.warn('Firebase App Check utiliza un site key de ejemplo. Reemplace el valor en public/firebase-app-check.js para activarlo.');
+      return null;
     }
 
     applyAppCheckDebugConfig(config);
@@ -170,7 +186,17 @@ async function initAppCheck(){
       window.FIREBASE_APPCHECK_SITE_KEY = siteKey;
     }
 
+    if(!firebase.appCheck){
+      console.warn('Firebase App Check no está disponible en esta versión del SDK.');
+      return null;
+    }
+
     const appCheck = firebase.appCheck();
+    if(!appCheck || typeof appCheck.activate !== 'function'){
+      console.warn('No se pudo inicializar Firebase App Check porque la API de activación no está disponible.');
+      return null;
+    }
+
     if(provider === 'recaptcha-enterprise'){
       appCheck.activate(siteKey, {
         isTokenAutoRefreshEnabled: autoRefresh,
@@ -212,7 +238,6 @@ async function initFirebase(){
       await initAppCheck();
     }catch(appCheckErr){
       console.error('No se pudo inicializar Firebase App Check', appCheckErr);
-      throw appCheckErr;
     }
 
     db = firebase.firestore();
