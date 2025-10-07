@@ -1453,29 +1453,50 @@
     return true;
   }
 
-  auth.onAuthStateChanged(async user=>{
-    if(!user){
-      sorteoCookieKey = sorteoCookieDefaultKey;
-      restauracionPendiente = false;
-      if(resolverAuthListo){ resolverAuthListo(); resolverAuthListo = null; }
-      return;
-    }
-    const nuevoKey = `cantarsorteos_${user.email.replace(/[^\w]/g,'_')}`;
-    if(!getCookie(nuevoKey)){
-      const general = getCookie(sorteoCookieDefaultKey);
-      if(general){
-        setCookie(nuevoKey, general);
-      }
-    }
-    sorteoCookieKey = nuevoKey;
-    restauracionPendiente = true;
-    try {
-      await verificarSorteoPersistidoAlEntrar({ mostrarFallback: false });
-    } catch (err) {
-      console.error('No se pudo restaurar el sorteo tras la autenticación.', err);
-    }
-    if(resolverAuthListo){ resolverAuthListo(); resolverAuthListo = null; }
-  });
+  let authListenerRegistrado = false;
+
+  function registrarObservadorAuth(){
+    if(authListenerRegistrado) return;
+    authListenerRegistrado = true;
+    initFirebase()
+      .then(()=>{
+        if(!auth || typeof auth.onAuthStateChanged !== 'function'){
+          throw new Error('Firebase Auth no está disponible.');
+        }
+        auth.onAuthStateChanged(async user=>{
+          if(!user){
+            sorteoCookieKey = sorteoCookieDefaultKey;
+            restauracionPendiente = false;
+            if(resolverAuthListo){ resolverAuthListo(); resolverAuthListo = null; }
+            return;
+          }
+          const nuevoKey = `cantarsorteos_${user.email.replace(/[^\w]/g,'_')}`;
+          if(!getCookie(nuevoKey)){
+            const general = getCookie(sorteoCookieDefaultKey);
+            if(general){
+              setCookie(nuevoKey, general);
+            }
+          }
+          sorteoCookieKey = nuevoKey;
+          restauracionPendiente = true;
+          try {
+            await verificarSorteoPersistidoAlEntrar({ mostrarFallback: false });
+          } catch (err) {
+            console.error('No se pudo restaurar el sorteo tras la autenticación.', err);
+          }
+          if(resolverAuthListo){ resolverAuthListo(); resolverAuthListo = null; }
+        });
+      })
+      .catch(err=>{
+        console.error('No se pudo registrar el observador de autenticación.', err);
+        if(mensajeEl){
+          mensajeEl.textContent = 'No se pudo validar la sesión actual. Recarga la página.';
+        }
+        if(resolverAuthListo){ resolverAuthListo(); resolverAuthListo = null; }
+      });
+  }
+
+  registrarObservadorAuth();
 
   document.getElementById('salir-btn').addEventListener('click',()=>{ window.location.href='admin.html'; });
   btnSorteo.addEventListener('click', abrirModalSorteos);
