@@ -1284,6 +1284,27 @@
     }
   }
 
+  function obtenerPersistenciaSorteo(key){
+    if(!key) return null;
+    const guardado = getCookie(key);
+    if(!guardado || guardado === 'undefined') return null;
+    if(typeof guardado === 'string'){
+      try {
+        const data = JSON.parse(guardado);
+        if(data && typeof data === 'object'){
+          const id = (data.id || data.sorteoId || '').toString();
+          if(id) return { ...data, id };
+        }
+      } catch (err) {
+        const idTexto = guardado.toString();
+        if(idTexto){
+          return { id: idTexto };
+        }
+      }
+    }
+    return null;
+  }
+
   async function verificarSorteoPersistidoAlEntrar(opciones = {}){
     const mostrarFallback = opciones.mostrarFallback === true;
     const esperarCargaActiva = opciones.esperarCargaActiva !== false;
@@ -1298,9 +1319,10 @@
           console.warn('No se pudo completar la carga previa al restaurar el sorteo guardado.', err);
         }
       }
-      if(!Array.isArray(sorteos) || !sorteos.length){
+      const listaVisibles = Array.isArray(sorteos) ? sorteos.filter(esSorteoVisible) : [];
+      if(!listaVisibles.length){
+        restauracionPendiente = false;
         if(mostrarFallback){
-          restauracionPendiente = false;
           try {
             mostrarDatos();
           } catch (err) {
@@ -1309,20 +1331,47 @@
         }
         return false;
       }
-      let restaurado = false;
-      try {
-        restaurado = intentarRestaurarSorteo();
-      } catch (err) {
-        console.error('Error intentando restaurar el sorteo guardado.', err);
-        restaurado = false;
+      const candidatos = [];
+      const persistidoActual = obtenerPersistenciaSorteo(sorteoCookieKey);
+      if(persistidoActual){ candidatos.push(persistidoActual); }
+      if(sorteoCookieKey !== sorteoCookieDefaultKey){
+        const persistidoGeneral = obtenerPersistenciaSorteo(sorteoCookieDefaultKey);
+        if(persistidoGeneral){ candidatos.push(persistidoGeneral); }
       }
-      if(!restaurado && mostrarFallback){
-        restauracionPendiente = false;
-        try {
+      let restaurado = false;
+      let huboPersistencia = candidatos.length > 0;
+      for(const candidato of candidatos){
+        const encontrado = listaVisibles.find(item=>item && item.id === candidato.id);
+        if(!encontrado) continue;
+        if(encontrado.id !== currentSorteoId){
+          seleccionarSorteo(encontrado.id);
+        } else {
+          guardarSorteoSeleccionado(encontrado);
           mostrarDatos();
-        } catch (err) {
-          console.error('Error mostrando los datos luego de intentar restaurar el sorteo.', err);
         }
+        restauracionPendiente = false;
+        restaurado = true;
+        break;
+      }
+      if(!restaurado){
+        if(huboPersistencia){
+          limpiarSorteoSeleccionado();
+        }
+        const respaldo = obtenerSorteoActivoMasReciente();
+        if(respaldo){
+          seleccionarSorteo(respaldo.id);
+          restaurado = true;
+        } else if(mostrarFallback){
+          restauracionPendiente = false;
+          try {
+            mostrarDatos();
+          } catch (err) {
+            console.error('Error mostrando los datos luego de intentar restaurar el sorteo.', err);
+          }
+        }
+      }
+      if(!restaurado){
+        restauracionPendiente = false;
       }
       return restaurado;
     })();
@@ -1403,54 +1452,6 @@
     if(sorteoCookieKey !== sorteoCookieDefaultKey){
       setCookie(sorteoCookieDefaultKey, JSON.stringify(payload));
     }
-  }
-
-  function intentarRestaurarSorteo(){
-    if(!sorteoCookieKey){
-      restauracionPendiente = false;
-      return restaurarSorteoMasReciente();
-    }
-    let guardado = getCookie(sorteoCookieKey);
-    if((!guardado || guardado === 'undefined') && sorteoCookieKey !== sorteoCookieDefaultKey){
-      const respaldoGeneral = getCookie(sorteoCookieDefaultKey);
-      if(respaldoGeneral && respaldoGeneral !== 'undefined'){
-        setCookie(sorteoCookieKey, respaldoGeneral);
-        guardado = respaldoGeneral;
-      }
-    }
-    if(!guardado){
-      restauracionPendiente = false;
-      return restaurarSorteoMasReciente();
-    }
-    let idRestaurar = guardado;
-    try {
-      const data = JSON.parse(guardado);
-      if(data && typeof data === 'object'){
-        idRestaurar = data.id || '';
-      }
-    } catch (err) {
-      idRestaurar = guardado;
-    }
-    if(!idRestaurar){
-      restauracionPendiente = false;
-      return restaurarSorteoMasReciente();
-    }
-    if(!sorteos || !sorteos.length){
-      return false;
-    }
-    if(idRestaurar === currentSorteoId){
-      restauracionPendiente = false;
-      return true;
-    }
-    const existe = sorteos.find(s=>s.id===idRestaurar);
-    if(!existe || !esSorteoVisible(existe)){
-      limpiarSorteoSeleccionado();
-      restauracionPendiente = false;
-      return restaurarSorteoMasReciente();
-    }
-    seleccionarSorteo(idRestaurar);
-    restauracionPendiente = false;
-    return true;
   }
 
   auth.onAuthStateChanged(async user=>{
