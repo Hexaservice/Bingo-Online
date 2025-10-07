@@ -3177,10 +3177,11 @@
   async function inicializar(){
     let primerIntentoFallido = false;
     let mensajePostCarga = '';
+    const esperaAuth = authListoPromesa.catch(()=>{});
     try {
       await initFirebase();
-      const esperaAuth = authListoPromesa.catch(()=>{});
-      await Promise.all([esperaAuth, cargarSorteos()]);
+      await esperaAuth;
+      await cargarSorteos();
     } catch (err) {
       primerIntentoFallido = true;
       console.error('Error inicializando los sorteos', err);
@@ -3189,6 +3190,7 @@
     if(primerIntentoFallido){
       try {
         await initFirebase();
+        await esperaAuth;
         await cargarSorteos({ forzar: true });
         mensajePostCarga = 'Los sorteos se cargaron tras un reintento.';
       } catch (reintentoErr) {
