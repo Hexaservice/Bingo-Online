@@ -16,18 +16,30 @@ const db = admin.firestore();
 // ----- Lógica de sincronización de hora (adaptado de public/js/timezone.js) -----
 const serverTime = { zonaIana: '', diferencia: 0 };
 
+function esZonaIanaValida(zona = '') {
+  if (!zona) return false;
+  try {
+    Intl.DateTimeFormat('es-ES', { timeZone: zona });
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 function parseZona(zona) {
-  const match = zona.match(/^UTC([+-])(\d{2}):(\d{2})$/);
+  if (!zona) return '';
+  const zonaLimpia = zona.trim();
+  const match = zonaLimpia.match(/^UTC([+-])(\d{2}):(\d{2})$/);
   if (match) {
     const sign = match[1] === '-' ? '+' : '-';
     const h = String(parseInt(match[2], 10));
     return `Etc/GMT${sign}${h}`;
   }
-  return zona;
+  return zonaLimpia;
 }
 
 async function sincronizarHora() {
-  if (!serverTime.zonaIana) {
+  if (!serverTime.zonaIana || !esZonaIanaValida(serverTime.zonaIana)) {
     serverTime.diferencia = 0;
     return;
   }
@@ -51,8 +63,24 @@ async function initServerTime() {
   try {
     const doc = await db.collection('Variablesglobales').doc('Parametros').get();
     if (!doc.exists) throw new Error('Documento Parametros no existe');
-    const { ZonaHoraria = '' } = doc.data();
-    serverTime.zonaIana = parseZona(ZonaHoraria);
+    const { Pais = '', ZonaHoraria = '' } = doc.data();
+    const zonaPorPais = {
+      Venezuela: 'America/Caracas',
+      España: 'Europe/Madrid',
+      Mexico: 'America/Mexico_City',
+      Colombia: 'America/Bogota',
+      Argentina: 'America/Argentina/Buenos_Aires'
+    };
+    const zonaNormalizada = parseZona(ZonaHoraria);
+    if (esZonaIanaValida(zonaNormalizada)) {
+      serverTime.zonaIana = zonaNormalizada;
+    } else if (esZonaIanaValida(ZonaHoraria.trim())) {
+      serverTime.zonaIana = ZonaHoraria.trim();
+    } else if (zonaPorPais[Pais] && esZonaIanaValida(zonaPorPais[Pais])) {
+      serverTime.zonaIana = zonaPorPais[Pais];
+    } else {
+      serverTime.zonaIana = '';
+    }
     await sincronizarHora();
     setInterval(sincronizarHora, 3600000);
   } catch (e) {
