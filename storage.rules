@@ -5,18 +5,12 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    function hasValidAppCheck() {
-      return request.auth != null &&
-             request.auth.token.firebase != null &&
-             request.auth.token.firebase['app_check'] == true;
-    }
-
     function isSystemRequest() {
       return request.auth != null && request.auth.token.admin == true;
     }
 
     match /{allPaths=**} {
-      allow read, write: if isSystemRequest() || (isSignedIn() && hasValidAppCheck());
+      allow read, write: if isSystemRequest() || isSignedIn();
     }
   }
 }
