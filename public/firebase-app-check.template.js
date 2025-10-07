@@ -3,7 +3,7 @@
 // al crear el proveedor (reCAPTCHA v3 o reCAPTCHA Enterprise) para la app web.
 window.__FIREBASE_APP_CHECK_CONFIG__ = {
   provider: 'recaptcha_v3',
-  siteKey: '__FIREBASE_APPCHECK_SITE_KEY__',
+  siteKey: '6Lf4tuArAAAAAJfj6sMEccGu57QKz2n5PfOz9d5y',
   isTokenAutoRefreshEnabled: true,
   // Opcional: establezca un token de depuración cuando ejecute la app en entornos
   // locales. Utilice la consola de Firebase para registrar el token y permitir
