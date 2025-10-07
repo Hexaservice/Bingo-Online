@@ -602,6 +602,36 @@
     generarCartonesBtn.disabled = false;
   }
 
+  function construirRutaPdf(nombreArchivo){
+    const storageInstance = obtenerStorage();
+    if(!storageInstance){
+      throw new Error('No se pudo obtener una instancia válida de Firebase Storage.');
+    }
+    const nombreNormalizado = normalizarTextoArchivo(nombreArchivo || 'sorteo');
+    const fechaSubida = new Date().toISOString().replace(/[:.]/g,'-');
+    const ruta = `sorteos/${sorteoId}/${nombreNormalizado}_${fechaSubida}.pdf`;
+    return {
+      storageInstance,
+      ruta,
+      storageRef: storageInstance.ref().child(ruta)
+    };
+  }
+
+  async function subirPdf(pdfBlob, nombreArchivo){
+    const { storageRef, ruta } = construirRutaPdf(nombreArchivo);
+    const snapshot = await storageRef.put(pdfBlob, { contentType: 'application/pdf' });
+    const pdfUrl = await snapshot.ref.getDownloadURL();
+    return { pdfUrl, ruta };
+  }
+
+  async function marcarPdfGenerado(pdfUrl){
+    const payload = { pdf: 'si', pdfUrl };
+    await Promise.all([
+      db.collection('sorteos').doc(sorteoId).set(payload, { merge: true }),
+      db.collection('cantarsorteos').doc(sorteoId).set(payload, { merge: true })
+    ]);
+  }
+
   async function generarPDF(){
     if(!sorteoData){ return; }
     if(!cartonesCargados){ alert('Primero debes generar los cartones del sorteo.'); return; }
@@ -647,19 +677,8 @@
       pdf.addImage(imgData, 'PNG', marginX, marginY, pdfWidth, pdfHeight);
 
       const pdfBlob = pdf.output('blob');
-      const storageInstance = obtenerStorage();
-      const nombreNormalizado = normalizarTextoArchivo(nombreArchivo || 'sorteo');
-      const fechaSubida = new Date().toISOString().replace(/[:.]/g,'-');
-      const ruta = `sorteos/${sorteoId}/${nombreNormalizado}_${fechaSubida}.pdf`;
-      const storageRef = storageInstance.ref().child(ruta);
-      const snapshot = await storageRef.put(pdfBlob, { contentType: 'application/pdf' });
-      const pdfUrl = await snapshot.ref.getDownloadURL();
-
-      const payload = { pdf: 'si', pdfUrl };
-      await Promise.all([
-        db.collection('sorteos').doc(sorteoId).set(payload, { merge: true }),
-        db.collection('cantarsorteos').doc(sorteoId).set(payload, { merge: true })
-      ]);
+      const { pdfUrl } = await subirPdf(pdfBlob, nombreArchivo);
+      await marcarPdfGenerado(pdfUrl);
 
       alert('El PDF del sorteo se generó y cargó correctamente.');
     } catch (err) {
