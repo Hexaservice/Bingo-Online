@@ -1072,6 +1072,7 @@
   let promesaCargaSorteos = null;
   let ultimaCargaSorteos = 0;
   const INTERVALO_CACHE_SORTEOS_MS = 30000;
+  const TAM_MAX_CONSULTA_IN = 10;
   let modoManual = false;
   let infoTiempoSorteo = {
     fecha: null,
@@ -2376,6 +2377,96 @@
     return db;
   }
 
+  function crearLotes(arreglo, tamano){
+    if(!Array.isArray(arreglo) || arreglo.length === 0){
+      return [];
+    }
+    const valorTamano = Math.max(1, tamano | 0);
+    const lotes = [];
+    for(let i = 0; i < arreglo.length; i += valorTamano){
+      lotes.push(arreglo.slice(i, i + valorTamano));
+    }
+    return lotes;
+  }
+
+  async function cargarCantosPorLotes(ids, registrosMap){
+    if(!Array.isArray(ids) || !ids.length) return;
+    if(!db) return;
+    const lotes = crearLotes(ids, TAM_MAX_CONSULTA_IN);
+    const fieldPathId = firebase.firestore.FieldPath.documentId();
+    const consultas = lotes.map(lote=>{
+      if(!Array.isArray(lote) || !lote.length) return Promise.resolve();
+      return db.collection('cantos')
+        .where(fieldPathId, 'in', lote)
+        .get()
+        .then(snap=>{
+          snap.forEach(doc=>{
+            const registro = registrosMap.get(doc.id);
+            if(!registro) return;
+            const dataCantos = doc.data() || {};
+            registro.cantos = Array.isArray(dataCantos.numeros) ? dataCantos.numeros : [];
+          });
+        })
+        .catch(err=>{
+          console.error('Error cargando cantos en lote', err);
+        });
+    });
+    await Promise.allSettled(consultas);
+    ids.forEach(id=>{
+      const registro = registrosMap.get(id);
+      if(registro && !Array.isArray(registro.cantos)){
+        registro.cantos = [];
+      }
+    });
+  }
+
+  async function cargarFormasPorLotes(ids, registrosMap){
+    if(!Array.isArray(ids) || !ids.length) return;
+    if(!db) return;
+    const lotes = crearLotes(ids, TAM_MAX_CONSULTA_IN);
+    const consultas = lotes.map(lote=>{
+      if(!Array.isArray(lote) || !lote.length) return Promise.resolve();
+      return db.collection('formas')
+        .where('sorteoId', 'in', lote)
+        .get()
+        .then(snap=>{
+          const agrupado = new Map();
+          snap.forEach(doc=>{
+            const dataForma = doc.data() || {};
+            const sorteoId = dataForma.sorteoId || '';
+            if(!sorteoId) return;
+            if(!agrupado.has(sorteoId)){
+              agrupado.set(sorteoId, []);
+            }
+            const arr = agrupado.get(sorteoId);
+            arr.push({
+              idx: dataForma.idx || dataForma.indice || arr.length + 1,
+              nombre: dataForma.nombre || '',
+              porcentaje: dataForma.porcentaje ?? dataForma.porcentajePremio ?? 0,
+              cartonesGratis: dataForma.cartonesGratis ?? (dataForma.cartones || 0)
+            });
+          });
+          agrupado.forEach((arr, sorteoId)=>{
+            arr.sort((a,b)=>(parseInt(a.idx,10)||0)-(parseInt(b.idx,10)||0));
+            const registro = registrosMap.get(sorteoId);
+            if(registro){
+              registro.formas = arr;
+            }
+          });
+        })
+        .catch(err=>{
+          console.error('Error cargando formas en lote', err);
+        });
+    });
+    await Promise.allSettled(consultas);
+    ids.forEach(id=>{
+      const registro = registrosMap.get(id);
+      if(registro && !Array.isArray(registro.formas)){
+        registro.formas = [];
+      }
+    });
+  }
+
   async function cargarSorteos(opciones = {}){
     const forzar = opciones.forzar === true;
     const ahora = Date.now();
@@ -2398,8 +2489,6 @@
         await asegurarDbListo();
         const snap = await db.collection('sorteos').get();
         const pendientesPdf = [];
-        const cantosPromises = [];
-        const formasPromises = [];
         const registrosMap = new Map();
         snap.forEach(doc=>{
           const d = doc.data() || {};
@@ -2424,32 +2513,6 @@
           if(typeof d.pdf === 'undefined' || d.pdf === null || d.pdf === ''){
             pendientesPdf.push(doc.id);
           }
-          cantosPromises.push(
-            db.collection('cantos').doc(doc.id).get().then(cantoDoc=>{
-              if(!cantoDoc.exists){
-                registro.cantos = [];
-                return;
-              }
-              const dataCantos = cantoDoc.data() || {};
-              registro.cantos = Array.isArray(dataCantos.numeros) ? dataCantos.numeros : [];
-            }).catch(err=>console.error('Error cargando cantos de sorteo', err))
-          );
-          formasPromises.push(
-            db.collection('formas').where('sorteoId','==',doc.id).get().then(formasSnap=>{
-              const arr = [];
-              formasSnap.forEach(fdoc=>{
-                const dataForma = fdoc.data() || {};
-                arr.push({
-                  idx: dataForma.idx || dataForma.indice || arr.length + 1,
-                  nombre: dataForma.nombre || '',
-                  porcentaje: dataForma.porcentaje ?? dataForma.porcentajePremio ?? 0,
-                  cartonesGratis: dataForma.cartonesGratis ?? (dataForma.cartones || 0)
-                });
-              });
-              arr.sort((a,b)=>(parseInt(a.idx,10)||0)-(parseInt(b.idx,10)||0));
-              registro.formas = arr;
-            }).catch(err=>console.error('Error cargando formas de sorteo', err))
-          );
         });
         sorteos = Array.from(registrosMap.values());
         if(pendientesPdf.length){
@@ -2457,9 +2520,12 @@
             db.collection('sorteos').doc(id).set({ pdf: 'no' }, { merge: true })
           )).catch(err=>console.error('Error asegurando pdf en sorteos', err));
         }
+        const idsSorteos = Array.from(registrosMap.keys());
         const cargasDetalles = [];
-        if(cantosPromises.length) cargasDetalles.push(Promise.allSettled(cantosPromises));
-        if(formasPromises.length) cargasDetalles.push(Promise.allSettled(formasPromises));
+        if(idsSorteos.length){
+          cargasDetalles.push(cargarCantosPorLotes(idsSorteos, registrosMap));
+          cargasDetalles.push(cargarFormasPorLotes(idsSorteos, registrosMap));
+        }
         if(cargasDetalles.length){
           Promise.allSettled(cargasDetalles).then(()=>{
             if(!currentSorteoId) return;
