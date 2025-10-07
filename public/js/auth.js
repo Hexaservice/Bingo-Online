@@ -1,18 +1,3 @@
-import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
-
-
-if (!self.FIREBASE_APPCHECK_SITE_KEY) {
-  alert("App Check no configurado correctamente");
-  throw new Error("Falta configuración de App Check");
-}
-
-const appCheck = initializeAppCheck(firebaseApp, {
-  provider: new ReCaptchaV3Provider(self.FIREBASE_APPCHECK_SITE_KEY),
-  isTokenAutoRefreshEnabled: true
-});
-
-
-
 let app, auth, db, provider, appName = 'BingOnline';
 const DISABLED_MSG = "Tu cuenta ha sido deshabilitada, Motivado posiblemente a que has incumplido una o más clausulas en nuestros Terminos y condiciones. Contacta con un administrador del sistema si necesitas información.";
 let firebaseInitPromise = null;
@@ -180,6 +165,10 @@ async function initAppCheck(){
     const autoRefresh = config.isTokenAutoRefreshEnabled !== false;
     const provider = normalizeAppCheckProvider(config.provider);
     const siteKey = String(config.siteKey).trim();
+
+    if(hasWindow()){
+      window.FIREBASE_APPCHECK_SITE_KEY = siteKey;
+    }
 
     const appCheck = firebase.appCheck();
     if(provider === 'recaptcha-enterprise'){
