@@ -7,7 +7,7 @@ window.__FIREBASE_APP_CHECK_CONFIG__ = {
   // TODO: Reemplace el valor por el site key real generado en la consola
   // de Firebase (se recomienda mantener el archivo fuera del control de
   // versiones público una vez configurado).
-  siteKey: 'REEMPLAZA_CON_TU_SITE_KEY',
+  siteKey: '6Lf4tuArAAAAAJfj6sMEccGu57QKz2n5PfOz9d5y',
   isTokenAutoRefreshEnabled: true,
   debugToken: undefined,
   enableDebug: false
