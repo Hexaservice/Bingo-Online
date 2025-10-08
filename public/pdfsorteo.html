@@ -99,9 +99,9 @@
       margin-bottom: 26px;
     }
     #resumen-header {
-      display: grid;
-      grid-template-columns: auto 1fr;
-      align-items: start;
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
       gap: 16px;
       margin-bottom: 16px;
       text-align: left;
@@ -110,7 +110,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      align-self: start;
+      flex: 0 0 auto;
     }
     #logo {
       width: 110px;
@@ -121,6 +121,7 @@
       flex-direction: column;
       gap: 4px;
       align-items: flex-start;
+      flex: 1 1 220px;
     }
     #nombre-sorteo {
       font-family: 'Bangers', cursive;
@@ -273,14 +274,14 @@
       align-self: center;
     }
     .forma-mini-carton {
+      --mini-cell: 18px;
       border-collapse: separate;
       border-spacing: 0;
       background: linear-gradient(#ffffff,#eeeeee);
       border-radius: 12px;
       overflow: hidden;
-    }
-    .forma-mini-carton {
-      --mini-cell: 18px;
+      width: calc(var(--mini-cell) * 5);
+      table-layout: fixed;
     }
     .forma-mini-carton th,
     .forma-mini-carton td {
@@ -288,12 +289,15 @@
       width: var(--mini-cell);
       height: var(--mini-cell);
       aspect-ratio: 1 / 1;
-      display: grid;
-      place-items: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       font-weight: 700;
       font-size: 0.68rem;
       background: #ffffff;
       padding: 0;
+      text-align: center;
+      vertical-align: middle;
     }
     .forma-mini-carton th {
       font-size: 0.9rem;
@@ -379,11 +383,14 @@
       width: var(--cell-size);
       height: var(--cell-size);
       aspect-ratio: 1 / 1;
-      display: grid;
-      place-items: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       font-weight: 700;
       color: #1a1a1a;
       padding: 0;
+      text-align: center;
+      vertical-align: middle;
     }
     .pdf-carton-table th {
       font-size: calc(var(--cell-size) * 0.75);
@@ -473,8 +480,12 @@
       #resumen-pdf { padding: 22px 14px; }
       #acciones-fixed { right: 6px; }
       #acciones-fixed button { padding: 8px 14px; font-size: 1rem; }
-      #resumen-header { grid-template-columns: 1fr; justify-items: flex-start; }
+      #resumen-header { gap: 12px; }
       #resumen-header .header-logo { justify-content: flex-start; }
+      #resumen-header .header-info { align-items: flex-start; }
+    }
+    @media (max-width: 520px) {
+      #resumen-header { flex-wrap: wrap; }
     }
     @media (max-width: 640px) {
       #cartones-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
