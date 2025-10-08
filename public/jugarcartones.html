@@ -191,11 +191,18 @@
     .text-premio-total{font-family:'Bangers',cursive;color:white;font-size:1.5rem;text-align:center;}
     .text-premio-total div{ text-shadow:0 0 4px darkgreen; }
     .valor-total{font-size:3rem;text-shadow:0 0 4px darkgreen;animation:pulse 1s infinite;}
-    .premio-row{display:flex;justify-content:center;align-items:center;gap:10px;font-family:'Bangers',cursive;font-weight:bold;margin-bottom:4px;}
-    .premio-row .premio-valor{font-size:1.4rem;}
-    .premio-row .cartones-valor{font-size:1.2rem;}
-    .premio-row .forma-nombre{font-family:'Poppins',sans-serif;font-weight:normal;font-size:0.6rem;display:block;margin-top:-2px;}
-    .premio-row div,.premio-row span{ text-shadow:0 0 6px #fff,0 0 10px #fff; }
+    #premios-formas,#back-premios-formas{display:flex;flex-direction:column;gap:8px;width:100%;box-sizing:border-box;}
+    .premio-row{display:flex;align-items:center;gap:12px;justify-content:flex-start;font-family:'Bangers',cursive;font-weight:bold;margin-bottom:0;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,0.85);box-shadow:0 2px 6px rgba(0,0,0,0.15);flex-wrap:wrap;}
+    .premio-mini-box{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;}
+    .premio-mini-box .forma-mini-etiqueta{font-size:0.75rem;background:linear-gradient(90deg,#4B0082,#00008b);color:#fff;padding:2px 6px;border-radius:6px;text-shadow:0 0 4px #000;font-family:'Bangers',cursive;}
+    .premio-mini-box .mini-carton-wrapper{padding:2px;border-radius:10px;box-shadow:0 0 4px rgba(0,0,0,0.25);background:linear-gradient(#0a8800,#f5f5a5);}
+    .forma-carton-wrapper{display:inline-flex;}
+    .premio-mini-box .mini-carton{border-radius:8px;}
+    .premio-mini-box .mini-carton th,.premio-mini-box .mini-carton td{border-width:1px;}
+    .premio-info{display:flex;flex-direction:column;gap:4px;align-items:flex-start;font-family:'Poppins',sans-serif;font-weight:600;color:#333;min-width:140px;}
+    .premio-info .premio-valor{font-size:1.1rem;font-family:'Bangers',cursive;text-shadow:0 0 6px #fff,0 0 10px #fff;}
+    .premio-info .cartones-valor{font-size:1rem;font-family:'Bangers',cursive;text-shadow:0 0 6px #fff,0 0 10px #fff;}
+    .premio-info .forma-nombre{font-family:'Poppins',sans-serif;font-weight:600;font-size:0.75rem;color:#4B0082;text-shadow:none;margin-top:2px;}
     #back-premios-content{display:flex;flex-direction:column;align-items:center;position:relative;z-index:1;}
     @media (max-width:480px){#fecha-hora-sorteo .fecha-col{align-items:center;text-align:center;}}
   </style>
@@ -1106,39 +1113,56 @@ function toggleForma(idx){
     const cont=document.getElementById(`${prefijo}-formas`);
     if(cont){
       cont.innerHTML='';
-      formasSorteo.sort((a,b)=>a.idx-b.idx).forEach(f=>{
-        const premioForma=Math.round(premioActual*parseFloat(f.porcentaje||0)/100);
-        const color=formGlows[f.idx-1];
-        const fila=document.createElement('div');
-        fila.className='premio-row';
+      if(formasSorteo.length===0){
+        const vacio=document.createElement('div');
+        vacio.className='no-cartones';
+        vacio.textContent='No hay formas registradas para este sorteo.';
+        cont.appendChild(vacio);
+        return;
+      }
+      formasSorteo
+        .slice()
+        .sort((a,b)=>a.idx-b.idx)
+        .forEach(f=>{
+          const premioForma=Math.round(premioActual*parseFloat(f.porcentaje||0)/100);
+          const color=formGlows[(f.idx-1)%formGlows.length]||'#0a8800';
+          const fila=document.createElement('div');
+          fila.className='premio-row';
 
-        const premioSpan=document.createElement('div');
-        premioSpan.style.color=color;
-        premioSpan.style.display='flex';
-        premioSpan.style.flexDirection='column';
-        premioSpan.style.alignItems='center';
-        const labelDiv=document.createElement('div');
-        labelDiv.style.display='flex';
-        labelDiv.style.alignItems='baseline';
-        labelDiv.style.gap='4px';
-        labelDiv.innerHTML=`PREMIO FORMA ${f.idx}: <span class=\"premio-valor\">${premioForma}</span>`;
-        const nombreDiv=document.createElement('div');
-        nombreDiv.className='forma-nombre';
-        nombreDiv.textContent=f.nombre||'';
-        premioSpan.appendChild(labelDiv);
-        premioSpan.appendChild(nombreDiv);
+          const miniBox=document.createElement('div');
+          miniBox.className='premio-mini-box';
+          const etiqueta=document.createElement('div');
+          etiqueta.className='forma-mini-etiqueta';
+          etiqueta.textContent=`Forma ${String(f.idx).padStart(2,'0')}`;
+          miniBox.appendChild(etiqueta);
+          const miniWrapper=document.createElement('div');
+          miniWrapper.className='mini-carton-wrapper';
+          miniWrapper.classList.add('forma-carton-wrapper');
+          miniWrapper.style.background=`linear-gradient(${color},#ffffff)`;
+          const posiciones=Array.isArray(f.posiciones)?f.posiciones:[];
+          miniWrapper.appendChild(crearMiniCarton(posiciones));
+          miniBox.appendChild(miniWrapper);
+          fila.appendChild(miniBox);
 
-        const cartSpan=document.createElement('div');
-        cartSpan.style.color=color;
-        cartSpan.style.display='flex';
-        cartSpan.style.alignItems='baseline';
-        cartSpan.style.gap='4px';
-        cartSpan.innerHTML=`CARTONES: <span class=\"cartones-valor\">${f.cartonesGratis||0}</span>`;
-
-        fila.appendChild(premioSpan);
-        fila.appendChild(cartSpan);
-        cont.appendChild(fila);
-      });
+          const info=document.createElement('div');
+          info.className='premio-info';
+          const premioLinea=document.createElement('div');
+          premioLinea.style.color=color;
+          premioLinea.innerHTML=`Premio: <span class=\"premio-valor\">${premioForma}</span>`;
+          info.appendChild(premioLinea);
+          const cartLinea=document.createElement('div');
+          cartLinea.style.color=color;
+          cartLinea.innerHTML=`Cartones: <span class=\"cartones-valor\">${f.cartonesGratis||0}</span>`;
+          info.appendChild(cartLinea);
+          if(f.nombre){
+            const nombreDiv=document.createElement('div');
+            nombreDiv.className='forma-nombre';
+            nombreDiv.textContent=f.nombre;
+            info.appendChild(nombreDiv);
+          }
+          fila.appendChild(info);
+          cont.appendChild(fila);
+        });
     }
   }
 
@@ -1199,8 +1223,22 @@ function toggleForma(idx){
     const btnEditar=document.getElementById('editar-jugado-btn');
     const botones=document.getElementById('jugados-buttons');
     const snap=await db.collection('CartonJugado').where('userId','==',user.uid).where('sorteoId','==',currentSorteo).get();
-    const docs=[]; snap.forEach(d=>docs.push({id:d.id,...d.data()}));
-    const ordenados=[...docs.filter(d=>d.tipocarton==='gratis'),...docs.filter(d=>d.tipocarton!=='gratis')];
+    const docs=[];
+    snap.forEach(d=>docs.push({id:d.id,...d.data()}));
+    const parseNumero=valor=>{
+      if(valor===undefined||valor===null) return Number.MAX_SAFE_INTEGER;
+      const num=parseInt(valor,10);
+      return Number.isNaN(num)?Number.MAX_SAFE_INTEGER:num;
+    };
+    const ordenados=docs
+      .slice()
+      .sort((a,b)=>{
+        const na=parseNumero(a.cartonNum??a.Ncarton);
+        const nb=parseNumero(b.cartonNum??b.Ncarton);
+        if(na!==nb) return na-nb;
+        if(a.tipocarton===b.tipocarton) return 0;
+        return a.tipocarton==='gratis'?-1:1;
+      });
     if(ordenados.length===0){
       grid.innerHTML='<div class="no-cartones">No has jugado ningún cartón en este sorteo</div>';
       botones.style.display='none';
@@ -1223,7 +1261,8 @@ function toggleForma(idx){
       });
       const num=document.createElement('div');
       num.className='mini-index';
-      num.textContent=`N° ${++idx} ${data.tipocarton==='gratis'?'Gratis':'Pagado'}`;
+      const ordenVisual=String(++idx).padStart(2,'0');
+      num.textContent=`#${ordenVisual} ${data.tipocarton==='gratis'?'Gratis':'Pagado'}`;
       box.appendChild(num);
       const wrap=document.createElement('div');
       wrap.className='mini-carton-wrapper';
@@ -1344,6 +1383,7 @@ function toggleForma(idx){
   }
 
   function crearMiniCarton(posiciones){
+    const lista=Array.isArray(posiciones)?posiciones:[];
     const table=document.createElement('table');
     table.className='mini-carton';
     const head=document.createElement('thead');
@@ -1356,7 +1396,7 @@ function toggleForma(idx){
       for(let c=0;c<5;c++){
         const td=document.createElement('td');
         if(r===2&&c===2){td.innerHTML='<span style="color:orange;">★</span>';}else{
-          const found=posiciones.find(p=>p.r===r&&p.c===c);
+          const found=lista.find(p=>p.r===r&&p.c===c);
           if(found) td.textContent=found.valor;
         }
         tr.appendChild(td);
