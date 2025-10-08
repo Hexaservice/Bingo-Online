@@ -211,11 +211,11 @@
       width: 100%;
     }
     .forma-resumen {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 12px 16px;
-      align-items: stretch;
-      grid-auto-rows: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
       background: rgba(255,255,255,0.92);
       border-radius: 18px;
       padding: 14px 16px;
@@ -229,6 +229,7 @@
       gap: 6px;
       text-align: left;
       justify-content: center;
+      flex: 1 1 240px;
     }
     .forma-titulo {
       font-family: 'Bangers', cursive;
@@ -264,27 +265,26 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 8px 12px;
-      border-radius: 16px;
+      padding: 4px 6px;
+      border-radius: 12px;
       background: radial-gradient(circle at 20% 20%, var(--forma-color-suave, #6fa8dc), var(--forma-color, #0b5394));
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.45), 0 10px 24px rgba(0,0,0,0.14);
-      min-width: 120px;
-      max-width: 150px;
-      justify-self: center;
-      align-self: center;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35), 0 6px 16px rgba(0,0,0,0.12);
+      min-width: 96px;
+      max-width: 110px;
+      flex: 0 0 auto;
       position: relative;
       overflow: hidden;
     }
     .forma-mini-carton-wrapper::after {
       content: '';
       position: absolute;
-      inset: 3px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0));
+      inset: 2px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0));
       pointer-events: none;
     }
     .forma-mini-carton {
-      --mini-cell: 18px;
+      --mini-cell: 14px;
       border-collapse: separate;
       border-spacing: 0;
       background: linear-gradient(160deg, rgba(255,255,255,0.95), var(--forma-color-super-suave, #f3f7ff));
@@ -303,7 +303,7 @@
       height: var(--mini-cell);
       aspect-ratio: 1 / 1;
       font-weight: 700;
-      font-size: 0.68rem;
+      font-size: calc(var(--mini-cell) * 0.65);
       background: #ffffff;
       padding: 0;
       text-align: center;
@@ -311,7 +311,7 @@
       line-height: var(--mini-cell);
     }
     .forma-mini-carton th {
-      font-size: 0.9rem;
+      font-size: calc(var(--mini-cell) * 0.85);
       color: #ffffff;
       background: linear-gradient(135deg, var(--forma-color-intenso, #0b5394), var(--forma-color, #0b5394));
       text-shadow: 0 1px 2px rgba(0,0,0,0.6);
@@ -347,40 +347,32 @@
     }
     #cartones-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      gap: 14px;
-      justify-items: stretch;
-      align-items: stretch;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      justify-items: center;
+      align-items: flex-start;
       width: 100%;
     }
     .pdf-carton {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      align-items: stretch;
-      justify-content: space-between;
-      background: rgba(255,255,255,0.95);
-      border-radius: 20px;
-      padding: 10px;
-      box-shadow: 0 10px 24px rgba(0,0,0,0.08);
-      border: 1px solid rgba(0,0,0,0.05);
+      gap: 6px;
+      align-items: center;
+      justify-content: flex-start;
+      background: transparent;
+      border-radius: 12px;
+      padding: 6px;
+      box-shadow: none;
+      border: none;
       page-break-inside: avoid;
       width: 100%;
-      max-width: 260px;
-      justify-self: stretch;
-      height: 100%;
+      max-width: 220px;
     }
-    .pdf-carton-wrapper {
-      border-radius: 16px;
-      padding: 8px;
-      background: linear-gradient(135deg, rgba(0,139,69,0.85), rgba(255,255,0,0.5));
-      box-shadow: inset 0 0 0 2px rgba(255,255,255,0.6);
-    }
-    .pdf-carton-wrapper.gratis {
-      background: linear-gradient(135deg, rgba(0,0,255,0.75), rgba(255,255,102,0.6));
+    .pdf-carton.gratis .pdf-carton-table {
+      box-shadow: 0 0 0 2px rgba(0,76,153,0.25);
     }
     .pdf-carton-table {
-      --cell-size: clamp(34px, 6vw, 46px);
+      --cell-size: clamp(26px, 4.6vw, 36px);
       border-collapse: separate;
       border-spacing: 0;
       width: calc(var(--cell-size) * 5);
@@ -389,6 +381,7 @@
       border-radius: 12px;
       overflow: hidden;
       table-layout: fixed;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.1);
     }
     .pdf-carton-table th,
     .pdf-carton-table td {
@@ -499,18 +492,18 @@
       #resumen-header { flex-wrap: wrap; }
     }
     @media (max-width: 640px) {
-      #cartones-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+      #cartones-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
       .pdf-carton { width: 100%; }
     }
     @media (orientation: landscape) and (max-width: 900px) {
-      #cartones-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+      #cartones-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
     }
     @media (max-width: 480px) {
       #datos-generales { grid-template-columns: 1fr; }
     }
     @media (max-width: 640px) {
-      .forma-resumen { grid-template-columns: 1fr; gap: 10px; }
-      .forma-mini-carton-wrapper { justify-self: center; }
+      .forma-resumen { flex-direction: column; align-items: stretch; }
+      .forma-mini-carton-wrapper { align-self: center; }
       .forma-info { width: 100%; }
     }
   </style>
@@ -543,7 +536,7 @@
         <div class="dato-inline"><span class="dato-label">Hora de cierre:</span><span id="dato-cierre" class="dato-valor">-</span></div>
         <div class="dato-inline"><span class="dato-label">Hora del sorteo:</span><span id="dato-hora" class="dato-valor">-</span></div>
         <div class="dato-inline"><span class="dato-label">Valor del cartón:</span><span id="dato-valor" class="dato-valor">-</span></div>
-        <div class="dato-inline"><span class="dato-label">Cartones gratis máximos:</span><span id="dato-maxgratis" class="dato-valor">-</span></div>
+        <div class="dato-inline"><span class="dato-label">Cartones máximos por jugador:</span><span id="dato-maxgratis" class="dato-valor">-</span></div>
       </div>
       <section id="premios-section">
         <h2>CRÉDITOS TOTALES A REPARTIR</h2>
@@ -824,10 +817,8 @@
   function crearCartonVisual(data){
     const carton = document.createElement('div');
     carton.className = 'pdf-carton';
-    const wrapper = document.createElement('div');
-    wrapper.className = 'pdf-carton-wrapper';
     if((data.tipocarton || '').toLowerCase() === 'gratis'){
-      wrapper.classList.add('gratis');
+      carton.classList.add('gratis');
     }
 
     const tabla = document.createElement('table');
@@ -861,8 +852,7 @@
       tbody.appendChild(tr);
     }
     tabla.appendChild(tbody);
-    wrapper.appendChild(tabla);
-    carton.appendChild(wrapper);
+    carton.appendChild(tabla);
 
     const infoInferior = document.createElement('div');
     infoInferior.className = 'pdf-carton-datos';
@@ -895,7 +885,7 @@
       return;
     }
     const total = Number(sorteoData.totalPremios || 0);
-    formasData.sort((a,b)=>(a.idx||0)-(b.idx||0));
+    formasData.sort((a,b)=>(b.idx||0)-(a.idx||0));
     formasData.forEach(forma=>{
       const color = obtenerColorForma(forma.idx || 1);
       const contenedor = document.createElement('div');
@@ -947,7 +937,7 @@
     cartonesData.sort((a,b)=>{
       const numA = Number(a.cartonNum ?? a.Ncarton) || 0;
       const numB = Number(b.cartonNum ?? b.Ncarton) || 0;
-      return numB - numA;
+      return numA - numB;
     });
     const fragment = document.createDocumentFragment();
     cartonesData.forEach(data=>{
@@ -1088,7 +1078,7 @@
         .sort((a,b)=>{
           const numA = Number(a.dataset.numero || 0);
           const numB = Number(b.dataset.numero || 0);
-          return numB - numA;
+          return numA - numB;
         });
       if(cartonElements.length){
         let paginaIniciada = false;
