@@ -345,17 +345,33 @@
     return firebaseReadyPromise;
   }
 
+  function normalizarBucketConfig(bucketConfig){
+    if(!bucketConfig) return '';
+    const limpio = bucketConfig.trim();
+    if(!limpio){ return ''; }
+    if(limpio.startsWith('gs://')){ return limpio; }
+    if(limpio.startsWith('https://')){
+      const gsDesdeHttps = limpio
+        .replace(/^https:\/\/(?:storage\.googleapis\.com|firebasestorage\.googleapis\.com)\/(?:v0\/b\/)?/,'gs://')
+        .replace(/\/o$/,'');
+      if(gsDesdeHttps.startsWith('gs://')){ return gsDesdeHttps; }
+    }
+    const bucketNormalizado = limpio.endsWith('.firebasestorage.app')
+      ? limpio.replace(/\.firebasestorage\.app$/, '.appspot.com')
+      : limpio;
+    return `gs://${bucketNormalizado}`;
+  }
+
   function obtenerStorage(){
     if(storage) return storage;
     try {
       const appInstance = firebase.app();
       const opciones = (appInstance && appInstance.options) || {};
-      const bucketConfig = (opciones.storageBucket || '').trim();
+      const bucketConfig = normalizarBucketConfig(opciones.storageBucket || '');
 
       if(bucketConfig){
-        const bucketUrl = bucketConfig.startsWith('gs://') ? bucketConfig : `gs://${bucketConfig}`;
         try {
-          storage = appInstance.storage(bucketUrl);
+          storage = appInstance.storage(bucketConfig);
         } catch (bucketErr) {
           console.warn('Fallo al inicializar Storage con el bucket configurado, se usará el predeterminado.', bucketErr);
           storage = firebase.storage();
@@ -619,13 +635,26 @@
 
   async function subirPdf(pdfBlob, nombreArchivo){
     const { storageRef, ruta } = construirRutaPdf(nombreArchivo);
-    const snapshot = await storageRef.put(pdfBlob, { contentType: 'application/pdf' });
+    const metadata = {
+      contentType: 'application/pdf',
+      customMetadata: {
+        sorteoId: sorteoId == null ? '' : String(sorteoId),
+        origen: 'pdfsorteo.html'
+      }
+    };
+    const snapshot = await storageRef.put(pdfBlob, metadata);
     const pdfUrl = await snapshot.ref.getDownloadURL();
     return { pdfUrl, ruta };
   }
 
-  async function marcarPdfGenerado(pdfUrl){
-    const payload = { pdf: 'si', pdfUrl };
+  async function marcarPdfGenerado(pdfUrl, ruta){
+    const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+    const payload = {
+      pdf: 'si',
+      pdfUrl,
+      pdfStoragePath: ruta,
+      pdfActualizadoEn: timestamp
+    };
     await Promise.all([
       db.collection('sorteos').doc(sorteoId).set(payload, { merge: true }),
       db.collection('cantarsorteos').doc(sorteoId).set(payload, { merge: true })
@@ -677,8 +706,8 @@
       pdf.addImage(imgData, 'PNG', marginX, marginY, pdfWidth, pdfHeight);
 
       const pdfBlob = pdf.output('blob');
-      const { pdfUrl } = await subirPdf(pdfBlob, nombreArchivo);
-      await marcarPdfGenerado(pdfUrl);
+      const { pdfUrl, ruta } = await subirPdf(pdfBlob, nombreArchivo);
+      await marcarPdfGenerado(pdfUrl, ruta);
 
       alert('El PDF del sorteo se generó y cargó correctamente.');
     } catch (err) {
