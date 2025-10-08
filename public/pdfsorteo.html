@@ -125,30 +125,32 @@
       margin: 0;
     }
     #datos-generales {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
-      margin: 18px 0 26px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 18px;
+      justify-content: center;
+      align-items: center;
+      margin: 14px auto 26px;
+      padding: 12px 18px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.85);
+      box-shadow: inset 0 0 0 1px rgba(11,83,148,0.08);
       width: 100%;
     }
-    .dato {
-      background: rgba(255,255,255,0.9);
-      border-radius: 14px;
-      padding: 10px 12px;
-      box-shadow: 0 6px 16px rgba(11,83,148,0.1);
+    .dato-inline {
       display: flex;
-      flex-direction: column;
-      gap: 4px;
-      text-align: left;
+      gap: 6px;
+      align-items: baseline;
+      font-size: 0.98rem;
+      color: #0b5394;
     }
-    .dato-label {
+    .dato-inline .dato-label {
       font-family: 'Bangers', cursive;
       font-size: 1rem;
-      color: #0b5394;
       letter-spacing: 0.5px;
     }
-    .dato-valor {
-      font-size: 1.05rem;
+    .dato-inline .dato-valor {
+      font-family: 'Poppins', sans-serif;
       font-weight: 600;
       color: #1a1a1a;
     }
@@ -179,11 +181,10 @@
       width: 100%;
     }
     .forma-resumen {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      align-items: stretch;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto;
+      gap: 12px 18px;
+      align-items: center;
       background: rgba(255,255,255,0.92);
       border-radius: 18px;
       padding: 12px;
@@ -192,12 +193,10 @@
       position: relative;
     }
     .forma-info {
-      flex: 1 1 220px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 6px 18px;
       text-align: left;
-      min-width: 200px;
     }
     .forma-titulo {
       font-family: 'Bangers', cursive;
@@ -205,21 +204,32 @@
       color: var(--forma-color, #0b5394);
       text-transform: uppercase;
       letter-spacing: 0.6px;
+      grid-column: 1 / -1;
     }
     .forma-detalle {
       font-size: 0.95rem;
       color: #0b1d0b;
+      display: flex;
+      gap: 4px;
+      align-items: baseline;
+    }
+    .forma-detalle .etiqueta {
+      font-weight: 600;
+      color: #0b5394;
+    }
+    .forma-detalle .valor {
+      font-weight: 600;
+      color: #1a1a1a;
     }
     .forma-mini-carton-wrapper {
-      flex: 0 0 auto;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 8px;
-      border-radius: 16px;
+      padding: 6px;
+      border-radius: 14px;
       background: linear-gradient(135deg, var(--forma-color, #0b5394), #cfcfcf);
       box-shadow: 0 8px 18px rgba(0,0,0,0.12);
-      min-width: 140px;
+      min-width: 110px;
     }
     .forma-mini-carton {
       border-collapse: separate;
@@ -231,14 +241,14 @@
     .forma-mini-carton th,
     .forma-mini-carton td {
       border: 1px solid rgba(0,0,0,0.12);
-      width: 26px;
-      height: 26px;
+      width: 22px;
+      height: 22px;
       text-align: center;
       font-weight: 700;
-      font-size: 0.75rem;
+      font-size: 0.68rem;
     }
     .forma-mini-carton th {
-      font-size: 1rem;
+      font-size: 0.9rem;
       color: #ff6600;
       background: radial-gradient(circle,#ffffff,#ffffff 60%,rgba(0,170,0,0.6));
       text-shadow: 1px 1px 0 #000;
@@ -265,9 +275,10 @@
       text-align: center;
     }
     #cartones-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      display: flex;
+      flex-wrap: wrap;
       gap: 18px;
+      justify-content: center;
     }
     .pdf-carton {
       display: flex;
@@ -281,6 +292,7 @@
       box-shadow: 0 10px 24px rgba(0,0,0,0.08);
       border: 1px solid rgba(0,0,0,0.05);
       page-break-inside: avoid;
+      width: min(320px, 100%);
     }
     .pdf-carton-wrapper {
       border-radius: 16px;
@@ -295,6 +307,8 @@
       border-collapse: separate;
       border-spacing: 0;
       width: 100%;
+      max-width: 280px;
+      margin: 0 auto;
       background: linear-gradient(#ffffff,#e8e8e8);
       border-radius: 12px;
       overflow: hidden;
@@ -393,6 +407,11 @@
       .pdf-carton-table th,
       .pdf-carton-table td { font-size: 0.9rem; }
     }
+    @media (max-width: 640px) {
+      .forma-resumen { grid-template-columns: 1fr; }
+      .forma-mini-carton-wrapper { justify-self: center; }
+      .forma-info { justify-items: flex-start; }
+    }
   </style>
 </head>
 <body>
@@ -414,12 +433,11 @@
         <h2 id="tipo-sorteo-titulo"></h2>
       </div>
       <div id="datos-generales">
-        <div class="dato"><span class="dato-label">Fecha del sorteo</span><span id="dato-fecha" class="dato-valor">-</span></div>
-        <div class="dato"><span class="dato-label">Hora del sorteo</span><span id="dato-hora" class="dato-valor">-</span></div>
-        <div class="dato"><span class="dato-label">Hora de cierre</span><span id="dato-cierre" class="dato-valor">-</span></div>
-        <div class="dato"><span class="dato-label">Valor del cartón</span><span id="dato-valor" class="dato-valor">-</span></div>
-        <div class="dato"><span class="dato-label">Cartones gratis máximos</span><span id="dato-maxgratis" class="dato-valor">-</span></div>
-        <div class="dato"><span class="dato-label">Estado</span><span id="dato-estado" class="dato-valor">-</span></div>
+        <div class="dato-inline"><span class="dato-label">Fecha del sorteo:</span><span id="dato-fecha" class="dato-valor">-</span></div>
+        <div class="dato-inline"><span class="dato-label">Hora del sorteo:</span><span id="dato-hora" class="dato-valor">-</span></div>
+        <div class="dato-inline"><span class="dato-label">Hora de cierre:</span><span id="dato-cierre" class="dato-valor">-</span></div>
+        <div class="dato-inline"><span class="dato-label">Valor del cartón:</span><span id="dato-valor" class="dato-valor">-</span></div>
+        <div class="dato-inline"><span class="dato-label">Cartones gratis máximos:</span><span id="dato-maxgratis" class="dato-valor">-</span></div>
       </div>
       <section id="premios-section">
         <h2>CRÉDITOS TOTALES A REPARTIR</h2>
@@ -461,7 +479,6 @@
   const datoCierreEl = document.getElementById('dato-cierre');
   const datoValorEl = document.getElementById('dato-valor');
   const datoMaxGratisEl = document.getElementById('dato-maxgratis');
-  const datoEstadoEl = document.getElementById('dato-estado');
   const totalPremiosEl = document.getElementById('total-premios');
   const formasCont = document.getElementById('formas-resumen');
   const cartonesGrid = document.getElementById('cartones-grid');
@@ -724,22 +741,30 @@
 
       const porcentaje = parseFloat(forma.porcentaje || 0) || 0;
       const premioForma = porcentaje > 0 ? Math.round(total * (porcentaje / 100)) : 0;
-      const detallePremio = document.createElement('div');
-      detallePremio.className = 'forma-detalle';
-      detallePremio.textContent = porcentaje > 0
-        ? `Premio: ${formatearNumero(premioForma)} créditos (${porcentaje.toFixed(2)}%)`
-        : 'Premio: -';
-      info.appendChild(detallePremio);
+      info.appendChild(crearDetalleForma('Premio', porcentaje > 0
+        ? `${formatearNumero(premioForma)} créditos`
+        : '-'));
 
-      const detalleCartones = document.createElement('div');
-      detalleCartones.className = 'forma-detalle';
-      detalleCartones.textContent = `Cartones gratis: ${formatearNumero(forma.cartonesGratis || 0)}`;
-      info.appendChild(detalleCartones);
+      info.appendChild(crearDetalleForma('Cartones gratis', formatearNumero(forma.cartonesGratis || 0)));
 
       contenedor.appendChild(info);
       contenedor.appendChild(crearMiniCartonForma(forma));
       formasCont.appendChild(contenedor);
     });
+  }
+
+  function crearDetalleForma(etiqueta, valor){
+    const cont = document.createElement('div');
+    cont.className = 'forma-detalle';
+    const spanEtiqueta = document.createElement('span');
+    spanEtiqueta.className = 'etiqueta';
+    spanEtiqueta.textContent = `${etiqueta}:`;
+    const spanValor = document.createElement('span');
+    spanValor.className = 'valor';
+    spanValor.textContent = valor;
+    cont.appendChild(spanEtiqueta);
+    cont.appendChild(spanValor);
+    return cont;
   }
 
   function renderCartones(){
@@ -775,7 +800,6 @@
       datoCierreEl.textContent = formatearHoraParaMostrar(sorteoData.horacierre || '');
       datoValorEl.textContent = `${formatearNumero(sorteoData.valorCarton || 0)} créditos`;
       datoMaxGratisEl.textContent = formatearNumero(sorteoData.maxcartongratis || 0);
-      datoEstadoEl.textContent = (sorteoData.estado || 'Sin estado').toString();
       totalPremiosEl.textContent = formatearNumero(sorteoData.totalPremios || 0);
       pdfFileName = construirNombreArchivo();
 
@@ -830,7 +854,8 @@
   async function generarPDF(){
     if(!sorteoData){ return; }
     if(!cartonesCargados){ alert('Primero debes generar los cartones del sorteo.'); return; }
-    if(!window.html2canvas || !window.jspdf){
+    const jsPDFLib = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    if(!window.html2canvas || !jsPDFLib){
       alert('Dependencias para generar PDF no disponibles');
       return;
     }
@@ -856,8 +881,7 @@
       }
       mostrarLoading('Generando PDF para descargar, por favor espera');
 
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF('p', 'pt', 'a4');
+      const pdf = new jsPDFLib('p', 'pt', 'a4');
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       const marginX = 36;
