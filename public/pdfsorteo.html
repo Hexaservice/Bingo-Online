@@ -210,11 +210,16 @@
       gap: 12px;
       width: 100%;
     }
+    .forma-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(110px, auto);
+      gap: 10px 16px;
+      align-items: stretch;
+      min-width: 0;
+    }
     .forma-resumen {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(180px, 220px);
-      align-items: stretch;
-      gap: 10px 16px;
+      gap: 8px;
       background: rgba(255,255,255,0.92);
       border-radius: 18px;
       padding: 12px 16px;
@@ -222,6 +227,8 @@
       box-shadow: 0 8px 18px rgba(0,0,0,0.06);
       position: relative;
       min-width: 0;
+      text-align: left;
+      align-content: start;
     }
     .forma-info {
       display: grid;
@@ -260,6 +267,9 @@
       display: block;
       width: 100%;
       text-align: right;
+    }
+    .forma-item > .forma-mini-carton-wrapper {
+      justify-self: end;
     }
     .forma-mini-carton-wrapper {
       display: flex;
@@ -491,22 +501,71 @@
     @media (orientation: landscape) and (max-width: 900px) {
       #cartones-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
     }
+    @media (orientation: landscape) {
+      #cartones-grid {
+        gap: 18px;
+      }
+    }
     @media (max-width: 480px) {
       #datos-generales { grid-template-columns: 1fr; }
     }
-    @media (max-width: 640px) {
-      .forma-resumen {
-        grid-template-columns: 1fr;
+    @media (max-width: 720px) {
+      .forma-item {
+        grid-template-columns: minmax(0, 1fr) minmax(96px, auto);
+        gap: 8px 12px;
       }
-      .forma-mini-carton-wrapper {
-        justify-self: center;
-        margin-top: 6px;
+      .forma-resumen {
+        padding: 10px 12px;
+        border-radius: 16px;
+      }
+      .forma-titulo {
+        font-size: 1.05rem;
+      }
+      .forma-detalle {
+        font-size: 0.88rem;
+        padding: 6px 10px;
+      }
+      .forma-detalle .valor {
+        font-size: 0.95rem;
+      }
+      .forma-mini-carton {
+        --mini-cell: 12px;
+      }
+    }
+    @media (max-width: 520px) and (orientation: portrait) {
+      .forma-item {
+        grid-template-columns: minmax(0, 1fr) minmax(80px, auto);
+        align-items: start;
+        gap: 6px 10px;
+      }
+      .forma-resumen {
+        padding: 8px 10px;
+        gap: 6px;
+      }
+      .forma-titulo {
+        font-size: 0.98rem;
+      }
+      .forma-detalle {
+        font-size: 0.82rem;
+        padding: 6px 8px;
+      }
+      .forma-detalle .valor {
+        font-size: 0.9rem;
+      }
+      .forma-mini-carton {
+        --mini-cell: 10px;
+      }
+      .forma-item > .forma-mini-carton-wrapper {
+        justify-self: end;
       }
     }
     body.pdf-captura #formas-resumen {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       gap: 12px;
+    }
+    body.pdf-captura #formas-resumen .forma-item {
+      width: 100%;
     }
   </style>
 </head>
@@ -538,7 +597,7 @@
         <div class="dato-inline"><span class="dato-label">Hora de cierre:</span><span id="dato-cierre" class="dato-valor">-</span></div>
         <div class="dato-inline"><span class="dato-label">Hora del sorteo:</span><span id="dato-hora" class="dato-valor">-</span></div>
         <div class="dato-inline"><span class="dato-label">Valor del cartón:</span><span id="dato-valor" class="dato-valor">-</span></div>
-        <div class="dato-inline"><span class="dato-label">Cartones máximos por jugador:</span><span id="dato-maxgratis" class="dato-valor">-</span></div>
+        <div class="dato-inline"><span class="dato-label">CARTONES GRATIS MÁXIMOS POR JUGADOR:</span><span id="dato-maxgratis" class="dato-valor">-</span></div>
       </div>
       <section id="premios-section">
         <h2>CRÉDITOS TOTALES A REPARTIR</h2>
@@ -890,6 +949,9 @@
     formasData.sort((a,b)=>(b.idx||0)-(a.idx||0));
     formasData.forEach(forma=>{
       const color = obtenerColorForma(forma.idx || 1);
+      const item = document.createElement('div');
+      item.className = 'forma-item';
+
       const contenedor = document.createElement('div');
       contenedor.className = 'forma-resumen';
       contenedor.style.setProperty('--forma-color', color);
@@ -910,8 +972,12 @@
       info.appendChild(crearDetalleForma('Cartones gratis', formatearNumero(forma.cartonesGratis || 0)));
 
       contenedor.appendChild(info);
-      contenedor.appendChild(crearMiniCartonForma(forma));
-      formasCont.appendChild(contenedor);
+
+      const miniCarton = crearMiniCartonForma(forma);
+
+      item.appendChild(contenedor);
+      item.appendChild(miniCarton);
+      formasCont.appendChild(item);
     });
   }
 
