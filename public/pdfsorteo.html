@@ -211,24 +211,28 @@
       width: 100%;
     }
     .forma-item {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(110px, auto);
-      gap: 10px 16px;
+      display: flex;
+      flex-direction: row;
       align-items: stretch;
+      gap: 0;
       min-width: 0;
+      width: 100%;
     }
     .forma-resumen {
       display: grid;
       gap: 8px;
       background: rgba(255,255,255,0.92);
-      border-radius: 18px;
+      border-radius: 18px 0 0 18px;
       padding: 12px 16px;
       border: 2px solid rgba(0,0,0,0.05);
+      border-right: none;
       box-shadow: 0 8px 18px rgba(0,0,0,0.06);
       position: relative;
       min-width: 0;
       text-align: left;
       align-content: start;
+      flex: 1 1 240px;
+      height: 100%;
     }
     .forma-info {
       display: grid;
@@ -268,23 +272,23 @@
       width: 100%;
       text-align: right;
     }
-    .forma-item > .forma-mini-carton-wrapper {
-      justify-self: end;
-    }
     .forma-mini-carton-wrapper {
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 4px;
-      border-radius: 8px;
+      border-radius: 0 18px 18px 0;
       background: #ffffff;
       box-shadow: 0 4px 12px rgba(0,0,0,0.12);
       min-width: 96px;
       max-width: 120px;
-      justify-self: end;
-      align-self: center;
+      flex: 0 0 auto;
+      align-self: stretch;
+      height: 100%;
       position: relative;
       overflow: hidden;
+      border: 2px solid rgba(0,0,0,0.05);
+      border-left: none;
     }
     .forma-mini-carton {
       --mini-cell: 14px;
@@ -311,7 +315,9 @@
       padding: 0;
       text-align: center;
       vertical-align: middle;
-      line-height: var(--mini-cell);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .forma-mini-carton th {
       font-size: calc(var(--mini-cell) * 0.85);
@@ -332,10 +338,12 @@
       color: #ffffff;
     }
     .forma-mini-carton .forma-estrella {
-      font-size: 1rem;
+      font-size: calc(var(--mini-cell) * 0.8);
       text-shadow: 0 0 4px rgba(0,0,0,0.12);
       line-height: 1;
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
     #cartones-section {
       margin-top: 32px;
@@ -500,23 +508,16 @@
     }
     @media (orientation: landscape) and (max-width: 900px) {
       #cartones-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
-    }
-    @media (orientation: landscape) {
-      #cartones-grid {
-        gap: 18px;
-      }
+      .pdf-carton-table { --cell-size: clamp(20px, 3.2vw, 28px); }
+      #cartones-grid { gap: 12px; }
+      .pdf-carton { max-width: 190px; }
     }
     @media (max-width: 480px) {
       #datos-generales { grid-template-columns: 1fr; }
     }
     @media (max-width: 720px) {
-      .forma-item {
-        grid-template-columns: minmax(0, 1fr) minmax(96px, auto);
-        gap: 8px 12px;
-      }
       .forma-resumen {
         padding: 10px 12px;
-        border-radius: 16px;
       }
       .forma-titulo {
         font-size: 1.05rem;
@@ -532,15 +533,16 @@
         --mini-cell: 12px;
       }
     }
-    @media (max-width: 520px) and (orientation: portrait) {
+    @media (max-width: 520px) {
       .forma-item {
-        grid-template-columns: minmax(0, 1fr) minmax(80px, auto);
-        align-items: start;
-        gap: 6px 10px;
+        flex-direction: column;
       }
       .forma-resumen {
         padding: 8px 10px;
         gap: 6px;
+        border-radius: 18px 18px 0 0;
+        border-bottom: none;
+        border-right: 2px solid rgba(0,0,0,0.05);
       }
       .forma-titulo {
         font-size: 0.98rem;
@@ -555,8 +557,13 @@
       .forma-mini-carton {
         --mini-cell: 10px;
       }
-      .forma-item > .forma-mini-carton-wrapper {
-        justify-self: end;
+      .forma-mini-carton-wrapper {
+        width: 100%;
+        max-width: none;
+        border-radius: 0 0 18px 18px;
+        border-left: 2px solid rgba(0,0,0,0.05);
+        border-top: 2px solid rgba(0,0,0,0.05);
+        justify-content: center;
       }
     }
     body.pdf-captura #formas-resumen {
@@ -946,7 +953,11 @@
       return;
     }
     const total = Number(sorteoData.totalPremios || 0);
-    formasData.sort((a,b)=>(b.idx||0)-(a.idx||0));
+    formasData.sort((a,b)=>{
+      const idxA = Number(a.idx) || 0;
+      const idxB = Number(b.idx) || 0;
+      return idxA - idxB;
+    });
     formasData.forEach(forma=>{
       const color = obtenerColorForma(forma.idx || 1);
       const item = document.createElement('div');
