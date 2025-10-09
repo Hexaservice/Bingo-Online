@@ -184,55 +184,55 @@
     #dato-hora { color: #2e7d32; }
     #dato-valor { color: #c76a00; }
     #dato-maxgratis { color: #6a1b9a; }
-    #premios-section {
-      border: 3px solid rgba(11,102,35,0.3);
-      border-radius: 18px;
-      padding: 14px;
-      background: linear-gradient(180deg, rgba(10,120,10,0.12), rgba(255,255,255,0.95));
-      margin-bottom: 18px;
+    .totales-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 12px;
+      margin: 20px 0 18px;
+      justify-content: center;
     }
-    #premios-section h2 {
+    .totales-header h2 {
       font-family: 'Bangers', cursive;
-      font-size: 1.8rem;
+      font-size: clamp(1.6rem, 4.5vw, 2rem);
       color: #0b6623;
       margin: 0;
+      letter-spacing: 0.5px;
     }
     #total-premios {
-      font-size: 2.4rem;
+      font-size: clamp(1.8rem, 6vw, 2.6rem);
       font-weight: 700;
       color: #0b6623;
       text-shadow: 0 0 6px rgba(255,255,255,0.9);
-      margin: 4px 0 10px;
     }
     #formas-resumen {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
       width: 100%;
     }
     .forma-item {
-      display: flex;
-      flex-direction: row;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) clamp(140px, 32vw, 260px);
       align-items: stretch;
-      gap: 0;
       min-width: 0;
       width: 100%;
+      border-radius: 20px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.92);
+      border: 2px solid rgba(0,0,0,0.05);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.06);
     }
     .forma-resumen {
       display: grid;
       gap: 8px;
-      background: rgba(255,255,255,0.92);
-      border-radius: 18px 0 0 18px;
-      padding: 12px 16px;
-      border: 2px solid rgba(0,0,0,0.05);
-      border-right: none;
-      box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+      padding: 14px 16px;
       position: relative;
       min-width: 0;
       text-align: left;
       align-content: start;
-      flex: 1 1 240px;
-      height: 100%;
+      border-right: 2px solid rgba(0,0,0,0.05);
+      background: rgba(255,255,255,0.85);
     }
     .forma-info {
       display: grid;
@@ -277,47 +277,42 @@
       align-items: center;
       justify-content: center;
       padding: 4px;
-      border-radius: 0 18px 18px 0;
       background: #ffffff;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-      min-width: 96px;
-      max-width: 120px;
-      flex: 0 0 auto;
-      align-self: stretch;
       height: 100%;
-      position: relative;
-      overflow: hidden;
-      border: 2px solid rgba(0,0,0,0.05);
-      border-left: none;
+      align-self: stretch;
+      min-width: 0;
+      border-left: 2px solid rgba(0,0,0,0.05);
     }
     .forma-mini-carton {
-      --mini-cell: 14px;
       border-collapse: separate;
       border-spacing: 0;
       background: linear-gradient(160deg, rgba(255,255,255,0.95), var(--forma-color-super-suave, #f3f7ff));
-      border-radius: 6px;
+      border-radius: 8px;
       overflow: hidden;
-      width: calc(var(--mini-cell) * 5);
+      width: auto;
+      height: 100%;
       table-layout: fixed;
       box-shadow: 0 4px 10px rgba(0,0,0,0.12);
       position: relative;
       z-index: 1;
+      max-width: 100%;
+      max-height: 100%;
+      aspect-ratio: 1 / 1;
     }
     .forma-mini-carton th,
     .forma-mini-carton td {
       border: 1px solid rgba(0,0,0,0.12);
-      width: var(--mini-cell);
-      height: var(--mini-cell);
+      width: 20%;
       aspect-ratio: 1 / 1;
       font-weight: 700;
-      font-size: calc(var(--mini-cell) * 0.65);
       background: #ffffff;
       padding: 0;
       text-align: center;
       vertical-align: middle;
+      font-size: clamp(0.55rem, 1.8vw, 0.85rem);
     }
     .forma-mini-carton th {
-      font-size: calc(var(--mini-cell) * 0.85);
+      font-size: clamp(0.7rem, 2vw, 1.05rem);
       color: #ffffff;
       background: linear-gradient(135deg, var(--forma-color-intenso, #0b5394), var(--forma-color, #0b5394));
       text-shadow: 0 1px 2px rgba(0,0,0,0.6);
@@ -335,7 +330,7 @@
       color: #ffffff;
     }
     .forma-mini-carton .forma-estrella {
-      font-size: calc(var(--mini-cell) * 0.8);
+      font-size: clamp(0.65rem, 2.2vw, 1.1rem);
       text-shadow: 0 0 4px rgba(0,0,0,0.12);
       line-height: 1;
       display: inline-flex;
@@ -513,8 +508,11 @@
       #datos-generales { grid-template-columns: 1fr; }
     }
     @media (max-width: 720px) {
+      .forma-item {
+        grid-template-columns: minmax(0, 1fr) clamp(130px, 36vw, 230px);
+      }
       .forma-resumen {
-        padding: 10px 12px;
+        padding: 12px;
       }
       .forma-titulo {
         font-size: 1.05rem;
@@ -527,19 +525,19 @@
         font-size: 0.95rem;
       }
       .forma-mini-carton {
-        --mini-cell: 12px;
+        max-width: 220px;
       }
     }
     @media (max-width: 520px) {
+      #formas-resumen {
+        grid-template-columns: 1fr;
+      }
       .forma-item {
-        flex-direction: column;
+        grid-template-columns: minmax(0, 1fr) clamp(120px, 45vw, 200px);
       }
       .forma-resumen {
-        padding: 8px 10px;
+        padding: 10px;
         gap: 6px;
-        border-radius: 18px 18px 0 0;
-        border-bottom: none;
-        border-right: 2px solid rgba(0,0,0,0.05);
       }
       .forma-titulo {
         font-size: 0.98rem;
@@ -552,15 +550,7 @@
         font-size: 0.9rem;
       }
       .forma-mini-carton {
-        --mini-cell: 10px;
-      }
-      .forma-mini-carton-wrapper {
-        width: 100%;
-        max-width: none;
-        border-radius: 0 0 18px 18px;
-        border-left: 2px solid rgba(0,0,0,0.05);
-        border-top: 2px solid rgba(0,0,0,0.05);
-        justify-content: center;
+        max-width: 200px;
       }
     }
     body.pdf-captura #formas-resumen {
@@ -603,11 +593,11 @@
         <div class="dato-inline"><span class="dato-label">Valor del cartón:</span><span id="dato-valor" class="dato-valor">-</span></div>
         <div class="dato-inline"><span class="dato-label">CARTONES GRATIS MÁXIMOS POR JUGADOR:</span><span id="dato-maxgratis" class="dato-valor">-</span></div>
       </div>
-      <section id="premios-section">
+      <div class="totales-header">
         <h2>CRÉDITOS TOTALES A REPARTIR</h2>
         <div id="total-premios">0</div>
-        <div id="formas-resumen"></div>
-      </section>
+      </div>
+      <div id="formas-resumen"></div>
     </section>
     <section id="cartones-section">
       <h2>Cartones del sorteo</h2>
