@@ -192,6 +192,7 @@
     .text-premio-total div{ text-shadow:0 0 4px darkgreen; }
     .valor-total{font-size:3rem;text-shadow:0 0 4px darkgreen;animation:pulse 1s infinite;}
     #premios-formas,#back-premios-formas{display:flex;flex-direction:column;gap:8px;width:100%;box-sizing:border-box;}
+    #back-premios-formas{gap:4px;align-items:flex-start;}
     .premio-row{display:flex;align-items:center;gap:12px;justify-content:flex-start;font-family:'Bangers',cursive;font-weight:bold;margin-bottom:0;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,0.85);box-shadow:0 2px 6px rgba(0,0,0,0.15);flex-wrap:wrap;}
     .premio-mini-box{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;}
     .premio-mini-box .forma-mini-etiqueta{font-size:0.75rem;background:linear-gradient(90deg,#4B0082,#00008b);color:#fff;padding:2px 6px;border-radius:6px;text-shadow:0 0 4px #000;font-family:'Bangers',cursive;}
@@ -206,6 +207,11 @@
     .premio-row.solo-texto{flex-direction:column;align-items:flex-start;gap:4px;}
     .premio-row.solo-texto .premio-info{gap:2px;min-width:auto;}
     .premio-row.solo-texto .premio-info .forma-titulo{font-family:'Bangers',cursive;font-size:1rem;text-shadow:0 0 6px #fff,0 0 10px #fff;}
+    .back-forma-line{font-family:'Bangers',cursive;font-size:1.05rem;display:flex;align-items:center;flex-wrap:wrap;gap:6px;width:100%;text-shadow:0 0 6px #fff,0 0 10px #fff;}
+    .back-forma-line .back-forma-separador{flex:1 1 auto;border-bottom:1px dashed transparent;}
+    .back-forma-line span{display:inline-block;text-shadow:inherit;}
+    .back-forma-line .back-forma-valor,.back-forma-line .back-forma-cartones{font-size:1.2rem;}
+    .back-forma-nombre{font-family:'Poppins',sans-serif;font-size:0.7rem;font-weight:600;text-shadow:0 0 4px #fff,0 0 8px #fff;align-self:flex-start;margin-top:-4px;margin-bottom:6px;}
     #back-premios-content{display:flex;flex-direction:column;align-items:center;position:relative;z-index:1;}
     @media (max-width:480px){#fecha-hora-sorteo .fecha-col{align-items:center;text-align:center;}}
   </style>
@@ -1129,47 +1135,59 @@ function toggleForma(idx){
         .forEach(f=>{
           const premioForma=Math.round(premioActual*parseFloat(f.porcentaje||0)/100);
           const color=formGlows[(f.idx-1)%formGlows.length]||'#0a8800';
+          const cartonesAsignados=f.cartones ?? f.cartonesGratis ?? 0;
+          const esBack=prefijo==='back-premios';
+
+          if(esBack){
+            const linea=document.createElement('div');
+            linea.className='back-forma-line';
+            linea.style.color=color;
+            linea.style.textShadow='0 0 6px #fff, 0 0 12px #fff';
+            linea.innerHTML=`<span class="back-forma-etiqueta">PREMIO FORMA ${String(f.idx).padStart(2,'0')}: </span>`+
+              `<span class="back-forma-valor">${premioForma}</span>`+
+              `<span class="back-forma-separador"></span>`+
+              `<span class="back-forma-cartones-label">CARTONES:</span>`+
+              `<span class="back-forma-cartones">${cartonesAsignados}</span>`;
+            cont.appendChild(linea);
+            if(f.nombre){
+              const nombreLinea=document.createElement('div');
+              nombreLinea.className='back-forma-nombre';
+              nombreLinea.style.color=color;
+              nombreLinea.style.textShadow='0 0 4px #fff, 0 0 8px #fff';
+              nombreLinea.textContent=f.nombre;
+              cont.appendChild(nombreLinea);
+            }
+            return;
+          }
+
           const fila=document.createElement('div');
           fila.className='premio-row';
-          const esBack=prefijo==='back-premios';
-          if(esBack) fila.classList.add('solo-texto');
-
-          if(!esBack){
-            const miniBox=document.createElement('div');
-            miniBox.className='premio-mini-box';
-            const etiqueta=document.createElement('div');
-            etiqueta.className='forma-mini-etiqueta';
-            etiqueta.textContent=`Forma ${String(f.idx).padStart(2,'0')}`;
-            miniBox.appendChild(etiqueta);
-            const miniWrapper=document.createElement('div');
-            miniWrapper.className='mini-carton-wrapper';
-            miniWrapper.classList.add('forma-carton-wrapper');
-            miniWrapper.style.background=`linear-gradient(${color},#ffffff)`;
-            const posiciones=Array.isArray(f.posiciones)?f.posiciones:[];
-            miniWrapper.appendChild(crearMiniCarton(posiciones));
-            miniBox.appendChild(miniWrapper);
-            fila.appendChild(miniBox);
-          }
+          const miniBox=document.createElement('div');
+          miniBox.className='premio-mini-box';
+          const etiqueta=document.createElement('div');
+          etiqueta.className='forma-mini-etiqueta';
+          etiqueta.textContent=`Forma ${String(f.idx).padStart(2,'0')}`;
+          miniBox.appendChild(etiqueta);
+          const miniWrapper=document.createElement('div');
+          miniWrapper.className='mini-carton-wrapper';
+          miniWrapper.classList.add('forma-carton-wrapper');
+          miniWrapper.style.background=`linear-gradient(${color},#ffffff)`;
+          const posiciones=Array.isArray(f.posiciones)?f.posiciones:[];
+          miniWrapper.appendChild(crearMiniCarton(posiciones));
+          miniBox.appendChild(miniWrapper);
+          fila.appendChild(miniBox);
 
           const info=document.createElement('div');
           info.className='premio-info';
-          if(esBack){
-            const tituloForma=document.createElement('div');
-            tituloForma.className='forma-titulo';
-            tituloForma.style.color=color;
-            const nombreTexto=f.nombre?` - ${f.nombre}`:'';
-            tituloForma.textContent=`Forma ${String(f.idx).padStart(2,'0')}${nombreTexto}`;
-            info.appendChild(tituloForma);
-          }
           const premioLinea=document.createElement('div');
           premioLinea.style.color=color;
           premioLinea.innerHTML=`Premio: <span class=\"premio-valor\">${premioForma}</span>`;
           info.appendChild(premioLinea);
           const cartLinea=document.createElement('div');
           cartLinea.style.color=color;
-          cartLinea.innerHTML=`Cartones: <span class=\"cartones-valor\">${f.cartonesGratis||0}</span>`;
+          cartLinea.innerHTML=`Cartones: <span class=\"cartones-valor\">${cartonesAsignados}</span>`;
           info.appendChild(cartLinea);
-          if(!esBack && f.nombre){
+          if(f.nombre){
             const nombreDiv=document.createElement('div');
             nombreDiv.className='forma-nombre';
             nombreDiv.textContent=f.nombre;
