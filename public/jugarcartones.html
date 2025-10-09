@@ -203,6 +203,9 @@
     .premio-info .premio-valor{font-size:1.1rem;font-family:'Bangers',cursive;text-shadow:0 0 6px #fff,0 0 10px #fff;}
     .premio-info .cartones-valor{font-size:1rem;font-family:'Bangers',cursive;text-shadow:0 0 6px #fff,0 0 10px #fff;}
     .premio-info .forma-nombre{font-family:'Poppins',sans-serif;font-weight:600;font-size:0.75rem;color:#4B0082;text-shadow:none;margin-top:2px;}
+    .premio-row.solo-texto{flex-direction:column;align-items:flex-start;gap:4px;}
+    .premio-row.solo-texto .premio-info{gap:2px;min-width:auto;}
+    .premio-row.solo-texto .premio-info .forma-titulo{font-family:'Bangers',cursive;font-size:1rem;text-shadow:0 0 6px #fff,0 0 10px #fff;}
     #back-premios-content{display:flex;flex-direction:column;align-items:center;position:relative;z-index:1;}
     @media (max-width:480px){#fecha-hora-sorteo .fecha-col{align-items:center;text-align:center;}}
   </style>
@@ -1128,24 +1131,36 @@ function toggleForma(idx){
           const color=formGlows[(f.idx-1)%formGlows.length]||'#0a8800';
           const fila=document.createElement('div');
           fila.className='premio-row';
+          const esBack=prefijo==='back-premios';
+          if(esBack) fila.classList.add('solo-texto');
 
-          const miniBox=document.createElement('div');
-          miniBox.className='premio-mini-box';
-          const etiqueta=document.createElement('div');
-          etiqueta.className='forma-mini-etiqueta';
-          etiqueta.textContent=`Forma ${String(f.idx).padStart(2,'0')}`;
-          miniBox.appendChild(etiqueta);
-          const miniWrapper=document.createElement('div');
-          miniWrapper.className='mini-carton-wrapper';
-          miniWrapper.classList.add('forma-carton-wrapper');
-          miniWrapper.style.background=`linear-gradient(${color},#ffffff)`;
-          const posiciones=Array.isArray(f.posiciones)?f.posiciones:[];
-          miniWrapper.appendChild(crearMiniCarton(posiciones));
-          miniBox.appendChild(miniWrapper);
-          fila.appendChild(miniBox);
+          if(!esBack){
+            const miniBox=document.createElement('div');
+            miniBox.className='premio-mini-box';
+            const etiqueta=document.createElement('div');
+            etiqueta.className='forma-mini-etiqueta';
+            etiqueta.textContent=`Forma ${String(f.idx).padStart(2,'0')}`;
+            miniBox.appendChild(etiqueta);
+            const miniWrapper=document.createElement('div');
+            miniWrapper.className='mini-carton-wrapper';
+            miniWrapper.classList.add('forma-carton-wrapper');
+            miniWrapper.style.background=`linear-gradient(${color},#ffffff)`;
+            const posiciones=Array.isArray(f.posiciones)?f.posiciones:[];
+            miniWrapper.appendChild(crearMiniCarton(posiciones));
+            miniBox.appendChild(miniWrapper);
+            fila.appendChild(miniBox);
+          }
 
           const info=document.createElement('div');
           info.className='premio-info';
+          if(esBack){
+            const tituloForma=document.createElement('div');
+            tituloForma.className='forma-titulo';
+            tituloForma.style.color=color;
+            const nombreTexto=f.nombre?` - ${f.nombre}`:'';
+            tituloForma.textContent=`Forma ${String(f.idx).padStart(2,'0')}${nombreTexto}`;
+            info.appendChild(tituloForma);
+          }
           const premioLinea=document.createElement('div');
           premioLinea.style.color=color;
           premioLinea.innerHTML=`Premio: <span class=\"premio-valor\">${premioForma}</span>`;
@@ -1154,7 +1169,7 @@ function toggleForma(idx){
           cartLinea.style.color=color;
           cartLinea.innerHTML=`Cartones: <span class=\"cartones-valor\">${f.cartonesGratis||0}</span>`;
           info.appendChild(cartLinea);
-          if(f.nombre){
+          if(!esBack && f.nombre){
             const nombreDiv=document.createElement('div');
             nombreDiv.className='forma-nombre';
             nombreDiv.textContent=f.nombre;
