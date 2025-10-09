@@ -165,8 +165,11 @@
   <script src="js/auth.js"></script>
   <script src="js/timezone.js"></script>
   <script>
-    ensureAuth('Colaborador');
-    initServerTime();
+    let transRef = null;
+    const datosRec = [];
+    const datosRet = [];
+    let unsubscribeTransacciones = null;
+
     function volverConFallback(){
       if(window.history.length>1){
         window.history.back();
@@ -181,11 +184,12 @@
         window.location.href='collab.html';
       }
     }
-    const transRef=db.collection('transacciones');
-    const datosRec=[];const datosRet=[];
     function loadRefCookies(){
       const m=document.cookie.match(/refVals=([^;]+)/);
-      if(m){try{return JSON.parse(decodeURIComponent(m[1]));}catch(e){}}
+      if(m){
+        try{return JSON.parse(decodeURIComponent(m[1]));}
+        catch(e){}
+      }
       return {};
     }
     function saveRefCookies(){
@@ -246,35 +250,65 @@
         btnOk.addEventListener('click',()=>{
           let val=sel.value;
           if(!val){alert('Debes seleccionar un motivo');return;}
-          if(val==='Otro'){val=inp.value.trim();if(!val){alert('Debes colocar un motivo para anulación');return;}}
-          document.body.removeChild(overlay);res(val);
+          if(val==='Otro'){
+            val=inp.value.trim();
+            if(!val){alert('Debes colocar un motivo para anulación');return;}
+          }
+          document.body.removeChild(overlay);
+          res(val);
         });
         btnCan.addEventListener('click',()=>{document.body.removeChild(overlay);res(null);});
-        box.appendChild(aviso);box.appendChild(sel);box.appendChild(inp);box.appendChild(btnOk);box.appendChild(btnCan);
-        overlay.appendChild(box);document.body.appendChild(overlay);sel.focus();
+        box.appendChild(aviso);
+        box.appendChild(sel);
+        box.appendChild(inp);
+        box.appendChild(btnOk);
+        box.appendChild(btnCan);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        sel.focus();
       });
     }
 
-    function toggleView(id,content){document.getElementById(id).addEventListener('change',()=>{content.style.display=document.getElementById(id).checked?'block':'none';});content.style.display='none';}
-    toggleView('toggle-recargas',document.getElementById('recargas-content'));
-    toggleView('toggle-retiros',document.getElementById('retiros-content'));
+    function toggleView(id,content){
+      const el=document.getElementById(id);
+      el.addEventListener('change',()=>{content.style.display=el.checked?'block':'none';});
+      content.style.display='none';
+    }
 
     async function cargarBancos(){
       const selRec=document.getElementById('filtro-rec-banco');
       const snapRec=await db.collection('Bancos').where('categoria','==','Bingo').where('estado','==','Activo').get();
-      snapRec.forEach(doc=>{const nombre=doc.data().nombre||doc.id;const opt=document.createElement('option');opt.value=nombre;opt.textContent=nombre;selRec.appendChild(opt);});
+      snapRec.forEach(doc=>{
+        const nombre=doc.data().nombre||doc.id;
+        const opt=document.createElement('option');
+        opt.value=nombre;
+        opt.textContent=nombre;
+        selRec.appendChild(opt);
+      });
       const selRet=document.getElementById('filtro-ret-banco');
       const snapRet=await db.collection('Bancos').where('categoria','==','Jugadores').where('estado','==','Activo').get();
-      snapRet.forEach(doc=>{const nombre=doc.data().nombre||doc.id;const opt=document.createElement('option');opt.value=nombre;opt.textContent=nombre;selRet.appendChild(opt);});
+      snapRet.forEach(doc=>{
+        const nombre=doc.data().nombre||doc.id;
+        const opt=document.createElement('option');
+        opt.value=nombre;
+        opt.textContent=nombre;
+        selRet.appendChild(opt);
+      });
     }
 
     function procesarTransacciones(snap){
-      datosRec.length=0;datosRet.length=0;
-      snap.forEach(d=>{const dt={id:d.id,...d.data()};
+      datosRec.length=0;
+      datosRet.length=0;
+      snap.forEach(d=>{
+        const dt={id:d.id,...d.data()};
         dt.Condicion = dt.Condicion || (dt.estado==='ARCHIVADO'?'ARCHIVADA':'VISIBLE');
-        if(dt.tipotrans==='deposito')datosRec.push(dt); else datosRet.push(dt);});
-      datosRec.sort(sortTrans);datosRet.sort(sortTrans);
-      renderRec();renderRet();
+        if(dt.tipotrans==='deposito') datosRec.push(dt);
+        else datosRet.push(dt);
+      });
+      datosRec.sort(sortTrans);
+      datosRet.sort(sortTrans);
+      renderRec();
+      renderRet();
       actualizarPendientes();
       actualizarEditable();
     }
@@ -296,9 +330,14 @@
       const box=document.createElement('div');
       Object.assign(box.style,{background:'#fff',padding:'15px',borderRadius:'8px',display:'flex',flexDirection:'column',gap:'8px',minWidth:'260px',fontFamily:'Calibri, Arial, sans-serif',fontSize:'1.1rem',fontWeight:'bold'});
       box.textContent='Cargando...';
-      overlay.appendChild(box);document.body.appendChild(overlay);
-      const [uDoc,bDoc]=await Promise.all([db.collection('users').doc(mail).get(),db.collection('Billetera').doc(mail).get()]);
-      const u=uDoc.data()||{};const b=bDoc.data()||{};
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+      const [uDoc,bDoc]=await Promise.all([
+        db.collection('users').doc(mail).get(),
+        db.collection('Billetera').doc(mail).get()
+      ]);
+      const u=uDoc.data()||{};
+      const b=bDoc.data()||{};
       box.innerHTML = `
         <div><span style="color:black;">Nombre:</span> <span style="color:#555;">${u.name||''}</span></div>
         <div><span style="color:black;">Alias:</span> <span style="color:#006400;">${u.alias||''}</span></div>
@@ -309,14 +348,18 @@
         <div><span style="color:black;">Créditos:</span> <span style="color:#800080;">${b.creditos||0}</span></div>
         <div><span style="color:black;">Cartones gratis:</span> <span style="color:#008000;">${b.CartonesGratis||0}</span></div>
       `;
-      const btn=document.createElement('button');btn.textContent='Cerrar';btn.addEventListener('click',()=>document.body.removeChild(overlay));box.appendChild(btn);
+      const btn=document.createElement('button');
+      btn.textContent='Cerrar';
+      btn.addEventListener('click',()=>document.body.removeChild(overlay));
+      box.appendChild(btn);
     }
     function mostrarDatosTransaccion(t){
       const overlay=document.createElement('div');
       Object.assign(overlay.style,{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center'});
       const box=document.createElement('div');
       Object.assign(box.style,{background:'#fff',padding:'15px',borderRadius:'8px',display:'flex',flexDirection:'column',gap:'8px',minWidth:'260px',fontFamily:'Calibri, Arial, sans-serif',fontWeight:'bold'});
-      overlay.appendChild(box);document.body.appendChild(overlay);
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
       const fs=formatearFecha(t.fechasolicitud||'');
       const hs=formatearHora(t.horasolicitud||'');
       const fg=formatearFecha(t.fechagestion||'');
@@ -328,14 +371,60 @@
         `<div style="color:green;">Fecha de gestión: ${fg}</div>`+
         `<div style="color:green;">Hora de gestión: ${hg}</div>`+
         `<div style="color:#555;font-weight:bold;">Usuario Gestor: ${t.usuariogestor||''}</div>`;
-      const btn=document.createElement('button');btn.textContent='Cerrar';btn.addEventListener('click',()=>document.body.removeChild(overlay));box.appendChild(btn);
+      const btn=document.createElement('button');
+      btn.textContent='Cerrar';
+      btn.addEventListener('click',()=>document.body.removeChild(overlay));
+      box.appendChild(btn);
     }
-    function formatearFecha(f){if(!f)return '';if(f.includes('-')){const[y,m,d]=f.split('-');return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${y}`;}const[d,m,y]=f.split('/');return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${y}`;}
-    function parseFecha(f){if(!f)return 0;if(f.includes('-')){const[y,m,d]=f.split('-');return new Date(`${y}-${m}-${d}`).getTime();}const[d,m,y]=f.split('/');return new Date(`${y}-${m}-${d}`).getTime();}
-    function aHora24(str){if(!str) return '00:00';str=str.toLowerCase().replace(/\./g,'').replace(/\s+/g,'');const m=str.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?(a|p)?m?/);if(!m) return str;let h=parseInt(m[1],10);const min=m[2];const ap=m[4];if(ap==='p'&&h<12)h+=12;if(ap==='a'&&h===12)h=0;return `${String(h).padStart(2,'0')}:${min}`;}
-    function formatearHora(str){if(!str) return '';const [h24,min]=aHora24(str).split(':');let h=parseInt(h24,10);const ampm=h>=12?'pm':'am';h=h%12;if(h===0)h=12;return `${h}:${min} ${ampm}`;}
-    function formatearMonto(valor){const num=parseFloat(valor);if(isNaN(num))return valor;return num%1===0?num.toString():num.toFixed(2);}
-    function sortTrans(a,b){if(a.estado==='PENDIENTE'&&b.estado!=='PENDIENTE')return -1;if(a.estado!=='PENDIENTE'&&b.estado==='PENDIENTE')return 1;return parseFecha(a.fechasolicitud)-parseFecha(b.fechasolicitud);}
+    function formatearFecha(f){
+      if(!f) return '';
+      if(f.includes('-')){
+        const[y,m,d]=f.split('-');
+        return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${y}`;
+      }
+      const[d,m,y]=f.split('/');
+      return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${y}`;
+    }
+    function parseFecha(f){
+      if(!f) return 0;
+      if(f.includes('-')){
+        const[y,m,d]=f.split('-');
+        return new Date(`${y}-${m}-${d}`).getTime();
+      }
+      const[d,m,y]=f.split('/');
+      return new Date(`${y}-${m}-${d}`).getTime();
+    }
+    function aHora24(str){
+      if(!str) return '00:00';
+      str=str.toLowerCase().replace(/\./g,'').replace(/\s+/g,'');
+      const m=str.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?(a|p)?m?/);
+      if(!m) return str;
+      let h=parseInt(m[1],10);
+      const min=m[2];
+      const ap=m[4];
+      if(ap==='p'&&h<12)h+=12;
+      if(ap==='a'&&h===12)h=0;
+      return `${String(h).padStart(2,'0')}:${min}`;
+    }
+    function formatearHora(str){
+      if(!str) return '';
+      const [h24,min]=aHora24(str).split(':');
+      let h=parseInt(h24,10);
+      const ampm=h>=12?'pm':'am';
+      h=h%12;
+      if(h===0)h=12;
+      return `${h}:${min} ${ampm}`;
+    }
+    function formatearMonto(valor){
+      const num=parseFloat(valor);
+      if(isNaN(num))return valor;
+      return num%1===0?num.toString():num.toFixed(2);
+    }
+    function sortTrans(a,b){
+      if(a.estado==='PENDIENTE'&&b.estado!=='PENDIENTE')return -1;
+      if(a.estado!=='PENDIENTE'&&b.estado==='PENDIENTE')return 1;
+      return parseFecha(a.fechasolicitud)-parseFecha(b.fechasolicitud);
+    }
     function renderRec(){
       const tb=document.querySelector('#tabla-recargas tbody');
       tb.innerHTML='';
@@ -346,18 +435,25 @@
         const fecha=formatearFecha(t.fechasolicitud);
         const montoNum=parseFloat(t.Monto);
         const montoStr=montoNum.toFixed(2);
-        if(filtrosRec.monto&& !montoStr.includes(filtrosRec.monto))return;
+        if(filtrosRec.monto && !montoStr.includes(filtrosRec.monto))return;
         const monto=formatearMonto(montoNum);
-        if(filtrosRec.nombre&& !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRec.nombre))return;
-        if(filtrosRec.banco&& (t.bancoreceptor||'')!==filtrosRec.banco)return;
-        if(filtrosRec.ref&& !(t.referencia||'').toString().includes(filtrosRec.ref))return;
-        if(filtrosRec.fecha&& fecha!==filtrosRec.fecha)return;
-        if(filtrosRec.estado&& t.estado!==filtrosRec.estado)return;
+        if(filtrosRec.nombre && !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRec.nombre))return;
+        if(filtrosRec.banco && (t.bancoreceptor||'')!==filtrosRec.banco)return;
+        if(filtrosRec.ref && !(t.referencia||'').toString().includes(filtrosRec.ref))return;
+        if(filtrosRec.fecha && fecha!==filtrosRec.fecha)return;
+        if(filtrosRec.estado && t.estado!==filtrosRec.estado)return;
         const tr=document.createElement('tr');
         tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td>${t.bancoreceptor||''}</td><td style='color:#4b0082;'>${t.referencia}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
         const estadoTd=tr.children[6];
-        if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{estadoTd.style.color=estadoColor(t.estado);}
-        if(t.nota){estadoTd.classList.add('nota-estado');estadoTd.addEventListener('click',e=>{e.stopPropagation();alert(t.nota);});}
+        if(t.estado==='ANULADO'){
+          tr.classList.add('anulado');
+        }else{
+          estadoTd.style.color=estadoColor(t.estado);
+        }
+        if(t.nota){
+          estadoTd.classList.add('nota-estado');
+          estadoTd.addEventListener('click',e=>{e.stopPropagation();alert(t.nota);});
+        }
         const mailTd=tr.children[2];
         mailTd.style.cursor='pointer';
         mailTd.addEventListener('click',()=>mostrarInfoGmail(t.IDbilletera));
@@ -378,23 +474,30 @@
         const fecha=formatearFecha(t.fechasolicitud);
         const montoNum=parseFloat(t.Monto);
         const montoStr=montoNum.toFixed(2);
-        if(filtrosRet.monto&& !montoStr.includes(filtrosRet.monto))return;
+        if(filtrosRet.monto && !montoStr.includes(filtrosRet.monto))return;
         const monto=formatearMonto(montoNum);
-        if(filtrosRet.nombre&& !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRet.nombre))return;
-        if(filtrosRet.banco&& (t.bancoreceptor||'')!==filtrosRet.banco)return;
-        if(filtrosRet.ref&& !(t.referencia||'').toString().includes(filtrosRet.ref))return;
-        if(filtrosRet.fecha&& fecha!==filtrosRet.fecha)return;
-        if(filtrosRet.estado&& t.estado!==filtrosRet.estado)return;
+        if(filtrosRet.nombre && !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRet.nombre))return;
+        if(filtrosRet.banco && (t.bancoreceptor||'')!==filtrosRet.banco)return;
+        if(filtrosRet.ref && !(t.referencia||'').toString().includes(filtrosRet.ref))return;
+        if(filtrosRet.fecha && fecha!==filtrosRet.fecha)return;
+        if(filtrosRet.estado && t.estado!==filtrosRet.estado)return;
         const tr=document.createElement('tr');
         const refValue=refCookies[t.id]!==undefined?refCookies[t.id]:(t.referencia||'');
-        tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;' contenteditable='false' inputmode='numeric' oninput="this.textContent=this.textContent.replace(/[^0-9]/g,'').slice(0,5);">${refValue}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
+        tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;' contenteditable='false' inputmode='numeric'>${refValue}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
         const estadoTd=tr.children[6];
-        if(t.estado==='ANULADO'){tr.classList.add('anulado');}else{estadoTd.style.color=estadoColor(t.estado);}
-        if(t.nota){estadoTd.classList.add('nota-estado');estadoTd.addEventListener('click',e=>{e.stopPropagation();alert(t.nota);});}
+        if(t.estado==='ANULADO'){
+          tr.classList.add('anulado');
+        }else{
+          estadoTd.style.color=estadoColor(t.estado);
+        }
+        if(t.nota){
+          estadoTd.classList.add('nota-estado');
+          estadoTd.addEventListener('click',e=>{e.stopPropagation();alert(t.nota);});
+        }
         const chk=tr.querySelector('input[type=checkbox]');
         const refTd=tr.children[4];
         refTd.dataset.original=t.referencia||'';
-        chk.addEventListener('change',()=>{actualizarEditable();});
+        chk.addEventListener('change',actualizarEditable);
         refTd.addEventListener('input',()=>{
           refTd.textContent=refTd.textContent.replace(/[^0-9]/g,'').slice(0,5);
           const nuevo=refTd.textContent.trim();
@@ -411,7 +514,6 @@
         i++;
       });
     }
-
     function actualizarEditable(){
       const checks=Array.from(document.querySelectorAll('#tabla-retiros tbody input[type=checkbox]'));
       checks.forEach(c=>{
@@ -426,19 +528,25 @@
         }
       });
     }
-
-    function seleccionados(tb){return Array.from(tb.querySelectorAll('input[type=checkbox]:checked')).map(c=>c.dataset.id);}
-
+    function seleccionados(tb){
+      return Array.from(tb.querySelectorAll('input[type=checkbox]:checked')).map(c=>c.dataset.id);
+    }
     async function actualizar(ids,estado,nota,ref,condicion){
       await initServerTime();
       for(const id of ids){
         const doc=await transRef.doc(id).get();
         const data=doc.data();
-        const upd={usuariogestor:auth.currentUser.email,rolusuario:window.currentRole,fechagestion:fecha(),horagestion:hora()};
+        const upd={
+          usuariogestor:auth.currentUser.email,
+          rolusuario:window.currentRole,
+          fechagestion:fecha(),
+          horagestion:hora()
+        };
         if(estado)upd.estado=estado;
         if(nota)upd.nota=nota;
         if(ref)upd.referencia=ref;
-        if(condicion)upd.Condicion=condicion; else if(!data.Condicion)upd.Condicion='VISIBLE';
+        if(condicion)upd.Condicion=condicion;
+        else if(!data.Condicion)upd.Condicion='VISIBLE';
         await transRef.doc(id).update(upd);
         delete refCookies[id];
         if(estado==='APROBADO'){
@@ -456,187 +564,239 @@
       saveRefCookies();
     }
 
-    document.getElementById('aprobar-rec').addEventListener('click',()=>{
-      const tb=document.getElementById('tabla-recargas');
-      const sel=Array.from(tb.querySelectorAll('input[type=checkbox]:checked'));
-      if(!sel.length) return;
-      const ids=[];
-      let hasAprobado=false;
-      let hasAnulado=false;
-      sel.forEach(chk=>{
-        const t=datosRec.find(x=>x.id===chk.dataset.id);
-        if(t.estado==='ANULADO'){hasAnulado=true;chk.checked=false;}
-        else if(t.estado==='APROBADO'){hasAprobado=true;chk.checked=false;}
-        else ids.push(chk.dataset.id);
+    function marcarTodos(id){
+      const tb=document.getElementById(id);
+      const checks=tb.querySelectorAll('tbody input[type=checkbox]');
+      const all=Array.from(checks).every(c=>c.checked);
+      checks.forEach(c=>{
+        c.checked=!all;
+        c.dispatchEvent(new Event('change'));
       });
-      if(hasAnulado) alert('No se pueden Aprobar transacciones ANULADAS');
-      if(hasAprobado) alert('No se pueden aprobar las transacciones APROBADAS');
-      if(ids.length) actualizar(ids,'APROBADO');
-    });
-    document.getElementById('anular-rec').addEventListener('click',async()=>{
-      const ids=seleccionados(document.getElementById('tabla-recargas'));
-      if(!ids.length) return;
-      const registros=ids.map(id=>datosRec.find(t=>t.id===id));
-      const invalid=registros.filter(t=>t.estado!=='PENDIENTE');
-      if(invalid.length){
-        invalid.forEach(t=>document.querySelector(`#tabla-recargas input[data-id="${t.id}"]`).checked=false);
-        const hasAprobado=invalid.some(t=>t.estado==='APROBADO');
-        alert(hasAprobado?'No se pueden Anular Transacciones APROBADAS':'Solo se pueden Anular Transacciones PENDIENTES');
-        return;
-      }
-      const motivo=await solicitarMotivo();
-      if(!motivo) return;
-      actualizar(ids,'ANULADO',motivo);
-    });
-    document.getElementById('archivar-rec').addEventListener('click',()=>{
-      const checks=document.querySelectorAll('#tabla-recargas tbody input[type=checkbox]:checked');
-      if(!checks.length)return;
-      const ids=[];let pendiente=false;
-      checks.forEach(ch=>{
-        if(ch.dataset.estado==='PENDIENTE'){pendiente=true;ch.checked=false;}
-        else ids.push(ch.dataset.id);
-      });
-      if(pendiente)alert('Las transacciones PENDIENTES no pueden archivarse');
-      if(!ids.length)return;
-      if(mostrarRecArch)actualizar(ids,null,null,null,'VISIBLE');
-      else actualizar(ids,null,null,null,'ARCHIVADA');
-    });
-    document.getElementById('ver-arch-rec').addEventListener('click',()=>{
-      mostrarRecArch=!mostrarRecArch;
-      document.getElementById('ver-arch-rec').classList.toggle('archivo-activo',mostrarRecArch);
-      actualizarArchivarRecBtn();
-      renderRec();
-    });
+    }
 
-    document.getElementById('aprobar-ret').addEventListener('click',async()=>{
-      const tb=document.getElementById('tabla-retiros');
-      const sel=Array.from(tb.querySelectorAll('input[type=checkbox]:checked'));
-      if(!sel.length) return;
-      const invalidSel=[];
-      for(const chk of sel){
-        const ref=chk.closest('tr').children[4].textContent.trim();
-        if(!/^[0-9]{5}$/.test(ref)) invalidSel.push(chk);
-      }
-      if(invalidSel.length){
-        invalidSel.forEach(chk=>chk.checked=false);
-        alert('Debes colocar una Referencia válida de los ultimos 5 digitos de la Referencia');
-        actualizarEditable();
-        return;
-      }
-      if(sel.length>1){
-        const conf=confirm('¿Deseas APROBAR todos los registros seleccionados?');
-        if(!conf) return;
-      }
-      for(const chk of sel){
-        const ref=chk.closest('tr').children[4].textContent.trim();
-        const t=datosRet.find(x=>x.id===chk.dataset.id);
-        if(t.estado==='APROBADO'){
-          alert('No se pueden aprobar las transacciones APROBADAS');
-          chk.checked=false;
-        }else if(t.estado==='PENDIENTE'){
-          await actualizar([chk.dataset.id],'APROBADO',null,ref);
-        }else{
-          alert('No se pueden aprobar las transacciones ANULADAS');
-          chk.checked=false;
+    function iniciarApp(){
+      toggleView('toggle-recargas',document.getElementById('recargas-content'));
+      toggleView('toggle-retiros',document.getElementById('retiros-content'));
+
+      document.getElementById('aprobar-rec').addEventListener('click',()=>{
+        const tb=document.getElementById('tabla-recargas');
+        const sel=Array.from(tb.querySelectorAll('input[type=checkbox]:checked'));
+        if(!sel.length) return;
+        const ids=[];
+        let hasAprobado=false;
+        let hasAnulado=false;
+        sel.forEach(chk=>{
+          const t=datosRec.find(x=>x.id===chk.dataset.id);
+          if(t.estado==='ANULADO'){
+            hasAnulado=true;
+            chk.checked=false;
+          }else if(t.estado==='APROBADO'){
+            hasAprobado=true;
+            chk.checked=false;
+          }else{
+            ids.push(chk.dataset.id);
+          }
+        });
+        if(hasAnulado) alert('No se pueden Aprobar transacciones ANULADAS');
+        if(hasAprobado) alert('No se pueden aprobar las transacciones APROBADAS');
+        if(ids.length) actualizar(ids,'APROBADO');
+      });
+
+      document.getElementById('anular-rec').addEventListener('click',async()=>{
+        const ids=seleccionados(document.getElementById('tabla-recargas'));
+        if(!ids.length) return;
+        const registros=ids.map(id=>datosRec.find(t=>t.id===id));
+        const invalid=registros.filter(t=>t.estado!=='PENDIENTE');
+        if(invalid.length){
+          invalid.forEach(t=>document.querySelector(`#tabla-recargas input[data-id="${t.id}"]`).checked=false);
+          const hasAprobado=invalid.some(t=>t.estado==='APROBADO');
+          alert(hasAprobado?'No se pueden Anular Transacciones APROBADAS':'Solo se pueden Anular Transacciones PENDIENTES');
+          return;
         }
-      }
-      actualizarEditable();
-    });
-    document.getElementById('editar-ret').addEventListener('click',async()=>{
-      const tb=document.getElementById('tabla-retiros');
-      const sel=Array.from(tb.querySelectorAll('input[type=checkbox]:checked'));
-      if(!sel.length) return;
-      let edited=false;
-      for(const chk of sel){
-        const tr=chk.closest('tr');
-        const refTd=tr.children[4];
-        const nuevo=refTd.textContent.trim();
-        const orig=refTd.dataset.original||'';
-        if(nuevo===orig) continue;
-        if(!/^[0-9]{5}$/.test(nuevo)){
+        const motivo=await solicitarMotivo();
+        if(!motivo) return;
+        actualizar(ids,'ANULADO',motivo);
+      });
+
+      document.getElementById('archivar-rec').addEventListener('click',()=>{
+        const checks=document.querySelectorAll('#tabla-recargas tbody input[type=checkbox]:checked');
+        if(!checks.length)return;
+        const ids=[];
+        let pendiente=false;
+        checks.forEach(ch=>{
+          if(ch.dataset.estado==='PENDIENTE'){
+            pendiente=true;
+            ch.checked=false;
+          }else{
+            ids.push(ch.dataset.id);
+          }
+        });
+        if(pendiente)alert('Las transacciones PENDIENTES no pueden archivarse');
+        if(!ids.length)return;
+        if(mostrarRecArch) actualizar(ids,null,null,null,'VISIBLE');
+        else actualizar(ids,null,null,null,'ARCHIVADA');
+      });
+
+      document.getElementById('ver-arch-rec').addEventListener('click',()=>{
+        mostrarRecArch=!mostrarRecArch;
+        document.getElementById('ver-arch-rec').classList.toggle('archivo-activo',mostrarRecArch);
+        actualizarArchivarRecBtn();
+        renderRec();
+      });
+
+      document.getElementById('aprobar-ret').addEventListener('click',async()=>{
+        const tb=document.getElementById('tabla-retiros');
+        const sel=Array.from(tb.querySelectorAll('input[type=checkbox]:checked'));
+        if(!sel.length) return;
+        const invalidSel=[];
+        for(const chk of sel){
+          const ref=chk.closest('tr').children[4].textContent.trim();
+          if(!/^[0-9]{5}$/.test(ref)) invalidSel.push(chk);
+        }
+        if(invalidSel.length){
+          invalidSel.forEach(chk=>chk.checked=false);
           alert('Debes colocar una Referencia válida de los ultimos 5 digitos de la Referencia');
-          chk.checked=false;
-          continue;
+          actualizarEditable();
+          return;
         }
-        const conf=confirm(`¿Estas seguro de querer editar a este nuevo valor de Referencia ${nuevo}?`);
-        if(conf){
-          await actualizar([chk.dataset.id],null,null,nuevo);
-          edited=true;
+        if(sel.length>1){
+          const conf=await confirm('¿Deseas APROBAR todos los registros seleccionados?');
+          if(!conf) return;
         }
-      }
-      if(edited) alert('Se ha editado correctamente la Referencia');
-      actualizarEditable();
-    });
-    document.getElementById('anular-ret').addEventListener('click',async()=>{
-      const ids=seleccionados(document.getElementById('tabla-retiros'));
-      if(!ids.length) return;
-      const registros=ids.map(id=>datosRet.find(t=>t.id===id));
-      const invalid=registros.filter(t=>t.estado!=='PENDIENTE');
-      if(invalid.length){
-        invalid.forEach(t=>document.querySelector(`#tabla-retiros input[data-id="${t.id}"]`).checked=false);
-        const hasAprobado=invalid.some(t=>t.estado==='APROBADO');
-        alert(hasAprobado?'No se pueden Anular Transacciones APROBADAS':'Solo se pueden Anular Transacciones PENDIENTES');
+        for(const chk of sel){
+          const ref=chk.closest('tr').children[4].textContent.trim();
+          const t=datosRet.find(x=>x.id===chk.dataset.id);
+          if(t.estado==='APROBADO'){
+            alert('No se pueden aprobar las transacciones APROBADAS');
+            chk.checked=false;
+          }else if(t.estado==='PENDIENTE'){
+            await actualizar([chk.dataset.id],'APROBADO',null,ref);
+          }else{
+            alert('No se pueden aprobar las transacciones ANULADAS');
+            chk.checked=false;
+          }
+        }
         actualizarEditable();
-        return;
-      }
-      const nota=await prompt('Motivo');
-      if(nota===null) return;
-      if(!nota.trim()){alert('Debes colocar un motivo para anulación');return;}
-      actualizar(ids,'ANULADO',nota.trim());
-    });
-    document.getElementById('archivar-ret').addEventListener('click',()=>{
-      const checks=document.querySelectorAll('#tabla-retiros tbody input[type=checkbox]:checked');
-      if(!checks.length)return;
-      const ids=[];let pendiente=false;
-      checks.forEach(ch=>{
-        if(ch.dataset.estado==='PENDIENTE'){pendiente=true;ch.checked=false;}
-        else ids.push(ch.dataset.id);
       });
-      if(pendiente)alert('Las transacciones PENDIENTES no pueden archivarse');
-      if(!ids.length)return;
-      if(mostrarRetArch)actualizar(ids,null,null,null,'VISIBLE');
-      else actualizar(ids,null,null,null,'ARCHIVADA');
-    });
-    document.getElementById('ver-arch-ret').addEventListener('click',()=>{
-      mostrarRetArch=!mostrarRetArch;
-      document.getElementById('ver-arch-ret').classList.toggle('archivo-activo',mostrarRetArch);
+
+      document.getElementById('editar-ret').addEventListener('click',async()=>{
+        const tb=document.getElementById('tabla-retiros');
+        const sel=Array.from(tb.querySelectorAll('input[type=checkbox]:checked'));
+        if(!sel.length) return;
+        let edited=false;
+        for(const chk of sel){
+          const tr=chk.closest('tr');
+          const refTd=tr.children[4];
+          const nuevo=refTd.textContent.trim();
+          const orig=refTd.dataset.original||'';
+          if(nuevo===orig) continue;
+          if(!/^[0-9]{5}$/.test(nuevo)){
+            alert('Debes colocar una Referencia válida de los ultimos 5 digitos de la Referencia');
+            chk.checked=false;
+            continue;
+          }
+          const conf=await confirm(`¿Estas seguro de querer editar a este nuevo valor de Referencia ${nuevo}?`);
+          if(conf){
+            await actualizar([chk.dataset.id],null,null,nuevo);
+            edited=true;
+          }
+        }
+        if(edited) alert('Se ha editado correctamente la Referencia');
+        actualizarEditable();
+      });
+
+      document.getElementById('anular-ret').addEventListener('click',async()=>{
+        const ids=seleccionados(document.getElementById('tabla-retiros'));
+        if(!ids.length) return;
+        const registros=ids.map(id=>datosRet.find(t=>t.id===id));
+        const invalid=registros.filter(t=>t.estado!=='PENDIENTE');
+        if(invalid.length){
+          invalid.forEach(t=>document.querySelector(`#tabla-retiros input[data-id="${t.id}"]`).checked=false);
+          const hasAprobado=invalid.some(t=>t.estado==='APROBADO');
+          alert(hasAprobado?'No se pueden Anular Transacciones APROBADAS':'Solo se pueden Anular Transacciones PENDIENTES');
+          actualizarEditable();
+          return;
+        }
+        const nota=await prompt('Motivo');
+        if(nota===null) return;
+        if(!nota.trim()){
+          alert('Debes colocar un motivo para anulación');
+          return;
+        }
+        actualizar(ids,'ANULADO',nota.trim());
+      });
+
+      document.getElementById('archivar-ret').addEventListener('click',()=>{
+        const checks=document.querySelectorAll('#tabla-retiros tbody input[type=checkbox]:checked');
+        if(!checks.length)return;
+        const ids=[];
+        let pendiente=false;
+        checks.forEach(ch=>{
+          if(ch.dataset.estado==='PENDIENTE'){
+            pendiente=true;
+            ch.checked=false;
+          }else{
+            ids.push(ch.dataset.id);
+          }
+        });
+        if(pendiente)alert('Las transacciones PENDIENTES no pueden archivarse');
+        if(!ids.length)return;
+        if(mostrarRetArch)actualizar(ids,null,null,null,'VISIBLE');
+        else actualizar(ids,null,null,null,'ARCHIVADA');
+      });
+
+      document.getElementById('ver-arch-ret').addEventListener('click',()=>{
+        mostrarRetArch=!mostrarRetArch;
+        document.getElementById('ver-arch-ret').classList.toggle('archivo-activo',mostrarRetArch);
+        actualizarArchivarRetBtn();
+        renderRet();
+      });
+
+      document.getElementById('sel-rec').addEventListener('click',()=>marcarTodos('tabla-recargas'));
+      document.getElementById('sel-ret').addEventListener('click',()=>marcarTodos('tabla-retiros'));
+
+      document.getElementById('filtro-rec-monto').addEventListener('input',e=>{filtrosRec.monto=e.target.value;renderRec();});
+      document.getElementById('filtro-rec-nombre').addEventListener('input',e=>{filtrosRec.nombre=e.target.value.toLowerCase();renderRec();});
+      document.getElementById('filtro-rec-banco').addEventListener('change',e=>{filtrosRec.banco=e.target.value;renderRec();});
+      document.getElementById('filtro-rec-ref').addEventListener('input',e=>{filtrosRec.ref=e.target.value;renderRec();});
+      document.getElementById('filtro-rec-fecha').addEventListener('change',e=>{filtrosRec.fecha=e.target.value?formatearFecha(e.target.value):'';renderRec();});
+      document.getElementById('filtro-rec-estado').addEventListener('change',e=>{filtrosRec.estado=e.target.value;renderRec();});
+
+      document.getElementById('filtro-ret-monto').addEventListener('input',e=>{filtrosRet.monto=e.target.value;renderRet();});
+      document.getElementById('filtro-ret-nombre').addEventListener('input',e=>{filtrosRet.nombre=e.target.value.toLowerCase();renderRet();});
+      document.getElementById('filtro-ret-banco').addEventListener('change',e=>{filtrosRet.banco=e.target.value;renderRet();});
+      document.getElementById('filtro-ret-ref').addEventListener('input',e=>{filtrosRet.ref=e.target.value;renderRet();});
+      document.getElementById('filtro-ret-fecha').addEventListener('change',e=>{filtrosRet.fecha=e.target.value?formatearFecha(e.target.value):'';renderRet();});
+      document.getElementById('filtro-ret-estado').addEventListener('change',e=>{filtrosRet.estado=e.target.value;renderRet();});
+
+      document.getElementById('volver-btn').addEventListener('click',volverConFallback);
+      actualizarArchivarRecBtn();
       actualizarArchivarRetBtn();
-      renderRet();
-    });
+      cargarBancos().catch(err=>console.error('Error cargando bancos',err));
 
-    function marcarTodos(id){const tb=document.getElementById(id);const checks=tb.querySelectorAll('tbody input[type=checkbox]');const all=Array.from(checks).every(c=>c.checked);checks.forEach(c=>{c.checked=!all;c.dispatchEvent(new Event('change'));});}
-    document.getElementById('sel-rec').addEventListener('click',()=>marcarTodos('tabla-recargas'));
-    document.getElementById('sel-ret').addEventListener('click',()=>marcarTodos('tabla-retiros'));
-
-    document.getElementById('filtro-rec-monto').addEventListener('input',e=>{filtrosRec.monto=e.target.value;renderRec();});
-    document.getElementById('filtro-rec-nombre').addEventListener('input',e=>{filtrosRec.nombre=e.target.value.toLowerCase();renderRec();});
-    document.getElementById('filtro-rec-banco').addEventListener('change',e=>{filtrosRec.banco=e.target.value;renderRec();});
-    document.getElementById('filtro-rec-ref').addEventListener('input',e=>{filtrosRec.ref=e.target.value;renderRec();});
-    document.getElementById('filtro-rec-fecha').addEventListener('change',e=>{filtrosRec.fecha=e.target.value?formatearFecha(e.target.value):'';renderRec();});
-    document.getElementById('filtro-rec-estado').addEventListener('change',e=>{filtrosRec.estado=e.target.value;renderRec();});
-
-    document.getElementById('filtro-ret-monto').addEventListener('input',e=>{filtrosRet.monto=e.target.value;renderRet();});
-    document.getElementById('filtro-ret-nombre').addEventListener('input',e=>{filtrosRet.nombre=e.target.value.toLowerCase();renderRet();});
-    document.getElementById('filtro-ret-banco').addEventListener('change',e=>{filtrosRet.banco=e.target.value;renderRet();});
-    document.getElementById('filtro-ret-ref').addEventListener('input',e=>{filtrosRet.ref=e.target.value;renderRet();});
-    document.getElementById('filtro-ret-fecha').addEventListener('change',e=>{filtrosRet.fecha=e.target.value?formatearFecha(e.target.value):'';renderRet();});
-    document.getElementById('filtro-ret-estado').addEventListener('change',e=>{filtrosRet.estado=e.target.value;renderRet();});
-    let unsubscribeTransacciones=null;
-
-    document.getElementById('volver-btn').addEventListener('click',volverConFallback);
-    actualizarArchivarRecBtn();
-    actualizarArchivarRetBtn();
-    cargarBancos();
-    auth.onAuthStateChanged(user=>{
-      if(unsubscribeTransacciones){
-        unsubscribeTransacciones();
-        unsubscribeTransacciones=null;
-      }
-      if(!user) return;
-      unsubscribeTransacciones=transRef.onSnapshot(procesarTransacciones,err=>{
-        console.error('Error al escuchar transacciones',err);
+      auth.onAuthStateChanged(user=>{
+        if(unsubscribeTransacciones){
+          unsubscribeTransacciones();
+          unsubscribeTransacciones=null;
+        }
+        if(!user) return;
+        unsubscribeTransacciones=transRef.onSnapshot(procesarTransacciones,err=>{
+          console.error('Error al escuchar transacciones',err);
+        });
       });
-    });
+    }
+
+    initFirebase()
+      .then(()=>{
+        ensureAuth('Colaborador');
+        initServerTime();
+        transRef=db.collection('transacciones');
+        iniciarApp();
+      })
+      .catch(err=>{
+        console.error('No se pudo iniciar la vista de transacciones',err);
+        alert('Error al conectar con los servicios. Intente nuevamente más tarde.');
+      });
   </script>
 </body>
 </html>
