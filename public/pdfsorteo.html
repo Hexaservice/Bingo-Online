@@ -107,6 +107,10 @@
       margin: 0 auto;
       width: 100%;
       text-align: left;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-auto-rows: minmax(0, auto);
+      align-items: stretch;
+      grid-auto-flow: dense;
     }
     .resumen-bloque {
       background: #ffffff;
@@ -122,6 +126,7 @@
       gap: clamp(10px, 1.8vw, 18px);
       text-align: left;
       min-width: 0;
+      grid-column: 1 / -1;
     }
     #resumen-header .header-logo {
       display: flex;
@@ -159,21 +164,6 @@
       text-transform: capitalize;
       line-height: 1.3;
     }
-    #datos-generales {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: clamp(6px, 1.4vw, 14px) clamp(10px, 1.8vw, 16px);
-      justify-content: center;
-      align-items: stretch;
-      margin: 0;
-      padding: clamp(12px, 1.8vw, 18px) clamp(12px, 2vw, 20px);
-      border-radius: 14px;
-      background: rgba(255,255,255,0.92);
-      box-shadow: inset 0 0 0 1px rgba(11,83,148,0.08);
-      width: 100%;
-      max-width: 100%;
-      box-sizing: border-box;
-    }
     .dato-inline {
       display: grid;
       grid-template-columns: auto 1fr;
@@ -185,6 +175,8 @@
       padding: 6px 10px;
       border-radius: 10px;
       background: rgba(11,83,148,0.05);
+      height: 100%;
+      box-shadow: inset 0 0 0 1px rgba(11,83,148,0.08);
     }
     .dato-inline .dato-label {
       font-family: 'Bangers', cursive;
@@ -211,6 +203,7 @@
       margin: 0;
       justify-content: center;
       text-align: center;
+      grid-column: 1 / -1;
     }
     .totales-header h2 {
       font-family: 'Bangers', cursive;
@@ -230,20 +223,17 @@
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: clamp(10px, 1.8vw, 18px);
       width: 100%;
+      margin: clamp(18px, 3vw, 28px) auto 0;
+      align-items: stretch;
     }
     @media (min-width: 1024px) {
       #resumen-layout {
-        grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
-        grid-template-rows: auto auto minmax(0, 1fr);
-        grid-template-areas:
-          "header datos"
-          "totales datos"
-          "formas formas";
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        grid-auto-flow: dense;
       }
-      #resumen-header { grid-area: header; }
-      #datos-generales { grid-area: datos; }
-      .totales-header { grid-area: totales; }
-      #formas-resumen { grid-area: formas; }
+      #resumen-layout > .dato-inline {
+        min-height: 100%;
+      }
     }
     .forma-item {
       display: grid;
@@ -294,6 +284,12 @@
       background: rgba(11,83,148,0.04);
       padding: 6px 10px;
       border-radius: 10px;
+    }
+    .forma-detalle.sin-valor {
+      grid-template-columns: 1fr;
+    }
+    .forma-detalle.sin-valor .etiqueta {
+      justify-content: flex-start;
     }
     .forma-detalle .etiqueta {
       font-weight: 600;
@@ -626,7 +622,9 @@
       .pdf-carton { max-width: clamp(170px, 28vw, 210px); }
     }
     @media (max-width: 480px) {
-      #datos-generales { grid-template-columns: 1fr; }
+      #resumen-layout {
+        grid-template-columns: 1fr;
+      }
       #acciones-fixed {
         left: 50%;
         right: auto;
@@ -762,12 +760,7 @@
     }
     body.pdf-captura #resumen-layout {
       display: grid;
-      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
-      grid-template-rows: auto auto minmax(0, 1fr);
-      grid-template-areas:
-        "header datos"
-        "totales datos"
-        "formas formas";
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       column-gap: clamp(16px, 2.4vw, 24px);
       row-gap: clamp(12px, 2vw, 22px);
       width: 100%;
@@ -775,6 +768,7 @@
       min-height: clamp(560px, 56vw, 700px);
       margin: 0 auto;
       align-content: stretch;
+      grid-auto-flow: dense;
     }
     body.pdf-captura #resumen-layout > .resumen-bloque {
       padding: clamp(20px, 2.8vw, 28px);
@@ -782,7 +776,7 @@
       border-width: 1.8px;
     }
     body.pdf-captura #resumen-header {
-      grid-area: header;
+      grid-column: 1 / -1;
       align-items: center;
       flex-wrap: nowrap;
       gap: clamp(12px, 2.2vw, 22px);
@@ -793,7 +787,7 @@
       width: 100%;
     }
     body.pdf-captura .totales-header {
-      grid-area: totales;
+      grid-column: 1 / -1;
       justify-content: flex-start;
       text-align: left;
       align-items: center;
@@ -803,19 +797,11 @@
       margin-bottom: 0;
       font-size: clamp(2rem, 4.2vw, 2.6rem);
     }
-    body.pdf-captura #datos-generales {
-      grid-area: datos;
-      align-self: stretch;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: clamp(8px, 1.6vw, 16px) clamp(10px, 1.8vw, 18px);
-      padding: clamp(14px, 1.8vw, 20px);
-    }
     body.pdf-captura .dato-inline {
       font-size: clamp(0.95rem, 1.4vw, 1.12rem);
       padding: clamp(6px, 1.1vw, 12px);
     }
     body.pdf-captura #formas-resumen {
-      grid-area: formas;
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: clamp(10px, 1.8vw, 20px);
@@ -883,20 +869,36 @@
           <div id="tipo-sorteo-titulo"></div>
         </div>
       </div>
-      <div id="datos-generales" class="resumen-bloque">
-        <div class="dato-inline"><span class="dato-label">Tipo de sorteo:</span><span id="dato-tipo" class="dato-valor">-</span></div>
-        <div class="dato-inline"><span class="dato-label">Fecha del sorteo:</span><span id="dato-fecha" class="dato-valor">-</span></div>
-        <div class="dato-inline"><span class="dato-label">Hora de cierre:</span><span id="dato-cierre" class="dato-valor">-</span></div>
-        <div class="dato-inline"><span class="dato-label">Hora del sorteo:</span><span id="dato-hora" class="dato-valor">-</span></div>
-        <div class="dato-inline"><span class="dato-label">Valor del cartón:</span><span id="dato-valor" class="dato-valor">-</span></div>
-        <div class="dato-inline"><span class="dato-label">CARTONES GRATIS MÁXIMOS POR JUGADOR:</span><span id="dato-maxgratis" class="dato-valor">-</span></div>
+      <div class="dato-inline">
+        <span class="dato-label">Tipo de sorteo:</span>
+        <span id="dato-tipo" class="dato-valor">-</span>
+      </div>
+      <div class="dato-inline">
+        <span class="dato-label">Fecha del sorteo:</span>
+        <span id="dato-fecha" class="dato-valor">-</span>
+      </div>
+      <div class="dato-inline">
+        <span class="dato-label">Hora de cierre:</span>
+        <span id="dato-cierre" class="dato-valor">-</span>
+      </div>
+      <div class="dato-inline">
+        <span class="dato-label">Hora del sorteo:</span>
+        <span id="dato-hora" class="dato-valor">-</span>
+      </div>
+      <div class="dato-inline">
+        <span class="dato-label">Valor del cartón:</span>
+        <span id="dato-valor" class="dato-valor">-</span>
+      </div>
+      <div class="dato-inline">
+        <span class="dato-label">CARTONES GRATIS MÁXIMOS POR JUGADOR:</span>
+        <span id="dato-maxgratis" class="dato-valor">-</span>
       </div>
       <div class="totales-header resumen-bloque">
         <h2>CRÉDITOS TOTALES A REPARTIR</h2>
         <div id="total-premios">0</div>
       </div>
-      <div id="formas-resumen" class="resumen-bloque"></div>
     </div>
+    <section id="formas-resumen"></section>
     <section id="cartones-section">
       <h2>Cartones del sorteo</h2>
       <div id="cartones-grid"></div>
@@ -1302,7 +1304,7 @@
     spanEtiqueta.className = 'etiqueta';
     const usarIconoCarton = Boolean(opciones && opciones.usarIconoCarton);
     const textoEtiqueta = usarIconoCarton
-      ? 'icono de cartón (usado en la ventana jugarcartones) gratis:'
+      ? `icono de cartón (usado en la ventana jugarcartones) gratis: ${valor}`
       : `${etiqueta}:`;
     if(usarIconoCarton){
       const icono = document.createElement('img');
@@ -1313,14 +1315,17 @@
       const texto = document.createElement('span');
       texto.textContent = textoEtiqueta;
       spanEtiqueta.appendChild(texto);
+      cont.classList.add('sin-valor');
     } else {
       spanEtiqueta.textContent = textoEtiqueta;
     }
     const spanValor = document.createElement('span');
     spanValor.className = 'valor';
-    spanValor.textContent = valor;
+    spanValor.textContent = usarIconoCarton ? '' : valor;
     cont.appendChild(spanEtiqueta);
-    cont.appendChild(spanValor);
+    if(!usarIconoCarton){
+      cont.appendChild(spanValor);
+    }
     return cont;
   }
 
