@@ -9,11 +9,14 @@
     :root {
       color-scheme: only light;
     }
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
     body {
       font-family: 'Poppins', sans-serif;
       background: #ffffff;
       margin: 0;
-      padding: 60px 15px 40px;
+      padding: clamp(48px, 6vw, 60px) clamp(12px, 4vw, 24px) clamp(28px, 6vw, 40px);
       box-sizing: border-box;
       color: #1a1a1a;
     }
@@ -54,6 +57,7 @@
       z-index: 1001;
       flex-wrap: wrap;
       justify-content: flex-end;
+      width: min(100%, 420px);
     }
     #acciones-fixed button {
       padding: 10px 18px;
@@ -89,6 +93,8 @@
       max-width: 960px;
       margin: 0 auto;
       text-align: center;
+      width: 100%;
+      padding: 0 clamp(4px, 2vw, 16px);
     }
     #resumen-pdf {
       background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(230,244,255,0.85));
@@ -105,6 +111,7 @@
       gap: 16px;
       margin-bottom: 16px;
       text-align: left;
+      min-width: 0;
     }
     #resumen-header .header-logo {
       display: flex;
@@ -122,6 +129,7 @@
       gap: 4px;
       align-items: flex-start;
       flex: 1 1 220px;
+      min-width: 0;
     }
     #nombre-sorteo {
       font-family: 'Bangers', cursive;
@@ -130,6 +138,7 @@
       margin: 0;
       text-transform: uppercase;
       letter-spacing: 1px;
+      overflow-wrap: anywhere;
     }
     #tipo-sorteo-titulo {
       font-family: 'Poppins', sans-serif;
@@ -363,8 +372,8 @@
     }
     #cartones-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(clamp(150px, 28vw, 220px), 1fr));
+      gap: clamp(8px, 3vw, 18px);
       justify-items: center;
       align-items: flex-start;
       width: 100%;
@@ -382,13 +391,14 @@
       border: none;
       page-break-inside: avoid;
       width: 100%;
-      max-width: 220px;
+      max-width: clamp(180px, 32vw, 230px);
     }
     .pdf-carton.gratis .pdf-carton-table {
       box-shadow: 0 0 0 2px rgba(0,76,153,0.25);
     }
     .pdf-carton-table {
       --cell-size: clamp(26px, 4.6vw, 36px);
+      --bingo-gradient: radial-gradient(circle,#ffffff 0%,#ffffff 58%,rgba(11,143,47,0.78));
       border-collapse: separate;
       border-spacing: 0;
       width: calc(var(--cell-size) * 5);
@@ -398,6 +408,7 @@
       overflow: hidden;
       table-layout: fixed;
       box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+      max-width: 100%;
     }
     .pdf-carton-table th,
     .pdf-carton-table td {
@@ -414,15 +425,12 @@
     }
     .pdf-carton-table th {
       font-size: calc(var(--cell-size) * 0.75);
+      color: #ffffff;
+      background: var(--bingo-gradient);
+      text-shadow: 2px 2px 0 rgba(0,0,0,0.45);
     }
     .pdf-carton-table td {
       font-size: calc(var(--cell-size) * 0.48);
-    }
-    .pdf-carton-table th {
-      font-size: 1.6rem;
-      color: #ff6600;
-      background: radial-gradient(circle,#ffffff,#ffffff 60%,rgba(0,170,0,0.75));
-      text-shadow: 2px 2px 0 #000;
     }
     .pdf-carton-table td.free {
       background: radial-gradient(circle,#ffbd4f,#ffe8b3);
@@ -440,7 +448,7 @@
     }
     .pdf-carton-datos .numero {
       font-size: 1.05rem;
-      color: #0b5394;
+      color: #000000;
     }
     .pdf-carton-datos .alias {
       font-size: 0.95rem;
@@ -448,8 +456,22 @@
     }
     .pdf-carton-datos .tipo {
       font-size: 0.85rem;
-      color: #0b6623;
       text-transform: uppercase;
+      color: #0b6623;
+    }
+    .pdf-carton.pagado .pdf-carton-table {
+      --bingo-gradient: radial-gradient(circle,#ffffff 0%,#ffffff 58%,rgba(11,143,47,0.78));
+    }
+    .pdf-carton.gratis .pdf-carton-table {
+      --bingo-gradient: radial-gradient(circle,#ffffff 0%,#ffffff 58%,rgba(0,102,204,0.8));
+    }
+    .pdf-carton.pagado .pdf-carton-datos .tipo,
+    .pdf-carton-datos .tipo.tipo-pagado {
+      color: #0b6623;
+    }
+    .pdf-carton.gratis .pdf-carton-datos .tipo,
+    .pdf-carton-datos .tipo.tipo-gratis {
+      color: #005bbb;
     }
     .cartones-placeholder {
       grid-column: 1 / -1;
@@ -496,10 +518,18 @@
       to { transform: rotate(360deg); }
     }
     @media (max-width: 720px) {
-      body { padding: 70px 10px 30px; }
+      body {
+        padding: clamp(56px, 10vw, 64px) clamp(10px, 5vw, 18px) clamp(24px, 7vw, 32px);
+      }
       #resumen-pdf { padding: 22px 14px; }
-      #acciones-fixed { right: 6px; }
-      #acciones-fixed button { padding: 8px 14px; font-size: 1rem; }
+      #acciones-fixed {
+        right: 8px;
+        width: min(100%, 360px);
+      }
+      #acciones-fixed button {
+        padding: 8px 14px;
+        font-size: 1rem;
+      }
       #resumen-header { gap: 12px; }
       #resumen-header .header-logo { justify-content: flex-start; }
       #resumen-header .header-info { align-items: flex-start; }
@@ -508,17 +538,58 @@
       #resumen-header { flex-wrap: wrap; }
     }
     @media (max-width: 640px) {
-      #cartones-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
-      .pdf-carton { width: 100%; }
+      #cartones-grid {
+        grid-template-columns: repeat(auto-fit, minmax(clamp(140px, 42vw, 200px), 1fr));
+      }
+      .pdf-carton {
+        max-width: clamp(170px, 48vw, 210px);
+      }
     }
     @media (orientation: landscape) and (max-width: 900px) {
-      #cartones-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
-      .pdf-carton-table { --cell-size: clamp(20px, 3.2vw, 28px); }
-      #cartones-grid { gap: 12px; }
-      .pdf-carton { max-width: 190px; }
+      #cartones-grid {
+        grid-template-columns: repeat(auto-fit, minmax(clamp(140px, 25vw, 200px), 1fr));
+        gap: clamp(8px, 2vw, 14px);
+      }
+      .pdf-carton-table { --cell-size: clamp(20px, 4vh, 30px); }
+      .pdf-carton { max-width: clamp(170px, 28vw, 210px); }
     }
     @media (max-width: 480px) {
       #datos-generales { grid-template-columns: 1fr; }
+      #acciones-fixed {
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        justify-content: center;
+      }
+      #acciones-fixed button {
+        flex: 1 1 140px;
+      }
+    }
+    @media (max-width: 420px) {
+      body {
+        padding: clamp(58px, 14vw, 66px) 8px clamp(22px, 10vw, 30px);
+      }
+      #acciones-fixed {
+        flex-direction: column;
+        gap: 8px;
+        width: calc(100% - 16px);
+      }
+      #acciones-fixed button {
+        width: 100%;
+      }
+      #salir-btn {
+        width: 52px;
+        height: 44px;
+      }
+      #salir-btn .label {
+        display: none;
+      }
+      .pdf-carton-datos .alias {
+        font-size: 0.88rem;
+      }
+      .pdf-carton-datos .numero {
+        font-size: 0.98rem;
+      }
     }
     @media (max-width: 720px) {
       .forma-item {
@@ -912,9 +983,10 @@
   function crearCartonVisual(data){
     const carton = document.createElement('div');
     carton.className = 'pdf-carton';
-    if((data.tipocarton || '').toLowerCase() === 'gratis'){
-      carton.classList.add('gratis');
-    }
+    const tipoCartonRaw = typeof data.tipocarton === 'string' ? data.tipocarton.trim().toLowerCase() : '';
+    const tipoCartonNormalizado = tipoCartonRaw === 'gratis' ? 'gratis' : 'pagado';
+    carton.classList.add(tipoCartonNormalizado);
+    carton.dataset.tipocarton = tipoCartonNormalizado;
 
     const tabla = document.createElement('table');
     tabla.className = 'pdf-carton-table';
@@ -965,8 +1037,8 @@
     infoInferior.appendChild(alias);
 
     const tipo = document.createElement('div');
-    tipo.className = 'tipo';
-    tipo.textContent = (data.tipocarton || 'pagado').toUpperCase();
+    tipo.className = `tipo tipo-${tipoCartonNormalizado}`;
+    tipo.textContent = (data.tipocarton || tipoCartonNormalizado).toString().toUpperCase();
     infoInferior.appendChild(tipo);
 
     carton.appendChild(infoInferior);
