@@ -712,55 +712,88 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      width: 100%;
     }
     body.pdf-captura #pdf-wrapper {
       max-width: none;
-      width: min(1240px, 100%);
-      padding-inline: clamp(12px, 3vw, 24px);
+      width: min(1280px, 100%);
+      padding-inline: clamp(12px, 2.6vw, 28px);
     }
     body.pdf-captura #resumen-pdf {
       display: grid;
-      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+      grid-template-rows: auto auto minmax(0, 1fr);
       grid-template-areas:
         "header datos"
         "totales datos"
         "formas formas";
-      column-gap: clamp(18px, 3vw, 28px);
-      row-gap: clamp(14px, 2.6vw, 22px);
-      padding: clamp(28px, 4.6vw, 42px);
+      column-gap: clamp(18px, 3vw, 32px);
+      row-gap: clamp(12px, 2vw, 24px);
+      padding: clamp(28px, 4vw, 40px);
+      width: 100%;
+      max-width: none;
+      min-height: clamp(460px, 55vw, 520px);
+      align-content: stretch;
     }
     body.pdf-captura #resumen-header {
       grid-area: header;
+      align-items: center;
+      flex-wrap: nowrap;
+      gap: clamp(16px, 2.6vw, 28px);
+    }
+    body.pdf-captura #resumen-header .header-info {
+      align-items: flex-start;
+      justify-content: center;
+      width: 100%;
     }
     body.pdf-captura .totales-header {
       grid-area: totales;
       justify-content: flex-start;
       text-align: left;
+      align-items: center;
+      gap: clamp(10px, 2.2vw, 20px);
+    }
+    body.pdf-captura .totales-header h2 {
+      margin-bottom: 0;
     }
     body.pdf-captura #datos-generales {
       grid-area: datos;
       align-self: stretch;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: clamp(10px, 2vw, 18px) clamp(12px, 2.4vw, 20px);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(10px, 2vw, 18px) clamp(12px, 2.4vw, 24px);
+      padding: clamp(12px, 1.8vw, 18px);
+    }
+    body.pdf-captura .dato-inline {
+      font-size: clamp(0.9rem, 1.5vw, 1.05rem);
     }
     body.pdf-captura #formas-resumen {
       grid-area: formas;
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 12px;
+      gap: clamp(10px, 2vw, 20px);
+      align-items: stretch;
     }
     body.pdf-captura #formas-resumen .forma-item {
       width: 100%;
+      min-height: 100%;
+    }
+    body.pdf-captura .forma-resumen {
+      padding: clamp(16px, 2vw, 22px);
+    }
+    body.pdf-captura .forma-mini-carton-wrapper {
+      padding: clamp(8px, 2vw, 16px);
     }
     body.pdf-captura #cartones-grid {
-      grid-template-columns: repeat(8, minmax(0, 1fr));
-      gap: clamp(8px, 1.6vw, 16px);
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: clamp(10px, 1.6vw, 18px);
+      align-items: stretch;
     }
     body.pdf-captura .pdf-carton {
       max-width: none;
+      width: 100%;
     }
     body.pdf-captura .pdf-carton-table {
-      --cell-size: clamp(18px, 2.3vw, 24px);
+      --cell-size: clamp(20px, 2.6vw, 28px);
     }
   </style>
 </head>
@@ -1343,7 +1376,7 @@
       const marginX = 24;
       const marginY = 24;
 
-      const canvasScale = Math.min(1.8, Math.max(1.4, window.devicePixelRatio || 1.5));
+      const canvasScale = Math.min(2.2, Math.max(1.6, window.devicePixelRatio || 1.8));
       const canvasOptions = {
         scale: canvasScale,
         useCORS: true,
@@ -1369,13 +1402,13 @@
           return numA - numB;
         });
       if(cartonElements.length){
-        const columnas = 8;
-        const filas = 5;
+        const columnas = 4;
+        const filas = 3;
         const totalPorPagina = columnas * filas;
-        const espacioHorizontal = 8;
-        const espacioVertical = 12;
-        const margenCartonesX = 18;
-        const margenCartonesY = 20;
+        const espacioHorizontal = 14;
+        const espacioVertical = 18;
+        const margenCartonesX = 24;
+        const margenCartonesY = 28;
         const anchoUtil = pageWidth - margenCartonesX * 2;
         const altoUtil = pageHeight - margenCartonesY * 2;
         const anchoCelda = (anchoUtil - espacioHorizontal * (columnas - 1)) / columnas;
