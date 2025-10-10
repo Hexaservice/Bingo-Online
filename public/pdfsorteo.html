@@ -20,6 +20,9 @@
       box-sizing: border-box;
       color: #1a1a1a;
     }
+    body.modal-activa {
+      overflow: hidden;
+    }
     #salir-btn {
       position: fixed;
       top: 10px;
@@ -91,6 +94,90 @@
     #pdf-listo-btn {
       background: linear-gradient(#b85c00, #ffaf40);
       display: none;
+    }
+    .orientacion-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(6, 18, 42, 0.78);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 1102;
+    }
+    .orientacion-modal.visible {
+      display: flex;
+    }
+    .orientacion-modal-contenido {
+      width: min(420px, 92%);
+      background: linear-gradient(165deg, #b71c1c 0%, #ff6f60 55%, #ff1744 100%);
+      border: 4px solid #ffe082;
+      border-radius: 18px;
+      box-shadow: 0 22px 45px rgba(0,0,0,0.45);
+      padding: clamp(22px, 4vw, 32px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: clamp(12px, 2.4vw, 18px);
+      text-align: center;
+      color: #ffffff;
+      position: relative;
+      overflow: hidden;
+    }
+    .orientacion-modal-contenido::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.28), transparent 55%);
+      pointer-events: none;
+    }
+    .orientacion-modal-icono {
+      font-size: clamp(2.2rem, 6vw, 3rem);
+      text-shadow: 0 4px 10px rgba(0,0,0,0.35);
+      z-index: 1;
+    }
+    .orientacion-modal-titulo {
+      font-family: 'Bangers', cursive;
+      font-size: clamp(1.6rem, 4.8vw, 2.2rem);
+      letter-spacing: 1.2px;
+      margin: 0;
+      z-index: 1;
+    }
+    .orientacion-modal-texto {
+      margin: 0;
+      font-size: clamp(1rem, 3.6vw, 1.1rem);
+      line-height: 1.5;
+      font-weight: 600;
+      z-index: 1;
+    }
+    .orientacion-modal-texto .orientacion-inline-icono {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2em;
+      margin-left: 6px;
+    }
+    #orientacion-modal-aceptar {
+      border: 3px solid #ffe082;
+      border-radius: 12px;
+      background: #ffffff;
+      color: #b71c1c;
+      font-family: 'Bangers', cursive;
+      font-size: clamp(1.1rem, 3.4vw, 1.4rem);
+      padding: 10px 28px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+      z-index: 1;
+    }
+    #orientacion-modal-aceptar:hover {
+      transform: scale(1.05);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.4);
+    }
+    #orientacion-modal-aceptar:active {
+      transform: scale(0.95);
     }
     #pdf-wrapper {
       max-width: none;
@@ -927,6 +1014,14 @@
     <button id="generar-pdf-btn">Generar PDF</button>
     <button id="pdf-listo-btn">PDF listo</button>
   </div>
+  <div id="orientacion-modal" class="orientacion-modal" role="dialog" aria-modal="true" aria-labelledby="orientacion-modal-titulo" aria-hidden="true">
+    <div class="orientacion-modal-contenido">
+      <span class="orientacion-modal-icono" aria-hidden="true">🔄📱</span>
+      <h2 id="orientacion-modal-titulo" class="orientacion-modal-titulo">Gira tu dispositivo</h2>
+      <p class="orientacion-modal-texto">Coloca el celular en orientación Horizontal <span class="orientacion-inline-icono" aria-hidden="true">📱↻</span> para poder generar el PDF.</p>
+      <button id="orientacion-modal-aceptar" type="button">Aceptar</button>
+    </div>
+  </div>
   <div id="pdf-wrapper">
     <div id="resumen-layout">
       <div id="resumen-header" class="resumen-bloque">
@@ -1006,6 +1101,8 @@
   const totalPremiosEl = document.getElementById('total-premios');
   const formasCont = document.getElementById('formas-resumen');
   const cartonesGrid = document.getElementById('cartones-grid');
+  const orientacionModal = document.getElementById('orientacion-modal');
+  const orientacionAceptarBtn = document.getElementById('orientacion-modal-aceptar');
 
   let sorteoData = null;
   let formasData = [];
@@ -1082,6 +1179,64 @@
   if(generarCartonesBtn){ generarCartonesBtn.addEventListener('click', manejarGenerarCartones); }
   if(pdfBtn){ pdfBtn.addEventListener('click', generarPDF); }
   if(pdfListoBtn){ pdfListoBtn.addEventListener('click', confirmarPdfListo); }
+  if(orientacionAceptarBtn){ orientacionAceptarBtn.addEventListener('click', ocultarModalOrientacion); }
+  if(orientacionModal){
+    orientacionModal.addEventListener('click', (event)=>{
+      if(event.target === orientacionModal){
+        ocultarModalOrientacion();
+      }
+    });
+  }
+
+  const mediaRetrato = (()=>{
+    try {
+      return window.matchMedia ? window.matchMedia('(orientation: portrait)') : null;
+    } catch (e) {
+      return null;
+    }
+  })();
+  if(mediaRetrato){
+    const manejadorCambio = (event)=>{
+      if(!event.matches){
+        ocultarModalOrientacion();
+      }
+    };
+    if(typeof mediaRetrato.addEventListener === 'function'){
+      mediaRetrato.addEventListener('change', manejadorCambio);
+    } else if(typeof mediaRetrato.addListener === 'function'){
+      mediaRetrato.addListener(manejadorCambio);
+    }
+  }
+
+  function esDispositivoMovil(){
+    if(typeof navigator === 'undefined' || !navigator.userAgent) return false;
+    return /(android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini)/i.test(navigator.userAgent);
+  }
+
+  function estaEnOrientacionRetrato(){
+    try {
+      if(window.matchMedia){
+        return window.matchMedia('(orientation: portrait)').matches;
+      }
+    } catch (e) {
+      // ignorado
+    }
+    return window.innerHeight > window.innerWidth;
+  }
+
+  function mostrarModalOrientacion(){
+    if(!orientacionModal) return;
+    orientacionModal.classList.add('visible');
+    orientacionModal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-activa');
+  }
+
+  function ocultarModalOrientacion(){
+    if(!orientacionModal) return;
+    orientacionModal.classList.remove('visible');
+    orientacionModal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-activa');
+  }
 
   function mostrarLoading(mensaje){
     if(loadingText && mensaje){ loadingText.textContent = mensaje; }
@@ -1487,6 +1642,10 @@
   async function generarPDF(){
     if(!sorteoData){ return; }
     if(!cartonesCargados){ alert('Primero debes generar los cartones del sorteo.'); return; }
+    if(esDispositivoMovil() && estaEnOrientacionRetrato()){
+      mostrarModalOrientacion();
+      return;
+    }
     const jsPDFLib = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
     if(!window.html2canvas || !jsPDFLib){
       alert('Dependencias para generar PDF no disponibles');
