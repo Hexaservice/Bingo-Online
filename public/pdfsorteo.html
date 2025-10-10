@@ -1279,7 +1279,7 @@
       document.body.classList.add('pdf-captura');
       await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
 
-      const pdf = new jsPDFLib('p', 'pt', 'a4');
+      const pdf = new jsPDFLib('landscape', 'pt', 'a4');
       if(typeof pdf.setCompression === 'function'){
         pdf.setCompression(true);
       }
@@ -1314,49 +1314,46 @@
           return numA - numB;
         });
       if(cartonElements.length){
-        let paginaIniciada = false;
-        let columna = 0;
-        let cursorY = marginY;
-        let alturaFila = 0;
+        const columnas = 4;
+        const filas = 5;
+        const totalPorPagina = columnas * filas;
         const espacioHorizontal = 12;
-        const espacioVertical = 14;
+        const espacioVertical = 16;
         const anchoUtil = pageWidth - marginX * 2;
-        const muestra = cartonElements[0];
-        const anchoVisual = muestra ? Math.max(muestra.getBoundingClientRect().width, 200) : 220;
-        const anchoReferencia = Math.max(200, Math.min(260, anchoVisual));
-        const columnasMax = Math.max(2, Math.floor((anchoUtil + espacioHorizontal) / (anchoReferencia + espacioHorizontal)));
-        const anchoColumna = (anchoUtil - espacioHorizontal * (columnasMax - 1)) / columnasMax;
-        const limiteY = pageHeight - marginY;
+        const altoUtil = pageHeight - marginY * 2;
+        const anchoCelda = (anchoUtil - espacioHorizontal * (columnas - 1)) / columnas;
+        const altoCelda = (altoUtil - espacioVertical * (filas - 1)) / filas;
+
+        let indiceEnPagina = 0;
 
         for(const elemento of cartonElements){
-          const canvas = await window.html2canvas(elemento, { ...canvasOptions });
+          if(indiceEnPagina === 0){
+            if(typeof pdf.addPage === 'function'){
+              pdf.addPage('a4', 'landscape');
+            }
+          }
 
-          const escala = anchoColumna / canvas.width;
-          const renderWidth = anchoColumna;
+          const canvas = await window.html2canvas(elemento, { ...canvasOptions });
+          const escala = Math.min(
+            anchoCelda / canvas.width,
+            altoCelda / canvas.height
+          );
+          const renderWidth = canvas.width * escala;
           const renderHeight = canvas.height * escala;
 
-          if(!paginaIniciada){
-            pdf.addPage();
-            paginaIniciada = true;
-          }
+          const columna = indiceEnPagina % columnas;
+          const fila = Math.floor(indiceEnPagina / columnas);
+          const baseX = marginX + columna * (anchoCelda + espacioHorizontal);
+          const baseY = marginY + fila * (altoCelda + espacioVertical);
+          const posX = baseX + (anchoCelda - renderWidth) / 2;
+          const posY = baseY + (altoCelda - renderHeight) / 2;
 
-          if(columna >= columnasMax){
-            columna = 0;
-            cursorY += alturaFila + espacioVertical;
-            alturaFila = 0;
-          }
+          pdf.addImage(canvas.toDataURL('image/jpeg', 0.82), 'JPEG', posX, posY, renderWidth, renderHeight);
 
-          if(cursorY + renderHeight > limiteY){
-            pdf.addPage();
-            columna = 0;
-            cursorY = marginY;
-            alturaFila = 0;
+          indiceEnPagina++;
+          if(indiceEnPagina >= totalPorPagina){
+            indiceEnPagina = 0;
           }
-
-          const posX = marginX + columna * (anchoColumna + espacioHorizontal);
-          pdf.addImage(canvas.toDataURL('image/jpeg', 0.82), 'JPEG', posX, cursorY, renderWidth, renderHeight);
-          alturaFila = Math.max(alturaFila, renderHeight);
-          columna++;
         }
       }
 
