@@ -411,6 +411,15 @@
         --cell-size: clamp(24px, 3.2vw, 32px);
       }
     }
+    @media (min-width: 1500px) {
+      #cartones-grid {
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+        gap: clamp(8px, 1.8vw, 18px);
+      }
+      .pdf-carton-table {
+        --cell-size: clamp(18px, 2.2vw, 24px);
+      }
+    }
     .pdf-carton.gratis .pdf-carton-table {
       box-shadow: 0 0 0 2px rgba(0,76,153,0.25);
     }
@@ -699,13 +708,59 @@
         max-width: clamp(140px, 50vw, 200px);
       }
     }
+    body.pdf-captura {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    body.pdf-captura #pdf-wrapper {
+      max-width: none;
+      width: min(1240px, 100%);
+      padding-inline: clamp(12px, 3vw, 24px);
+    }
+    body.pdf-captura #resumen-pdf {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+      grid-template-areas:
+        "header datos"
+        "totales datos"
+        "formas formas";
+      column-gap: clamp(18px, 3vw, 28px);
+      row-gap: clamp(14px, 2.6vw, 22px);
+      padding: clamp(28px, 4.6vw, 42px);
+    }
+    body.pdf-captura #resumen-header {
+      grid-area: header;
+    }
+    body.pdf-captura .totales-header {
+      grid-area: totales;
+      justify-content: flex-start;
+      text-align: left;
+    }
+    body.pdf-captura #datos-generales {
+      grid-area: datos;
+      align-self: stretch;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: clamp(10px, 2vw, 18px) clamp(12px, 2.4vw, 20px);
+    }
     body.pdf-captura #formas-resumen {
+      grid-area: formas;
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       gap: 12px;
     }
     body.pdf-captura #formas-resumen .forma-item {
       width: 100%;
+    }
+    body.pdf-captura #cartones-grid {
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      gap: clamp(8px, 1.6vw, 16px);
+    }
+    body.pdf-captura .pdf-carton {
+      max-width: none;
+    }
+    body.pdf-captura .pdf-carton-table {
+      --cell-size: clamp(18px, 2.3vw, 24px);
     }
   </style>
 </head>
@@ -1314,13 +1369,15 @@
           return numA - numB;
         });
       if(cartonElements.length){
-        const columnas = 4;
+        const columnas = 8;
         const filas = 5;
         const totalPorPagina = columnas * filas;
-        const espacioHorizontal = 12;
-        const espacioVertical = 16;
-        const anchoUtil = pageWidth - marginX * 2;
-        const altoUtil = pageHeight - marginY * 2;
+        const espacioHorizontal = 8;
+        const espacioVertical = 12;
+        const margenCartonesX = 18;
+        const margenCartonesY = 20;
+        const anchoUtil = pageWidth - margenCartonesX * 2;
+        const altoUtil = pageHeight - margenCartonesY * 2;
         const anchoCelda = (anchoUtil - espacioHorizontal * (columnas - 1)) / columnas;
         const altoCelda = (altoUtil - espacioVertical * (filas - 1)) / filas;
 
@@ -1343,8 +1400,8 @@
 
           const columna = indiceEnPagina % columnas;
           const fila = Math.floor(indiceEnPagina / columnas);
-          const baseX = marginX + columna * (anchoCelda + espacioHorizontal);
-          const baseY = marginY + fila * (altoCelda + espacioVertical);
+          const baseX = margenCartonesX + columna * (anchoCelda + espacioHorizontal);
+          const baseY = margenCartonesY + fila * (altoCelda + espacioVertical);
           const posX = baseX + (anchoCelda - renderWidth) / 2;
           const posY = baseY + (altoCelda - renderHeight) / 2;
 
