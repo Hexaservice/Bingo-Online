@@ -415,7 +415,7 @@
     }
     .pdf-carton-table th,
     .pdf-carton-table td {
-      border: 2px solid rgba(70,70,70,0.85);
+      border: 1.5px solid rgba(70,70,70,0.75);
       width: var(--cell-size);
       height: var(--cell-size);
       aspect-ratio: 1 / 1;
@@ -424,8 +424,8 @@
       padding: 0;
       text-align: center;
       vertical-align: middle;
-      display: grid;
-      place-items: center;
+      position: relative;
+      overflow: hidden;
     }
     .pdf-carton-table th {
       font-size: calc(var(--cell-size) * 0.75);
@@ -440,6 +440,19 @@
       background: radial-gradient(circle,#ffbd4f,#ffe8b3);
       font-size: calc(var(--cell-size) * 0.65);
       color: #ffffff;
+    }
+    .pdf-carton-table .cell-content {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      line-height: 1;
+    }
+    .pdf-carton-table td.free .cell-content {
+      font-weight: 700;
+      font-size: inherit;
+      color: inherit;
     }
     .pdf-carton-datos {
       display: flex;
@@ -936,7 +949,7 @@
     const trh = document.createElement('tr');
     ['B','I','N','G','O'].forEach(l=>{
       const th = document.createElement('th');
-      th.textContent = l;
+      th.appendChild(crearContenidoCelda(l));
       trh.appendChild(th);
     });
     thead.appendChild(trh);
@@ -948,12 +961,18 @@
         const td = document.createElement('td');
         if(r===2 && c===2){
           td.classList.add('free','star');
-          td.innerHTML = '<span class="forma-estrella">★</span>';
+          const estrella = document.createElement('span');
+          estrella.className = 'forma-estrella';
+          estrella.textContent = '★';
+          td.appendChild(estrella);
         }else{
           const seleccionada = posiciones.some(p=>Number(p.r)===r && Number(p.c)===c);
           if(seleccionada){
             td.classList.add('star');
-            td.innerHTML = '<span class="forma-estrella">★</span>';
+            const estrella = document.createElement('span');
+            estrella.className = 'forma-estrella';
+            estrella.textContent = '★';
+            td.appendChild(estrella);
             td.style.backgroundColor = aclararColorHex(color, 0.7);
           }
         }
@@ -987,6 +1006,15 @@
     return mapa;
   }
 
+  function crearContenidoCelda(valor){
+    const cont = document.createElement('span');
+    cont.className = 'cell-content';
+    if(valor !== undefined && valor !== null){
+      cont.textContent = valor;
+    }
+    return cont;
+  }
+
   function crearCartonVisual(data){
     const carton = document.createElement('div');
     carton.className = 'pdf-carton';
@@ -1001,7 +1029,7 @@
     const trh = document.createElement('tr');
     ['B','I','N','G','O'].forEach(l=>{
       const th = document.createElement('th');
-      th.textContent = l;
+      th.appendChild(crearContenidoCelda(l));
       trh.appendChild(th);
     });
     thead.appendChild(trh);
@@ -1015,11 +1043,11 @@
         const td = document.createElement('td');
         if(r===2 && c===2){
           td.classList.add('free');
-          td.textContent = '★';
+          td.appendChild(crearContenidoCelda('★'));
         }else{
           const key = `${r}-${c}`;
           const valor = mapa.get(key) || '';
-          td.textContent = valor;
+          td.appendChild(crearContenidoCelda(valor));
         }
         tr.appendChild(td);
       }
