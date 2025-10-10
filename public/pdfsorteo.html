@@ -711,13 +711,23 @@
     body.pdf-captura {
       display: flex;
       flex-direction: column;
-      align-items: center;
+      align-items: stretch;
+      justify-content: flex-start;
       width: 100%;
+      margin: 0;
+      padding: clamp(12px, 2vw, 22px);
+      background: #ffffff;
+      --pdf-columnas: 6;
+    }
+    body.pdf-captura #salir-btn,
+    body.pdf-captura #acciones-fixed {
+      display: none !important;
     }
     body.pdf-captura #pdf-wrapper {
       max-width: none;
-      width: min(1280px, 100%);
-      padding-inline: clamp(12px, 2.6vw, 28px);
+      width: 100%;
+      padding: clamp(8px, 1.6vw, 18px) clamp(12px, 2.8vw, 26px);
+      box-sizing: border-box;
     }
     body.pdf-captura #resumen-pdf {
       display: grid;
@@ -727,13 +737,16 @@
         "header datos"
         "totales datos"
         "formas formas";
-      column-gap: clamp(18px, 3vw, 32px);
+      column-gap: clamp(18px, 2.6vw, 32px);
       row-gap: clamp(12px, 2vw, 24px);
-      padding: clamp(28px, 4vw, 40px);
+      padding: clamp(26px, 3.2vw, 38px);
       width: 100%;
       max-width: none;
-      min-height: clamp(460px, 55vw, 520px);
+      min-height: clamp(440px, 50vw, 520px);
       align-content: stretch;
+      border-radius: 18px;
+      box-shadow: none;
+      border-width: 2px;
     }
     body.pdf-captura #resumen-header {
       grid-area: header;
@@ -760,17 +773,17 @@
       grid-area: datos;
       align-self: stretch;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: clamp(10px, 2vw, 18px) clamp(12px, 2.4vw, 24px);
-      padding: clamp(12px, 1.8vw, 18px);
+      gap: clamp(10px, 1.8vw, 20px) clamp(12px, 2.2vw, 26px);
+      padding: clamp(12px, 1.6vw, 18px);
     }
     body.pdf-captura .dato-inline {
-      font-size: clamp(0.9rem, 1.5vw, 1.05rem);
+      font-size: clamp(0.92rem, 1.5vw, 1.08rem);
     }
     body.pdf-captura #formas-resumen {
       grid-area: formas;
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: clamp(10px, 2vw, 20px);
+      gap: clamp(10px, 1.8vw, 22px);
       align-items: stretch;
     }
     body.pdf-captura #formas-resumen .forma-item {
@@ -778,22 +791,26 @@
       min-height: 100%;
     }
     body.pdf-captura .forma-resumen {
-      padding: clamp(16px, 2vw, 22px);
+      padding: clamp(16px, 1.8vw, 22px);
     }
     body.pdf-captura .forma-mini-carton-wrapper {
-      padding: clamp(8px, 2vw, 16px);
+      padding: clamp(8px, 1.6vw, 16px);
+    }
+    body.pdf-captura #cartones-section {
+      margin-top: clamp(24px, 3vw, 32px);
     }
     body.pdf-captura #cartones-grid {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: clamp(10px, 1.6vw, 18px);
+      grid-template-columns: repeat(var(--pdf-columnas, 6), minmax(0, 1fr));
+      gap: clamp(8px, 1vw, 14px);
       align-items: stretch;
     }
     body.pdf-captura .pdf-carton {
       max-width: none;
       width: 100%;
+      padding: clamp(4px, 0.8vw, 8px);
     }
     body.pdf-captura .pdf-carton-table {
-      --cell-size: clamp(20px, 2.6vw, 28px);
+      --cell-size: clamp(16px, 1.9vw, 24px);
     }
   </style>
 </head>
@@ -1402,47 +1419,72 @@
           return numA - numB;
         });
       if(cartonElements.length){
-        const columnas = 4;
-        const filas = 3;
-        const totalPorPagina = columnas * filas;
-        const espacioHorizontal = 14;
-        const espacioVertical = 18;
-        const margenCartonesX = 24;
-        const margenCartonesY = 28;
+        const margenCartonesX = 18;
+        const margenCartonesY = 24;
+        const espacioHorizontal = 10;
+        const espacioVertical = 14;
         const anchoUtil = pageWidth - margenCartonesX * 2;
         const altoUtil = pageHeight - margenCartonesY * 2;
+        const anchoReferencia = 90;
+        const altoReferencia = 120;
+        const maxColumnas = 8;
+        const minColumnas = 4;
+        let columnas = Math.floor((anchoUtil + espacioHorizontal) / (anchoReferencia + espacioHorizontal));
+        if(!Number.isFinite(columnas) || columnas < minColumnas){
+          columnas = minColumnas;
+        }
+        columnas = Math.min(maxColumnas, columnas);
+        columnas = Math.min(columnas, Math.max(minColumnas, cartonElements.length));
+        let filas = Math.floor((altoUtil + espacioVertical) / (altoReferencia + espacioVertical));
+        if(!Number.isFinite(filas) || filas < 3){
+          filas = 3;
+        }
+        filas = Math.min(4, Math.max(3, filas));
+        const totalPorPagina = columnas * filas;
         const anchoCelda = (anchoUtil - espacioHorizontal * (columnas - 1)) / columnas;
         const altoCelda = (altoUtil - espacioVertical * (filas - 1)) / filas;
 
+        const valorOriginalColumnas = document.body.style.getPropertyValue('--pdf-columnas');
+        document.body.style.setProperty('--pdf-columnas', String(columnas));
+        await new Promise(resolve=>requestAnimationFrame(resolve));
+
         let indiceEnPagina = 0;
 
-        for(const elemento of cartonElements){
-          if(indiceEnPagina === 0){
-            if(typeof pdf.addPage === 'function'){
-              pdf.addPage('a4', 'landscape');
+        try {
+          for(const elemento of cartonElements){
+            if(indiceEnPagina === 0){
+              if(typeof pdf.addPage === 'function'){
+                pdf.addPage('a4', 'landscape');
+              }
+            }
+
+            const canvas = await window.html2canvas(elemento, { ...canvasOptions });
+            const escala = Math.min(
+              anchoCelda / canvas.width,
+              altoCelda / canvas.height
+            );
+            const renderWidth = canvas.width * escala;
+            const renderHeight = canvas.height * escala;
+
+            const columna = indiceEnPagina % columnas;
+            const fila = Math.floor(indiceEnPagina / columnas);
+            const baseX = margenCartonesX + columna * (anchoCelda + espacioHorizontal);
+            const baseY = margenCartonesY + fila * (altoCelda + espacioVertical);
+            const posX = baseX + (anchoCelda - renderWidth) / 2;
+            const posY = baseY + (altoCelda - renderHeight) / 2;
+
+            pdf.addImage(canvas.toDataURL('image/jpeg', 0.82), 'JPEG', posX, posY, renderWidth, renderHeight);
+
+            indiceEnPagina++;
+            if(indiceEnPagina >= totalPorPagina){
+              indiceEnPagina = 0;
             }
           }
-
-          const canvas = await window.html2canvas(elemento, { ...canvasOptions });
-          const escala = Math.min(
-            anchoCelda / canvas.width,
-            altoCelda / canvas.height
-          );
-          const renderWidth = canvas.width * escala;
-          const renderHeight = canvas.height * escala;
-
-          const columna = indiceEnPagina % columnas;
-          const fila = Math.floor(indiceEnPagina / columnas);
-          const baseX = margenCartonesX + columna * (anchoCelda + espacioHorizontal);
-          const baseY = margenCartonesY + fila * (altoCelda + espacioVertical);
-          const posX = baseX + (anchoCelda - renderWidth) / 2;
-          const posY = baseY + (altoCelda - renderHeight) / 2;
-
-          pdf.addImage(canvas.toDataURL('image/jpeg', 0.82), 'JPEG', posX, posY, renderWidth, renderHeight);
-
-          indiceEnPagina++;
-          if(indiceEnPagina >= totalPorPagina){
-            indiceEnPagina = 0;
+        } finally {
+          if(valorOriginalColumnas){
+            document.body.style.setProperty('--pdf-columnas', valorOriginalColumnas);
+          } else {
+            document.body.style.removeProperty('--pdf-columnas');
           }
         }
       }
