@@ -353,6 +353,7 @@ let sorteoInterval=null;
 let currentSorteo=null;
 let currentSorteoNombre='';
 let currentSorteoTipo='';
+let currentSorteoEstado='';
 let cartonesGuardados={};
 let sorteosActivos=[];
 let seleccionadoJugado=null;
@@ -774,6 +775,7 @@ function toggleForma(idx){
     currentSorteo=s.id;
     currentSorteoNombre=s.nombre;
     currentSorteoTipo=s.tipo;
+    currentSorteoEstado=s.estado||'';
     const btn=document.getElementById('sorteo-btn');
     btn.textContent=s.nombre;
     btn.classList.remove('diario','especial');
@@ -786,6 +788,9 @@ function toggleForma(idx){
     actualizarFechaHoraActual();
     const jugarBtn=document.getElementById('jugar-carton-btn');
     if(s.estado==='Sellado' || s.estado==='Jugando') jugarBtn.disabled=true; else jugarBtn.disabled=false;
+    if(s.estado==='Sellado'){
+      alert('No se puede jugar el cartón en este sorteo ya que esta SELLADO, elije otro sorteo disponible');
+    }
     actualizarFondoCarton();
     guardarSorteoSeleccionado(s);
     await cargarFormasSorteo();
@@ -855,15 +860,50 @@ function toggleForma(idx){
     let creditos=billeteraDoc.data().creditos||0;
     let gratis=billeteraDoc.data().CartonesGratis||0;
 
-  const sorteoRef=db.collection('sorteos').doc(currentSorteo);
-  const sorteoDoc=await sorteoRef.get();
-  const sorteoData=sorteoDoc.data();
-  const valor=Number(sorteoData.valorCarton||0);
-  const jugActual=sorteoData.cartonesjugando||0;
-  const gratisJugando=sorteoData.cartonesgratisjugando||0;
-  const maxGratis=sorteoData.maxcartongratis||0;
-  const cartonNum=jugActual+gratisJugando+1;
-  const vars=await db.collection('Variablesglobales').doc('Parametros').get();
+    const sorteoRef=db.collection('sorteos').doc(currentSorteo);
+    const sorteoDoc=await sorteoRef.get();
+    const sorteoData=sorteoDoc.data();
+    currentSorteoEstado=sorteoData?.estado||currentSorteoEstado;
+    if(currentSorteoEstado==='Sellado'){
+      alert('No se puede jugar el cartón en este sorteo ya que esta SELLADO, elije otro sorteo disponible');
+      return;
+    }
+
+    const posiciones=[];
+    document.querySelectorAll('#bingo-board td').forEach(td=>{
+      const r=parseInt(td.dataset.row);
+      const c=parseInt(td.dataset.col);
+      if(!(r===2&&c===2)) posiciones.push({r,c,valor:td.dataset.value||''});
+    });
+    const firmaActual=generarFirmaPosiciones(posiciones);
+
+    const jugadosJugador=await db.collection('CartonJugado')
+      .where('sorteoId','==',currentSorteo)
+      .where('userId','==',user.uid)
+      .get();
+    let cartonDuplicado=false;
+    jugadosJugador.forEach(doc=>{
+      const firmaDoc=generarFirmaPosiciones(doc.data()?.posiciones||[]);
+      if(firmaDoc===firmaActual) cartonDuplicado=true;
+    });
+    if(cartonDuplicado){
+      alert(`No se puede jugar este cartón, ya que en este sorteo ${currentSorteoNombre} estas jugando uno idéntico`);
+      return;
+    }
+
+    const ncarton=document.getElementById('carton-num').textContent.toString();
+    const dup=await db.collection('CartonJugado').where('sorteoId','==',currentSorteo).where('Ncarton','==',ncarton).get();
+    if(!dup.empty){
+      alert('Este número de cartón ya fue jugado en este sorteo.');
+      return;
+    }
+
+    const valor=Number(sorteoData.valorCarton||0);
+    const jugActual=sorteoData.cartonesjugando||0;
+    const gratisJugando=sorteoData.cartonesgratisjugando||0;
+    const maxGratis=sorteoData.maxcartongratis||0;
+    const cartonNum=jugActual+gratisJugando+1;
+    const vars=await db.collection('Variablesglobales').doc('Parametros').get();
     const porcentaje=Number(vars.data().porcentaje||0);
     const porcentajesu=Number(vars.data().porcentajesu||0);
     let jugarGratis=false;
@@ -916,18 +956,6 @@ function toggleForma(idx){
         totalporcentajesu: firebase.firestore.FieldValue.increment(porcentajeSuVal)
       });
     }
-    const posiciones=[];
-    document.querySelectorAll('#bingo-board td').forEach(td=>{
-      const r=parseInt(td.dataset.row);
-      const c=parseInt(td.dataset.col);
-      if(!(r===2&&c===2)) posiciones.push({r,c,valor:td.dataset.value||''});
-    });
-    const ncarton=document.getElementById('carton-num').textContent.toString();
-    const dup=await db.collection('CartonJugado').where('sorteoId','==',currentSorteo).where('Ncarton','==',ncarton).get();
-    if(!dup.empty){
-      alert('Este número de cartón ya fue jugado en este sorteo.');
-      return;
-    }
     await initServerTime();
     await db.collection('CartonJugado').add({
       userId:user.uid,
@@ -966,6 +994,11 @@ function toggleForma(idx){
     const gratis=billeteraDoc.data().CartonesGratis||0;
     const sorteoDoc=await db.collection('sorteos').doc(currentSorteo).get();
     const sorteoData=sorteoDoc.data();
+    currentSorteoEstado=sorteoData?.estado||currentSorteoEstado;
+    if(currentSorteoEstado==='Sellado'){
+      alert('No se puede jugar el cartón en este sorteo ya que esta SELLADO, elije otro sorteo disponible');
+      return;
+    }
     const valor=Number(sorteoData.valorCarton||0);
     const gratisJugando=sorteoData.cartonesgratisjugando||0;
     const maxGratis=sorteoData.maxcartongratis||0;
@@ -1017,6 +1050,10 @@ function toggleForma(idx){
     await db.collection('CartonGuardado').add({userId:user.uid,alias,nombre,posiciones});
     await cargarCartonesGuardados();
     alert('Cartón guardado');
+    const checkEl=document.getElementById('guardar-check');
+    checkEl.checked=false;
+    document.getElementById('nombre-carton').value='';
+    checkEl.dispatchEvent(new Event('change'));
   }
 
   async function cargarCartonesGuardados(){
@@ -1459,6 +1496,15 @@ function toggleForma(idx){
     const carton=[[],[],[],[],[]];
     pos.forEach(p=>{carton[p.r][p.c]=p.valor;});
     setBoard(carton);
+  }
+
+  function generarFirmaPosiciones(posiciones){
+    if(!Array.isArray(posiciones)) return '';
+    return posiciones
+      .map(p=>({r:Number(p?.r),c:Number(p?.c),valor:p?.valor??''}))
+      .sort((a,b)=>a.r-b.r||a.c-b.c)
+      .map(p=>`${p.r}-${p.c}-${p.valor}`)
+      .join('|');
   }
 
   document.getElementById('sorteo-btn').addEventListener('click',abrirSorteosModal);
