@@ -81,6 +81,8 @@
     @keyframes zoomInOut{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
     .sorteo-jugando span,.sorteo-jugando .sorteo-detalle{display:inline-block;animation:zoomInOut 1s infinite;transform-origin:left center;}
     .sorteo-info{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;}
+    .sellado-aviso{display:none;align-items:center;justify-content:center;gap:8px;margin:10px auto;padding:10px 16px;border-radius:10px;background:rgba(255,165,0,0.15);color:#b22222;max-width:480px;font-family:'Poppins',sans-serif;font-weight:600;box-shadow:0 0 10px rgba(0,0,0,0.08);text-align:center;line-height:1.4;}
+    .sellado-aviso.visible{display:flex;}
     #fecha-hora-sorteo{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:center;gap:12px;font-family:'Poppins',sans-serif;text-transform:none;}
     #fecha-hora-sorteo .fecha-col{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:120px;}
     #fecha-hora-sorteo .sorteo-line{display:flex;align-items:center;gap:4px;font-weight:600;font-size:1rem;}
@@ -240,6 +242,7 @@
         <div id="cartones-jugando"><img src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" class="carton-icon" alt="Cartón"> Jugando: <span id="cartones-jugando-valor">0</span> <span id="gratis-plus">+</span> <span id="cartones-gratis-jugando">0</span></div>
       </div>
     </div>
+    <div id="sellado-aviso" class="sellado-aviso" role="alert" aria-live="assertive" aria-hidden="true"></div>
   </section>
   <section id="alias-section">
     <div id="player-container">
@@ -392,6 +395,30 @@ function iniciarActualizacionFechaActual(){
   if(fechaActualInterval) clearInterval(fechaActualInterval);
   fechaActualInterval=setInterval(actualizarFechaHoraActual,1000);
 }
+function ocultarMensajeSellado(){
+  const aviso=document.getElementById('sellado-aviso');
+  if(!aviso) return;
+  aviso.innerHTML='';
+  aviso.classList.remove('visible');
+  aviso.setAttribute('aria-hidden','true');
+}
+function mostrarMensajeSellado(nombre){
+  const aviso=document.getElementById('sellado-aviso');
+  const destino=nombre&&nombre.trim()?nombre.trim():'este sorteo';
+  const mensaje=`Ya NO se pueden jugar el cartones en: ${destino} ya que esta SELLADO, elije otro sorteo disponible`;
+  if(aviso){
+    const destinoSeguro=destino
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;')
+      .replace(/'/g,'&#39;');
+    aviso.innerHTML=`Ya NO se pueden jugar el cartones en: <strong>${destinoSeguro}</strong> ya que esta SELLADO, elije otro sorteo disponible`;
+    aviso.classList.add('visible');
+    aviso.setAttribute('aria-hidden','false');
+  }
+  return mensaje;
+}
 function guardarSorteoSeleccionado(s){
   if(!sorteoCookieKey||!s) return;
   setCookie(sorteoCookieKey,JSON.stringify({id:s.id||'',tipo:s.tipo||''}));
@@ -403,13 +430,30 @@ async function restaurarSorteoSeleccionado(){
   try{
     const data=JSON.parse(raw);
     if(!data||!data.id) return false;
-    const encontrado=sorteosActivos.find(s=>s.id===data.id);
+    let encontrado=sorteosActivos.find(s=>s.id===data.id);
     if(encontrado){
+      await seleccionarSorteo(encontrado);
+      return true;
+    }
+    const doc=await db.collection('sorteos').doc(data.id).get();
+    if(doc.exists){
+      const d=doc.data();
+      encontrado={
+        id:doc.id,
+        nombre:d?.nombre||'Sorteo',
+        fecha:d?.fecha||'',
+        hora:d?.hora||'',
+        horacierre:obtenerHoraCierre(d||{}),
+        tipo:d?.tipo||'',
+        estado:d?.estado||''
+      };
+      sorteosActivos.push(encontrado);
       await seleccionarSorteo(encontrado);
       return true;
     }
     deleteCookie(sorteoCookieKey);
   }catch(e){
+    console.warn('No se pudo restaurar el sorteo seleccionado',e);
     deleteCookie(sorteoCookieKey);
   }
   return false;
@@ -776,6 +820,7 @@ function toggleForma(idx){
     currentSorteoNombre=s.nombre;
     currentSorteoTipo=s.tipo;
     currentSorteoEstado=s.estado||'';
+    ocultarMensajeSellado();
     const btn=document.getElementById('sorteo-btn');
     btn.textContent=s.nombre;
     btn.classList.remove('diario','especial');
@@ -789,7 +834,8 @@ function toggleForma(idx){
     const jugarBtn=document.getElementById('jugar-carton-btn');
     if(s.estado==='Sellado' || s.estado==='Jugando') jugarBtn.disabled=true; else jugarBtn.disabled=false;
     if(s.estado==='Sellado'){
-      alert('No se puede jugar el cartón en este sorteo ya que esta SELLADO, elije otro sorteo disponible');
+      const mensaje=mostrarMensajeSellado(s.nombre||'este sorteo');
+      alert(mensaje);
     }
     actualizarFondoCarton();
     guardarSorteoSeleccionado(s);
@@ -865,7 +911,8 @@ function toggleForma(idx){
     const sorteoData=sorteoDoc.data();
     currentSorteoEstado=sorteoData?.estado||currentSorteoEstado;
     if(currentSorteoEstado==='Sellado'){
-      alert('No se puede jugar el cartón en este sorteo ya que esta SELLADO, elije otro sorteo disponible');
+      const mensaje=mostrarMensajeSellado(currentSorteoNombre||sorteoData?.nombre||'este sorteo');
+      alert(mensaje);
       return;
     }
 
@@ -996,7 +1043,8 @@ function toggleForma(idx){
     const sorteoData=sorteoDoc.data();
     currentSorteoEstado=sorteoData?.estado||currentSorteoEstado;
     if(currentSorteoEstado==='Sellado'){
-      alert('No se puede jugar el cartón en este sorteo ya que esta SELLADO, elije otro sorteo disponible');
+      const mensaje=mostrarMensajeSellado(currentSorteoNombre||sorteoData?.nombre||'este sorteo');
+      alert(mensaje);
       return;
     }
     const valor=Number(sorteoData.valorCarton||0);
