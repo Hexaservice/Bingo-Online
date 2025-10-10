@@ -6,6 +6,9 @@
   <title>PDF Sorteo</title>
   <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
+    :root {
+      color-scheme: only light;
+    }
     body {
       font-family: 'Poppins', sans-serif;
       background: #ffffff;
@@ -49,6 +52,8 @@
       display: flex;
       gap: 10px;
       z-index: 1001;
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
     #acciones-fixed button {
       padding: 10px 18px;
@@ -76,152 +81,386 @@
       background: linear-gradient(#008c3a, #66d17a);
       display: none;
     }
+    #pdf-listo-btn {
+      background: linear-gradient(#b85c00, #ffaf40);
+      display: none;
+    }
     #pdf-wrapper {
-      max-width: 900px;
+      max-width: 960px;
       margin: 0 auto;
       text-align: center;
     }
+    #resumen-pdf {
+      background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(230,244,255,0.85));
+      border: 3px solid rgba(11,83,148,0.2);
+      border-radius: 24px;
+      padding: 30px 20px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+      margin-bottom: 26px;
+    }
+    #resumen-header {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+      text-align: left;
+    }
+    #resumen-header .header-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+    }
     #logo {
-      width: 140px;
-      margin: 0 auto 15px;
+      width: 110px;
       display: block;
+    }
+    #resumen-header .header-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: flex-start;
+      flex: 1 1 220px;
     }
     #nombre-sorteo {
       font-family: 'Bangers', cursive;
-      font-size: 2.2rem;
+      font-size: clamp(2rem, 4vw, 2.6rem);
       color: #0b5394;
-      margin: 5px 0;
+      margin: 0;
       text-transform: uppercase;
+      letter-spacing: 1px;
     }
-    #tipo-sorteo {
-      font-family: 'Bangers', cursive;
-      font-size: 1.4rem;
-      color: #0b6623;
-      margin-bottom: 8px;
+    #tipo-sorteo-titulo {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1rem;
+      color: #0b5394;
+      margin: 2px 0 0;
+      font-weight: 600;
+      text-transform: capitalize;
+      line-height: 1.3;
     }
-    #fecha-hora-line {
-      display: flex;
+    #datos-generales {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px 16px;
       justify-content: center;
-      gap: 20px;
+      align-items: stretch;
+      margin: 10px auto 20px;
+      padding: 14px 18px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.9);
+      box-shadow: inset 0 0 0 1px rgba(11,83,148,0.08);
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    .dato-inline {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+      color: #0b5394;
+      text-align: left;
+      padding: 6px 12px;
+      border-radius: 12px;
+      background: rgba(11,83,148,0.05);
+    }
+    .dato-inline .dato-label {
+      font-family: 'Bangers', cursive;
+      font-size: 1rem;
+      letter-spacing: 0.5px;
+    }
+    .dato-inline .dato-valor {
       font-family: 'Poppins', sans-serif;
       font-weight: 600;
       color: #1a1a1a;
-      margin-bottom: 18px;
+      justify-self: end;
+      text-align: right;
     }
-    #premios-section {
-      border: 2px solid #0b6623;
-      border-radius: 16px;
-      padding: 15px;
-      background: linear-gradient(180deg, rgba(10,120,10,0.15), rgba(255,255,255,0.95));
-      margin-bottom: 20px;
+    #dato-fecha { color: #005bbb; }
+    #dato-cierre { color: #c62828; }
+    #dato-hora { color: #2e7d32; }
+    #dato-valor { color: #c76a00; }
+    #dato-maxgratis { color: #6a1b9a; }
+    .totales-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 12px;
+      margin: 20px 0 18px;
+      justify-content: center;
     }
-    #premios-section h2 {
+    .totales-header h2 {
       font-family: 'Bangers', cursive;
-      font-size: 1.6rem;
+      font-size: clamp(1.6rem, 4.5vw, 2rem);
       color: #0b6623;
       margin: 0;
+      letter-spacing: 0.5px;
     }
     #total-premios {
-      font-size: 2.4rem;
+      font-size: clamp(1.8rem, 6vw, 2.6rem);
       font-weight: 700;
       color: #0b6623;
       text-shadow: 0 0 6px rgba(255,255,255,0.9);
-      margin: 10px 0 20px;
     }
-    #formas-container {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      align-items: flex-start;
-      margin-top: 12px;
+    #formas-resumen {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      width: 100%;
     }
-    .forma-linea {
+    .forma-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) clamp(140px, 32vw, 260px);
+      align-items: stretch;
+      min-width: 0;
+      width: 100%;
+      border-radius: 20px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.92);
+      border: 2px solid rgba(0,0,0,0.05);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+      gap: 0;
+    }
+    .forma-resumen {
+      display: grid;
+      gap: 8px;
+      padding: 14px 16px;
+      position: relative;
+      min-width: 0;
+      text-align: left;
+      align-content: start;
+      border-right: 2px solid rgba(0,0,0,0.05);
+      background: rgba(255,255,255,0.85);
+    }
+    .forma-info {
+      display: grid;
+      gap: 8px;
+      text-align: left;
+      align-content: start;
+      min-width: 0;
+    }
+    .forma-titulo {
       font-family: 'Bangers', cursive;
       font-size: 1.2rem;
+      color: var(--forma-color, #0b5394);
       text-transform: uppercase;
+      letter-spacing: 0.6px;
+      grid-column: 1 / -1;
     }
-    .forma-detalles {
-      font-family: 'Poppins', sans-serif;
-      font-size: 0.9rem;
-      margin-left: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
+    .forma-detalle {
+      font-size: 0.95rem;
       color: #0b1d0b;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 4px 8px;
+      align-items: center;
+      background: rgba(11,83,148,0.04);
+      padding: 8px 12px;
+      border-radius: 10px;
+    }
+    .forma-detalle .etiqueta {
+      font-weight: 600;
+      color: #0b5394;
+    }
+    .forma-detalle .valor {
+      font-weight: 700;
+      color: #1a1a1a;
+      font-size: 1.05rem;
+      display: block;
+      width: 100%;
+      text-align: right;
+    }
+    .forma-mini-carton-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(6px, 1.8vw, 12px);
+      background: #ffffff;
+      height: 100%;
+      align-self: stretch;
+      min-width: 0;
+      border-left: 2px solid rgba(0,0,0,0.05);
+      width: 100%;
+      max-width: clamp(160px, 34vw, 240px);
+      box-sizing: border-box;
+    }
+    .forma-mini-carton {
+      border-collapse: separate;
+      border-spacing: 0;
+      background: linear-gradient(160deg, rgba(255,255,255,0.95), var(--forma-color-super-suave, #f3f7ff));
+      border-radius: 8px;
+      overflow: hidden;
+      width: 100%;
+      height: auto;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+      position: relative;
+      z-index: 1;
+      aspect-ratio: 5 / 6;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      grid-auto-rows: 1fr;
+      max-width: 100%;
+    }
+    .forma-mini-carton thead,
+    .forma-mini-carton tbody,
+    .forma-mini-carton tr {
+      display: contents;
+    }
+    .forma-mini-carton th,
+    .forma-mini-carton td {
+      border: 1px solid rgba(0,0,0,0.12);
+      font-weight: 700;
+      background: #ffffff;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      aspect-ratio: 1 / 1;
+      font-size: clamp(0.45rem, 1.95vmin, 0.82rem);
+      min-width: 0;
+    }
+    .forma-mini-carton th {
+      font-size: clamp(0.66rem, 2.6vmin, 1.05rem);
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--forma-color-intenso, #0b5394), var(--forma-color, #0b5394));
+      text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+    }
+    .forma-mini-carton td.star {
+      background: linear-gradient(145deg, var(--forma-color-suave, #6fa8dc), rgba(255,255,255,0.9));
+    }
+    .forma-mini-carton td.star .forma-estrella {
+      color: var(--forma-color-intenso, #0b5394);
+    }
+    .forma-mini-carton td.free {
+      background: linear-gradient(135deg, #ffb347, #ff7b00);
+    }
+    .forma-mini-carton td.free .forma-estrella {
+      color: #ffffff;
+    }
+    .forma-mini-carton .forma-estrella {
+      font-size: clamp(0.72rem, 3vmin, 1.2rem);
+      text-shadow: 0 0 4px rgba(0,0,0,0.12);
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+    }
+    #cartones-section {
+      margin-top: 32px;
+      text-align: left;
     }
     #cartones-section h2 {
       font-family: 'Bangers', cursive;
-      font-size: 1.6rem;
+      font-size: 1.8rem;
       color: #0b5394;
-      margin-bottom: 10px;
+      margin-bottom: 14px;
+      text-align: center;
     }
     #cartones-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      justify-items: center;
+      align-items: flex-start;
+      width: 100%;
     }
-    .mini-carton-box {
+    .pdf-carton {
       display: flex;
       flex-direction: column;
-      align-items: center;
       gap: 6px;
-      padding: 6px;
-    }
-    .mini-carton-wrapper {
-      background: linear-gradient(green, yellow);
-      padding: 4px;
+      align-items: center;
+      justify-content: flex-start;
+      background: transparent;
       border-radius: 12px;
-      box-shadow: 0 0 8px rgba(0,0,0,0.3);
+      padding: 6px;
+      box-shadow: none;
+      border: none;
+      page-break-inside: avoid;
+      width: 100%;
+      max-width: 220px;
     }
-    .mini-carton-wrapper.gratis {
-      background: linear-gradient(#0000ff, #ffff66);
+    .pdf-carton.gratis .pdf-carton-table {
+      box-shadow: 0 0 0 2px rgba(0,76,153,0.25);
     }
-    .mini-carton {
+    .pdf-carton-table {
+      --cell-size: clamp(26px, 4.6vw, 36px);
       border-collapse: separate;
       border-spacing: 0;
-      background: linear-gradient(#ffffff,#cccccc);
-      border-radius: 10px;
+      width: calc(var(--cell-size) * 5);
+      margin: 0 auto;
+      background: linear-gradient(#ffffff,#e8e8e8);
+      border-radius: 12px;
       overflow: hidden;
+      table-layout: fixed;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.1);
     }
-    .mini-carton th, .mini-carton td {
-      border: 1px solid gray;
-      width: 28px;
-      height: 28px;
-      text-align: center;
+    .pdf-carton-table th,
+    .pdf-carton-table td {
+      border: 2px solid rgba(128,128,128,0.65);
+      width: var(--cell-size);
+      height: var(--cell-size);
+      aspect-ratio: 1 / 1;
       font-weight: 700;
-      font-size: 0.8rem;
+      color: #1a1a1a;
+      padding: 0;
+      text-align: center;
+      vertical-align: middle;
+      line-height: var(--cell-size);
     }
-    .mini-carton th {
-      font-size: 1.1rem;
+    .pdf-carton-table th {
+      font-size: calc(var(--cell-size) * 0.75);
+    }
+    .pdf-carton-table td {
+      font-size: calc(var(--cell-size) * 0.48);
+    }
+    .pdf-carton-table th {
+      font-size: 1.6rem;
       color: #ff6600;
-      background: radial-gradient(circle,#ffffff,#ffffff 60%,#00aa00);
-      text-shadow: 1px 1px 0 #000;
+      background: radial-gradient(circle,#ffffff,#ffffff 60%,rgba(0,170,0,0.75));
+      text-shadow: 2px 2px 0 #000;
     }
-    .mini-carton-wrapper.gratis .mini-carton th {
-      background: radial-gradient(circle,#ffffff,#ffffff 60%,#0000ff);
+    .pdf-carton-table td.free {
+      background: radial-gradient(circle,#ffbd4f,#ffe8b3);
+      font-size: calc(var(--cell-size) * 0.65);
+      color: #ffffff;
     }
-    .mini-carton td.free {
-      background: radial-gradient(circle,#ffffff,#ffff00);
-      color: #e67e22;
-    }
-    .mini-carton td.free .estrella-libre {
-      font-size: 1rem;
-      color: #ff8c00;
-    }
-    .mini-inferior {
+    .pdf-carton-datos {
       display: flex;
       flex-direction: column;
-      align-items: center;
-      gap: 2px;
+      gap: 4px;
+      text-align: center;
       font-family: 'Poppins', sans-serif;
       font-weight: 600;
-      font-size: 0.9rem;
+      word-break: break-word;
+    }
+    .pdf-carton-datos .numero {
+      font-size: 1.05rem;
+      color: #0b5394;
+    }
+    .pdf-carton-datos .alias {
+      font-size: 0.95rem;
+      color: #004488;
+    }
+    .pdf-carton-datos .tipo {
+      font-size: 0.85rem;
+      color: #0b6623;
+      text-transform: uppercase;
+    }
+    .cartones-placeholder {
+      grid-column: 1 / -1;
+      font-family: 'Poppins', sans-serif;
+      font-size: 1rem;
       color: #1a1a1a;
       text-align: center;
-    }
-    .mini-inferior .alias {
-      font-size: 0.85rem;
-      color: #004488;
+      padding: 20px 10px;
+      background: rgba(255,255,255,0.9);
+      border-radius: 16px;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06);
     }
     #loading-overlay {
       position: fixed;
@@ -230,7 +469,7 @@
       width: 100%;
       height: 100%;
       background: rgba(0,0,0,0.6);
-      display: flex;
+      display: none;
       flex-direction: column;
       align-items: center;
       justify-content: center;
@@ -239,8 +478,10 @@
       font-size: 1.4rem;
       gap: 12px;
       z-index: 1200;
+      text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
     }
-    #loading-overlay { display: none; }
     #loading-overlay.activo { display: flex; }
     .spinner {
       width: 50px;
@@ -254,13 +495,111 @@
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
     }
-    .cartones-placeholder {
-      grid-column: 1 / -1;
-      font-family: 'Poppins', sans-serif;
-      font-size: 1rem;
-      color: #1a1a1a;
-      text-align: center;
-      padding: 20px 10px;
+    @media (max-width: 720px) {
+      body { padding: 70px 10px 30px; }
+      #resumen-pdf { padding: 22px 14px; }
+      #acciones-fixed { right: 6px; }
+      #acciones-fixed button { padding: 8px 14px; font-size: 1rem; }
+      #resumen-header { gap: 12px; }
+      #resumen-header .header-logo { justify-content: flex-start; }
+      #resumen-header .header-info { align-items: flex-start; }
+    }
+    @media (max-width: 520px) {
+      #resumen-header { flex-wrap: wrap; }
+    }
+    @media (max-width: 640px) {
+      #cartones-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+      .pdf-carton { width: 100%; }
+    }
+    @media (orientation: landscape) and (max-width: 900px) {
+      #cartones-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+      .pdf-carton-table { --cell-size: clamp(20px, 3.2vw, 28px); }
+      #cartones-grid { gap: 12px; }
+      .pdf-carton { max-width: 190px; }
+    }
+    @media (max-width: 480px) {
+      #datos-generales { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 720px) {
+      .forma-item {
+        grid-template-columns: minmax(0, 1fr) clamp(150px, 36vw, 220px);
+      }
+      .forma-resumen {
+        padding: 12px;
+      }
+      .forma-titulo {
+        font-size: 1.05rem;
+      }
+      .forma-detalle {
+        font-size: 0.88rem;
+        padding: 6px 10px;
+      }
+      .forma-detalle .valor {
+        font-size: 0.95rem;
+      }
+      .forma-mini-carton-wrapper {
+        max-width: clamp(150px, 42vw, 220px);
+      }
+    }
+    @media (orientation: landscape) and (min-width: 700px) {
+      #formas-resumen {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      }
+      .forma-item {
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+      }
+      .forma-mini-carton-wrapper {
+        max-width: none;
+        align-items: stretch;
+        margin-top: auto;
+        margin-bottom: auto;
+      }
+    }
+    @media (max-width: 640px) {
+      .forma-item {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: stretch;
+      }
+      .forma-resumen {
+        border-right: none;
+        border-bottom: none;
+        padding: clamp(10px, 3.5vw, 14px);
+      }
+      .forma-mini-carton-wrapper {
+        border-left: 1px solid rgba(0,0,0,0.05);
+        padding: clamp(6px, 3vw, 12px);
+        max-width: clamp(140px, 50vw, 200px);
+      }
+    }
+    @media (max-width: 520px) {
+      #formas-resumen {
+        grid-template-columns: 1fr;
+      }
+      .forma-resumen {
+        padding: 10px;
+        gap: 6px;
+      }
+      .forma-titulo {
+        font-size: 0.98rem;
+      }
+      .forma-detalle {
+        font-size: 0.82rem;
+        padding: 6px 8px;
+      }
+      .forma-detalle .valor {
+        font-size: 0.9rem;
+      }
+      .forma-mini-carton-wrapper {
+        max-width: clamp(140px, 50vw, 200px);
+      }
+    }
+    body.pdf-captura #formas-resumen {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 12px;
+    }
+    body.pdf-captura #formas-resumen .forma-item {
+      width: 100%;
     }
   </style>
 </head>
@@ -273,21 +612,32 @@
   <div id="acciones-fixed">
     <button id="generar-cartones-btn">Generar cartones</button>
     <button id="generar-pdf-btn">Generar PDF</button>
+    <button id="pdf-listo-btn">PDF listo</button>
   </div>
   <div id="pdf-wrapper">
-    <img id="logo" src="https://i.imgur.com/twjhNtZ.png" alt="Bingo Online">
-    <div id="info-basica">
-      <div id="nombre-sorteo">Sorteo</div>
-      <div id="tipo-sorteo"></div>
-      <div id="fecha-hora-line">
-        <span id="fecha-sorteo"></span>
-        <span id="hora-sorteo"></span>
+    <section id="resumen-pdf">
+      <div id="resumen-header">
+        <div class="header-logo">
+          <img id="logo" src="https://i.imgur.com/twjhNtZ.png" alt="Bingo Online">
+        </div>
+        <div class="header-info">
+          <h1 id="nombre-sorteo">Sorteo</h1>
+          <div id="tipo-sorteo-titulo"></div>
+        </div>
       </div>
-    </div>
-    <section id="premios-section">
-      <h2>CRÉDITOS TOTALES A REPARTIR</h2>
-      <div id="total-premios">0</div>
-      <div id="formas-container"></div>
+      <div id="datos-generales">
+        <div class="dato-inline"><span class="dato-label">Tipo de sorteo:</span><span id="dato-tipo" class="dato-valor">-</span></div>
+        <div class="dato-inline"><span class="dato-label">Fecha del sorteo:</span><span id="dato-fecha" class="dato-valor">-</span></div>
+        <div class="dato-inline"><span class="dato-label">Hora de cierre:</span><span id="dato-cierre" class="dato-valor">-</span></div>
+        <div class="dato-inline"><span class="dato-label">Hora del sorteo:</span><span id="dato-hora" class="dato-valor">-</span></div>
+        <div class="dato-inline"><span class="dato-label">Valor del cartón:</span><span id="dato-valor" class="dato-valor">-</span></div>
+        <div class="dato-inline"><span class="dato-label">CARTONES GRATIS MÁXIMOS POR JUGADOR:</span><span id="dato-maxgratis" class="dato-valor">-</span></div>
+      </div>
+      <div class="totales-header">
+        <h2>CRÉDITOS TOTALES A REPARTIR</h2>
+        <div id="total-premios">0</div>
+      </div>
+      <div id="formas-resumen"></div>
     </section>
     <section id="cartones-section">
       <h2>Cartones del sorteo</h2>
@@ -296,10 +646,9 @@
   </div>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnJ8O3ilS+AJGEylh4G6dkprdFMn/hTyBC0bYKT1eZq9VHtV6nRvWmvMRGsiE9z1FMvx6bMpiKFF59sGyg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-v3Z7xZPAKqz/mdrIW6DCe4k74vNysGEKMluSleqrs9jwELyhl725LLJoPLD114F8CbnMD4HzyBbs6k8ZZr3GkQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="js/auth.js"></script>
   <script>
   ensureAuth('Administrador');
@@ -314,22 +663,26 @@
   const salirBtn = document.getElementById('salir-btn');
   const generarCartonesBtn = document.getElementById('generar-cartones-btn');
   const pdfBtn = document.getElementById('generar-pdf-btn');
+  const pdfListoBtn = document.getElementById('pdf-listo-btn');
   const loadingOverlay = document.getElementById('loading-overlay');
   const loadingText = document.getElementById('loading-text');
   const nombreEl = document.getElementById('nombre-sorteo');
-  const tipoEl = document.getElementById('tipo-sorteo');
-  const fechaEl = document.getElementById('fecha-sorteo');
-  const horaEl = document.getElementById('hora-sorteo');
+  const tipoTituloEl = document.getElementById('tipo-sorteo-titulo');
+  const datoFechaEl = document.getElementById('dato-fecha');
+  const datoHoraEl = document.getElementById('dato-hora');
+  const datoCierreEl = document.getElementById('dato-cierre');
+  const datoValorEl = document.getElementById('dato-valor');
+  const datoMaxGratisEl = document.getElementById('dato-maxgratis');
+  const datoTipoEl = document.getElementById('dato-tipo');
   const totalPremiosEl = document.getElementById('total-premios');
-  const formasCont = document.getElementById('formas-container');
+  const formasCont = document.getElementById('formas-resumen');
   const cartonesGrid = document.getElementById('cartones-grid');
 
   let sorteoData = null;
   let formasData = [];
   let cartonesData = [];
-  let pdfFileName = '';
+  let pdfNombreBase = 'pdf-sorteo';
   let cartonesCargados = false;
-  let storage = null;
   let firebaseReadyPromise = null;
 
   function ensureFirebaseReady(){
@@ -345,37 +698,61 @@
     return firebaseReadyPromise;
   }
 
-  function obtenerStorage(){
-    if(storage) return storage;
-    try {
-      const appInstance = firebase.app();
-      const opciones = (appInstance && appInstance.options) || {};
-      const bucketConfig = (opciones.storageBucket || '').trim();
+  const coloresFormas = ['#006400', '#b8860b', '#00008b', '#4b0082', '#8b4513', '#d2691e'];
 
-      if(bucketConfig){
-        const bucketUrl = bucketConfig.startsWith('gs://') ? bucketConfig : `gs://${bucketConfig}`;
-        try {
-          storage = appInstance.storage(bucketUrl);
-        } catch (bucketErr) {
-          console.warn('Fallo al inicializar Storage con el bucket configurado, se usará el predeterminado.', bucketErr);
-          storage = firebase.storage();
-        }
-      } else {
-        storage = firebase.storage();
-      }
-    } catch (err) {
-      console.error('No se pudo obtener la instancia de Firebase Storage', err);
-      throw err;
+  function normalizarHex(hex){
+    if(typeof hex !== 'string') return hex;
+    let limpio = hex.replace('#','');
+    if(limpio.length === 3){
+      limpio = limpio.split('').map(ch=>ch+ch).join('');
     }
-    return storage;
+    if(limpio.length !== 6) return null;
+    return limpio;
   }
 
-  const coloresFormas = ['#006400', '#b8860b', '#00008b', '#4b0082', '#8b4513', '#d2691e'];
+  function aclararColorHex(hex, factor = 0.55){
+    const limpio = normalizarHex(hex);
+    if(!limpio) return hex;
+    const r = parseInt(limpio.slice(0,2), 16);
+    const g = parseInt(limpio.slice(2,4), 16);
+    const b = parseInt(limpio.slice(4,6), 16);
+    const mezcla = (canal)=>{
+      if(Number.isNaN(canal)) return canal;
+      return Math.round(canal + (255 - canal) * factor);
+    };
+    const nr = mezcla(r);
+    const ng = mezcla(g);
+    const nb = mezcla(b);
+    const hexCanal = (val)=>{
+      if(!Number.isFinite(val)) return 'ff';
+      return Math.min(255, Math.max(0, val)).toString(16).padStart(2,'0');
+    };
+    return `#${hexCanal(nr)}${hexCanal(ng)}${hexCanal(nb)}`;
+  }
+
+  function oscurecerColorHex(hex, factor = 0.35){
+    const limpio = normalizarHex(hex);
+    if(!limpio) return hex;
+    const clampFactor = Math.min(Math.max(factor, 0), 1);
+    const r = parseInt(limpio.slice(0,2), 16);
+    const g = parseInt(limpio.slice(2,4), 16);
+    const b = parseInt(limpio.slice(4,6), 16);
+    const mezcla = (canal)=>{
+      if(Number.isNaN(canal)) return canal;
+      return Math.round(canal * (1 - clampFactor));
+    };
+    const hexCanal = (val)=>{
+      if(!Number.isFinite(val)) return '00';
+      return Math.min(255, Math.max(0, val)).toString(16).padStart(2,'0');
+    };
+    return `#${hexCanal(mezcla(r))}${hexCanal(mezcla(g))}${hexCanal(mezcla(b))}`;
+  }
 
   salirBtn.addEventListener('click', ()=>{ window.location.href = 'cantarsorteos.html'; });
   if(generarCartonesBtn){ generarCartonesBtn.disabled = true; }
   if(generarCartonesBtn){ generarCartonesBtn.addEventListener('click', manejarGenerarCartones); }
-  pdfBtn.addEventListener('click', generarPDF);
+  if(pdfBtn){ pdfBtn.addEventListener('click', generarPDF); }
+  if(pdfListoBtn){ pdfListoBtn.addEventListener('click', confirmarPdfListo); }
 
   function mostrarLoading(mensaje){
     if(loadingText && mensaje){ loadingText.textContent = mensaje; }
@@ -391,24 +768,30 @@
     cartonesGrid.innerHTML = '<div class="cartones-placeholder">Haz clic en "Generar cartones" para cargar los cartones del sorteo.</div>';
   }
 
-  function formatearFecha(fecha){
-    if(!fecha) return '';
+  function formatearFechaParaMostrar(fecha){
+    if(!fecha) return '-';
     const partes = fecha.includes('-') ? fecha.split('-') : fecha.split('/');
-    if(partes.length===3){
-      const [anio, mes, dia] = partes[0].length===4 ? partes : [partes[2], partes[1], partes[0]];
-      return `📅 ${dia.padStart(2,'0')}/${mes.padStart(2,'0')}/${anio}`;
+    if(partes.length === 3){
+      const [anio, mes, dia] = partes[0].length === 4 ? partes : [partes[2], partes[1], partes[0]];
+      return `${dia.padStart(2,'0')}/${mes.padStart(2,'0')}/${anio}`;
     }
-    return `📅 ${fecha}`;
+    return fecha;
   }
 
-  function formatearHora(hora){
-    if(!hora) return '';
+  function formatearHoraParaMostrar(hora){
+    if(!hora) return '-';
     const [hh = '00', mm = '00'] = hora.split(':');
     let h = parseInt(hh, 10);
     if(Number.isNaN(h)) h = 0;
     const sufijo = h >= 12 ? 'PM' : 'AM';
     h = h % 12 || 12;
-    return `⏰ Hora: ${h.toString().padStart(2,'0')}:${mm.padStart(2,'0')} ${sufijo}`;
+    return `${h.toString().padStart(2,'0')}:${mm.padStart(2,'0')} ${sufijo}`;
+  }
+
+  function formatearNumero(valor){
+    const numero = Number(valor);
+    if(!Number.isFinite(numero)) return '0';
+    return new Intl.NumberFormat('es-ES').format(numero);
   }
 
   function normalizarTextoArchivo(texto){
@@ -432,27 +815,45 @@
     return fecha.replace(/\//g,'-');
   }
 
-  function formatearHoraArchivo(hora){
-    if(!hora) return '00-00-am';
-    const [hh = '00', mm = '00'] = hora.split(':');
-    let h = parseInt(hh, 10);
-    if(Number.isNaN(h)) h = 0;
-    const sufijo = h >= 12 ? 'pm' : 'am';
-    h = h % 12 || 12;
-    return `${h.toString().padStart(2,'0')}-${mm.padStart(2,'0')}-${sufijo}`;
-  }
-
-  function construirNombreArchivo(){
+  function construirNombreBaseArchivo(){
     if(!sorteoData) return 'pdf-sorteo';
     const nombre = normalizarTextoArchivo(sorteoData.nombre);
     const fecha = formatearFechaArchivo(sorteoData.fecha || '');
-    const hora = formatearHoraArchivo(sorteoData.hora || '');
-    return `${nombre}_${fecha}_${hora}`;
+    return `${nombre}_${fecha}`;
   }
 
-  function crearMiniCarton(posiciones){
+  function obtenerHoraGeneracionArchivo(fecha = new Date()){
+    if(!(fecha instanceof Date) || Number.isNaN(fecha.getTime())){
+      return '00-00-00-am';
+    }
+    const horas = fecha.getHours();
+    const sufijo = horas >= 12 ? 'pm' : 'am';
+    const hora12 = horas % 12 || 12;
+    const minutos = fecha.getMinutes();
+    const segundos = fecha.getSeconds();
+    return `${hora12.toString().padStart(2,'0')}-${minutos.toString().padStart(2,'0')}-${segundos.toString().padStart(2,'0')}-${sufijo}`;
+  }
+
+  function construirNombreArchivo(){
+    const base = pdfNombreBase || construirNombreBaseArchivo();
+    return `${base}_${obtenerHoraGeneracionArchivo()}`;
+  }
+
+  function crearMiniCartonForma(forma){
+    const posiciones = Array.isArray(forma.posiciones) ? forma.posiciones : [];
+    const wrapper = document.createElement('div');
+    wrapper.className = 'forma-mini-carton-wrapper';
+    const color = obtenerColorForma(forma.idx || 1);
+    const colorSuave = aclararColorHex(color, 0.65);
+    const colorMuySuave = aclararColorHex(color, 0.82);
+    const colorIntenso = oscurecerColorHex(color, 0.2);
+    wrapper.style.setProperty('--forma-color', color);
+    if(colorSuave){ wrapper.style.setProperty('--forma-color-suave', colorSuave); }
+    if(colorMuySuave){ wrapper.style.setProperty('--forma-color-super-suave', colorMuySuave); }
+    if(colorIntenso){ wrapper.style.setProperty('--forma-color-intenso', colorIntenso); }
+
     const table = document.createElement('table');
-    table.className = 'mini-carton';
+    table.className = 'forma-mini-carton';
     const thead = document.createElement('thead');
     const trh = document.createElement('tr');
     ['B','I','N','G','O'].forEach(l=>{
@@ -468,18 +869,23 @@
       for(let c=0; c<5; c++){
         const td = document.createElement('td');
         if(r===2 && c===2){
-          td.classList.add('free');
-          td.innerHTML = '<span class="estrella-libre">★</span>';
+          td.classList.add('free','star');
+          td.innerHTML = '<span class="forma-estrella">★</span>';
         }else{
-          const found = posiciones.find(p=>p.r===r && p.c===c);
-          if(found){ td.textContent = found.valor; }
+          const seleccionada = posiciones.some(p=>Number(p.r)===r && Number(p.c)===c);
+          if(seleccionada){
+            td.classList.add('star');
+            td.innerHTML = '<span class="forma-estrella">★</span>';
+            td.style.backgroundColor = aclararColorHex(color, 0.7);
+          }
         }
         tr.appendChild(td);
       }
       tbody.appendChild(tr);
     }
     table.appendChild(tbody);
-    return table;
+    wrapper.appendChild(table);
+    return wrapper;
   }
 
   function obtenerColorForma(idx){
@@ -488,54 +894,164 @@
     return coloresFormas[posicion] || '#0b5394';
   }
 
+  function construirMapaPosiciones(posiciones){
+    const mapa = new Map();
+    if(!Array.isArray(posiciones)) return mapa;
+    posiciones.forEach(p=>{
+      const fila = Number(p.r);
+      const col = Number(p.c);
+      if(!Number.isFinite(fila) || !Number.isFinite(col)) return;
+      const key = `${fila}-${col}`;
+      if(typeof p.valor === 'string' || typeof p.valor === 'number'){
+        mapa.set(key, p.valor);
+      }
+    });
+    return mapa;
+  }
+
+  function crearCartonVisual(data){
+    const carton = document.createElement('div');
+    carton.className = 'pdf-carton';
+    if((data.tipocarton || '').toLowerCase() === 'gratis'){
+      carton.classList.add('gratis');
+    }
+
+    const tabla = document.createElement('table');
+    tabla.className = 'pdf-carton-table';
+    const thead = document.createElement('thead');
+    const trh = document.createElement('tr');
+    ['B','I','N','G','O'].forEach(l=>{
+      const th = document.createElement('th');
+      th.textContent = l;
+      trh.appendChild(th);
+    });
+    thead.appendChild(trh);
+    tabla.appendChild(thead);
+
+    const mapa = construirMapaPosiciones(data.posiciones);
+    const tbody = document.createElement('tbody');
+    for(let r=0; r<5; r++){
+      const tr = document.createElement('tr');
+      for(let c=0; c<5; c++){
+        const td = document.createElement('td');
+        if(r===2 && c===2){
+          td.classList.add('free');
+          td.textContent = '★';
+        }else{
+          const key = `${r}-${c}`;
+          const valor = mapa.get(key) || '';
+          td.textContent = valor;
+        }
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+    tabla.appendChild(tbody);
+    carton.appendChild(tabla);
+
+    const infoInferior = document.createElement('div');
+    infoInferior.className = 'pdf-carton-datos';
+    const numero = document.createElement('div');
+    const numeroValor = Number(data.cartonNum ?? data.Ncarton);
+    const numeroTexto = Number.isFinite(numeroValor) ? String(numeroValor).padStart(4,'0') : (data.Ncarton || data.cartonNum || '-');
+    carton.dataset.numero = Number.isFinite(numeroValor) ? numeroValor : 0;
+    numero.className = 'numero';
+    numero.textContent = `Cartón ${numeroTexto}`;
+    infoInferior.appendChild(numero);
+
+    const alias = document.createElement('div');
+    alias.className = 'alias';
+    alias.textContent = data.alias ? `Alias: ${data.alias}` : 'Alias: -';
+    infoInferior.appendChild(alias);
+
+    const tipo = document.createElement('div');
+    tipo.className = 'tipo';
+    tipo.textContent = (data.tipocarton || 'pagado').toUpperCase();
+    infoInferior.appendChild(tipo);
+
+    carton.appendChild(infoInferior);
+    return carton;
+  }
+
   function renderFormas(){
     formasCont.innerHTML = '';
+    if(!formasData.length){
+      formasCont.innerHTML = '<div class="cartones-placeholder">No se registraron formas para este sorteo.</div>';
+      return;
+    }
     const total = Number(sorteoData.totalPremios || 0);
-    formasData.sort((a,b)=>(a.idx||0)-(b.idx||0));
+    formasData.sort((a,b)=>{
+      const idxA = Number(a.idx) || 0;
+      const idxB = Number(b.idx) || 0;
+      return idxA - idxB;
+    });
     formasData.forEach(forma=>{
       const color = obtenerColorForma(forma.idx || 1);
+      const item = document.createElement('div');
+      item.className = 'forma-item';
+
+      const contenedor = document.createElement('div');
+      contenedor.className = 'forma-resumen';
+      contenedor.style.setProperty('--forma-color', color);
+
+      const info = document.createElement('div');
+      info.className = 'forma-info';
       const titulo = document.createElement('div');
-      titulo.className = 'forma-linea';
-      titulo.style.color = color;
-      titulo.textContent = `Forma ${forma.idx || ''}: ${forma.nombre || ''}`;
-      formasCont.appendChild(titulo);
-      const premioForma = Math.round(total * (parseFloat(forma.porcentaje || 0)/100));
-      const detalles = document.createElement('div');
-      detalles.className = 'forma-detalles';
-      detalles.innerHTML = `<span>Premio: ${premioForma}</span><span>Cartones gratis: ${forma.cartonesGratis || 0}</span>`;
-      formasCont.appendChild(detalles);
+      titulo.className = 'forma-titulo';
+      const nombreForma = (forma.nombre && String(forma.nombre).trim())
+        || (forma.idx ? `Forma ${forma.idx}` : 'Forma');
+      titulo.textContent = nombreForma;
+      info.appendChild(titulo);
+
+      const porcentaje = parseFloat(forma.porcentaje || 0) || 0;
+      const premioForma = porcentaje > 0 ? Math.round(total * (porcentaje / 100)) : 0;
+      info.appendChild(crearDetalleForma('Premio', porcentaje > 0
+        ? `${formatearNumero(premioForma)}`
+        : '-'));
+
+      info.appendChild(crearDetalleForma('Cartones gratis', formatearNumero(forma.cartonesGratis || 0)));
+
+      contenedor.appendChild(info);
+
+      const miniCarton = crearMiniCartonForma(forma);
+
+      item.appendChild(contenedor);
+      item.appendChild(miniCarton);
+      formasCont.appendChild(item);
     });
+  }
+
+  function crearDetalleForma(etiqueta, valor){
+    const cont = document.createElement('div');
+    cont.className = 'forma-detalle';
+    const spanEtiqueta = document.createElement('span');
+    spanEtiqueta.className = 'etiqueta';
+    spanEtiqueta.textContent = `${etiqueta}:`;
+    const spanValor = document.createElement('span');
+    spanValor.className = 'valor';
+    spanValor.textContent = valor;
+    cont.appendChild(spanEtiqueta);
+    cont.appendChild(spanValor);
+    return cont;
   }
 
   function renderCartones(){
     cartonesGrid.innerHTML = '';
+    pdfListoBtn.style.display = 'none';
     if(!cartonesData.length){
       cartonesGrid.innerHTML = '<div class="cartones-placeholder">No se encontraron cartones generados para este sorteo.</div>';
       return;
     }
-    cartonesData.sort((a,b)=> (Number(a.cartonNum) || 0) - (Number(b.cartonNum) || 0));
-    cartonesData.forEach(data=>{
-      const box = document.createElement('div');
-      box.className = 'mini-carton-box';
-      const wrapper = document.createElement('div');
-      wrapper.className = 'mini-carton-wrapper';
-      if((data.tipocarton || '').toLowerCase() === 'gratis'){ wrapper.classList.add('gratis'); }
-      wrapper.appendChild(crearMiniCarton(data.posiciones || []));
-      box.appendChild(wrapper);
-      const infoInferior = document.createElement('div');
-      infoInferior.className = 'mini-inferior';
-      const numero = document.createElement('div');
-      const numeroValor = Number(data.cartonNum);
-      const numeroFormateado = Number.isFinite(numeroValor) ? numeroValor : 0;
-      numero.textContent = `Cartón ${String(numeroFormateado).padStart(4,'0')}`;
-      infoInferior.appendChild(numero);
-      const alias = document.createElement('div');
-      alias.className = 'alias';
-      alias.textContent = data.alias ? `Alias: ${data.alias}` : 'Alias: -';
-      infoInferior.appendChild(alias);
-      box.appendChild(infoInferior);
-      cartonesGrid.appendChild(box);
+    cartonesData.sort((a,b)=>{
+      const numA = Number(a.cartonNum ?? a.Ncarton) || 0;
+      const numB = Number(b.cartonNum ?? b.Ncarton) || 0;
+      return numA - numB;
     });
+    const fragment = document.createDocumentFragment();
+    cartonesData.forEach(data=>{
+      fragment.appendChild(crearCartonVisual(data));
+    });
+    cartonesGrid.appendChild(fragment);
   }
 
   async function cargarDatosBasicos(){
@@ -550,11 +1066,15 @@
       }
       sorteoData = sorteoDoc.data();
       nombreEl.textContent = sorteoData.nombre || 'Sorteo';
-      tipoEl.textContent = sorteoData.tipo ? `Tipo de sorteo: ${sorteoData.tipo}` : '';
-      fechaEl.textContent = formatearFecha(sorteoData.fecha || '');
-      horaEl.textContent = formatearHora(sorteoData.hora || '');
-      totalPremiosEl.textContent = Math.round(sorteoData.totalPremios || 0);
-      pdfFileName = construirNombreArchivo();
+      tipoTituloEl.textContent = sorteoData.tipo ? sorteoData.tipo : '';
+      datoFechaEl.textContent = formatearFechaParaMostrar(sorteoData.fecha || '');
+      datoHoraEl.textContent = formatearHoraParaMostrar(sorteoData.hora || '');
+      datoCierreEl.textContent = formatearHoraParaMostrar(sorteoData.horacierre || '');
+      datoValorEl.textContent = `${formatearNumero(sorteoData.valorCarton || 0)}`;
+      datoMaxGratisEl.textContent = formatearNumero(sorteoData.maxcartongratis || 0);
+      datoTipoEl.textContent = sorteoData.tipo || '-';
+      totalPremiosEl.textContent = formatearNumero(sorteoData.totalPremios || 0);
+      pdfNombreBase = construirNombreBaseArchivo();
 
       const formasSnap = await db.collection('formas').where('sorteoId','==',sorteoId).get();
       formasData = [];
@@ -577,17 +1097,20 @@
       await ensureFirebaseReady();
       const cartonesSnap = await db.collection('CartonJugado').where('sorteoId','==',sorteoId).get();
       cartonesData = [];
-      cartonesSnap.forEach(doc=>cartonesData.push(doc.data()));
-      renderCartones();
-      cartonesCargados = true;
-      pdfBtn.style.display = 'block';
-      if(generarCartonesBtn){ generarCartonesBtn.textContent = 'Regenerar cartones'; }
+    cartonesSnap.forEach(doc=>cartonesData.push(doc.data()));
+    renderCartones();
+    cartonesCargados = cartonesData.length > 0;
+    if(pdfBtn){
+      pdfBtn.style.display = cartonesCargados ? 'block' : 'none';
+      pdfBtn.disabled = !cartonesCargados;
+    }
+    if(generarCartonesBtn){ generarCartonesBtn.textContent = 'Regenerar cartones'; }
     } catch (err) {
       cartonesCargados = false;
       console.error('Error cargando cartones', err);
       alert('Ocurrió un error al generar los cartones del sorteo.');
       mostrarMensajeCartonesPendientes();
-      pdfBtn.style.display = 'none';
+      if(pdfBtn){ pdfBtn.style.display = 'none'; }
     } finally {
       ocultarLoading();
     }
@@ -595,8 +1118,7 @@
 
   async function manejarGenerarCartones(){
     if(!sorteoData){ alert('La información del sorteo aún no está disponible.'); return; }
-    if(!generarCartonesBtn) return;
-    if(generarCartonesBtn.disabled) return;
+    if(!generarCartonesBtn || generarCartonesBtn.disabled) return;
     generarCartonesBtn.disabled = true;
     await cargarCartones();
     generarCartonesBtn.disabled = false;
@@ -605,9 +1127,17 @@
   async function generarPDF(){
     if(!sorteoData){ return; }
     if(!cartonesCargados){ alert('Primero debes generar los cartones del sorteo.'); return; }
-    const nombreArchivo = pdfFileName || construirNombreArchivo();
-    const wrapper = document.getElementById('pdf-wrapper');
-    if(!wrapper){
+    const jsPDFLib = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    if(!window.html2canvas || !jsPDFLib){
+      alert('Dependencias para generar PDF no disponibles');
+      return;
+    }
+    if(pdfListoBtn){
+      pdfListoBtn.style.display = 'none';
+    }
+    const nombreArchivo = `${construirNombreArchivo()}.pdf`;
+    const resumen = document.getElementById('resumen-pdf');
+    if(!resumen){
       alert('No se encontró el contenido del sorteo para generar el PDF.');
       return;
     }
@@ -622,50 +1152,100 @@
         pdfBtn.disabled = true;
         pdfBtn.textContent = 'Generando PDF...';
       }
-      mostrarLoading('Generando PDF y cargándolo en la nube, por favor espera');
+      mostrarLoading('Generando PDF para descargar, por favor espera');
 
-      if(!window.html2canvas || !window.jspdf){
-        throw new Error('Dependencias para generar PDF no disponibles');
+      document.body.classList.add('pdf-captura');
+      await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
+
+      const pdf = new jsPDFLib('p', 'pt', 'a4');
+      if(typeof pdf.setCompression === 'function'){
+        pdf.setCompression(true);
       }
-
-      const canvas = await window.html2canvas(wrapper, {
-        scale: 2,
-        useCORS: true,
-        logging: false
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF('p', 'pt', 'a4');
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height);
-      const pdfWidth = canvas.width * ratio;
-      const pdfHeight = canvas.height * ratio;
-      const marginX = (pageWidth - pdfWidth) / 2;
-      const marginY = (pageHeight - pdfHeight) / 2;
-      pdf.addImage(imgData, 'PNG', marginX, marginY, pdfWidth, pdfHeight);
+      const marginX = 24;
+      const marginY = 24;
 
-      const pdfBlob = pdf.output('blob');
-      const storageInstance = obtenerStorage();
-      const nombreNormalizado = normalizarTextoArchivo(nombreArchivo || 'sorteo');
-      const fechaSubida = new Date().toISOString().replace(/[:.]/g,'-');
-      const ruta = `sorteos/${sorteoId}/${nombreNormalizado}_${fechaSubida}.pdf`;
-      const storageRef = storageInstance.ref().child(ruta);
-      const snapshot = await storageRef.put(pdfBlob, { contentType: 'application/pdf' });
-      const pdfUrl = await snapshot.ref.getDownloadURL();
+      const canvasScale = Math.min(1.8, Math.max(1.4, window.devicePixelRatio || 1.5));
+      const canvasOptions = {
+        scale: canvasScale,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      };
 
-      const payload = { pdf: 'si', pdfUrl };
-      await Promise.all([
-        db.collection('sorteos').doc(sorteoId).set(payload, { merge: true }),
-        db.collection('cantarsorteos').doc(sorteoId).set(payload, { merge: true })
-      ]);
+      const resumenCanvas = await window.html2canvas(resumen, canvasOptions);
+      const resumenRatio = Math.min(
+        (pageWidth - marginX * 2) / resumenCanvas.width,
+        (pageHeight - marginY * 2) / resumenCanvas.height
+      );
+      const resumenWidth = resumenCanvas.width * resumenRatio;
+      const resumenHeight = resumenCanvas.height * resumenRatio;
+      const resumenX = (pageWidth - resumenWidth) / 2;
+      const resumenY = (pageHeight - resumenHeight) / 2;
+      pdf.addImage(resumenCanvas.toDataURL('image/jpeg', 0.85), 'JPEG', resumenX, resumenY, resumenWidth, resumenHeight);
 
-      alert('El PDF del sorteo se generó y cargó correctamente.');
+      const cartonElements = Array.from(document.querySelectorAll('.pdf-carton'))
+        .sort((a,b)=>{
+          const numA = Number(a.dataset.numero || 0);
+          const numB = Number(b.dataset.numero || 0);
+          return numA - numB;
+        });
+      if(cartonElements.length){
+        let paginaIniciada = false;
+        let columna = 0;
+        let cursorY = marginY;
+        let alturaFila = 0;
+        const espacioHorizontal = 12;
+        const espacioVertical = 14;
+        const anchoUtil = pageWidth - marginX * 2;
+        const muestra = cartonElements[0];
+        const anchoVisual = muestra ? Math.max(muestra.getBoundingClientRect().width, 200) : 220;
+        const anchoReferencia = Math.max(200, Math.min(260, anchoVisual));
+        const columnasMax = Math.max(2, Math.floor((anchoUtil + espacioHorizontal) / (anchoReferencia + espacioHorizontal)));
+        const anchoColumna = (anchoUtil - espacioHorizontal * (columnasMax - 1)) / columnasMax;
+        const limiteY = pageHeight - marginY;
+
+        for(const elemento of cartonElements){
+          const canvas = await window.html2canvas(elemento, { ...canvasOptions });
+
+          const escala = anchoColumna / canvas.width;
+          const renderWidth = anchoColumna;
+          const renderHeight = canvas.height * escala;
+
+          if(!paginaIniciada){
+            pdf.addPage();
+            paginaIniciada = true;
+          }
+
+          if(columna >= columnasMax){
+            columna = 0;
+            cursorY += alturaFila + espacioVertical;
+            alturaFila = 0;
+          }
+
+          if(cursorY + renderHeight > limiteY){
+            pdf.addPage();
+            columna = 0;
+            cursorY = marginY;
+            alturaFila = 0;
+          }
+
+          const posX = marginX + columna * (anchoColumna + espacioHorizontal);
+          pdf.addImage(canvas.toDataURL('image/jpeg', 0.82), 'JPEG', posX, cursorY, renderWidth, renderHeight);
+          alturaFila = Math.max(alturaFila, renderHeight);
+          columna++;
+        }
+      }
+
+      pdf.save(nombreArchivo);
+      if(pdfListoBtn){ pdfListoBtn.style.display = 'block'; pdfListoBtn.disabled = false; }
+      alert('El PDF del sorteo ha sido generado. Descárgalo y luego confirma con "PDF listo".');
     } catch (err) {
-      console.error('Error generando o subiendo el PDF', err);
-      alert('No se pudo generar o subir el PDF del sorteo. Intenta nuevamente.');
+      console.error('Error generando el PDF', err);
+      alert('No se pudo generar el PDF del sorteo. Intenta nuevamente.');
     } finally {
+      document.body.classList.remove('pdf-captura');
       if(pdfBtn){
         pdfBtn.disabled = false;
         pdfBtn.textContent = textoOriginalPdf || 'Generar PDF';
@@ -674,6 +1254,37 @@
         generarCartonesBtn.disabled = false;
         generarCartonesBtn.textContent = textoOriginalCartones || generarCartonesBtn.textContent;
       }
+      ocultarLoading();
+    }
+  }
+
+  async function confirmarPdfListo(){
+    if(!sorteoId){ return; }
+    const confirmar = await window.confirm('¿Confirmas que el PDF fue descargado correctamente?');
+    if(!confirmar) return;
+    try {
+      await ensureFirebaseReady();
+      if(pdfListoBtn){ pdfListoBtn.disabled = true; }
+      mostrarLoading('Actualizando el estado del PDF, por favor espera');
+      const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+      const eliminar = firebase.firestore.FieldValue.delete();
+      const payload = {
+        pdf: 'si',
+        pdfActualizadoEn: timestamp,
+        pdfUrl: eliminar,
+        pdfStoragePath: eliminar
+      };
+      await Promise.all([
+        db.collection('sorteos').doc(sorteoId).set(payload, { merge: true }),
+        db.collection('cantarsorteos').doc(sorteoId).set(payload, { merge: true })
+      ]);
+      alert('El sorteo se marcó como PDF listo.');
+      window.location.href = 'cantarsorteos.html';
+    } catch (err) {
+      console.error('Error actualizando el estado del PDF', err);
+      alert('No se pudo actualizar el estado del PDF. Intenta nuevamente.');
+      if(pdfListoBtn){ pdfListoBtn.disabled = false; }
+    } finally {
       ocultarLoading();
     }
   }
