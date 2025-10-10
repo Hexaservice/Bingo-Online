@@ -93,17 +93,17 @@
       display: none;
     }
     #pdf-wrapper {
-      max-width: 1000px;
+      max-width: 1180px;
       margin: 0 auto;
       text-align: center;
       width: 100%;
-      padding: 0 clamp(4px, 2vw, 20px);
+      padding: 0 clamp(8px, 2.6vw, 26px);
     }
     #resumen-pdf {
       background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(230,244,255,0.85));
       border: 3px solid rgba(11,83,148,0.2);
       border-radius: 24px;
-      padding: 30px 20px;
+      padding: clamp(32px, 4vw, 44px);
       box-shadow: 0 12px 30px rgba(0,0,0,0.1);
       margin-bottom: 26px;
     }
@@ -481,7 +481,7 @@
     .pdf-carton-datos {
       display: flex;
       flex-direction: column;
-      gap: 3px;
+      gap: 4px;
       text-align: center;
       font-family: 'Poppins', sans-serif;
       font-weight: 600;
@@ -489,15 +489,15 @@
       line-height: 1.15;
     }
     .pdf-carton-datos .numero {
-      font-size: 1.05rem;
+      font-size: 1.12rem;
       color: #000000;
     }
     .pdf-carton-datos .alias {
-      font-size: 0.98rem;
+      font-size: 1.04rem;
       color: #004488;
     }
     .pdf-carton-datos .tipo {
-      font-size: 0.88rem;
+      font-size: 0.94rem;
       text-transform: uppercase;
       color: #0b6623;
     }
@@ -718,16 +718,16 @@
       margin: 0;
       padding: clamp(14px, 2.4vw, 26px);
       background: #ffffff;
-      --pdf-columnas: 8;
+      --pdf-columnas: 7;
     }
     body.pdf-captura #salir-btn,
     body.pdf-captura #acciones-fixed {
       display: none !important;
     }
     body.pdf-captura #pdf-wrapper {
-      max-width: 1320px;
-      width: min(1320px, 100%);
-      padding: clamp(12px, 2.2vw, 28px) clamp(16px, 3.2vw, 32px);
+      max-width: 1440px;
+      width: min(1440px, 100%);
+      padding: clamp(16px, 2.6vw, 32px) clamp(20px, 3.6vw, 36px);
       box-sizing: border-box;
     }
     body.pdf-captura #resumen-pdf {
@@ -740,10 +740,10 @@
         "formas formas";
       column-gap: clamp(22px, 3vw, 36px);
       row-gap: clamp(14px, 2.4vw, 28px);
-      padding: clamp(32px, 3.8vw, 44px);
+      padding: clamp(36px, 4.2vw, 52px);
       width: 100%;
       max-width: none;
-      min-height: clamp(560px, 56vw, 700px);
+      min-height: clamp(620px, 60vw, 760px);
       margin: 0 auto;
       align-content: stretch;
       border-radius: 20px;
@@ -804,8 +804,8 @@
       margin-top: clamp(28px, 3.4vw, 36px);
     }
     body.pdf-captura #cartones-grid {
-      grid-template-columns: repeat(var(--pdf-columnas, 6), minmax(0, 1fr));
-      gap: clamp(8px, 0.9vw, 12px);
+      grid-template-columns: repeat(var(--pdf-columnas, 7), minmax(0, 1fr));
+      gap: clamp(10px, 1.1vw, 16px);
       align-items: stretch;
     }
     body.pdf-captura .pdf-carton {
@@ -814,19 +814,19 @@
       padding: clamp(6px, 1vw, 10px);
     }
     body.pdf-captura .pdf-carton-table {
-      --cell-size: 24px;
+      --cell-size: clamp(26px, 3vw, 32px);
     }
     body.pdf-captura .pdf-carton-datos {
-      gap: 3px;
+      gap: 4px;
     }
     body.pdf-captura .pdf-carton-datos .numero {
-      font-size: 1.05rem;
+      font-size: 1.12rem;
     }
     body.pdf-captura .pdf-carton-datos .alias {
-      font-size: 0.95rem;
+      font-size: 1.02rem;
     }
     body.pdf-captura .pdf-carton-datos .tipo {
-      font-size: 0.82rem;
+      font-size: 0.9rem;
     }
   </style>
 </head>
@@ -1450,10 +1450,12 @@
           const datos = cartonElements[0].querySelector('.pdf-carton-datos');
           return datos ? Math.round(datos.getBoundingClientRect().height) : 0;
         })();
-        const anchoReferencia = Math.max(108, anchoTabla + 16);
-        const altoReferencia = Math.max(190, altoTabla + altoDatos + 20);
-        const maxColumnas = 8;
-        const minColumnas = 4;
+        const anchoMuestra = Math.round(muestraRect.width) || Math.round(anchoTabla + 16);
+        const altoMuestra = Math.round(muestraRect.height) || Math.round(altoTabla + altoDatos);
+        const anchoReferencia = Math.max(160, anchoMuestra + 24);
+        const altoReferencia = Math.max(220, altoMuestra + 24);
+        const maxColumnas = 7;
+        const minColumnas = 3;
         let columnas = Math.floor((anchoUtil + espacioHorizontal) / (anchoReferencia + espacioHorizontal));
         if(!Number.isFinite(columnas) || columnas < minColumnas){
           columnas = minColumnas;
