@@ -438,6 +438,19 @@
         --cell-size: clamp(22px, 2.6vw, 28px);
       }
     }
+    body.forzar-orientacion-landscape #pdf-wrapper {
+      max-width: min(1440px, 100%);
+    }
+    body.forzar-orientacion-landscape #cartones-grid {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: clamp(6px, 1vw, 12px);
+    }
+    body.forzar-orientacion-landscape .pdf-carton {
+      max-width: none;
+    }
+    body.forzar-orientacion-landscape .pdf-carton-table {
+      --cell-size: clamp(22px, 2.6vw, 28px);
+    }
     @media (min-width: 1500px) {
       #cartones-grid {
         grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -445,6 +458,32 @@
       }
       .pdf-carton-table {
         --cell-size: clamp(20px, 2.1vw, 26px);
+      }
+    }
+    @media (max-width: 900px) {
+      body.forzar-orientacion-landscape #cartones-grid {
+        grid-template-columns: repeat(auto-fit, minmax(clamp(140px, 25vw, 200px), 1fr));
+        gap: clamp(8px, 2vw, 14px);
+      }
+      body.forzar-orientacion-landscape .pdf-carton-table {
+        --cell-size: clamp(20px, 4vh, 30px);
+      }
+      body.forzar-orientacion-landscape .pdf-carton {
+        max-width: clamp(170px, 28vw, 210px);
+      }
+    }
+    @media (min-width: 700px) {
+      body.forzar-orientacion-landscape #formas-resumen {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      }
+      body.forzar-orientacion-landscape .forma-item {
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+      }
+      body.forzar-orientacion-landscape .forma-mini-carton-wrapper {
+        max-width: none;
+        align-items: stretch;
+        margin-top: auto;
+        margin-bottom: auto;
       }
     }
     .pdf-carton.gratis .pdf-carton-table {
@@ -1465,6 +1504,13 @@
 
     const textoOriginalPdf = pdfBtn ? pdfBtn.textContent : '';
     const textoOriginalCartones = generarCartonesBtn ? generarCartonesBtn.textContent : '';
+    const debeForzarPaisaje = (() => {
+      try {
+        return window.matchMedia ? window.matchMedia('(orientation: portrait)').matches : window.innerHeight > window.innerWidth;
+      } catch (e) {
+        return window.innerHeight > window.innerWidth;
+      }
+    })();
 
     try {
       await ensureFirebaseReady();
@@ -1474,6 +1520,11 @@
         pdfBtn.textContent = 'Generando PDF...';
       }
       mostrarLoading('Generando PDF para descargar, por favor espera');
+
+      if(debeForzarPaisaje){
+        document.body.classList.add('forzar-orientacion-landscape');
+        await new Promise(resolve=>requestAnimationFrame(resolve));
+      }
 
       document.body.classList.add('pdf-captura');
       await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
@@ -1607,6 +1658,9 @@
       alert('No se pudo generar el PDF del sorteo. Intenta nuevamente.');
     } finally {
       document.body.classList.remove('pdf-captura');
+      if(debeForzarPaisaje){
+        document.body.classList.remove('forzar-orientacion-landscape');
+      }
       if(pdfBtn){
         pdfBtn.disabled = false;
         pdfBtn.textContent = textoOriginalPdf || 'Generar PDF';
