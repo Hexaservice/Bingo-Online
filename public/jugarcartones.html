@@ -81,7 +81,34 @@
     @keyframes zoomInOut{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
     .sorteo-jugando span,.sorteo-jugando .sorteo-detalle{display:inline-block;animation:zoomInOut 1s infinite;transform-origin:left center;}
     .sorteo-info{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;}
-    .sellado-aviso{display:none;align-items:center;justify-content:center;gap:8px;margin:10px auto;padding:10px 16px;border-radius:10px;background:rgba(255,165,0,0.15);color:#b22222;max-width:480px;font-family:'Poppins',sans-serif;font-weight:600;box-shadow:0 0 10px rgba(0,0,0,0.08);text-align:center;line-height:1.4;}
+    .sellado-aviso{
+      position:absolute;
+      top:50%;
+      left:50%;
+      transform:translate(-50%,-50%);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      gap:8px;
+      padding:18px 20px;
+      border-radius:16px;
+      background:rgba(255,165,0,0.15);
+      color:#b22222;
+      width:min(280px,75%);
+      min-height:180px;
+      max-height:90%;
+      font-family:'Poppins',sans-serif;
+      font-weight:600;
+      box-shadow:0 10px 30px rgba(0,0,0,0.25);
+      text-align:center;
+      line-height:1.45;
+      z-index:40;
+      pointer-events:none;
+    }
+    .sellado-aviso .sellado-titulo{font-family:'Bangers',cursive;font-size:1.5rem;color:#b22222;text-transform:uppercase;letter-spacing:1px;text-shadow:0 0 6px rgba(255,255,255,0.6);} 
+    .sellado-aviso .sellado-detalle{font-size:0.95rem;color:#8b0000;}
+    .sellado-aviso .sellado-destino{font-weight:700;color:#b22222;font-family:'Poppins',sans-serif;}
     .sellado-aviso.visible{display:flex;}
     #fecha-hora-sorteo{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:center;gap:12px;font-family:'Poppins',sans-serif;text-transform:none;}
     #fecha-hora-sorteo .fecha-col{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:120px;}
@@ -242,7 +269,6 @@
         <div id="cartones-jugando"><img src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" class="carton-icon" alt="Cartón"> Jugando: <span id="cartones-jugando-valor">0</span> <span id="gratis-plus">+</span> <span id="cartones-gratis-jugando">0</span></div>
       </div>
     </div>
-    <div id="sellado-aviso" class="sellado-aviso" role="alert" aria-live="assertive" aria-hidden="true"></div>
   </section>
   <section id="alias-section">
     <div id="player-container">
@@ -270,6 +296,7 @@
           </thead>
           <tbody id="bingo-board"></tbody>
         </table>
+        <div id="sellado-aviso" class="sellado-aviso" role="alert" aria-live="assertive" aria-hidden="true"></div>
         <div class="carton-back">
           <div id="back-premios-content">
             <h2 id="back-premios-titulo"></h2>
@@ -405,7 +432,7 @@ function ocultarMensajeSellado(){
 function mostrarMensajeSellado(nombre){
   const aviso=document.getElementById('sellado-aviso');
   const destino=nombre&&nombre.trim()?nombre.trim():'este sorteo';
-  const mensaje=`Ya NO se pueden jugar cartones en: ${destino} ya que esta SELLADO, elije otro sorteo disponible`;
+  const mensaje=`El sorteo ${destino} está sellado. Ya no es posible jugar cartones. Selecciona otro sorteo disponible.`;
   if(aviso){
     const destinoSeguro=destino
       .replace(/&/g,'&amp;')
@@ -413,7 +440,7 @@ function mostrarMensajeSellado(nombre){
       .replace(/>/g,'&gt;')
       .replace(/"/g,'&quot;')
       .replace(/'/g,'&#39;');
-    aviso.innerHTML=`Ya NO se pueden jugar el cartones en: <strong>${destinoSeguro}</strong> ya que esta SELLADO, elije otro sorteo disponible`;
+    aviso.innerHTML=`<span class="sellado-titulo">¡Sorteo sellado!</span><span class="sellado-detalle">Ya no es posible jugar cartones en <span class="sellado-destino">${destinoSeguro}</span>. Selecciona otro sorteo disponible.</span>`;
     aviso.classList.add('visible');
     aviso.setAttribute('aria-hidden','false');
   }
