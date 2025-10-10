@@ -711,7 +711,7 @@
     body.pdf-captura {
       display: flex;
       flex-direction: column;
-      align-items: stretch;
+      align-items: center;
       justify-content: flex-start;
       width: 100%;
       margin: 0;
@@ -724,8 +724,8 @@
       display: none !important;
     }
     body.pdf-captura #pdf-wrapper {
-      max-width: none;
-      width: 100%;
+      max-width: 1180px;
+      width: min(1180px, 100%);
       padding: clamp(8px, 1.6vw, 18px) clamp(12px, 2.8vw, 26px);
       box-sizing: border-box;
     }
@@ -742,7 +742,8 @@
       padding: clamp(26px, 3.2vw, 38px);
       width: 100%;
       max-width: none;
-      min-height: clamp(440px, 50vw, 520px);
+      min-height: clamp(520px, 52vw, 640px);
+      margin: 0 auto;
       align-content: stretch;
       border-radius: 18px;
       box-shadow: none;
@@ -810,7 +811,19 @@
       padding: clamp(4px, 0.8vw, 8px);
     }
     body.pdf-captura .pdf-carton-table {
-      --cell-size: clamp(16px, 1.9vw, 24px);
+      --cell-size: 22px;
+    }
+    body.pdf-captura .pdf-carton-datos {
+      gap: 1px;
+    }
+    body.pdf-captura .pdf-carton-datos .numero {
+      font-size: 0.95rem;
+    }
+    body.pdf-captura .pdf-carton-datos .alias {
+      font-size: 0.85rem;
+    }
+    body.pdf-captura .pdf-carton-datos .tipo {
+      font-size: 0.75rem;
     }
   </style>
 </head>
@@ -1425,8 +1438,16 @@
         const espacioVertical = 14;
         const anchoUtil = pageWidth - margenCartonesX * 2;
         const altoUtil = pageHeight - margenCartonesY * 2;
-        const anchoReferencia = 90;
-        const altoReferencia = 120;
+        const muestraRect = cartonElements[0].getBoundingClientRect();
+        const muestraTabla = cartonElements[0].querySelector('.pdf-carton-table');
+        const anchoTabla = muestraTabla ? Math.round(muestraTabla.getBoundingClientRect().width) : Math.round(muestraRect.width);
+        const altoTabla = muestraTabla ? Math.round(muestraTabla.getBoundingClientRect().height) : 0;
+        const altoDatos = (()=>{
+          const datos = cartonElements[0].querySelector('.pdf-carton-datos');
+          return datos ? Math.round(datos.getBoundingClientRect().height) : 0;
+        })();
+        const anchoReferencia = Math.max(100, anchoTabla + 16);
+        const altoReferencia = Math.max(150, altoTabla + altoDatos + 16);
         const maxColumnas = 8;
         const minColumnas = 4;
         let columnas = Math.floor((anchoUtil + espacioHorizontal) / (anchoReferencia + espacioHorizontal));
@@ -1434,12 +1455,17 @@
           columnas = minColumnas;
         }
         columnas = Math.min(maxColumnas, columnas);
-        columnas = Math.min(columnas, Math.max(minColumnas, cartonElements.length));
+        if(cartonElements.length >= maxColumnas){
+          columnas = maxColumnas;
+        } else {
+          columnas = Math.min(columnas, cartonElements.length);
+        }
         let filas = Math.floor((altoUtil + espacioVertical) / (altoReferencia + espacioVertical));
         if(!Number.isFinite(filas) || filas < 3){
           filas = 3;
         }
-        filas = Math.min(4, Math.max(3, filas));
+        const maxFilas = columnas >= maxColumnas ? 3 : 4;
+        filas = Math.min(maxFilas, Math.max(3, filas));
         const totalPorPagina = columnas * filas;
         const anchoCelda = (anchoUtil - espacioHorizontal * (columnas - 1)) / columnas;
         const altoCelda = (altoUtil - espacioVertical * (filas - 1)) / filas;
