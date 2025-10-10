@@ -98,21 +98,28 @@
       text-align: center;
       width: 100%;
       padding: 0 clamp(8px, 2.6vw, 26px);
+      display: grid;
+      gap: clamp(26px, 4vw, 38px);
     }
-    #resumen-pdf {
-      background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(230,244,255,0.85));
-      border: 3px solid rgba(11,83,148,0.2);
-      border-radius: 24px;
-      padding: clamp(32px, 4vw, 44px);
-      box-shadow: 0 12px 30px rgba(0,0,0,0.1);
-      margin-bottom: 26px;
+    #resumen-layout {
+      display: grid;
+      gap: clamp(16px, 3vw, 28px);
+      margin: 0 auto;
+      width: 100%;
+      text-align: left;
+    }
+    .resumen-bloque {
+      background: #ffffff;
+      border: 1.5px solid rgba(11,83,148,0.12);
+      border-radius: 20px;
+      padding: clamp(22px, 3vw, 30px);
+      box-shadow: 0 6px 22px rgba(0,0,0,0.08);
     }
     #resumen-header {
       display: flex;
       flex-wrap: nowrap;
       align-items: center;
       gap: 16px;
-      margin-bottom: 16px;
       text-align: left;
       min-width: 0;
     }
@@ -158,8 +165,8 @@
       gap: 10px 16px;
       justify-content: center;
       align-items: stretch;
-      margin: 10px auto 20px;
-      padding: 14px 18px;
+      margin: 0;
+      padding: clamp(14px, 2vw, 22px) clamp(18px, 3vw, 26px);
       border-radius: 18px;
       background: rgba(255,255,255,0.9);
       box-shadow: inset 0 0 0 1px rgba(11,83,148,0.08);
@@ -201,8 +208,9 @@
       flex-wrap: wrap;
       align-items: baseline;
       gap: 12px;
-      margin: 20px 0 18px;
+      margin: 0;
       justify-content: center;
+      text-align: center;
     }
     .totales-header h2 {
       font-family: 'Bangers', cursive;
@@ -222,6 +230,20 @@
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 16px;
       width: 100%;
+    }
+    @media (min-width: 1024px) {
+      #resumen-layout {
+        grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+        grid-template-rows: auto auto minmax(0, 1fr);
+        grid-template-areas:
+          "header datos"
+          "totales datos"
+          "formas formas";
+      }
+      #resumen-header { grid-area: header; }
+      #datos-generales { grid-area: datos; }
+      .totales-header { grid-area: totales; }
+      #formas-resumen { grid-area: formas; }
     }
     .forma-item {
       display: grid;
@@ -363,7 +385,7 @@
       height: 100%;
     }
     #cartones-section {
-      margin-top: 32px;
+      margin-top: clamp(24px, 3.4vw, 32px);
       text-align: left;
     }
     #cartones-section h2 {
@@ -375,8 +397,8 @@
     }
     #cartones-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(clamp(150px, 28vw, 220px), 1fr));
-      gap: clamp(8px, 3vw, 18px);
+      grid-template-columns: repeat(auto-fit, minmax(clamp(160px, 28vw, 220px), 1fr));
+      gap: clamp(8px, 2.4vw, 16px);
       justify-items: center;
       align-items: flex-start;
       width: 100%;
@@ -401,8 +423,8 @@
         max-width: min(1180px, 100%);
       }
       #cartones-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: clamp(10px, 2vw, 20px);
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: clamp(8px, 1.6vw, 16px);
       }
       .pdf-carton {
         max-width: none;
@@ -413,8 +435,8 @@
     }
     @media (min-width: 1500px) {
       #cartones-grid {
-        grid-template-columns: repeat(8, minmax(0, 1fr));
-        gap: clamp(8px, 1.8vw, 18px);
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: clamp(8px, 1.4vw, 16px);
       }
       .pdf-carton-table {
         --cell-size: clamp(18px, 2.2vw, 24px);
@@ -563,7 +585,7 @@
       body {
         padding: clamp(56px, 10vw, 64px) clamp(10px, 5vw, 18px) clamp(24px, 7vw, 32px);
       }
-      #resumen-pdf { padding: 22px 14px; }
+      .resumen-bloque { padding: clamp(18px, 4vw, 24px); }
       #acciones-fixed {
         right: 8px;
         width: min(100%, 360px);
@@ -718,7 +740,7 @@
       margin: 0;
       padding: clamp(14px, 2.4vw, 26px);
       background: #ffffff;
-      --pdf-columnas: 7;
+      --pdf-columnas: 6;
     }
     body.pdf-captura #salir-btn,
     body.pdf-captura #acciones-fixed {
@@ -730,7 +752,7 @@
       padding: clamp(16px, 2.6vw, 32px) clamp(20px, 3.6vw, 36px);
       box-sizing: border-box;
     }
-    body.pdf-captura #resumen-pdf {
+    body.pdf-captura #resumen-layout {
       display: grid;
       grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
       grid-template-rows: auto auto minmax(0, 1fr);
@@ -740,13 +762,14 @@
         "formas formas";
       column-gap: clamp(22px, 3vw, 36px);
       row-gap: clamp(14px, 2.4vw, 28px);
-      padding: clamp(36px, 4.2vw, 52px);
       width: 100%;
       max-width: none;
       min-height: clamp(620px, 60vw, 760px);
       margin: 0 auto;
       align-content: stretch;
-      border-radius: 20px;
+    }
+    body.pdf-captura #resumen-layout > .resumen-bloque {
+      padding: clamp(28px, 3.6vw, 40px);
       box-shadow: none;
       border-width: 2px;
     }
@@ -804,17 +827,17 @@
       margin-top: clamp(28px, 3.4vw, 36px);
     }
     body.pdf-captura #cartones-grid {
-      grid-template-columns: repeat(var(--pdf-columnas, 7), minmax(0, 1fr));
-      gap: clamp(10px, 1.1vw, 16px);
+      grid-template-columns: repeat(var(--pdf-columnas, 6), minmax(0, 1fr));
+      gap: clamp(6px, 0.85vw, 12px);
       align-items: stretch;
     }
     body.pdf-captura .pdf-carton {
       max-width: none;
       width: 100%;
-      padding: clamp(6px, 1vw, 10px);
+      padding: clamp(4px, 0.7vw, 8px);
     }
     body.pdf-captura .pdf-carton-table {
-      --cell-size: clamp(26px, 3vw, 32px);
+      --cell-size: clamp(24px, 2.8vw, 30px);
     }
     body.pdf-captura .pdf-carton-datos {
       gap: 4px;
@@ -842,8 +865,8 @@
     <button id="pdf-listo-btn">PDF listo</button>
   </div>
   <div id="pdf-wrapper">
-    <section id="resumen-pdf">
-      <div id="resumen-header">
+    <div id="resumen-layout">
+      <div id="resumen-header" class="resumen-bloque">
         <div class="header-logo">
           <img id="logo" src="https://i.imgur.com/twjhNtZ.png" alt="Bingo Online">
         </div>
@@ -852,7 +875,7 @@
           <div id="tipo-sorteo-titulo"></div>
         </div>
       </div>
-      <div id="datos-generales">
+      <div id="datos-generales" class="resumen-bloque">
         <div class="dato-inline"><span class="dato-label">Tipo de sorteo:</span><span id="dato-tipo" class="dato-valor">-</span></div>
         <div class="dato-inline"><span class="dato-label">Fecha del sorteo:</span><span id="dato-fecha" class="dato-valor">-</span></div>
         <div class="dato-inline"><span class="dato-label">Hora de cierre:</span><span id="dato-cierre" class="dato-valor">-</span></div>
@@ -860,12 +883,12 @@
         <div class="dato-inline"><span class="dato-label">Valor del cartón:</span><span id="dato-valor" class="dato-valor">-</span></div>
         <div class="dato-inline"><span class="dato-label">CARTONES GRATIS MÁXIMOS POR JUGADOR:</span><span id="dato-maxgratis" class="dato-valor">-</span></div>
       </div>
-      <div class="totales-header">
+      <div class="totales-header resumen-bloque">
         <h2>CRÉDITOS TOTALES A REPARTIR</h2>
         <div id="total-premios">0</div>
       </div>
-      <div id="formas-resumen"></div>
-    </section>
+      <div id="formas-resumen" class="resumen-bloque"></div>
+    </div>
     <section id="cartones-section">
       <h2>Cartones del sorteo</h2>
       <div id="cartones-grid"></div>
@@ -1379,7 +1402,7 @@
       pdfListoBtn.style.display = 'none';
     }
     const nombreArchivo = `${construirNombreArchivo()}.pdf`;
-    const resumen = document.getElementById('resumen-pdf');
+    const resumen = document.getElementById('resumen-layout');
     if(!resumen){
       alert('No se encontró el contenido del sorteo para generar el PDF.');
       return;
@@ -1454,7 +1477,7 @@
         const altoMuestra = Math.round(muestraRect.height) || Math.round(altoTabla + altoDatos);
         const anchoReferencia = Math.max(160, anchoMuestra + 24);
         const altoReferencia = Math.max(220, altoMuestra + 24);
-        const maxColumnas = 7;
+        const maxColumnas = 6;
         const minColumnas = 3;
         let columnas = Math.floor((anchoUtil + espacioHorizontal) / (anchoReferencia + espacioHorizontal));
         if(!Number.isFinite(columnas) || columnas < minColumnas){
