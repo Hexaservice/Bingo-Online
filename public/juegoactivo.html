@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
       :root {
-          --panel-bg: rgba(255, 255, 255, 0.92);
+          --panel-bg: rgba(255, 255, 255, 0.88);
           --panel-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
           --texto-primario: #1f1f1f;
           --texto-secundario: #4b4b4b;
@@ -17,7 +17,7 @@
       }
       body {
           font-family: 'Poppins', sans-serif;
-          background: linear-gradient(rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.75)),
+          background: linear-gradient(rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.28)),
                       url('https://img.freepik.com/vetores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg');
           background-repeat: repeat;
           background-size: auto;
@@ -30,7 +30,7 @@
       main {
           width: 100%;
           max-width: 1200px;
-          padding: 54px 18px 18px;
+          padding: 8px 18px 18px;
           box-sizing: border-box;
           display: flex;
           flex-direction: column;
@@ -71,15 +71,16 @@
           align-items: center;
           justify-content: center;
           gap: 6px;
-          padding-top: 8px;
+          margin-top: 8px;
       }
       #sorteo-resumen {
           font-family: 'Bangers', cursive;
           font-size: clamp(1.8rem, 6vw, 2.6rem);
           letter-spacing: 1.6px;
-          color: #ffffff;
+          color: #1f1f1f;
           text-transform: uppercase;
           text-align: center;
+          transition: color 0.3s ease, text-shadow 0.3s ease;
       }
       #sorteo-resumen::after {
           content: '';
@@ -91,41 +92,53 @@
           background: rgba(255,255,255,0.35);
       }
       .sorteo-titulo-basico {
-          text-shadow: 0 0 14px rgba(255,255,255,0.45), 2px 2px 5px rgba(0,0,0,0.85);
+          text-shadow: 0 0 12px rgba(255,255,255,0.55), 2px 2px 5px rgba(0,0,0,0.6);
       }
       .sorteo-titulo-especial {
-          text-shadow: 0 0 12px #ff9800, 0 0 22px rgba(255,152,0,0.75), 2px 2px 5px rgba(0,0,0,0.85);
+          color: #ff7b00;
+          text-shadow: 0 0 14px rgba(255,152,0,0.55), 0 0 22px rgba(255,152,0,0.35), 2px 2px 5px rgba(0,0,0,0.6);
       }
       .sorteo-titulo-diario {
-          text-shadow: 0 0 12px #2ecc40, 0 0 22px rgba(46,204,64,0.75), 2px 2px 5px rgba(0,0,0,0.85);
+          color: #0aa128;
+          text-shadow: 0 0 14px rgba(46,204,64,0.45), 0 0 22px rgba(46,204,64,0.25), 2px 2px 5px rgba(0,0,0,0.6);
       }
       #sorteo-detalles {
           font-size: 0.9rem;
           font-weight: 500;
-          color: rgba(255,255,255,0.9);
-          text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+          color: var(--texto-primario);
           display: flex;
-          gap: 10px;
+          gap: 14px;
           align-items: center;
           justify-content: center;
           flex-wrap: wrap;
       }
-      #sorteo-detalles span {
+      #sorteo-detalles .detalle-item {
           display: inline-flex;
           align-items: center;
           gap: 4px;
       }
-      #sorteo-detalles strong {
-          color: #ffffff;
-      }
       #sorteo-detalles .detalle-tipo {
           text-transform: uppercase;
           font-weight: 700;
+          color: #222;
+      }
+      #sorteo-detalles .detalle-label {
+          font-weight: 700;
+          color: #000000;
+      }
+      #sorteo-detalles .detalle-valor {
+          font-weight: 700;
+      }
+      #sorteo-detalles .detalle-valor.fecha {
+          color: #6a0dad;
+      }
+      #sorteo-detalles .detalle-valor.hora {
+          color: #0b4cc2;
       }
       #panel-superior {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-          gap: 0;
+          grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.1fr);
+          gap: 14px;
           align-items: stretch;
       }
       #cantos-panel {
@@ -173,181 +186,292 @@
           background: transparent;
       }
       .canto-cell.cantado {
-          background: radial-gradient(circle at center, rgba(255,255,255,0.75), rgba(33, 132, 59, 0.95));
+          background: radial-gradient(circle at center, rgba(255,255,255,0.7), rgba(33,132,59,0.92));
           color: #ffffff;
           font-weight: 700;
           text-shadow: 0 0 6px rgba(0,0,0,0.85);
           transform: scale(1.05);
       }
       .canto-cell.ultimo {
-          box-shadow: 0 0 10px rgba(255,215,0,0.9);
-          transform: scale(1.12);
+          box-shadow: 0 0 14px rgba(255,215,0,0.9);
+          animation: focoUltimo 1.6s ease-in-out infinite;
       }
       #ultimo-canto {
-          font-size: 0.85rem;
+          font-size: 0.95rem;
           color: #1b5e20;
           text-align: center;
           font-weight: 600;
-          letter-spacing: 0.4px;
+          letter-spacing: 0.6px;
+          display: flex;
+          gap: 6px;
+          align-items: center;
+          justify-content: center;
+          flex-wrap: wrap;
       }
-      #formas-columna {
+      #ultimo-canto .ultimo-etiqueta {
+          text-transform: uppercase;
+          color: #1a1a1a;
+      }
+      #ultimo-canto .ultimo-total {
+          color: #0b8f1a;
+      }
+      #ultimo-canto .ultimo-numero {
+          color: #0b4cc2;
+          font-size: 1.05em;
+          display: inline-flex;
+          align-items: center;
+          animation: focoUltimo 1.6s ease-in-out infinite;
+      }
+      #panel-derecho {
           display: flex;
           flex-direction: column;
-          align-items: center;
+          gap: 16px;
+      }
+      #formas-columna {
+          background: var(--panel-bg);
+          box-shadow: var(--panel-shadow);
+          border-radius: 16px;
+          padding: 14px;
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
           gap: 12px;
-          padding: 0;
       }
       #formas-columna h2 {
           text-align: center;
+          font-size: 1.1rem;
+          letter-spacing: 1px;
       }
       #formas-panel {
           display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: flex-start;
-          gap: 10px;
-      }
-      .forma-btn {
-          position: relative;
-          width: 72px;
-          height: 72px;
-          border-radius: 20px;
-          border: none;
-          padding: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 8px 16px rgba(0,0,0,0.28);
-          cursor: pointer;
-          overflow: hidden;
-          transition: transform 0.2s ease;
-          background: #ccc;
-          color: white;
-          font-size: 1.2rem;
-          font-family: 'Bangers', cursive;
-      }
-      .forma-btn:hover {
-          transform: translateY(-3px);
-      }
-      .forma-btn img {
-          width: 75%;
-          height: 75%;
-          object-fit: contain;
-          filter: drop-shadow(0 0 4px rgba(0,0,0,0.3));
-      }
-      .forma-nombre {
-          font-size: 0.75rem;
-          text-align: center;
-          color: var(--texto-primario);
-          font-weight: 600;
-          margin-top: 4px;
-      }
-      .forma-badge {
-          position: absolute;
-          top: -10px;
-          right: -10px;
-          min-width: 26px;
-          height: 26px;
-          border-radius: 999px;
-          background: rgba(0,0,0,0.85);
-          color: white;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 0.82rem;
-          border: 2px solid rgba(255,255,255,0.85);
-          font-family: 'Bangers', cursive;
-          box-shadow: 0 4px 8px rgba(0,0,0,0.35);
-      }
-      .forma-btn.sin-ganadores {
-          opacity: 0.75;
-          cursor: default;
-      }
-      #cartones-panel {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          padding: 0 6px 6px;
-      }
-      #cartones-panel h2 {
-          text-align: center;
-      }
-      #cartones-grid {
-          display: flex;
           flex-wrap: wrap;
           justify-content: center;
-          gap: 16px;
+          gap: 10px;
       }
-      .carton-mini-wrapper {
+      .forma-wrapper {
           display: flex;
           flex-direction: column;
           align-items: center;
           gap: 4px;
       }
-      .carton-mini-wrapper.ganador .carton-mini {
-          box-shadow: 0 0 16px rgba(255,215,0,0.7);
-      }
-      .carton-mini {
-          border-collapse: separate;
-          border-spacing: 0;
-          background: linear-gradient(150deg, rgba(255,255,255,0.95), rgba(244,247,250,0.9));
-          border-radius: 10px;
+      .forma-boton {
+          position: relative;
+          min-width: 58px;
+          height: 48px;
+          border-radius: 14px;
+          border: 3px solid #FFD700;
+          padding: 0 12px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 6px 16px rgba(0,0,0,0.28);
+          cursor: pointer;
           overflow: hidden;
-          width: clamp(150px, 26vw, 190px);
-          table-layout: fixed;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-          display: grid;
-          grid-template-columns: repeat(5, 1fr);
-          grid-auto-rows: 1fr;
-          aspect-ratio: 5 / 6;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          background: linear-gradient(180deg, #ffffff, #f1f1f1);
+          color: #1a1a1a;
+          font-size: 1.05rem;
+          font-family: 'Bangers', cursive;
+          text-transform: uppercase;
       }
-      .carton-mini thead,
-      .carton-mini tbody,
-      .carton-mini tr {
-          display: contents;
+      .forma-boton:hover {
+          transform: translateY(-2px) scale(1.02);
+          box-shadow: 0 10px 20px rgba(0,0,0,0.28);
       }
-      .carton-mini th,
-      .carton-mini td {
-          border: 1px solid rgba(0,0,0,0.14);
-          text-align: center;
-          font-weight: 700;
-          font-size: 0.72rem;
-          min-width: 0;
+      .forma-boton.sin-ganadores {
+          opacity: 0.75;
+          cursor: default;
+      }
+      .forma-burbuja {
+          position: absolute;
+          top: -10px;
+          right: -10px;
+          min-width: 24px;
+          height: 24px;
+          border-radius: 999px;
+          background: linear-gradient(160deg, rgba(0,0,0,0.9), rgba(60,60,60,0.85));
+          color: white;
           display: flex;
           align-items: center;
           justify-content: center;
-          aspect-ratio: 1/1;
-          background: #ffffff;
-          color: #1a1a1a;
-          padding: 0;
+          font-size: 0.72rem;
+          border: 2px solid rgba(255,215,0,0.8);
+          font-family: 'Bangers', cursive;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.35);
       }
-      .carton-mini th {
-          font-size: 0.88rem;
-          color: #ffffff;
-          background: linear-gradient(135deg, #0b5394, #1c6dd0);
-          text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+      .forma-nombre {
+          font-size: 0.72rem;
+          text-align: center;
+          color: var(--texto-primario);
+          font-weight: 600;
       }
-      .carton-mini td.free {
-          background: linear-gradient(135deg, #ffb347, #ff7b00);
+      #carton-destacado {
+          background: var(--panel-bg);
+          box-shadow: var(--panel-shadow);
+          border-radius: 16px;
+          padding: 14px;
+          display: none;
+          flex-direction: column;
+          gap: 10px;
+          align-items: center;
       }
-      .carton-mini td.free .estrella {
-          color: #ffffff;
-          text-shadow: 0 0 6px rgba(0,0,0,0.3);
+      #carton-destacado.activo {
+          display: flex;
       }
-      .carton-mini .estrella {
-          font-size: 1.2rem;
-          line-height: 1;
+      #cartones-panel {
+          background: var(--panel-bg);
+          box-shadow: var(--panel-shadow);
+          border-radius: 16px;
+          padding: 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
       }
-      .carton-mini td.numero-cantado {
-          background: radial-gradient(circle at center, rgba(255,255,153,0.85), rgba(33,132,59,0.95));
-          color: #ffffff;
-          text-shadow: 0 0 6px rgba(255,255,255,0.9);
+      #cartones-panel h2 {
+          text-align: center;
+      }
+      #cartones-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 12px;
+      }
+      .carton-mini-wrapper {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 6px;
+          cursor: pointer;
+      }
+      .carton-mini-wrapper.seleccionado {
+          transform: translateY(-2px);
+      }
+      .carton-mini-wrapper.ganador .carton-tabla {
+          box-shadow: 0 0 16px rgba(255,215,0,0.7);
+      }
+      .carton-mini-wrapper.seleccionado .carton-tabla {
+          outline: 3px solid rgba(255,215,0,0.55);
+          outline-offset: 2px;
+      }
+      .carton-mini-wrapper:hover .carton-tabla {
+          transform: translateY(-1px) scale(1.01);
       }
       .carton-info {
-          font-size: 0.68rem;
-          color: #ffffff;
+          font-size: 0.72rem;
+          color: var(--texto-primario);
           text-align: center;
-          text-shadow: 1px 1px 3px rgba(0,0,0,0.75);
+          font-weight: 600;
+      }
+      .carton-tabla {
+          --cell-size: clamp(24px, 5.8vw, 34px);
+          width: calc(var(--cell-size) * 5);
+          border-collapse: separate;
+          border-spacing: 0;
+          background: linear-gradient(160deg, rgba(255,255,255,0.98), rgba(240,240,240,0.92));
+          border-radius: 14px;
+          overflow: hidden;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+      }
+      .carton-tabla thead th,
+      .carton-tabla tbody td {
+          width: var(--cell-size);
+          height: var(--cell-size);
+          border: 1px solid rgba(70,70,70,0.35);
+          text-align: center;
+          font-weight: 700;
+          color: #1a1a1a;
+          padding: 0;
+          position: relative;
+          overflow: hidden;
+          background: rgba(255,255,255,0.95);
+      }
+      .carton-tabla thead th {
+          font-size: calc(var(--cell-size) * 0.75);
+          background: linear-gradient(135deg, #0b5394, #1c6dd0);
+          color: #ffffff;
+          text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+      }
+      .carton-tabla.ganador thead th {
+          animation: zoomPulse 2.2s ease-in-out infinite;
+      }
+      .carton-tabla tbody td {
+          font-size: calc(var(--cell-size) * 0.55);
+          transition: background 0.4s ease, transform 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+      }
+      .carton-tabla td.free {
+          background: radial-gradient(circle, #ffbd4f, #ffe8b3);
+          color: #ffffff;
+          font-size: calc(var(--cell-size) * 0.65);
+      }
+      .carton-tabla .estrella {
+          font-size: 1.2em;
+          line-height: 1;
+          text-shadow: 0 0 4px rgba(0,0,0,0.3);
+      }
+      .carton-tabla .cell-content {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
+          line-height: 1;
+          font-weight: inherit;
+      }
+      .carton-tabla td.celda-cantada {
+          background: radial-gradient(circle at center, rgba(37,155,54,0.3), rgba(0,120,28,0.82));
+          color: #ffffff;
+          box-shadow: inset 0 0 8px rgba(0,0,0,0.45);
+      }
+      .carton-tabla td.celda-cantada .cell-content {
+          text-shadow: 0 0 6px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.85);
+      }
+      .carton-tabla td.forma-resaltada {
+          background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.96));
+          color: #1a1a1a;
+      }
+      .carton-tabla td.forma-resaltada .cell-content {
+          animation: zoomPulse 1.4s ease-in-out infinite;
+          text-shadow: 0 0 8px rgba(0,0,0,0.65);
+          color: #ffffff;
+      }
+      .carton-tabla td.forma-resaltada::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(180deg, rgba(var(--forma-rgb, 0, 120, 255), 0.9), rgba(255,255,255,0.05));
+          mix-blend-mode: multiply;
+          z-index: 0;
+      }
+      .carton-tabla td.forma-resaltada .cell-content {
+          position: relative;
+          z-index: 1;
+      }
+      .carton-tabla--principal {
+          --cell-size: clamp(42px, 8.5vw, 64px);
+      }
+      .carton-tabla--mini {
+          --cell-size: clamp(26px, 6vw, 36px);
+      }
+      #carton-destacado .carton-tabla {
+          width: clamp(260px, 85%, 480px);
+      }
+      #carton-destacado .carton-visor-info {
+          margin-top: 6px;
+      }
+      .carton-mini-wrapper .carton-tabla {
+          width: 100%;
+      }
+      .carton-visor-info {
+          font-size: 0.85rem;
+          font-weight: 700;
+          color: var(--texto-primario);
+          text-align: center;
+      }
+      .carton-etiqueta {
+          font-size: 0.68rem;
+          font-weight: 600;
+          color: rgba(0,0,0,0.6);
+          letter-spacing: 1px;
+          text-transform: uppercase;
       }
       .mensaje {
           font-size: 0.85rem;
@@ -434,13 +558,23 @@
           font-size: 0.85rem;
           color: var(--texto-secundario);
       }
+      @keyframes zoomPulse {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.12); }
+          100% { transform: scale(1); }
+      }
+      @keyframes focoUltimo {
+          0% { transform: scale(1); }
+          45% { transform: scale(1.18); }
+          100% { transform: scale(1); }
+      }
       @media (max-width: 768px) {
           :root {
               --canto-size: clamp(26px, 9vw, 38px);
               --mini-cell-size: clamp(18px, 6vw, 24px);
           }
           main {
-              padding: 64px 12px 16px;
+              padding: 20px 12px 16px;
           }
           .back-btn {
               width: 40px;
@@ -450,10 +584,22 @@
           #panel-superior {
               grid-template-columns: 1fr;
           }
+          #panel-derecho {
+              gap: 12px;
+          }
           #formas-panel {
-              flex-direction: row;
-              flex-wrap: wrap;
               justify-content: center;
+          }
+          .forma-boton {
+              min-width: 52px;
+              height: 42px;
+              font-size: 0.95rem;
+          }
+          #carton-destacado .carton-tabla {
+              max-width: clamp(240px, 92vw, 380px);
+          }
+          #cartones-grid {
+              grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
           }
       }
       @media (orientation: landscape) and (max-width: 900px) {
@@ -465,10 +611,10 @@
               padding-top: 58px;
           }
           #panel-superior {
-              grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+              grid-template-columns: 1fr 1fr;
           }
           #cartones-grid {
-              grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+              grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
               gap: 10px;
           }
       }
@@ -482,20 +628,23 @@
       <div id="sorteo-detalles"></div>
     </header>
     <section id="panel-superior">
-      <div id="cantos-panel">
+      <div id="cantos-panel" class="panel">
         <div id="cantos-grid"></div>
         <div id="ultimo-canto"></div>
       </div>
-      <aside id="formas-columna">
-        <h2>Formas en juego</h2>
-        <div id="formas-panel"></div>
-        <div id="formas-mensaje" class="mensaje"></div>
+      <aside id="panel-derecho">
+        <div id="formas-columna">
+          <h2>Cartones ganadores con formas</h2>
+          <div id="formas-panel"></div>
+          <div id="formas-mensaje" class="mensaje"></div>
+        </div>
+        <div id="carton-destacado" aria-live="polite"></div>
+        <section id="cartones-panel">
+          <h2>Mis cartones</h2>
+          <div id="cartones-mensaje" class="mensaje"></div>
+          <div id="cartones-grid"></div>
+        </section>
       </aside>
-    </section>
-    <section id="cartones-panel">
-      <h2>Mis cartones</h2>
-      <div id="cartones-mensaje" class="mensaje"></div>
-      <div id="cartones-grid"></div>
     </section>
   </main>
 
@@ -534,6 +683,7 @@
   const formasMensajeEl = document.getElementById('formas-mensaje');
   const cartonesGridEl = document.getElementById('cartones-grid');
   const cartonesMensajeEl = document.getElementById('cartones-mensaje');
+  const cartonDestacadoEl = document.getElementById('carton-destacado');
   const modalGanadores = document.getElementById('modal-ganadores');
   const modalCerrarBtn = document.getElementById('modal-cerrar');
   const modalTituloEl = document.getElementById('modal-titulo');
@@ -555,6 +705,9 @@
   let activeSorteo = null;
   let activeSorteoId = null;
   let usuarioActual = null;
+
+  let cartonSeleccionadoId = null;
+  const animacionesCartones = new Map();
 
   let unsubscribeSorteos = null;
   let unsubscribeCantos = null;
@@ -582,6 +735,214 @@
         cantoCellsMap.set(numero,celda);
       }
     }
+  }
+
+  function obtenerColorParaForma(idx){
+    const numero=Number(idx);
+    if(Number.isFinite(numero) && numero>0){
+      const posicion=(numero-1)%FORM_COLORS.length;
+      return FORM_COLORS[posicion];
+    }
+    return FORM_COLORS[0];
+  }
+
+  function crearTablaCartonVisual(carton, modo='mini'){
+    const tabla=document.createElement('table');
+    tabla.className=`carton-tabla carton-tabla--${modo}`;
+    tabla.dataset.cartonId=carton.id||'';
+    const esGanador=Array.isArray(carton.formasGanadas)&&carton.formasGanadas.length>0;
+    if(esGanador){
+      tabla.classList.add('ganador');
+    }
+    const thead=document.createElement('thead');
+    const trHead=document.createElement('tr');
+    BINGO_LETRAS.forEach(letra=>{
+      const th=document.createElement('th');
+      th.textContent=letra;
+      trHead.appendChild(th);
+    });
+    thead.appendChild(trHead);
+    tabla.appendChild(thead);
+    const tbody=document.createElement('tbody');
+    const mapaValor=new Map();
+    (carton.posiciones||[]).forEach(p=>{
+      const fila=Number(p.r);
+      const col=Number(p.c);
+      if(Number.isInteger(fila) && Number.isInteger(col)){
+        mapaValor.set(`${fila}-${col}`,p.valor);
+      }
+    });
+    const celdas=new Map();
+    for(let r=0;r<5;r++){
+      const fila=document.createElement('tr');
+      for(let c=0;c<5;c++){
+        const td=document.createElement('td');
+        td.dataset.pos=`${r}-${c}`;
+        let cantada='0';
+        if(r===2 && c===2){
+          td.classList.add('free');
+          const icono=document.createElement('span');
+          icono.className='cell-content estrella';
+          icono.textContent='★';
+          td.appendChild(icono);
+        }else{
+          const valor=mapaValor.get(`${r}-${c}`);
+          const span=document.createElement('span');
+          span.className='cell-content';
+          if(valor!==undefined && valor!==null){
+            const numero=Number(valor);
+            const texto=Number.isFinite(numero)?String(numero).padStart(2,'0'):String(valor);
+            span.textContent=texto;
+            td.dataset.valor=numero;
+            if(cantosIndiceMap.has(numero)){
+              cantada='1';
+              td.classList.add('celda-cantada');
+            }
+          }else{
+            span.textContent='—';
+          }
+          td.appendChild(span);
+        }
+        td.dataset.cantada=cantada;
+        fila.appendChild(td);
+        celdas.set(`${r}-${c}`,td);
+      }
+      tbody.appendChild(fila);
+    }
+    tabla.appendChild(tbody);
+    return {tabla, celdas, letras:Array.from(trHead.children)};
+  }
+
+  function obtenerNumeroCarton(carton){
+    const bruto=carton.cartonNum ?? carton.Ncarton;
+    if(bruto===undefined || bruto===null) return '--';
+    const numero=Number(bruto);
+    if(Number.isFinite(numero)){
+      return String(numero).padStart(4,'0');
+    }
+    const texto=String(bruto).trim();
+    return texto||'--';
+  }
+
+  function formatearInfoCarton(carton){
+    const partes=[];
+    const numero=obtenerNumeroCarton(carton);
+    partes.push(`Cartón ${numero==='--'?'--':`#${numero}`}`);
+    const tipo=(carton.tipocarton||'Pagado').toString().toUpperCase();
+    partes.push(tipo);
+    if(carton.alias){
+      partes.push(`Alias: ${carton.alias}`);
+    }
+    return partes.join(' · ');
+  }
+
+  function formatearDetalleCarton(carton){
+    const partes=[];
+    const numero=obtenerNumeroCarton(carton);
+    partes.push(`Cartón ${numero==='--'?'--':`#${numero}`}`);
+    if(carton.alias){
+      partes.push(`Alias: ${carton.alias}`);
+    }
+    const tipo=(carton.tipocarton||'Pagado').toString().toUpperCase();
+    partes.push(`Tipo: ${tipo}`);
+    return partes.join(' • ');
+  }
+
+  function detenerAnimacionCarton(cartonId){
+    const registro=animacionesCartones.get(cartonId);
+    if(registro && registro.timer){
+      clearTimeout(registro.timer);
+    }
+    animacionesCartones.delete(cartonId);
+  }
+
+  function detenerTodasAnimaciones(){
+    animacionesCartones.forEach(registro=>{
+      if(registro && registro.timer){
+        clearTimeout(registro.timer);
+      }
+    });
+    animacionesCartones.clear();
+  }
+
+  function aplicarResumenCarton(info){
+    if(!info) return;
+    info.celdas.forEach(celda=>{
+      celda.classList.remove('forma-resaltada');
+      celda.style.removeProperty('--forma-rgb');
+      if(celda.dataset.cantada==='1'){
+        celda.classList.add('celda-cantada');
+      }else{
+        celda.classList.remove('celda-cantada');
+      }
+    });
+  }
+
+  function aplicarFormaCarton(info, datosForma){
+    if(!info || !datosForma) return;
+    const rgb=hexToRgb(datosForma.color);
+    const rgbTexto=rgb?`${rgb.r},${rgb.g},${rgb.b}`:'0,120,255';
+    info.celdas.forEach(celda=>{
+      celda.classList.remove('forma-resaltada');
+      celda.style.removeProperty('--forma-rgb');
+      if(celda.dataset.cantada==='1'){
+        celda.classList.remove('celda-cantada');
+      }
+    });
+    (datosForma.posiciones||[]).forEach(pos=>{
+      const clave=`${pos.r}-${pos.c}`;
+      const celda=info.celdas.get(clave);
+      if(!celda || celda.classList.contains('free')) return;
+      celda.classList.add('forma-resaltada');
+      celda.style.setProperty('--forma-rgb',rgbTexto);
+    });
+  }
+
+  function configurarAnimacionCarton(carton, tablasInfo){
+    if(!carton || !Array.isArray(tablasInfo) || !tablasInfo.length) return;
+    detenerAnimacionCarton(carton.id);
+    tablasInfo.forEach(aplicarResumenCarton);
+    const formasGanadas=Array.isArray(carton.formasGanadas)?carton.formasGanadas:[];
+    const formasPreparadas=formasGanadas
+      .map(item=>{
+        const posiciones=item?.forma?.posicionesNormalizadas||[];
+        if(!posiciones.length) return null;
+        const idx=item?.forma?.idx ?? item?.idx;
+        return {
+          posiciones,
+          color:obtenerColorParaForma(idx)
+        };
+      })
+      .filter(Boolean);
+    if(!formasPreparadas.length){
+      return;
+    }
+    const secuencias=[];
+    formasPreparadas.forEach(data=>{
+      secuencias.push({tipo:'forma',data});
+      secuencias.push({tipo:'resumen'});
+    });
+    if(!secuencias.length){
+      return;
+    }
+    let indice=0;
+    const registro={timer:null};
+    animacionesCartones.set(carton.id,registro);
+    const ejecutar=()=>{
+      if(!animacionesCartones.has(carton.id)) return;
+      const actual=secuencias[indice];
+      const duracion=actual.tipo==='forma'?3000:1000;
+      if(actual.tipo==='forma'){
+        tablasInfo.forEach(info=>aplicarFormaCarton(info,actual.data));
+      }else{
+        tablasInfo.forEach(aplicarResumenCarton);
+      }
+      registro.timer=setTimeout(()=>{
+        indice=(indice+1)%secuencias.length;
+        ejecutar();
+      },duracion);
+    };
+    ejecutar();
   }
 
   crearGridCantos();
@@ -706,13 +1067,13 @@
     sorteoResumenEl.textContent=nombre||'Sorteo en vivo';
     const partes=[];
     if(tipo){
-      partes.push(`<span class="detalle-tipo">${tipo}</span>`);
+      partes.push(`<span class="detalle-item"><span class="detalle-tipo">${tipo}</span></span>`);
     }
     if(fecha){
-      partes.push(`<span>Fecha: <strong>${formatearFecha(fecha)}</strong></span>`);
+      partes.push(`<span class="detalle-item"><span class="detalle-label">Fecha:</span><span class="detalle-valor fecha">${formatearFecha(fecha)}</span></span>`);
     }
     if(hora){
-      partes.push(`<span>Hora: <strong>${hora}</strong></span>`);
+      partes.push(`<span class="detalle-item"><span class="detalle-label">Hora:</span><span class="detalle-valor hora">${hora}</span></span>`);
     }
     sorteoDetallesEl.innerHTML=partes.join(' ');
   }
@@ -735,7 +1096,7 @@
     });
     if(total){
       const etiqueta=cantosEtiquetas[total-1] || generarEtiquetaDesdeNumero(cantosOrdenados[total-1]);
-      ultimoCantoEl.textContent=`Último canto (${total}): ${etiqueta}`;
+      ultimoCantoEl.innerHTML=`<span class="ultimo-etiqueta">Último</span><span class="ultimo-total">(${total})</span>: <span class="ultimo-numero">${etiqueta}</span>`;
     }else{
       ultimoCantoEl.textContent='Aún no se han registrado cantos.';
     }
@@ -752,42 +1113,39 @@
       formasMensajeEl.textContent='No hay formas registradas para este sorteo.';
       return;
     }
+    const fragment=document.createDocumentFragment();
     formasActivas.forEach(forma=>{
-      const colorBase=FORM_COLORS[(Number(forma.idx||1)-1)%FORM_COLORS.length];
+      const indice=Number(forma.idx||1);
+      const colorBase=FORM_COLORS[(Number.isFinite(indice)&&indice>0?indice-1:0)%FORM_COLORS.length];
       const wrapper=document.createElement('div');
-      wrapper.style.display='flex';
-      wrapper.style.flexDirection='column';
-      wrapper.style.alignItems='center';
-      wrapper.style.gap='4px';
-      const btn=document.createElement('button');
-      btn.className='forma-btn';
-      const colorClaro=ajustarLuminosidad(colorBase,0.25);
-      const colorOscuro=ajustarLuminosidad(colorBase,-0.35);
-      btn.style.background=`linear-gradient(155deg, ${colorClaro}, ${colorOscuro})`;
-      btn.style.boxShadow='0 12px 20px rgba(0,0,0,0.28)';
-      if(forma.premioImagen){
-        const img=document.createElement('img');
-        img.src=forma.premioImagen;
-        img.alt=forma.nombre||`Forma ${forma.idx}`;
-        btn.appendChild(img);
-      }else{
-        btn.textContent=forma.idx?`F${String(forma.idx).padStart(2,'0')}`:'FORMA';
-      }
+      wrapper.className='forma-wrapper';
+      const boton=document.createElement('button');
+      boton.type='button';
+      boton.className='forma-boton';
+      const colorSuperior=ajustarLuminosidad(colorBase,0.2);
+      const colorTexto=ajustarLuminosidad(colorBase,-0.55);
+      boton.style.background=`linear-gradient(180deg, ${colorSuperior}, #ffffff)`;
+      boton.style.borderColor=ajustarLuminosidad(colorBase,-0.05);
+      boton.style.color=colorTexto;
+      const indiceTexto=forma.idx!==undefined&&forma.idx!==null?String(forma.idx).replace(/^0+/,''):'';
+      boton.textContent=indiceTexto?`F${indiceTexto}`:'FORMA';
       const ganadoresInfo=cartonesGanadoresPorForma.get(forma.idx)||{cartones:[]};
       const totalGanadores=(ganadoresInfo.cartones||[]).length;
-      const badge=document.createElement('div');
-      badge.className='forma-badge';
-      badge.style.background=ajustarLuminosidad(colorBase,-0.55);
-      badge.style.border=`2px solid ${ajustarLuminosidad(colorBase,0.25)}`;
-      badge.textContent=totalGanadores;
-      btn.appendChild(badge);
+      const burbuja=document.createElement('span');
+      burbuja.className='forma-burbuja';
+      const tonoBurbuja1=ajustarLuminosidad(colorBase,-0.35);
+      const tonoBurbuja2=ajustarLuminosidad(colorBase,-0.65);
+      burbuja.style.background=`linear-gradient(150deg, ${tonoBurbuja1}, ${tonoBurbuja2})`;
+      burbuja.style.borderColor=ajustarLuminosidad(colorBase,0.25);
+      burbuja.textContent=totalGanadores;
+      boton.appendChild(burbuja);
       if(totalGanadores>0){
-        btn.addEventListener('click',()=>abrirModalGanadores(forma));
+        boton.addEventListener('click',()=>abrirModalGanadores(forma));
       }else{
-        btn.classList.add('sin-ganadores');
+        boton.classList.add('sin-ganadores');
       }
-      btn.title=forma.nombre||`Forma ${forma.idx}`;
-      wrapper.appendChild(btn);
+      boton.title=forma.nombre?forma.nombre:`Forma ${indiceTexto||forma.idx||''}`;
+      wrapper.appendChild(boton);
       if(forma.nombre){
         const etiqueta=document.createElement('div');
         etiqueta.className='forma-nombre';
@@ -795,75 +1153,20 @@
         etiqueta.style.color=ajustarLuminosidad(colorBase,-0.45);
         wrapper.appendChild(etiqueta);
       }
-      formasPanelEl.appendChild(wrapper);
+      fragment.appendChild(wrapper);
     });
-  }
-
-  function crearMiniCartonDOM(posiciones){
-    const tabla=document.createElement('table');
-    tabla.className='carton-mini';
-    const thead=document.createElement('thead');
-    const trHead=document.createElement('tr');
-    BINGO_LETRAS.forEach(letra=>{
-      const th=document.createElement('th');
-      th.textContent=letra;
-      trHead.appendChild(th);
-    });
-    thead.appendChild(trHead);
-    tabla.appendChild(thead);
-    const tbody=document.createElement('tbody');
-    const mapaValor=new Map();
-    posiciones.forEach(p=>{
-      mapaValor.set(`${p.r}-${p.c}`,p.valor);
-    });
-    for(let r=0;r<5;r++){
-      const tr=document.createElement('tr');
-      for(let c=0;c<5;c++){
-        const td=document.createElement('td');
-        if(r===2 && c===2){
-          td.classList.add('free');
-          const icono=document.createElement('span');
-          icono.className='estrella';
-          icono.textContent='★';
-          td.appendChild(icono);
-        }else{
-          const valor=mapaValor.get(`${r}-${c}`);
-          if(valor!==undefined){
-            const texto=valor.toString().padStart(2,'0');
-            td.textContent=texto;
-            if(cantosIndiceMap.has(valor)){
-              td.classList.add('numero-cantado');
-            }else{
-              td.classList.add('numero-pendiente');
-            }
-          }
-        }
-        tr.appendChild(td);
-      }
-      tbody.appendChild(tr);
-    }
-    tabla.appendChild(tbody);
-    return tabla;
-  }
-
-  function aplicarFondosGanadores(cartaEl, posiciones, formaIdx){
-    const colorBase=FORM_COLORS[(Number(formaIdx||1)-1)%FORM_COLORS.length];
-    const celdas=cartaEl.querySelectorAll('tbody td');
-    posiciones.forEach(pos=>{
-      const idx=pos.r*5+pos.c;
-      if(idx>=0 && idx<celdas.length){
-        const celda=celdas[idx];
-        if(!celda || celda.classList.contains('free')) return;
-        celda.style.background=colorConTransparencia(colorBase,0.35);
-      }
-    });
+    formasPanelEl.appendChild(fragment);
   }
 
   function renderCartonesJugador(){
+    detenerTodasAnimaciones();
     cartonesGridEl.innerHTML='';
-    const lista=Array.from(cartonesSorteo.values()).filter(c=>c.userId=== (usuarioActual?usuarioActual.uid:null));
+    cartonDestacadoEl.innerHTML='';
+    cartonDestacadoEl.classList.remove('activo');
+    const lista=Array.from(cartonesSorteo.values()).filter(c=>c.userId===(usuarioActual?usuarioActual.uid:null));
     if(!lista.length){
       cartonesMensajeEl.textContent='No tienes cartones participando en este sorteo.';
+      cartonSeleccionadoId=null;
       return;
     }
     cartonesMensajeEl.textContent='';
@@ -883,32 +1186,61 @@
       const numB=b.cartonNum ?? b.Ncarton ?? Number.MAX_SAFE_INTEGER;
       return numA-numB;
     });
+    if(!cartonSeleccionadoId || !decorados.some(c=>c.id===cartonSeleccionadoId)){
+      cartonSeleccionadoId=decorados[0].id;
+    }
+    const tablasPorCarton=new Map();
+    const registrarTabla=(cartonId,info)=>{
+      if(!info) return;
+      if(!tablasPorCarton.has(cartonId)) tablasPorCarton.set(cartonId,[]);
+      tablasPorCarton.get(cartonId).push(info);
+    };
+    const fragment=document.createDocumentFragment();
     decorados.forEach(carton=>{
       const wrapper=document.createElement('div');
       wrapper.className='carton-mini-wrapper';
       if(carton.formasGanadas.length){
         wrapper.classList.add('ganador');
       }
-      const tabla=crearMiniCartonDOM(carton.posiciones);
-      if((carton.tipocarton||'').toLowerCase()==='gratis'){
-        tabla.dataset.tipo='gratis';
+      if(carton.id===cartonSeleccionadoId){
+        wrapper.classList.add('seleccionado');
       }
-      wrapper.appendChild(tabla);
-      carton.formasGanadas.forEach(f=>{
-        aplicarFondosGanadores(tabla,f.forma.posicionesNormalizadas,f.forma.idx);
-      });
+      const tablaInfo=crearTablaCartonVisual(carton,'mini');
+      aplicarResumenCarton(tablaInfo);
+      registrarTabla(carton.id,tablaInfo);
+      wrapper.appendChild(tablaInfo.tabla);
       const info=document.createElement('div');
       info.className='carton-info';
-      const numero=(carton.cartonNum ?? carton.Ncarton ?? '').toString();
-      const partesInfo=[];
-      partesInfo.push(`Cartón ${numero?`#${numero.padStart(4,'0')}`:'--'}`);
-      partesInfo.push((carton.tipocarton||'Pagado').toUpperCase());
-      if(carton.alias){
-        partesInfo.push(`Alias: ${carton.alias}`);
-      }
-      info.textContent=partesInfo.join(' · ');
+      info.textContent=formatearInfoCarton(carton);
       wrapper.appendChild(info);
-      cartonesGridEl.appendChild(wrapper);
+      wrapper.addEventListener('click',()=>{
+        if(cartonSeleccionadoId!==carton.id){
+          cartonSeleccionadoId=carton.id;
+          renderCartonesJugador();
+        }
+      });
+      fragment.appendChild(wrapper);
+    });
+    cartonesGridEl.appendChild(fragment);
+    const seleccionado=decorados.find(c=>c.id===cartonSeleccionadoId);
+    if(seleccionado){
+      const etiqueta=document.createElement('div');
+      etiqueta.className='carton-etiqueta';
+      etiqueta.textContent='Cartón seleccionado';
+      const tablaInfoPrincipal=crearTablaCartonVisual(seleccionado,'principal');
+      aplicarResumenCarton(tablaInfoPrincipal);
+      registrarTabla(seleccionado.id,tablaInfoPrincipal);
+      cartonDestacadoEl.appendChild(etiqueta);
+      cartonDestacadoEl.appendChild(tablaInfoPrincipal.tabla);
+      const infoDetalle=document.createElement('div');
+      infoDetalle.className='carton-visor-info';
+      infoDetalle.textContent=formatearDetalleCarton(seleccionado);
+      cartonDestacadoEl.appendChild(infoDetalle);
+      cartonDestacadoEl.classList.add('activo');
+    }
+    decorados.forEach(carton=>{
+      const tablas=tablasPorCarton.get(carton.id)||[];
+      configurarAnimacionCarton(carton,tablas);
     });
   }
 
@@ -934,9 +1266,11 @@
       ordenados.forEach(carton=>{
         const card=document.createElement('div');
         card.className='ganador-card';
-        const tabla=crearMiniCartonDOM(carton.posiciones);
-        aplicarFondosGanadores(tabla,forma.posicionesNormalizadas,forma.idx);
-        card.appendChild(tabla);
+        const cartonExtendido={...carton, formasGanadas:[{forma}]};
+        const tablaInfo=crearTablaCartonVisual(cartonExtendido,'mini');
+        aplicarResumenCarton(tablaInfo);
+        aplicarFormaCarton(tablaInfo,{posiciones:forma.posicionesNormalizadas||[],color:obtenerColorParaForma(forma.idx)});
+        card.appendChild(tablaInfo.tabla);
         const infoBox=document.createElement('div');
         infoBox.className='ganador-info';
         const numero=(carton.cartonNum ?? carton.Ncarton ?? '').toString();
