@@ -242,47 +242,35 @@
           animation: focoUltimo 1.6s ease-in-out infinite;
       }
       #panel-derecho {
-          display: flex;
-          flex-direction: column;
+          display: grid;
+          grid-template-rows: auto auto minmax(0, 1fr);
           gap: 12px;
-      }
-      #formas-columna {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 10px;
-          text-align: center;
-          padding: 0;
-          width: 100%;
-      }
-      #formas-columna h2 {
-          text-align: center;
-          font-family: 'Poppins', sans-serif;
-          font-weight: 600;
-          font-size: clamp(0.82rem, 2.2vw, 1.05rem);
-          letter-spacing: 1px;
-          margin-bottom: 0;
-          color: #ff7b00;
+          align-content: start;
       }
       #formas-panel {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(clamp(62px, 18vw, 96px), 1fr));
-          justify-items: center;
-          align-items: start;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: stretch;
+          justify-content: flex-start;
           gap: clamp(4px, 1.4vw, 10px);
           width: 100%;
       }
+      #formas-panel:empty {
+          padding: 0;
+          background: none;
+          box-shadow: none;
+      }
       .forma-wrapper {
+          position: relative;
           display: flex;
           flex-direction: column;
           align-items: center;
           gap: clamp(2px, 0.8vw, 6px);
-          position: relative;
-          width: 100%;
+          flex: 0 0 auto;
+          min-width: clamp(62px, 18vw, 96px);
       }
-      .forma-boton {
+      .forma-chip {
           width: 100%;
-          min-width: 0;
           min-height: clamp(26px, 7vw, 34px);
           border-radius: 8px;
           border: 1.4px solid #2d2d2d;
@@ -300,14 +288,17 @@
           text-transform: uppercase;
           text-shadow: 0 0 6px rgba(0,0,0,0.85);
       }
-      .forma-boton:hover {
+      .forma-chip:hover,
+      .forma-chip:focus-visible {
           transform: translateY(-1px) scale(1.03);
           box-shadow: 0 0 14px rgba(0,0,0,0.45);
+          outline: none;
       }
-      .forma-boton.sin-ganadores {
+      .forma-chip.sin-ganadores {
           opacity: 0.65;
           cursor: default;
           filter: saturate(0.55);
+          pointer-events: none;
       }
       .forma-burbuja {
           position: absolute;
@@ -710,10 +701,9 @@
               grid-template-columns: 1fr;
           }
           #panel-derecho {
-              align-items: stretch;
-              justify-content: flex-start;
+              grid-template-rows: auto auto minmax(0, 1fr);
           }
-          #formas-columna {
+          #formas-panel {
               position: sticky;
               top: 8px;
               z-index: 5;
@@ -721,6 +711,23 @@
               background: var(--panel-bg);
               border-radius: 16px;
               box-shadow: var(--panel-shadow);
+              flex-wrap: nowrap;
+              justify-content: flex-start;
+              overflow-x: auto;
+              overflow-y: hidden;
+          }
+          #formas-panel:empty {
+              position: static;
+          }
+          #formas-panel::-webkit-scrollbar {
+              height: 6px;
+          }
+          #formas-panel::-webkit-scrollbar-thumb {
+              background: rgba(0, 0, 0, 0.25);
+              border-radius: 999px;
+          }
+          #formas-panel {
+              scrollbar-color: rgba(0,0,0,0.25) transparent;
           }
       }
 
@@ -745,10 +752,9 @@
               gap: 10px;
           }
           #formas-panel {
-              grid-template-columns: repeat(auto-fit, minmax(clamp(64px, 26vw, 120px), 1fr));
               gap: clamp(4px, 2vw, 12px);
           }
-          .forma-boton {
+          .forma-chip {
               min-height: clamp(24px, 9vw, 32px);
               font-size: clamp(0.6rem, 3.2vw, 0.78rem);
               padding: clamp(2px, 1vw, 6px);
@@ -808,11 +814,8 @@
         <div id="ultimo-canto"></div>
       </div>
       <aside id="panel-derecho">
-        <div id="formas-columna">
-          <h2>Cartones ganadores</h2>
-          <div id="formas-panel"></div>
-          <div id="formas-mensaje" class="mensaje"></div>
-        </div>
+        <div id="formas-panel" role="list" aria-label="Cartones ganadores"></div>
+        <div id="formas-mensaje" class="mensaje"></div>
         <div id="carton-destacado" aria-live="polite"></div>
       </aside>
     </section>
@@ -1492,18 +1495,20 @@
       const colorBase=FORM_COLORS[(Number.isFinite(indice)&&indice>0?indice-1:0)%FORM_COLORS.length];
       const wrapper=document.createElement('div');
       wrapper.className='forma-wrapper';
-      const boton=document.createElement('button');
-      boton.type='button';
-      boton.className='forma-boton';
+      wrapper.setAttribute('role','listitem');
+      const chip=document.createElement('div');
+      chip.className='forma-chip';
+      chip.setAttribute('role','button');
+      chip.setAttribute('aria-disabled','false');
       const colorSuperior=ajustarLuminosidad(colorBase,0.35);
       const colorInferior=ajustarLuminosidad(colorBase,-0.12);
       const colorBorde=ajustarLuminosidad(colorBase,-0.55);
-      boton.style.background=`linear-gradient(180deg, ${colorSuperior}, ${colorInferior})`;
-      boton.style.borderColor=colorBorde;
-      boton.style.boxShadow=`0 0 9px rgba(0,0,0,0.42), 0 0 14px ${colorConTransparencia(colorBase,0.5)}`;
-      boton.style.color='#ffffff';
+      chip.style.background=`linear-gradient(180deg, ${colorSuperior}, ${colorInferior})`;
+      chip.style.borderColor=colorBorde;
+      chip.style.boxShadow=`0 0 9px rgba(0,0,0,0.42), 0 0 14px ${colorConTransparencia(colorBase,0.5)}`;
+      chip.style.color='#ffffff';
       const indiceTexto=forma.idx!==undefined&&forma.idx!==null?String(forma.idx).replace(/^0+/,''):'';
-      boton.textContent=indiceTexto?`F${indiceTexto}`:'FORMA';
+      chip.textContent=indiceTexto?`F${indiceTexto}`:'FORMA';
       const ganadoresInfo=cartonesGanadoresPorForma.get(forma.idx)||{cartones:[]};
       const ganadoresLista=Array.isArray(ganadoresInfo.cartones)?ganadoresInfo.cartones:[];
       const totalGanadores=ganadoresLista.length;
@@ -1520,12 +1525,21 @@
         burbuja.classList.add('activa');
       }
       if(totalGanadores>0){
-        boton.addEventListener('click',()=>abrirModalGanadores(forma));
+        chip.setAttribute('tabindex','0');
+        chip.addEventListener('click',()=>abrirModalGanadores(forma));
+        chip.addEventListener('keydown',evento=>{
+          if(evento.key==='Enter'||evento.key===' '){
+            evento.preventDefault();
+            abrirModalGanadores(forma);
+          }
+        });
       }else{
-        boton.classList.add('sin-ganadores');
+        chip.classList.add('sin-ganadores');
+        chip.setAttribute('tabindex','-1');
+        chip.setAttribute('aria-disabled','true');
       }
-      boton.title=forma.nombre?forma.nombre:`Forma ${indiceTexto||forma.idx||''}`;
-      wrapper.appendChild(boton);
+      chip.title=forma.nombre?forma.nombre:`Forma ${indiceTexto||forma.idx||''}`;
+      wrapper.appendChild(chip);
       wrapper.appendChild(burbuja);
       fragment.appendChild(wrapper);
     });
