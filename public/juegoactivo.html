@@ -243,7 +243,7 @@
       }
       #panel-derecho {
           display: grid;
-          grid-template-rows: auto minmax(0, 1fr);
+          grid-template-rows: auto auto minmax(0, 1fr);
           gap: 12px;
           align-content: start;
       }
@@ -538,13 +538,15 @@
           text-shadow: 0 0 6px rgba(0,0,0,0.75);
       }
       .carton-tabla--principal {
-          --cell-size: clamp(32px, 6.4vw, 52px);
+          --cell-size: min(clamp(32px, 6.4vw, 52px), calc(100% / 5));
       }
       .carton-tabla--mini {
           --cell-size: clamp(22px, 4.8vw, 28px);
       }
       #carton-destacado .carton-tabla {
-          width: clamp(220px, 70%, 420px);
+          width: 100%;
+          max-width: 420px;
+          margin: 0 auto;
       }
       #carton-destacado .carton-visor-info {
           margin-top: 6px;
@@ -563,6 +565,9 @@
       .mensaje {
           font-size: 0.85rem;
           color: var(--texto-secundario);
+      }
+      .mensaje:empty {
+          display: none;
       }
       #cartones-mensaje,
       #formas-mensaje {
@@ -704,7 +709,7 @@
               grid-template-columns: 1fr;
           }
           #panel-derecho {
-              grid-template-rows: auto minmax(0, 1fr);
+              grid-template-rows: auto auto minmax(0, 1fr);
           }
           #formas-flotantes {
               right: clamp(8px, 3vw, 22px);
@@ -729,10 +734,13 @@
               gap: 10px;
           }
           #panel-derecho {
+              grid-template-rows: auto auto minmax(0, 1fr);
+          }
+          #panel-derecho {
               gap: 10px;
           }
           #carton-destacado .carton-tabla {
-              max-width: clamp(220px, 96vw, 340px);
+              max-width: clamp(220px, 96vw, 360px);
           }
           #mis-cartones-grid {
               grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
@@ -776,6 +784,22 @@
               right: clamp(8px, 3vw, 20px);
               top: clamp(70px, 22vh, 240px);
               transform: none;
+          }
+          .forma-flotante-btn {
+              width: clamp(36px, 6vw, 52px);
+              height: clamp(36px, 6vw, 52px);
+              border-radius: 14px;
+              font-size: clamp(0.48rem, 1.8vw, 0.75rem);
+          }
+          .forma-flotante-badge {
+              min-width: 16px;
+              height: 16px;
+              font-size: clamp(0.45rem, 1.5vw, 0.62rem);
+              top: -4px;
+              right: -4px;
+          }
+          #carton-destacado .carton-tabla {
+              max-width: clamp(220px, 60vw, 360px);
           }
       }
   </style>
@@ -1526,7 +1550,7 @@
       formasFlotantesEl.appendChild(fragment);
     }
     if(formasMensajeEl){
-      formasMensajeEl.textContent='Consulta los íconos flotantes para ver los cartones ganadores disponibles.';
+      formasMensajeEl.textContent='';
     }
   }
 
