@@ -104,12 +104,12 @@
           text-shadow: 0 0 12px rgba(255,255,255,0.55), 2px 2px 5px rgba(0,0,0,0.6);
       }
       .sorteo-titulo-especial {
-          color: #ff7b00;
-          text-shadow: 0 0 14px rgba(255,152,0,0.55), 0 0 22px rgba(255,152,0,0.35), 2px 2px 5px rgba(0,0,0,0.6);
+          color: #ffffff;
+          text-shadow: 0 0 18px rgba(255, 123, 0, 0.85), 0 0 32px rgba(255, 152, 0, 0.5), 2px 2px 6px rgba(0,0,0,0.65);
       }
       .sorteo-titulo-diario {
-          color: #0aa128;
-          text-shadow: 0 0 14px rgba(46,204,64,0.45), 0 0 22px rgba(46,204,64,0.25), 2px 2px 5px rgba(0,0,0,0.6);
+          color: #ffffff;
+          text-shadow: 0 0 18px rgba(10, 161, 40, 0.8), 0 0 32px rgba(46, 204, 64, 0.5), 2px 2px 6px rgba(0,0,0,0.65);
       }
       #sorteo-detalles {
           font-size: 0.82rem;
@@ -129,7 +129,14 @@
       #sorteo-detalles .detalle-tipo {
           text-transform: uppercase;
           font-weight: 700;
-          color: #222;
+      }
+      #sorteo-detalles .detalle-tipo-especial {
+          color: #ff7b00;
+          text-shadow: 0 0 10px rgba(255, 123, 0, 0.6);
+      }
+      #sorteo-detalles .detalle-tipo-diario {
+          color: #0aa128;
+          text-shadow: 0 0 10px rgba(10, 161, 40, 0.55);
       }
       #sorteo-detalles .detalle-label {
           font-weight: 700;
@@ -242,56 +249,57 @@
       #formas-columna {
           display: flex;
           flex-direction: column;
-          align-items: flex-end;
+          align-items: center;
           gap: 10px;
           padding: 0;
           width: 100%;
       }
       #formas-columna h2 {
-          text-align: right;
+          text-align: center;
           font-family: 'Poppins', sans-serif;
           font-weight: 600;
-          font-size: 0.9rem;
-          letter-spacing: 0.4px;
+          font-size: clamp(0.78rem, 2vw, 0.95rem);
+          letter-spacing: 1px;
           margin-bottom: 0;
-          color: #1f1f1f;
+          color: #ff7b00;
+          text-shadow: 0 2px 4px rgba(0,0,0,0.65);
       }
       #formas-panel {
           display: flex;
           flex-wrap: wrap;
-          justify-content: flex-end;
-          gap: 4px;
+          justify-content: center;
+          gap: 6px;
+          width: 100%;
       }
       .forma-wrapper {
           display: flex;
           flex-direction: column;
-          align-items: flex-end;
-          gap: 2px;
+          align-items: center;
+          gap: 4px;
+          position: relative;
       }
       .forma-boton {
-          position: relative;
-          min-width: 44px;
-          height: 36px;
-          border-radius: 8px;
-          border: 2px solid #ff9800;
-          padding: 0 8px;
+          min-width: clamp(48px, 9vw, 62px);
+          height: clamp(40px, 8vw, 52px);
+          border-radius: 12px;
+          border: 2px solid #2d2d2d;
+          padding: 0 12px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 4px 10px rgba(0,0,0,0.18);
+          box-shadow: 0 0 12px rgba(0,0,0,0.45);
           cursor: pointer;
-          overflow: hidden;
           transition: transform 0.2s ease, box-shadow 0.2s ease;
           background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,138,0,0.75));
           color: #ffffff;
-          font-size: 0.82rem;
+          font-size: clamp(0.95rem, 2.4vw, 1.25rem);
           font-family: 'Bangers', cursive;
           text-transform: uppercase;
-          text-shadow: 1px 1px 3px rgba(0,0,0,0.45);
+          text-shadow: 0 0 6px rgba(0,0,0,0.85);
       }
       .forma-boton:hover {
-          transform: translateY(-2px) scale(1.02);
-          box-shadow: 0 8px 16px rgba(0,0,0,0.28);
+          transform: translateY(-2px) scale(1.05);
+          box-shadow: 0 0 18px rgba(0,0,0,0.55);
       }
       .forma-boton.sin-ganadores {
           opacity: 0.65;
@@ -300,28 +308,23 @@
       }
       .forma-burbuja {
           position: absolute;
-          top: -8px;
-          right: -8px;
-          min-width: 20px;
-          height: 20px;
+          top: -18px;
+          right: -14px;
+          min-width: 22px;
+          height: 22px;
           border-radius: 999px;
-          background: linear-gradient(150deg, #ff3d00, #ff9800);
           color: white;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 0.6rem;
-          border: 2px solid rgba(255, 244, 214, 0.9);
+          font-size: 0.65rem;
+          border: 2px solid rgba(0,0,0,0.35);
           font-family: 'Bangers', cursive;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.32);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+          pointer-events: none;
       }
-      .forma-nombre {
-          font-size: 0.62rem;
-          text-align: right;
-          color: var(--texto-primario);
-          font-weight: 600;
-          max-width: 120px;
-          line-height: 1.1;
+      .forma-burbuja.activa {
+          animation: zoomPulse 1.6s ease-in-out infinite;
       }
       #carton-destacado {
           display: none;
@@ -334,20 +337,25 @@
       #carton-destacado.activo {
           display: flex;
       }
-      #cartones-panel {
+      #mis-cartones-section {
+          background: var(--panel-bg);
+          box-shadow: var(--panel-shadow);
+          border-radius: 16px;
+          padding: 16px;
           display: flex;
           flex-direction: column;
           gap: 12px;
-          padding: 0;
+          margin-top: 6px;
           width: 100%;
       }
-      #cartones-panel h2 {
+      #mis-cartones-section h2 {
           text-align: center;
+          margin: 0;
       }
       #cartones-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-          gap: 10px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 12px;
       }
       .carton-mini-wrapper {
           display: flex;
@@ -382,27 +390,29 @@
           padding-top: 10px;
       }
       .carton-visual--principal {
-          padding-top: 14px;
+          padding-top: 12px;
       }
       .carton-forma-leyenda {
           position: absolute;
           top: 0;
           transform: translateY(-60%);
-          background: rgba(0,0,0,0.65);
-          color: #ffffff;
+          background: #ffffff;
+          color: #333333;
           font-size: 0.55rem;
           font-weight: 600;
           letter-spacing: 0.8px;
           text-transform: uppercase;
           border-radius: 999px;
-          padding: 2px 8px;
+          padding: 2px 10px;
           white-space: nowrap;
           opacity: 0;
           transition: opacity 0.3s ease;
+          box-shadow: 0 0 10px rgba(255, 215, 0, 0.75);
+          border: 1px solid rgba(0,0,0,0.1);
       }
       .carton-visual--principal .carton-forma-leyenda {
-          font-size: 0.6rem;
-          padding: 3px 10px;
+          font-size: 0.62rem;
+          padding: 3px 12px;
       }
       .carton-forma-leyenda.visible {
           opacity: 1;
@@ -491,13 +501,13 @@
           text-shadow: 0 0 10px rgba(0,0,0,0.9);
       }
       .carton-tabla--principal {
-          --cell-size: clamp(38px, 7.8vw, 60px);
+          --cell-size: clamp(32px, 6.4vw, 52px);
       }
       .carton-tabla--mini {
           --cell-size: clamp(24px, 5.5vw, 32px);
       }
       #carton-destacado .carton-tabla {
-          width: clamp(260px, 85%, 480px);
+          width: clamp(220px, 70%, 420px);
       }
       #carton-destacado .carton-visor-info {
           margin-top: 6px;
@@ -520,7 +530,7 @@
           text-align: center;
       }
       #formas-mensaje {
-          text-align: right;
+          text-align: center;
       }
       #resultados-contenedor {
           display: none;
@@ -577,23 +587,56 @@
       .ganador-card {
           background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(240,240,240,0.96));
           border-radius: 14px;
-          padding: 10px;
+          padding: 14px;
           box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+          display: grid;
+          grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.9fr);
+          gap: 12px;
+          align-items: center;
+      }
+      .ganador-card-info {
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 8px;
+          align-items: center;
       }
       .ganador-info {
-          font-size: 0.78rem;
+          font-size: 0.8rem;
           color: var(--texto-primario);
           display: flex;
           flex-direction: column;
-          gap: 2px;
+          gap: 3px;
+          text-align: center;
       }
       .ganador-info strong {
           color: #4b0082;
           font-family: 'Bangers', cursive;
           letter-spacing: 0.5px;
+      }
+      .ganador-card-premio {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          padding: 12px;
+          border-radius: 12px;
+          background: radial-gradient(circle at top, rgba(255,255,255,0.95), rgba(210,255,210,0.9));
+          box-shadow: inset 0 0 12px rgba(0,0,0,0.12);
+      }
+      .ganador-card-premio .label {
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #064d1f;
+          text-transform: uppercase;
+          letter-spacing: 0.6px;
+      }
+      .ganador-card-premio .monto {
+          font-size: clamp(1.1rem, 3vw, 1.6rem);
+          font-weight: 700;
+          color: #0aa128;
+          text-shadow: 0 0 10px rgba(0,0,0,0.25);
+          animation: zoomPulse 1.7s ease-in-out infinite;
       }
       .modal-mensaje {
           font-size: 0.85rem;
@@ -623,35 +666,42 @@
               font-size: 1.15rem;
           }
           #panel-superior {
-              grid-template-columns: repeat(2, minmax(0, 1fr));
-              gap: 8px;
+              grid-template-columns: 1fr;
+              gap: 10px;
           }
           #panel-derecho {
               gap: 10px;
           }
           #formas-panel {
-              justify-content: flex-end;
+              justify-content: center;
           }
           .forma-boton {
-              min-width: 40px;
-              height: 32px;
-              font-size: 0.78rem;
-              padding: 0 6px;
+              min-width: clamp(44px, 16vw, 56px);
+              height: clamp(36px, 14vw, 48px);
+              font-size: clamp(0.9rem, 4vw, 1.1rem);
+              padding: 0 8px;
           }
           .forma-burbuja {
-              min-width: 18px;
-              height: 18px;
+              min-width: 20px;
+              height: 20px;
               font-size: 0.55rem;
+              right: -10px;
           }
           #carton-destacado .carton-tabla {
               max-width: clamp(220px, 96vw, 340px);
           }
           #cartones-grid {
-              grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-              gap: 8px;
+              grid-template-columns: 1fr;
+              gap: 10px;
           }
           .carton-visual {
               padding-top: 12px;
+          }
+          #modal-ganadores-lista {
+              grid-template-columns: 1fr;
+          }
+          .ganador-card {
+              grid-template-columns: 1fr;
           }
       }
       @media (orientation: landscape) and (max-width: 900px) {
@@ -666,7 +716,7 @@
               grid-template-columns: minmax(200px, 0.9fr) minmax(240px, 1fr);
           }
           #cartones-grid {
-              grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+              grid-template-columns: repeat(2, minmax(0, 1fr));
               gap: 8px;
           }
       }
@@ -691,12 +741,12 @@
           <div id="formas-mensaje" class="mensaje"></div>
         </div>
         <div id="carton-destacado" aria-live="polite"></div>
-        <section id="cartones-panel">
-          <h2>Mis cartones</h2>
-          <div id="cartones-mensaje" class="mensaje"></div>
-          <div id="cartones-grid"></div>
-        </section>
       </aside>
+    </section>
+    <section id="mis-cartones-section">
+      <h2>Mis cartones</h2>
+      <div id="cartones-mensaje" class="mensaje"></div>
+      <div id="cartones-grid"></div>
     </section>
   </main>
 
@@ -941,6 +991,9 @@
     if(info.leyenda){
       info.leyenda.textContent='';
       info.leyenda.classList.remove('visible');
+      info.leyenda.style.removeProperty('color');
+      info.leyenda.style.removeProperty('border-color');
+      info.leyenda.style.removeProperty('text-shadow');
     }
   }
 
@@ -965,15 +1018,28 @@
       celda.style.setProperty('--forma-rgb',rgbTexto);
     });
     if(info.leyenda){
-      let etiqueta='Forma';
-      if(datosForma.nombre && datosForma.nombre.trim().length){
-        etiqueta=datosForma.nombre.trim();
-      }else if(datosForma.indice!==undefined && datosForma.indice!==null){
-        const indiceTexto=String(datosForma.indice).trim();
-        etiqueta=`Forma ${indiceTexto.padStart(2,'0')}`;
+      if(datosForma.mostrarLeyenda===false){
+        info.leyenda.textContent='';
+        info.leyenda.classList.remove('visible');
+        info.leyenda.style.removeProperty('color');
+        info.leyenda.style.removeProperty('border-color');
+        info.leyenda.style.removeProperty('text-shadow');
+      }else{
+        let etiqueta='Forma';
+        if(datosForma.nombre && datosForma.nombre.trim().length){
+          etiqueta=datosForma.nombre.trim();
+        }else if(datosForma.indice!==undefined && datosForma.indice!==null){
+          const indiceTexto=String(datosForma.indice).trim();
+          etiqueta=`Forma ${indiceTexto.padStart(2,'0')}`;
+        }
+        info.leyenda.textContent=etiqueta;
+        if(datosForma.color){
+          info.leyenda.style.color=ajustarLuminosidad(datosForma.color,-0.5);
+          info.leyenda.style.borderColor=ajustarLuminosidad(datosForma.color,-0.2);
+          info.leyenda.style.textShadow='0 0 14px rgba(255, 235, 59, 0.9)';
+        }
+        info.leyenda.classList.add('visible');
       }
-      info.leyenda.textContent=etiqueta;
-      info.leyenda.classList.add('visible');
     }
   }
 
@@ -1130,6 +1196,48 @@
     return `rgb(${r}, ${g}, ${b})`;
   }
 
+  function formatearCreditos(valor){
+    const numero=Number(valor);
+    if(!Number.isFinite(numero)) return '0';
+    return numero.toLocaleString('es-ES', {maximumFractionDigits: 0});
+  }
+
+  function obtenerTotalCreditosSorteo(){
+    if(!activeSorteo) return 0;
+    const posiblesClaves=['totalPremios','totalpremios','premioTotal','premio','total_premios'];
+    for(const clave of posiblesClaves){
+      const valor=Number(activeSorteo[clave]);
+      if(Number.isFinite(valor) && valor>0){
+        return valor;
+      }
+    }
+    const valorCarton=Number(activeSorteo.valorCarton ?? activeSorteo.valor);
+    const jugados=Number(activeSorteo.cartonesjugando ?? activeSorteo.cartonesJugando ?? activeSorteo.cartones);
+    if(Number.isFinite(valorCarton) && valorCarton>0 && Number.isFinite(jugados) && jugados>0){
+      return valorCarton*jugados;
+    }
+    return 0;
+  }
+
+  function obtenerCreditosForma(forma){
+    if(!forma) return 0;
+    const posiblesClaves=['premioCreditos','premiocreditos','creditos','premio','premioValor'];
+    for(const clave of posiblesClaves){
+      const valor=Number(forma[clave]);
+      if(Number.isFinite(valor) && valor>0){
+        return valor;
+      }
+    }
+    const porcentaje=Number(forma.porcentaje ?? forma.porcentajePremio ?? forma.porcentajepremio);
+    if(Number.isFinite(porcentaje) && porcentaje>0){
+      const total=obtenerTotalCreditosSorteo();
+      if(total>0){
+        return Math.round(total*porcentaje/100);
+      }
+    }
+    return 0;
+  }
+
   function actualizarHeader(){
     if(!activeSorteo){
       sorteoResumenEl.className='sorteo-titulo-basico';
@@ -1149,7 +1257,13 @@
     sorteoResumenEl.textContent=nombre||'Sorteo en vivo';
     const partes=[];
     if(tipo){
-      partes.push(`<span class="detalle-item"><span class="detalle-tipo">${tipo}</span></span>`);
+      let claseTipo='detalle-tipo';
+      if(tipoNormalizado.includes('especial')){
+        claseTipo+=' detalle-tipo-especial';
+      }else if(tipoNormalizado.includes('diario')){
+        claseTipo+=' detalle-tipo-diario';
+      }
+      partes.push(`<span class="detalle-item"><span class="${claseTipo}">${tipo}</span></span>`);
     }
     if(fecha){
       partes.push(`<span class="detalle-item"><span class="detalle-label">Fecha:</span><span class="detalle-valor fecha">${formatearFecha(fecha)}</span></span>`);
@@ -1196,6 +1310,7 @@
       return;
     }
     const fragment=document.createDocumentFragment();
+    const usuarioIdActual=usuarioActual?usuarioActual.uid:null;
     formasActivas.forEach(forma=>{
       const indice=Number(forma.idx||1);
       const colorBase=FORM_COLORS[(Number.isFinite(indice)&&indice>0?indice-1:0)%FORM_COLORS.length];
@@ -1205,22 +1320,29 @@
       boton.type='button';
       boton.className='forma-boton';
       const colorSuperior=ajustarLuminosidad(colorBase,0.35);
-      const colorInferior=ajustarLuminosidad(colorBase,-0.1);
+      const colorInferior=ajustarLuminosidad(colorBase,-0.12);
+      const colorBorde=ajustarLuminosidad(colorBase,-0.55);
       boton.style.background=`linear-gradient(180deg, ${colorSuperior}, ${colorInferior})`;
-      boton.style.borderColor='#ff9800';
+      boton.style.borderColor=colorBorde;
+      boton.style.boxShadow=`0 0 12px rgba(0,0,0,0.45), 0 0 18px ${colorConTransparencia(colorBase,0.55)}`;
       boton.style.color='#ffffff';
       const indiceTexto=forma.idx!==undefined&&forma.idx!==null?String(forma.idx).replace(/^0+/,''):'';
       boton.textContent=indiceTexto?`F${indiceTexto}`:'FORMA';
       const ganadoresInfo=cartonesGanadoresPorForma.get(forma.idx)||{cartones:[]};
-      const totalGanadores=(ganadoresInfo.cartones||[]).length;
+      const ganadoresLista=Array.isArray(ganadoresInfo.cartones)?ganadoresInfo.cartones:[];
+      const totalGanadores=ganadoresLista.length;
       const burbuja=document.createElement('span');
       burbuja.className='forma-burbuja';
-      const tonoBurbuja1=ajustarLuminosidad(colorBase,0.25);
-      const tonoBurbuja2=ajustarLuminosidad(colorBase,-0.2);
-      burbuja.style.background=`linear-gradient(150deg, ${tonoBurbuja1}, ${tonoBurbuja2})`;
-      burbuja.style.borderColor='rgba(255, 244, 214, 0.9)';
+      const tonoBurbujaClaro=ajustarLuminosidad(colorBase,-0.15);
+      const tonoBurbujaOscuro=ajustarLuminosidad(colorBase,-0.45);
+      burbuja.style.background=`linear-gradient(150deg, ${tonoBurbujaClaro}, ${tonoBurbujaOscuro})`;
+      burbuja.style.borderColor=ajustarLuminosidad(colorBase,-0.65);
       burbuja.textContent=totalGanadores;
-      boton.appendChild(burbuja);
+      burbuja.style.opacity=totalGanadores>0?1:0.45;
+      const hayGanadorPropio=usuarioIdActual && ganadoresLista.some(c=>c.userId===usuarioIdActual);
+      if(hayGanadorPropio){
+        burbuja.classList.add('activa');
+      }
       if(totalGanadores>0){
         boton.addEventListener('click',()=>abrirModalGanadores(forma));
       }else{
@@ -1228,13 +1350,7 @@
       }
       boton.title=forma.nombre?forma.nombre:`Forma ${indiceTexto||forma.idx||''}`;
       wrapper.appendChild(boton);
-      if(forma.nombre){
-        const etiqueta=document.createElement('div');
-        etiqueta.className='forma-nombre';
-        etiqueta.textContent=forma.nombre;
-        etiqueta.style.color=ajustarLuminosidad(colorBase,-0.45);
-        wrapper.appendChild(etiqueta);
-      }
+      wrapper.appendChild(burbuja);
       fragment.appendChild(wrapper);
     });
     formasPanelEl.appendChild(fragment);
@@ -1341,21 +1457,44 @@
         const numB=b.cartonNum ?? b.Ncarton ?? Number.MAX_SAFE_INTEGER;
         return numA-numB;
       });
+      const premioFormaTotal=obtenerCreditosForma(forma);
+      const totalGanadores=ordenados.length;
+      const premioIndividual=totalGanadores>0?Math.floor(premioFormaTotal/totalGanadores):0;
       ordenados.forEach(carton=>{
         const card=document.createElement('div');
         card.className='ganador-card';
+        const infoCol=document.createElement('div');
+        infoCol.className='ganador-card-info';
         const cartonExtendido={...carton, formasGanadas:[{forma}]};
         const tablaInfo=crearTablaCartonVisual(cartonExtendido,'mini');
         aplicarResumenCarton(tablaInfo);
-        aplicarFormaCarton(tablaInfo,{posiciones:forma.posicionesNormalizadas||[],color:obtenerColorParaForma(forma.idx)});
-        card.appendChild(tablaInfo.contenedor);
+        aplicarFormaCarton(tablaInfo,{
+          posiciones:forma.posicionesNormalizadas||[],
+          color:obtenerColorParaForma(forma.idx),
+          nombre:forma.nombre,
+          indice:forma.idx,
+          mostrarLeyenda:false
+        });
+        infoCol.appendChild(tablaInfo.contenedor);
         const infoBox=document.createElement('div');
         infoBox.className='ganador-info';
         const numero=(carton.cartonNum ?? carton.Ncarton ?? '').toString();
         infoBox.innerHTML=`<strong>Cartón ${numero?`#${numero.padStart(4,'0')}`:'--'}</strong>`+
           `<span>Alias: ${carton.alias || 'Sin alias'}</span>`+
           `<span>Tipo: ${(carton.tipocarton||'Pagado').toUpperCase()}</span>`;
-        card.appendChild(infoBox);
+        infoCol.appendChild(infoBox);
+        card.appendChild(infoCol);
+        const premioBox=document.createElement('div');
+        premioBox.className='ganador-card-premio';
+        const label=document.createElement('div');
+        label.className='label';
+        label.textContent='Créditos ganados';
+        const monto=document.createElement('div');
+        monto.className='monto';
+        monto.textContent=formatearCreditos(premioIndividual);
+        premioBox.appendChild(label);
+        premioBox.appendChild(monto);
+        card.appendChild(premioBox);
         modalListaEl.appendChild(card);
       });
     }
@@ -1461,7 +1600,9 @@
         idx,
         nombre:data.nombre||'',
         premioImagen:data.premioImagen||data.imagen||'',
-        posicionesNormalizadas:normalizadas
+        posicionesNormalizadas:normalizadas,
+        porcentaje:Number(data.porcentaje ?? data.porcentajePremio ?? data.porcentajepremio ?? 0) || 0,
+        premioCreditos:Number(data.premioCreditos ?? data.premiocreditos ?? data.creditos ?? data.premio ?? 0) || 0
       });
     });
     arr.sort((a,b)=>(a.idx||0)-(b.idx||0));
