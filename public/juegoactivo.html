@@ -1171,14 +1171,19 @@
     if(!tabla || !tabla.isConnected) return;
     const celdaReferencia=tabla.querySelector('tbody td, thead th');
     if(!celdaReferencia) return;
-    const ancho=celdaReferencia.getBoundingClientRect().width;
+    const rect=celdaReferencia.getBoundingClientRect();
+    const ancho=rect.width;
     if(!Number.isFinite(ancho) || ancho<=0) return;
     const estilos=getComputedStyle(celdaReferencia);
     const bordeSuperior=parseFloat(estilos.borderTopWidth||'0');
     const bordeInferior=parseFloat(estilos.borderBottomWidth||'0');
+    const bordeIzquierdo=parseFloat(estilos.borderLeftWidth||'0');
+    const bordeDerecho=parseFloat(estilos.borderRightWidth||'0');
+    const anchoContenido=Math.max(0, ancho - bordeIzquierdo - bordeDerecho);
     const alturaContenido=Math.max(0, ancho - bordeSuperior - bordeInferior);
     const alturaPx=`${alturaContenido}px`;
-    tabla.style.setProperty('--cell-size', `${ancho}px`);
+    const anchoPx=`${anchoContenido}px`;
+    tabla.style.setProperty('--cell-size', anchoPx);
     tabla.querySelectorAll('th, td').forEach(celda=>{
       celda.style.height=alturaPx;
       celda.style.minHeight=alturaPx;
