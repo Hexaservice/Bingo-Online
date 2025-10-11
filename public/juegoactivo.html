@@ -243,83 +243,90 @@
       }
       #panel-derecho {
           display: grid;
-          grid-template-rows: auto auto minmax(0, 1fr);
+          grid-template-rows: auto minmax(0, 1fr);
           gap: 12px;
           align-content: start;
       }
       #formas-panel {
-          display: flex;
-          flex-wrap: wrap;
-          align-items: stretch;
-          justify-content: flex-start;
-          gap: clamp(4px, 1.4vw, 10px);
-          width: 100%;
+          display: none;
       }
       #formas-panel:empty {
           padding: 0;
-          background: none;
-          box-shadow: none;
       }
-      .forma-wrapper {
+      #formas-flotantes {
+          position: fixed;
+          top: 50%;
+          right: clamp(10px, 2.8vw, 28px);
+          transform: translateY(-50%);
+          display: flex;
+          flex-direction: column;
+          gap: clamp(8px, 2vw, 16px);
+          z-index: 40;
+          pointer-events: none;
+      }
+      .forma-flotante-item {
+          display: flex;
+          justify-content: center;
+          pointer-events: auto;
+      }
+      .forma-flotante-btn {
           position: relative;
+          width: clamp(46px, 9vw, 64px);
+          height: clamp(46px, 9vw, 64px);
+          border-radius: 18px;
+          border: 2px solid transparent;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: clamp(2px, 0.8vw, 6px);
-          flex: 0 0 auto;
-          min-width: clamp(62px, 18vw, 96px);
-      }
-      .forma-chip {
-          width: 100%;
-          min-height: clamp(26px, 7vw, 34px);
-          border-radius: 8px;
-          border: 1.4px solid #2d2d2d;
-          padding: clamp(2px, 0.8vw, 6px);
-          display: inline-flex;
-          align-items: center;
           justify-content: center;
-          box-shadow: 0 0 8px rgba(0,0,0,0.38);
-          cursor: pointer;
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
-          background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,138,0,0.75));
-          color: #ffffff;
-          font-size: clamp(0.62rem, 2.1vw, 0.84rem);
+          gap: 2px;
           font-family: 'Bangers', cursive;
-          text-transform: uppercase;
-          text-shadow: 0 0 6px rgba(0,0,0,0.85);
+          font-size: clamp(0.58rem, 2.4vw, 0.95rem);
+          color: #ffffff;
+          cursor: pointer;
+          box-shadow: 0 10px 18px rgba(0,0,0,0.28);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          background: linear-gradient(160deg, rgba(255,255,255,0.85), rgba(0,0,0,0.35));
       }
-      .forma-chip:hover,
-      .forma-chip:focus-visible {
-          transform: translateY(-1px) scale(1.03);
-          box-shadow: 0 0 14px rgba(0,0,0,0.45);
+      .forma-flotante-btn:hover,
+      .forma-flotante-btn:focus-visible {
+          transform: translateY(-2px) scale(1.03);
+          box-shadow: 0 12px 22px rgba(0,0,0,0.34);
           outline: none;
       }
-      .forma-chip.sin-ganadores {
-          opacity: 0.65;
+      .forma-flotante-btn:disabled,
+      .forma-flotante-btn.sin-ganadores {
           cursor: default;
           filter: saturate(0.55);
+          opacity: 0.7;
+          transform: none;
+          box-shadow: 0 6px 12px rgba(0,0,0,0.18);
           pointer-events: none;
       }
-      .forma-burbuja {
+      .forma-flotante-btn--propio {
+          box-shadow: 0 0 18px rgba(255, 255, 255, 0.7), 0 0 32px rgba(255, 215, 0, 0.65);
+      }
+      .forma-flotante-texto {
+          text-transform: uppercase;
+          text-shadow: 0 0 8px rgba(0,0,0,0.65);
+      }
+      .forma-flotante-badge {
           position: absolute;
-          top: -12px;
-          right: -10px;
-          min-width: 18px;
-          height: 18px;
+          top: -6px;
+          right: -6px;
+          min-width: 20px;
+          height: 20px;
           border-radius: 999px;
-          color: white;
+          background: rgba(0,0,0,0.7);
+          color: #ffffff;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 0.58rem;
-          border: 1.4px solid rgba(0,0,0,0.35);
+          font-size: clamp(0.55rem, 1.8vw, 0.7rem);
+          border: 2px solid rgba(255,255,255,0.8);
           font-family: 'Bangers', cursive;
-          box-shadow: 0 3px 10px rgba(0,0,0,0.42);
-          pointer-events: none;
           padding: 0 4px;
-      }
-      .forma-burbuja.activa {
-          animation: zoomPulse 1.6s ease-in-out infinite;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.45);
       }
       #carton-destacado {
           display: none;
@@ -333,11 +340,7 @@
           display: flex;
       }
       #carton-destacado .carton-tabla thead th {
-          cursor: pointer;
-      }
-      #carton-destacado .carton-tabla thead th:focus-visible {
-          outline: 2px solid #FFD700;
-          outline-offset: 2px;
+          cursor: default;
       }
       #mis-cartones-section {
           display: flex;
@@ -701,33 +704,10 @@
               grid-template-columns: 1fr;
           }
           #panel-derecho {
-              grid-template-rows: auto auto minmax(0, 1fr);
+              grid-template-rows: auto minmax(0, 1fr);
           }
-          #formas-panel {
-              position: sticky;
-              top: 8px;
-              z-index: 5;
-              padding: 12px 10px;
-              background: var(--panel-bg);
-              border-radius: 16px;
-              box-shadow: var(--panel-shadow);
-              flex-wrap: nowrap;
-              justify-content: flex-start;
-              overflow-x: auto;
-              overflow-y: hidden;
-          }
-          #formas-panel:empty {
-              position: static;
-          }
-          #formas-panel::-webkit-scrollbar {
-              height: 6px;
-          }
-          #formas-panel::-webkit-scrollbar-thumb {
-              background: rgba(0, 0, 0, 0.25);
-              border-radius: 999px;
-          }
-          #formas-panel {
-              scrollbar-color: rgba(0,0,0,0.25) transparent;
+          #formas-flotantes {
+              right: clamp(8px, 3vw, 22px);
           }
       }
 
@@ -751,21 +731,6 @@
           #panel-derecho {
               gap: 10px;
           }
-          #formas-panel {
-              gap: clamp(4px, 2vw, 12px);
-          }
-          .forma-chip {
-              min-height: clamp(24px, 9vw, 32px);
-              font-size: clamp(0.6rem, 3.2vw, 0.78rem);
-              padding: clamp(2px, 1vw, 6px);
-          }
-          .forma-burbuja {
-              min-width: 16px;
-              height: 16px;
-              font-size: 0.52rem;
-              right: -8px;
-              top: -10px;
-          }
           #carton-destacado .carton-tabla {
               max-width: clamp(220px, 96vw, 340px);
           }
@@ -782,6 +747,15 @@
           .ganador-card {
               grid-template-columns: 1fr;
           }
+          #formas-flotantes {
+              flex-direction: row;
+              bottom: clamp(12px, 4vw, 20px);
+              top: auto;
+              right: auto;
+              left: 50%;
+              transform: translate(-50%, 0);
+              gap: clamp(6px, 3vw, 14px);
+          }
       }
       @media (orientation: landscape) and (max-width: 900px) {
           :root {
@@ -797,6 +771,11 @@
           #mis-cartones-grid {
               grid-template-columns: repeat(2, minmax(0, 1fr));
               gap: 8px;
+          }
+          #formas-flotantes {
+              right: clamp(8px, 3vw, 20px);
+              top: clamp(70px, 22vh, 240px);
+              transform: none;
           }
       }
   </style>
@@ -825,6 +804,8 @@
       <div id="mis-cartones-grid" aria-live="polite"></div>
     </section>
   </main>
+
+  <div id="formas-flotantes" role="list" aria-label="Cartones ganadores disponibles"></div>
 
   <div id="login-footer">
     <div id="fecha-hora"></div>
@@ -859,6 +840,7 @@
   const sorteoDetallesEl = document.getElementById('sorteo-detalles');
   const formasPanelEl = document.getElementById('formas-panel');
   const formasMensajeEl = document.getElementById('formas-mensaje');
+  const formasFlotantesEl = document.getElementById('formas-flotantes');
   const misCartonesSectionEl = document.getElementById('mis-cartones-section');
   const misCartonesGridEl = document.getElementById('mis-cartones-grid');
   const cartonesMensajeEl = document.getElementById('cartones-mensaje');
@@ -1200,20 +1182,6 @@
   function configurarEventosCartonPrincipal(carton,info){
     if(!carton || !info) return;
     cartonPrincipalInfo={cartonId:carton.id, info};
-    info.letras.forEach((span,index)=>{
-      const th=span.closest('th');
-      if(th){
-        th.setAttribute('role','button');
-        th.setAttribute('tabindex','0');
-        th.addEventListener('click',()=>resaltarFormaTemporal(index+1));
-        th.addEventListener('keydown',evento=>{
-          if(evento.key==='Enter' || evento.key===' '){
-            evento.preventDefault();
-            resaltarFormaTemporal(index+1);
-          }
-        });
-      }
-    });
   }
 
   function configurarAnimacionCarton(carton, tablasInfo){
@@ -1472,8 +1440,15 @@
   }
 
   function limpiarPanelFormas(){
-    formasPanelEl.innerHTML='';
-    formasMensajeEl.textContent='';
+    if(formasPanelEl){
+      formasPanelEl.innerHTML='';
+    }
+    if(formasMensajeEl){
+      formasMensajeEl.textContent='';
+    }
+    if(formasFlotantesEl){
+      formasFlotantesEl.innerHTML='';
+    }
   }
 
   function limpiarCartonesRenderizados(){
@@ -1485,7 +1460,9 @@
   function renderFormas(){
     limpiarPanelFormas();
     if(!formasActivas.length){
-      formasMensajeEl.textContent='No hay formas registradas para este sorteo.';
+      if(formasMensajeEl){
+        formasMensajeEl.textContent='No hay formas registradas para este sorteo.';
+      }
       return;
     }
     const fragment=document.createDocumentFragment();
@@ -1493,57 +1470,64 @@
     formasActivas.forEach(forma=>{
       const indice=Number(forma.idx||1);
       const colorBase=FORM_COLORS[(Number.isFinite(indice)&&indice>0?indice-1:0)%FORM_COLORS.length];
-      const wrapper=document.createElement('div');
-      wrapper.className='forma-wrapper';
-      wrapper.setAttribute('role','listitem');
-      const chip=document.createElement('div');
-      chip.className='forma-chip';
-      chip.setAttribute('role','button');
-      chip.setAttribute('aria-disabled','false');
+      const item=document.createElement('div');
+      item.className='forma-flotante-item';
+      item.setAttribute('role','listitem');
+      const boton=document.createElement('button');
+      boton.type='button';
+      boton.className='forma-flotante-btn';
       const colorSuperior=ajustarLuminosidad(colorBase,0.35);
       const colorInferior=ajustarLuminosidad(colorBase,-0.12);
-      const colorBorde=ajustarLuminosidad(colorBase,-0.55);
-      chip.style.background=`linear-gradient(180deg, ${colorSuperior}, ${colorInferior})`;
-      chip.style.borderColor=colorBorde;
-      chip.style.boxShadow=`0 0 9px rgba(0,0,0,0.42), 0 0 14px ${colorConTransparencia(colorBase,0.5)}`;
-      chip.style.color='#ffffff';
+      const colorBorde=ajustarLuminosidad(colorBase,-0.45);
+      boton.style.background=`linear-gradient(165deg, ${colorSuperior}, ${colorInferior})`;
+      boton.style.borderColor=colorBorde;
+      boton.style.boxShadow=`0 0 12px rgba(0,0,0,0.35), 0 0 18px ${colorConTransparencia(colorBase,0.55)}`;
       const indiceTexto=forma.idx!==undefined&&forma.idx!==null?String(forma.idx).replace(/^0+/,''):'';
-      chip.textContent=indiceTexto?`F${indiceTexto}`:'FORMA';
+      const indiceReferencia=indiceTexto || (forma.idx!==undefined&&forma.idx!==null?String(forma.idx):'');
+      const etiquetaIndice=indiceTexto?`F${indiceTexto}`:'FORMA';
+      const textoSpan=document.createElement('span');
+      textoSpan.className='forma-flotante-texto';
+      textoSpan.textContent=etiquetaIndice;
+      boton.appendChild(textoSpan);
       const ganadoresInfo=cartonesGanadoresPorForma.get(forma.idx)||{cartones:[]};
       const ganadoresLista=Array.isArray(ganadoresInfo.cartones)?ganadoresInfo.cartones:[];
       const totalGanadores=ganadoresLista.length;
-      const burbuja=document.createElement('span');
-      burbuja.className='forma-burbuja';
-      const tonoBurbujaOscuro=ajustarLuminosidad(colorBase,-0.45);
-      burbuja.style.background=tonoBurbujaOscuro;
-      burbuja.style.borderColor=ajustarLuminosidad(colorBase,-0.65);
-      burbuja.style.color='#ffffff';
-      burbuja.textContent=totalGanadores;
-      burbuja.style.opacity=totalGanadores>0?1:0.45;
+      const badge=document.createElement('span');
+      badge.className='forma-flotante-badge';
+      badge.textContent=totalGanadores;
+      badge.style.background=totalGanadores>0?colorConTransparencia(colorBase,0.9):'rgba(0,0,0,0.45)';
+      badge.style.borderColor=ajustarLuminosidad(colorBase,-0.25);
+      boton.appendChild(badge);
       const hayGanadorPropio=usuarioIdActual && ganadoresLista.some(c=>c.userId===usuarioIdActual);
       if(hayGanadorPropio){
-        burbuja.classList.add('activa');
+        boton.classList.add('forma-flotante-btn--propio');
       }
       if(totalGanadores>0){
-        chip.setAttribute('tabindex','0');
-        chip.addEventListener('click',()=>abrirModalGanadores(forma));
-        chip.addEventListener('keydown',evento=>{
-          if(evento.key==='Enter'||evento.key===' '){
-            evento.preventDefault();
-            abrirModalGanadores(forma);
-          }
-        });
+        boton.addEventListener('click',()=>abrirModalGanadores(forma));
+        const descripcionForma=forma.nombre?`, ${forma.nombre}`:'';
+        const etiquetaAccesible=indiceReferencia?
+          `Ver ganadores de la forma ${indiceReferencia}${descripcionForma}`:
+          `Ver ganadores de la forma disponible${descripcionForma}`;
+        boton.setAttribute('aria-label',etiquetaAccesible);
       }else{
-        chip.classList.add('sin-ganadores');
-        chip.setAttribute('tabindex','-1');
-        chip.setAttribute('aria-disabled','true');
+        boton.classList.add('sin-ganadores');
+        boton.setAttribute('aria-disabled','true');
+        boton.disabled=true;
+        const etiquetaSinGanadores=indiceReferencia?
+          `Forma ${indiceReferencia} sin ganadores registrados.`:
+          'Forma sin ganadores registrados.';
+        boton.setAttribute('aria-label',etiquetaSinGanadores);
       }
-      chip.title=forma.nombre?forma.nombre:`Forma ${indiceTexto||forma.idx||''}`;
-      wrapper.appendChild(chip);
-      wrapper.appendChild(burbuja);
-      fragment.appendChild(wrapper);
+      boton.title=forma.nombre?`Ganadores ${forma.nombre}`:`Ganadores forma ${indiceReferencia||''}`;
+      item.appendChild(boton);
+      fragment.appendChild(item);
     });
-    formasPanelEl.appendChild(fragment);
+    if(formasFlotantesEl){
+      formasFlotantesEl.appendChild(fragment);
+    }
+    if(formasMensajeEl){
+      formasMensajeEl.textContent='Consulta los íconos flotantes para ver los cartones ganadores disponibles.';
+    }
   }
 
   function renderCartonesJugador(){
