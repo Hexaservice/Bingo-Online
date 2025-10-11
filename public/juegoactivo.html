@@ -332,8 +332,8 @@
           gap: 12px;
           align-items: center;
           padding: 0;
-          width: 100%;
-          max-width: 420px;
+          width: min(100%, 340px);
+          max-width: min(90vw, 340px);
           margin: 0 auto;
       }
       #carton-destacado.activo {
@@ -538,14 +538,14 @@
           text-shadow: 0 0 6px rgba(0,0,0,0.75);
       }
       .carton-tabla--principal {
-          --cell-size: min(clamp(32px, 6.4vw, 52px), calc(100% / 5));
+          --cell-size: min(clamp(28px, min(5.6vw, 11vh), 46px), calc(100% / 5));
       }
       .carton-tabla--mini {
           --cell-size: clamp(22px, 4.8vw, 28px);
       }
       #carton-destacado .carton-tabla {
-          width: 100%;
-          max-width: 420px;
+          width: min(100%, 330px);
+          max-width: min(88vw, 330px);
           margin: 0 auto;
       }
       #carton-destacado .carton-visor-info {
@@ -557,10 +557,30 @@
           margin: 0 auto;
       }
       .carton-visor-info {
-          font-size: 0.85rem;
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 2px;
+          font-size: 0.7rem;
+          font-weight: 600;
+          color: var(--texto-primario);
+          text-align: left;
+      }
+      .carton-visor-info .carton-visor-numero {
+          grid-column: 1 / -1;
+          font-size: 0.82rem;
           font-weight: 700;
           color: var(--texto-primario);
-          text-align: center;
+      }
+      .carton-visor-info .carton-visor-forma {
+          grid-column: 1;
+          font-size: 0.68rem;
+          font-weight: 600;
+      }
+      .carton-visor-info .carton-visor-total {
+          grid-column: 2;
+          font-size: 0.74rem;
+          font-weight: 700;
+          color: #1f7a3d;
       }
       .mensaje {
           font-size: 0.85rem;
@@ -902,6 +922,7 @@
   let resaltadoTemporal = {timer:null, tablas:null, cartonId:null};
   let observadorTamanoCartonPrincipal = null;
   let listenerResizeCartonPrincipal = null;
+  let listenerOrientationCartonPrincipal = null;
   let ajustePendienteCartonPrincipal = false;
   let timeoutAjusteCartonPrincipal = null;
 
@@ -1030,27 +1051,33 @@
   }
 
   function formatearInfoCarton(carton){
-    const partes=[];
     const numero=obtenerNumeroCarton(carton);
-    partes.push(`Cartón ${numero==='--'?'--':`#${numero}`}`);
-    const tipo=(carton.tipocarton||'Pagado').toString().toUpperCase();
-    partes.push(tipo);
-    if(carton.alias){
-      partes.push(`Alias: ${carton.alias}`);
-    }
-    return partes.join(' · ');
+    return `Cartón ${numero==='--'?'--':`#${numero}`}`;
   }
 
   function formatearDetalleCarton(carton){
-    const partes=[];
     const numero=obtenerNumeroCarton(carton);
-    partes.push(`Cartón ${numero==='--'?'--':`#${numero}`}`);
-    if(carton.alias){
-      partes.push(`Alias: ${carton.alias}`);
+    return `Cartón ${numero==='--'?'--':`#${numero}`}`;
+  }
+
+  function obtenerResumenGananciasCarton(carton, limiteFormas=5){
+    const resultado={formas:[], total:0};
+    if(!carton) return resultado;
+    const gananciasPorForma=new Map();
+    const lista=formasPorCarton.get(carton.id)||[];
+    lista.forEach(item=>{
+      const idx=Number(item?.forma?.idx);
+      if(!Number.isFinite(idx)) return;
+      const valor=obtenerCreditosForma(item.forma);
+      if(!Number.isFinite(valor) || valor<=0) return;
+      gananciasPorForma.set(idx,(gananciasPorForma.get(idx)||0)+valor);
+    });
+    for(let i=1;i<=limiteFormas;i++){
+      const valor=gananciasPorForma.get(i)||0;
+      resultado.formas.push({idx:i, valor});
+      resultado.total+=valor;
     }
-    const tipo=(carton.tipocarton||'Pagado').toString().toUpperCase();
-    partes.push(`Tipo: ${tipo}`);
-    return partes.join(' • ');
+    return resultado;
   }
 
   function detenerAnimacionCarton(cartonId){
@@ -1214,6 +1241,10 @@
       window.removeEventListener('resize', listenerResizeCartonPrincipal);
       listenerResizeCartonPrincipal=null;
     }
+    if(listenerOrientationCartonPrincipal){
+      window.removeEventListener('orientationchange', listenerOrientationCartonPrincipal);
+      listenerOrientationCartonPrincipal=null;
+    }
     ajustePendienteCartonPrincipal=false;
     if(timeoutAjusteCartonPrincipal){
       clearTimeout(timeoutAjusteCartonPrincipal);
@@ -1229,6 +1260,11 @@
       timeoutAjusteCartonPrincipal=null;
       programarSincronizacionCartonPrincipal();
     },140);
+    listenerOrientationCartonPrincipal=()=>{
+      programarSincronizacionCartonPrincipal();
+      setTimeout(programarSincronizacionCartonPrincipal,160);
+    };
+    window.addEventListener('orientationchange', listenerOrientationCartonPrincipal);
     if(typeof ResizeObserver==='function'){
       observadorTamanoCartonPrincipal=new ResizeObserver(entries=>{
         if(!entries || !entries.length) return;
@@ -1732,7 +1768,24 @@
       cartonDestacadoEl.appendChild(tablaInfoPrincipal.contenedor);
       const infoDetalle=document.createElement('div');
       infoDetalle.className='carton-visor-info';
-      infoDetalle.textContent=formatearDetalleCarton(seleccionado);
+      const etiquetaNumero=document.createElement('span');
+      etiquetaNumero.className='carton-visor-numero';
+      etiquetaNumero.textContent=formatearDetalleCarton(seleccionado);
+      infoDetalle.appendChild(etiquetaNumero);
+      const resumenGanancias=obtenerResumenGananciasCarton(seleccionado,5);
+      resumenGanancias.formas.forEach(({idx,valor})=>{
+        const etiqueta=document.createElement('small');
+        etiqueta.className='carton-visor-forma';
+        etiqueta.dataset.formaIdx=String(idx).padStart(2,'0');
+        const colorBase=obtenerColorParaForma(idx);
+        etiqueta.style.color=ajustarLuminosidad(colorBase,-0.45);
+        etiqueta.textContent=`Ganado con Forma${String(idx).padStart(2,'0')}: ${formatearCreditos(valor)}`;
+        infoDetalle.appendChild(etiqueta);
+      });
+      const totalGanado=document.createElement('small');
+      totalGanado.className='carton-visor-total';
+      totalGanado.textContent=`Total Ganado: ${formatearCreditos(resumenGanancias.total)}`;
+      infoDetalle.appendChild(totalGanado);
       cartonDestacadoEl.appendChild(infoDetalle);
       cartonDestacadoEl.classList.add('activo');
       configurarEventosCartonPrincipal(seleccionado,tablaInfoPrincipal);
