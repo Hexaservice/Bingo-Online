@@ -6,27 +6,42 @@
   <title>Juego Activo</title>
   <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
+      :root {
+          --panel-bg: rgba(255, 255, 255, 0.92);
+          --panel-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+          --texto-primario: #1f1f1f;
+          --texto-secundario: #4b4b4b;
+          --verde-canto: #0b8f1a;
+      }
       body {
           font-family: 'Poppins', sans-serif;
-          background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)),
+          background: linear-gradient(rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.75)),
                       url('https://img.freepik.com/vetores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg');
           background-repeat: repeat;
           background-size: auto;
+          min-height: 100vh;
+          margin: 0;
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: center;
-          min-height: 100vh;
-          text-align: center;
+      }
+      main {
+          width: 100%;
+          max-width: 1080px;
+          padding: 70px 20px 20px;
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
       }
       .back-btn {
           position: fixed;
-          top: 5px;
-          left: 5px;
+          top: 8px;
+          left: 8px;
           width: 120px;
           height: 40px;
           font-family: 'Bangers', cursive;
-          font-size: 1.2rem;
+          font-size: 1.1rem;
           background: orange;
           color: white;
           border: 4px solid #FFD700;
@@ -37,20 +52,384 @@
           align-items:center;
           justify-content:center;
           gap:5px;
+          z-index: 20;
+          cursor: pointer;
       }
-      #login-footer { margin-top:20px; }
-      #fecha-hora, #derechos { font-size:0.7rem; text-align:center; color:#000; }
-      #derechos { font-size:0.6rem; }
+      .panel {
+          background: var(--panel-bg);
+          box-shadow: var(--panel-shadow);
+          border-radius: 16px;
+          padding: 16px;
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+      }
+      #sorteo-info {
+          align-items: flex-start;
+      }
+      #sorteo-resumen {
+          font-size: 0.95rem;
+          font-weight: 600;
+          color: var(--texto-primario);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+      }
+      #sorteo-detalles {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px 16px;
+          font-size: 0.78rem;
+          color: var(--texto-secundario);
+      }
+      #sorteo-detalles span {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+      }
+      #panel-superior {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+          gap: 16px;
+      }
+      h2 {
+          margin: 0;
+          font-family: 'Bangers', cursive;
+          letter-spacing: 1px;
+          font-size: 1.4rem;
+          color: #4b0082;
+          text-align: left;
+      }
+      #cantos-grid {
+          display: grid;
+          grid-template-columns: repeat(5, auto);
+          justify-content: center;
+          gap: 3px;
+          font-family: 'Bangers', cursive;
+      }
+      .canto-cell {
+          width: 34px;
+          height: 34px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 8px;
+          background: rgba(255,255,255,0.88);
+          color: #1f1f1f;
+          font-size: 1rem;
+          box-shadow: inset 0 0 3px rgba(0,0,0,0.2);
+          transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+      }
+      .canto-cell.encabezado {
+          font-size: 1.2rem;
+          color: #ff6600;
+          text-shadow: 1px 1px 0 #fff;
+          box-shadow: none;
+          background: transparent;
+      }
+      .canto-cell.cantado {
+          background: radial-gradient(circle, rgba(164, 231, 170, 0.95), rgba(64, 153, 71, 0.95));
+          color: white;
+          font-weight: 700;
+          transform: scale(1.05);
+      }
+      .canto-cell.ultimo {
+          box-shadow: 0 0 10px rgba(255,215,0,0.9);
+          transform: scale(1.12);
+      }
+      #ultimo-canto {
+          font-size: 0.8rem;
+          color: #1b5e20;
+          text-align: center;
+          font-weight: 600;
+      }
+      #formas-panel {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          justify-content: flex-start;
+      }
+      .forma-btn {
+          position: relative;
+          width: 68px;
+          height: 68px;
+          border-radius: 18px;
+          border: none;
+          padding: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 6px 14px rgba(0,0,0,0.25);
+          cursor: pointer;
+          overflow: hidden;
+          transition: transform 0.2s ease;
+          background: #ccc;
+          color: white;
+          font-size: 1.2rem;
+          font-family: 'Bangers', cursive;
+      }
+      .forma-btn:hover {
+          transform: translateY(-3px);
+      }
+      .forma-btn img {
+          width: 75%;
+          height: 75%;
+          object-fit: contain;
+          filter: drop-shadow(0 0 4px rgba(0,0,0,0.3));
+      }
+      .forma-nombre {
+          font-size: 0.75rem;
+          text-align: center;
+          color: var(--texto-primario);
+          font-weight: 600;
+          margin-top: 4px;
+      }
+      .forma-badge {
+          position: absolute;
+          top: -6px;
+          right: -6px;
+          min-width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          background: rgba(0,0,0,0.75);
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.9rem;
+          border: 2px solid white;
+          font-family: 'Bangers', cursive;
+      }
+      .forma-btn.sin-ganadores {
+          opacity: 0.75;
+          cursor: default;
+      }
+      #cartones-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+          gap: 14px;
+      }
+      .carton-card {
+          position: relative;
+          border-radius: 16px;
+          padding: 10px 12px 12px;
+          box-shadow: 0 6px 14px rgba(0,0,0,0.25);
+          background: linear-gradient(135deg, rgba(34,139,34,0.85), rgba(255,255,255,0.95));
+          transition: transform 0.25s ease, box-shadow 0.25s ease;
+      }
+      .carton-card.gratis {
+          background: linear-gradient(135deg, rgba(30, 144, 255, 0.85), rgba(255,255,255,0.95));
+      }
+      .carton-card.ganador {
+          background: linear-gradient(135deg, rgba(255, 231, 141, 0.95), rgba(255, 153, 85, 0.92));
+          box-shadow: 0 0 18px rgba(255, 153, 0, 0.9);
+          animation: zoomPulse 1.8s ease-in-out infinite;
+      }
+      @keyframes zoomPulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+      }
+      .carton-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-family: 'Bangers', cursive;
+          font-size: 1rem;
+          color: #4b0082;
+          margin-bottom: 6px;
+      }
+      .mini-carton {
+          width: 100%;
+          border-collapse: separate;
+          border-spacing: 2px;
+          table-layout: fixed;
+      }
+      .mini-carton th,
+      .mini-carton td {
+          width: 32px;
+          height: 32px;
+          border-radius: 6px;
+          text-align: center;
+          font-weight: bold;
+          background: rgba(255,255,255,0.92);
+          color: #111;
+          font-size: 0.95rem;
+          padding: 2px;
+      }
+      .mini-carton th {
+          font-size: 1.1rem;
+          color: #ff6600;
+          background: radial-gradient(circle, #ffffff 55%, #00aa00 95%);
+          text-shadow: 1px 1px 0 #000;
+      }
+      .numero-cantado {
+          color: var(--verde-canto);
+          text-shadow: 0 0 4px rgba(55, 155, 60, 0.55);
+      }
+      .numero-pendiente {
+          color: #111;
+      }
+      .mini-carton .free {
+          background: radial-gradient(circle, #ffffff 40%, #ffff66 95%);
+          font-size: 0.8rem;
+          color: #6a1b9a;
+      }
+      .forma-badge-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 4px;
+          margin-top: 6px;
+      }
+      .forma-tag {
+          font-size: 0.7rem;
+          padding: 2px 6px;
+          border-radius: 999px;
+          color: #fff;
+          font-weight: 600;
+          font-family: 'Poppins', sans-serif;
+          box-shadow: 0 0 6px rgba(0,0,0,0.35);
+      }
+      .mensaje {
+          font-size: 0.85rem;
+          color: var(--texto-secundario);
+      }
+      #resultados-contenedor {
+          display: none;
+      }
+      #login-footer {
+          margin: 30px 0 10px;
+          text-align: center;
+      }
+      #fecha-hora, #derechos {
+          font-size: 0.7rem;
+          color: #000;
+      }
+      #derechos {
+          font-size: 0.6rem;
+      }
+      .modal {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.8);
+          display: none;
+          align-items: center;
+          justify-content: center;
+          z-index: 100;
+      }
+      .modal.activa {
+          display: flex;
+      }
+      .modal-contenido {
+          background: #fff;
+          border-radius: 18px;
+          padding: 18px;
+          max-width: 840px;
+          max-height: 90vh;
+          overflow-y: auto;
+          box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          width: min(90vw, 840px);
+      }
+      .modal-cerrar {
+          align-self: flex-end;
+          background: none;
+          border: none;
+          font-size: 1.4rem;
+          cursor: pointer;
+          color: #333;
+      }
+      #modal-ganadores-lista {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+          gap: 12px;
+      }
+      .ganador-card {
+          background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(240,240,240,0.96));
+          border-radius: 14px;
+          padding: 10px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+      }
+      .ganador-info {
+          font-size: 0.78rem;
+          color: var(--texto-primario);
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+      }
+      .ganador-info strong {
+          color: #4b0082;
+          font-family: 'Bangers', cursive;
+          letter-spacing: 0.5px;
+      }
+      .modal-mensaje {
+          font-size: 0.85rem;
+          color: var(--texto-secundario);
+      }
+      @media (max-width: 768px) {
+          main {
+              padding: 70px 12px 20px;
+          }
+          .back-btn {
+              width: 90px;
+              font-size: 1rem;
+          }
+          .mini-carton th,
+          .mini-carton td {
+              width: 28px;
+              height: 28px;
+              font-size: 0.85rem;
+          }
+          .forma-btn {
+              width: 58px;
+              height: 58px;
+          }
+      }
   </style>
 </head>
 <body>
   <button id="volver-btn" class="menu-btn back-btn">&#9664; Volver</button>
-  <h3 style="font-size:1rem;margin:10px 0;">Sorteo N° XXX fecha XX/XX/XXXX Nombre de sorteo</h3>
-  <div id="resultados-contenedor"></div>
+  <main>
+    <section id="sorteo-info" class="panel">
+      <div id="sorteo-resumen">Cargando sorteo en vivo...</div>
+      <div id="sorteo-detalles"></div>
+    </section>
+    <section id="panel-superior">
+      <div id="cantos-panel" class="panel">
+        <h2>Números cantados</h2>
+        <div id="cantos-grid"></div>
+        <div id="ultimo-canto"></div>
+      </div>
+      <div id="formas-panel-contenedor" class="panel">
+        <h2>Formas en juego</h2>
+        <div id="formas-panel"></div>
+        <div id="formas-mensaje" class="mensaje"></div>
+      </div>
+    </section>
+    <section id="cartones-panel" class="panel">
+      <h2>Mis cartones</h2>
+      <div id="cartones-mensaje" class="mensaje"></div>
+      <div id="cartones-grid"></div>
+    </section>
+  </main>
 
   <div id="login-footer">
     <div id="fecha-hora"></div>
     <div id="derechos">Todos los derechos reservados ® Hexaservice 2025</div>
+  </div>
+
+  <div id="modal-ganadores" class="modal">
+    <div class="modal-contenido">
+      <button class="modal-cerrar" id="modal-cerrar">✖</button>
+      <h2 id="modal-titulo">Ganadores</h2>
+      <div id="modal-subtitulo" class="mensaje"></div>
+      <div id="modal-ganadores-lista"></div>
+      <div id="modal-sin-ganadores" class="modal-mensaje"></div>
+    </div>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
@@ -62,7 +441,577 @@
   ensureAuth();
   initFechaHora('fecha-hora');
 
-  document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='player.html';});
+  const volverBtn = document.getElementById('volver-btn');
+  volverBtn.addEventListener('click',()=>{window.location.href='player.html';});
+
+  const cantosGridEl = document.getElementById('cantos-grid');
+  const ultimoCantoEl = document.getElementById('ultimo-canto');
+  const sorteoResumenEl = document.getElementById('sorteo-resumen');
+  const sorteoDetallesEl = document.getElementById('sorteo-detalles');
+  const formasPanelEl = document.getElementById('formas-panel');
+  const formasMensajeEl = document.getElementById('formas-mensaje');
+  const cartonesGridEl = document.getElementById('cartones-grid');
+  const cartonesMensajeEl = document.getElementById('cartones-mensaje');
+  const modalGanadores = document.getElementById('modal-ganadores');
+  const modalCerrarBtn = document.getElementById('modal-cerrar');
+  const modalTituloEl = document.getElementById('modal-titulo');
+  const modalSubtituloEl = document.getElementById('modal-subtitulo');
+  const modalListaEl = document.getElementById('modal-ganadores-lista');
+  const modalSinGanadoresEl = document.getElementById('modal-sin-ganadores');
+
+  const FORM_COLORS = ['#90ee90', '#fffacd', '#add8e6', '#d8b0ff', '#ffcc99', '#f77fb3', '#9ad3bc', '#fecf6a'];
+
+  const cantoCellsMap = new Map();
+  let cantosOrdenados = [];
+  let cantosIndiceMap = new Map();
+  let formasActivas = [];
+  let cartonesSorteo = new Map();
+  let cartonesGanadoresPorForma = new Map();
+  let formasPorCarton = new Map();
+  let activeSorteo = null;
+  let activeSorteoId = null;
+  let usuarioActual = null;
+
+  let unsubscribeSorteos = null;
+  let unsubscribeCantos = null;
+  let unsubscribeFormas = null;
+  let unsubscribeCartones = null;
+
+  function crearGridCantos(){
+    cantosGridEl.innerHTML='';
+    cantoCellsMap.clear();
+    const letras=['B','I','N','G','O'];
+    letras.forEach(letra=>{
+      const celda=document.createElement('div');
+      celda.textContent=letra;
+      celda.className='canto-cell encabezado';
+      cantosGridEl.appendChild(celda);
+    });
+    for(let fila=0;fila<15;fila++){
+      for(let col=0;col<5;col++){
+        const numero=fila+1+col*15;
+        const celda=document.createElement('div');
+        celda.textContent=numero;
+        celda.dataset.numero=numero;
+        celda.className='canto-cell';
+        cantosGridEl.appendChild(celda);
+        cantoCellsMap.set(numero,celda);
+      }
+    }
+  }
+
+  crearGridCantos();
+
+  function formatearFecha(fechaStr){
+    if(!fechaStr) return '';
+    const partes=fechaStr.split('-');
+    if(partes.length===3){
+      return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    }
+    return fechaStr;
+  }
+
+  function normalizarNumero(valor){
+    if(typeof valor==='number' && Number.isFinite(valor)) return valor;
+    if(typeof valor==='string' && valor.trim()!==''){
+      const n=parseInt(valor,10);
+      if(Number.isFinite(n)) return n;
+    }
+    return null;
+  }
+
+  function colorConTransparencia(hex,alpha){
+    if(!hex) return `rgba(255,255,255,${alpha})`;
+    let valor=hex.replace('#','');
+    if(valor.length===3){
+      valor=valor.split('').map(c=>c+c).join('');
+    }
+    const num=parseInt(valor,16);
+    if(Number.isNaN(num)) return `rgba(255,255,255,${alpha})`;
+    const r=(num>>16)&255;
+    const g=(num>>8)&255;
+    const b=num&255;
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  function actualizarHeader(){
+    if(!activeSorteo){
+      sorteoResumenEl.textContent='No hay sorteos en vivo en este momento.';
+      sorteoDetallesEl.innerHTML='';
+      return;
+    }
+    const {nombre='',fecha='',tipo='',hora=''}=activeSorteo;
+    sorteoResumenEl.textContent=`${nombre}`;
+    const detalles=[];
+    if(tipo) detalles.push(`<span>Tipo: <strong>${tipo}</strong></span>`);
+    if(fecha) detalles.push(`<span>Fecha: <strong>${formatearFecha(fecha)}</strong></span>`);
+    if(hora) detalles.push(`<span>Hora: <strong>${hora}</strong></span>`);
+    sorteoDetallesEl.innerHTML=detalles.join(' · ');
+  }
+
+  function renderCantos(){
+    if(!cantoCellsMap.size) crearGridCantos();
+    const usados=new Set();
+    cantoCellsMap.forEach(celda=>{
+      celda.classList.remove('cantado','ultimo');
+    });
+    ultimoCantoEl.textContent='';
+    cantosOrdenados.forEach((num,idx)=>{
+      const celda=cantoCellsMap.get(num);
+      if(celda){
+        celda.classList.add('cantado');
+        usados.add(num);
+        if(idx===cantosOrdenados.length-1){
+          celda.classList.add('ultimo');
+          ultimoCantoEl.textContent=`Último canto: ${num}`;
+        }
+      }
+    });
+    if(!cantosOrdenados.length){
+      ultimoCantoEl.textContent='Aún no se han registrado cantos.';
+    }
+  }
+
+  function limpiarPanelFormas(){
+    formasPanelEl.innerHTML='';
+    formasMensajeEl.textContent='';
+  }
+
+  function renderFormas(){
+    limpiarPanelFormas();
+    if(!formasActivas.length){
+      formasMensajeEl.textContent='No hay formas registradas para este sorteo.';
+      return;
+    }
+    formasActivas.forEach(forma=>{
+      const colorBase=FORM_COLORS[(Number(forma.idx||1)-1)%FORM_COLORS.length];
+      const wrapper=document.createElement('div');
+      wrapper.style.display='flex';
+      wrapper.style.flexDirection='column';
+      wrapper.style.alignItems='center';
+      wrapper.style.gap='4px';
+      const btn=document.createElement('button');
+      btn.className='forma-btn';
+      btn.style.background=`linear-gradient(135deg, ${colorBase}, ${colorConTransparencia(colorBase,0.45)})`;
+      if(forma.premioImagen){
+        const img=document.createElement('img');
+        img.src=forma.premioImagen;
+        img.alt=forma.nombre||`Forma ${forma.idx}`;
+        btn.appendChild(img);
+      }else{
+        btn.textContent=forma.idx?`F${String(forma.idx).padStart(2,'0')}`:'FORMA';
+      }
+      const ganadoresInfo=cartonesGanadoresPorForma.get(forma.idx)||{cartones:[]};
+      const totalGanadores=(ganadoresInfo.cartones||[]).length;
+      const badge=document.createElement('div');
+      badge.className='forma-badge';
+      badge.style.background=colorConTransparencia(colorBase,0.9);
+      badge.textContent=totalGanadores;
+      btn.appendChild(badge);
+      if(totalGanadores>0){
+        btn.addEventListener('click',()=>abrirModalGanadores(forma));
+      }else{
+        btn.classList.add('sin-ganadores');
+      }
+      btn.title=forma.nombre||`Forma ${forma.idx}`;
+      wrapper.appendChild(btn);
+      if(forma.nombre){
+        const etiqueta=document.createElement('div');
+        etiqueta.className='forma-nombre';
+        etiqueta.textContent=forma.nombre;
+        wrapper.appendChild(etiqueta);
+      }
+      formasPanelEl.appendChild(wrapper);
+    });
+  }
+
+  function crearMiniCartonDOM(posiciones){
+    const tabla=document.createElement('table');
+    tabla.className='mini-carton';
+    const thead=document.createElement('thead');
+    const trHead=document.createElement('tr');
+    ['B','I','N','G','O'].forEach(letra=>{
+      const th=document.createElement('th');
+      th.textContent=letra;
+      trHead.appendChild(th);
+    });
+    thead.appendChild(trHead);
+    tabla.appendChild(thead);
+    const tbody=document.createElement('tbody');
+    const mapaValor=new Map();
+    posiciones.forEach(p=>{
+      mapaValor.set(`${p.r}-${p.c}`,p.valor);
+    });
+    for(let r=0;r<5;r++){
+      const tr=document.createElement('tr');
+      for(let c=0;c<5;c++){
+        const td=document.createElement('td');
+        if(r===2 && c===2){
+          td.classList.add('free');
+          td.textContent='FREE';
+        }else{
+          const valor=mapaValor.get(`${r}-${c}`);
+          if(valor!==undefined){
+            td.textContent=valor;
+            if(cantosIndiceMap.has(valor)){
+              td.classList.add('numero-cantado');
+            }else{
+              td.classList.add('numero-pendiente');
+            }
+          }
+        }
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+    tabla.appendChild(tbody);
+    return tabla;
+  }
+
+  function aplicarFondosGanadores(cartaEl, posiciones, formaIdx){
+    const colorBase=FORM_COLORS[(Number(formaIdx||1)-1)%FORM_COLORS.length];
+    const celdas=cartaEl.querySelectorAll('tbody td');
+    posiciones.forEach(pos=>{
+      const idx=pos.r*5+pos.c;
+      if(idx>=0 && idx<celdas.length){
+        const celda=celdas[idx];
+        if(!celda || celda.classList.contains('free')) return;
+        celda.style.background=colorConTransparencia(colorBase,0.35);
+      }
+    });
+  }
+
+  function renderCartonesJugador(){
+    cartonesGridEl.innerHTML='';
+    const lista=Array.from(cartonesSorteo.values()).filter(c=>c.userId=== (usuarioActual?usuarioActual.uid:null));
+    if(!lista.length){
+      cartonesMensajeEl.textContent='No tienes cartones participando en este sorteo.';
+      return;
+    }
+    cartonesMensajeEl.textContent='';
+    const decorados=lista.map(carton=>{
+      const formasGanadas=formasPorCarton.get(carton.id)||[];
+      const primerPaso=formasGanadas.length?Math.min(...formasGanadas.map(f=>f.paso)):Infinity;
+      return {...carton, formasGanadas, primerPaso};
+    });
+    decorados.sort((a,b)=>{
+      const aGan=a.formasGanadas.length>0;
+      const bGan=b.formasGanadas.length>0;
+      if(aGan!==bGan) return aGan?-1:1;
+      if(aGan && bGan){
+        if(a.primerPaso!==b.primerPaso) return a.primerPaso-b.primerPaso;
+      }
+      const numA=a.cartonNum ?? a.Ncarton ?? Number.MAX_SAFE_INTEGER;
+      const numB=b.cartonNum ?? b.Ncarton ?? Number.MAX_SAFE_INTEGER;
+      return numA-numB;
+    });
+    decorados.forEach(carton=>{
+      const wrapper=document.createElement('div');
+      wrapper.className='carton-card';
+      if((carton.tipocarton||'').toLowerCase()==='gratis'){
+        wrapper.classList.add('gratis');
+      }
+      if(carton.formasGanadas.length){
+        wrapper.classList.add('ganador');
+      }
+      const header=document.createElement('div');
+      header.className='carton-header';
+      const numero=(carton.cartonNum ?? carton.Ncarton ?? '').toString();
+      header.innerHTML=`<span>Cartón ${numero?`#${numero.padStart(4,'0')}`:'--'}</span><span>${(carton.tipocarton||'Pagado').toUpperCase()}</span>`;
+      wrapper.appendChild(header);
+      const tabla=crearMiniCartonDOM(carton.posiciones);
+      wrapper.appendChild(tabla);
+      carton.formasGanadas.forEach(f=>{
+        aplicarFondosGanadores(tabla,f.forma.posicionesNormalizadas,f.forma.idx);
+      });
+      if(carton.formasGanadas.length){
+        const tags=document.createElement('div');
+        tags.className='forma-badge-list';
+        carton.formasGanadas.forEach(f=>{
+          const tag=document.createElement('div');
+          tag.className='forma-tag';
+          tag.style.backgroundColor=colorConTransparencia(FORM_COLORS[(Number(f.forma.idx||1)-1)%FORM_COLORS.length],0.9);
+          tag.textContent=`Forma ${String(f.forma.idx).padStart(2,'0')}`;
+          tags.appendChild(tag);
+        });
+        wrapper.appendChild(tags);
+      }
+      cartonesGridEl.appendChild(wrapper);
+    });
+  }
+
+  function abrirModalGanadores(forma){
+    if(!forma) return;
+    const info=cartonesGanadoresPorForma.get(forma.idx);
+    const ganadores=info&&Array.isArray(info.cartones)?info.cartones:[];
+    modalTituloEl.textContent=`Ganadores Forma ${String(forma.idx).padStart(2,'0')}`;
+    modalSubtituloEl.textContent=forma.nombre?forma.nombre:'';
+    modalListaEl.innerHTML='';
+    modalSinGanadoresEl.textContent='';
+    if(!ganadores.length){
+      modalSinGanadoresEl.textContent='Aún no hay cartones ganadores para esta forma.';
+    }else{
+      const ordenados=ganadores.slice().sort((a,b)=>{
+        const pasoA=(formasPorCarton.get(a.id)||[]).find(f=>f.forma.idx===forma.idx)?.paso??Infinity;
+        const pasoB=(formasPorCarton.get(b.id)||[]).find(f=>f.forma.idx===forma.idx)?.paso??Infinity;
+        if(pasoA!==pasoB) return pasoA-pasoB;
+        const numA=a.cartonNum ?? a.Ncarton ?? Number.MAX_SAFE_INTEGER;
+        const numB=b.cartonNum ?? b.Ncarton ?? Number.MAX_SAFE_INTEGER;
+        return numA-numB;
+      });
+      ordenados.forEach(carton=>{
+        const card=document.createElement('div');
+        card.className='ganador-card';
+        const tabla=crearMiniCartonDOM(carton.posiciones);
+        aplicarFondosGanadores(tabla,forma.posicionesNormalizadas,forma.idx);
+        card.appendChild(tabla);
+        const infoBox=document.createElement('div');
+        infoBox.className='ganador-info';
+        const numero=(carton.cartonNum ?? carton.Ncarton ?? '').toString();
+        infoBox.innerHTML=`<strong>Cartón ${numero?`#${numero.padStart(4,'0')}`:'--'}</strong>`+
+          `<span>Alias: ${carton.alias || 'Sin alias'}</span>`+
+          `<span>Tipo: ${(carton.tipocarton||'Pagado').toUpperCase()}</span>`;
+        card.appendChild(infoBox);
+        modalListaEl.appendChild(card);
+      });
+    }
+    modalGanadores.classList.add('activa');
+  }
+
+  function cerrarModal(){
+    modalGanadores.classList.remove('activa');
+  }
+
+  modalCerrarBtn.addEventListener('click',cerrarModal);
+  modalGanadores.addEventListener('click',e=>{
+    if(e.target===modalGanadores) cerrarModal();
+  });
+
+  function calcularGanadores(){
+    cartonesGanadoresPorForma=new Map();
+    formasPorCarton=new Map();
+    cantosIndiceMap=new Map();
+    if(!formasActivas.length || !cartonesSorteo.size || !cantosOrdenados.length){
+      renderFormas();
+      renderCartonesJugador();
+      return;
+    }
+    cantosOrdenados.forEach((num,idx)=>{
+      if(!cantosIndiceMap.has(num)) cantosIndiceMap.set(num,idx);
+    });
+    formasActivas.forEach(forma=>{
+      const posiciones=forma.posicionesNormalizadas||[];
+      if(!posiciones.length) return;
+      let mejorPaso=Infinity;
+      const ganadores=[];
+      cartonesSorteo.forEach(carton=>{
+        let valido=true;
+        let maxPaso=-1;
+        for(const pos of posiciones){
+          const valor=carton.valorPorPos.get(`${pos.r}-${pos.c}`);
+          if(valor===undefined){
+            valido=false;
+            break;
+          }
+          const idx=cantosIndiceMap.get(valor);
+          if(idx===undefined){
+            valido=false;
+            break;
+          }
+          if(idx>maxPaso) maxPaso=idx;
+        }
+        if(!valido) return;
+        if(maxPaso<mejorPaso){
+          mejorPaso=maxPaso;
+          ganadores.length=0;
+          ganadores.push(carton);
+        }else if(maxPaso===mejorPaso){
+          ganadores.push(carton);
+        }
+      });
+      cartonesGanadoresPorForma.set(forma.idx,{forma,cartones:ganadores,paso:mejorPaso});
+      ganadores.forEach(carton=>{
+        if(!formasPorCarton.has(carton.id)) formasPorCarton.set(carton.id,[]);
+        formasPorCarton.get(carton.id).push({forma,paso:mejorPaso});
+      });
+    });
+    formasPorCarton.forEach(lista=>{
+      lista.sort((a,b)=>{
+        if(a.paso!==b.paso) return a.paso-b.paso;
+        return (a.forma.idx||0)-(b.forma.idx||0);
+      });
+    });
+    renderFormas();
+    renderCartonesJugador();
+  }
+
+  function procesarCantos(data){
+    const lista=Array.isArray(data)?data:[];
+    const normalizados=[];
+    lista.forEach(val=>{
+      const n=normalizarNumero(val);
+      if(n!==null) normalizados.push(n);
+    });
+    cantosOrdenados=normalizados;
+    renderCantos();
+    calcularGanadores();
+  }
+
+  function procesarFormas(snapshot){
+    const arr=[];
+    snapshot.forEach(doc=>{
+      const data=doc.data()||{};
+      const idx=Number(data.idx||data.indice||arr.length+1);
+      const posiciones=Array.isArray(data.posiciones)?data.posiciones:[];
+      const normalizadas=posiciones
+        .map(p=>({r:Number(p.r),c:Number(p.c)}))
+        .filter(p=>Number.isInteger(p.r)&&Number.isInteger(p.c));
+      arr.push({
+        id:doc.id,
+        idx,
+        nombre:data.nombre||'',
+        premioImagen:data.premioImagen||data.imagen||'',
+        posicionesNormalizadas:normalizadas
+      });
+    });
+    arr.sort((a,b)=>(a.idx||0)-(b.idx||0));
+    formasActivas=arr;
+    calcularGanadores();
+  }
+
+  function procesarCartones(snapshot){
+    const mapa=new Map();
+    snapshot.forEach(doc=>{
+      const data=doc.data()||{};
+      const posicionesRaw=Array.isArray(data.posiciones)?data.posiciones:[];
+      const posiciones=posicionesRaw
+        .map(p=>({r:Number(p.r),c:Number(p.c),valor:normalizarNumero(p.valor ?? p.numero ?? p.value)}))
+        .filter(p=>Number.isInteger(p.r)&&Number.isInteger(p.c)&&p.valor!==null);
+      const valorPorPos=new Map();
+      posiciones.forEach(p=>{
+        valorPorPos.set(`${p.r}-${p.c}`,p.valor);
+      });
+      mapa.set(doc.id,{
+        id:doc.id,
+        sorteoId:data.sorteoId,
+        userId:data.userId||'',
+        alias:data.alias||'',
+        cartonNum:data.cartonNum,
+        Ncarton:data.Ncarton,
+        tipocarton:data.tipocarton||'pagado',
+        posiciones,
+        valorPorPos
+      });
+    });
+    cartonesSorteo=mapa;
+    calcularGanadores();
+  }
+
+  function suscribirCantos(){
+    if(unsubscribeCantos){
+      unsubscribeCantos();
+      unsubscribeCantos=null;
+    }
+    if(!activeSorteoId) return;
+    unsubscribeCantos=db.collection('cantos').doc(activeSorteoId).onSnapshot(doc=>{
+      const datos=doc.exists?(doc.data()?.numeros||[]):[];
+      procesarCantos(datos);
+    },err=>console.error('Error escuchando cantos',err));
+  }
+
+  function suscribirFormas(){
+    if(unsubscribeFormas){
+      unsubscribeFormas();
+      unsubscribeFormas=null;
+    }
+    if(!activeSorteoId) return;
+    unsubscribeFormas=db.collection('formas').where('sorteoId','==',activeSorteoId).onSnapshot(procesarFormas,err=>{
+      console.error('Error escuchando formas',err);
+    });
+  }
+
+  function suscribirCartones(){
+    if(unsubscribeCartones){
+      unsubscribeCartones();
+      unsubscribeCartones=null;
+    }
+    if(!activeSorteoId) return;
+    unsubscribeCartones=db.collection('CartonJugado').where('sorteoId','==',activeSorteoId).onSnapshot(procesarCartones,err=>{
+      console.error('Error escuchando cartones',err);
+    });
+  }
+
+  function seleccionarSorteo(activos){
+    if(!activos.length){
+      activeSorteo=null;
+      activeSorteoId=null;
+      actualizarHeader();
+      if(unsubscribeCantos){unsubscribeCantos();unsubscribeCantos=null;}
+      if(unsubscribeFormas){unsubscribeFormas();unsubscribeFormas=null;}
+      if(unsubscribeCartones){unsubscribeCartones();unsubscribeCartones=null;}
+      procesarCantos([]);
+      formasActivas=[];
+      renderFormas();
+      cartonesSorteo=new Map();
+      renderCartonesJugador();
+      return;
+    }
+    const existente=activeSorteoId?activos.find(s=>s.id===activeSorteoId):null;
+    const elegido=existente||activos[0];
+    const cambio=activeSorteoId!==elegido.id;
+    activeSorteo=elegido;
+    activeSorteoId=elegido.id;
+    actualizarHeader();
+    if(cambio){
+      procesarCantos([]);
+      formasActivas=[];
+      renderFormas();
+      cartonesSorteo=new Map();
+      renderCartonesJugador();
+      suscribirCantos();
+      suscribirFormas();
+      suscribirCartones();
+    }
+  }
+
+  function iniciarSorteosListener(){
+    if(unsubscribeSorteos){
+      unsubscribeSorteos();
+      unsubscribeSorteos=null;
+    }
+    unsubscribeSorteos=db.collection('sorteos').where('estado','==','Jugando').onSnapshot(snapshot=>{
+      const lista=[];
+      snapshot.forEach(doc=>{
+        const data=doc.data()||{};
+        lista.push({id:doc.id,...data});
+      });
+      lista.sort((a,b)=>{
+        const fechaA=(a.fecha||'');
+        const fechaB=(b.fecha||'');
+        if(fechaA!==fechaB) return fechaA.localeCompare(fechaB);
+        return (a.hora||'').localeCompare(b.hora||'');
+      });
+      seleccionarSorteo(lista);
+    },err=>{
+      console.error('Error escuchando sorteos en juego',err);
+    });
+  }
+
+  initFirebase()
+    .then(()=>{
+      auth.onAuthStateChanged(user=>{
+        if(!user){
+          window.location.href='index.html';
+          return;
+        }
+        usuarioActual=user;
+        iniciarSorteosListener();
+      });
+    })
+    .catch(err=>{
+      console.error('No se pudo inicializar Firebase',err);
+      alert('Error inicializando la aplicación.');
+    });
   </script>
 </body>
 </html>
