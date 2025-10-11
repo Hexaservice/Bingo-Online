@@ -153,7 +153,7 @@
       }
       #panel-superior {
           display: grid;
-          grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+          grid-template-columns: minmax(0, 1fr) minmax(320px, 1fr);
           gap: 12px;
           align-items: start;
       }
@@ -242,16 +242,15 @@
           animation: focoUltimo 1.6s ease-in-out infinite;
       }
       #panel-derecho {
-          display: grid;
-          grid-template-rows: auto auto minmax(0, 1fr);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
           gap: 12px;
-          align-content: start;
-      }
-      #formas-panel {
-          display: none;
-      }
-      #formas-panel:empty {
-          padding: 0;
+          align-self: stretch;
+          justify-content: flex-start;
+          min-width: clamp(260px, 32vw, 420px);
+          width: 100%;
+          box-sizing: border-box;
       }
       #formas-flotantes {
           position: fixed;
@@ -335,6 +334,8 @@
           align-items: center;
           padding: 0;
           width: 100%;
+          max-width: 420px;
+          margin: 0 auto;
       }
       #carton-destacado.activo {
           display: flex;
@@ -709,7 +710,7 @@
               grid-template-columns: 1fr;
           }
           #panel-derecho {
-              grid-template-rows: auto auto minmax(0, 1fr);
+              min-width: 100%;
           }
           #formas-flotantes {
               right: clamp(8px, 3vw, 22px);
@@ -734,9 +735,7 @@
               gap: 10px;
           }
           #panel-derecho {
-              grid-template-rows: auto auto minmax(0, 1fr);
-          }
-          #panel-derecho {
+              min-width: 100%;
               gap: 10px;
           }
           #carton-destacado .carton-tabla {
@@ -774,7 +773,7 @@
               padding-top: 46px;
           }
           #panel-superior {
-              grid-template-columns: minmax(200px, 0.9fr) minmax(240px, 1fr);
+              grid-template-columns: minmax(200px, 0.9fr) minmax(260px, 1fr);
           }
           #mis-cartones-grid {
               grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -817,9 +816,8 @@
         <div id="ultimo-canto"></div>
       </div>
       <aside id="panel-derecho">
-        <div id="formas-panel" role="list" aria-label="Cartones ganadores"></div>
-        <div id="formas-mensaje" class="mensaje"></div>
         <div id="carton-destacado" aria-live="polite"></div>
+        <div id="formas-mensaje" class="mensaje"></div>
       </aside>
     </section>
     <section id="mis-cartones-section">
@@ -862,7 +860,6 @@
   const ultimoCantoEl = document.getElementById('ultimo-canto');
   const sorteoResumenEl = document.getElementById('sorteo-resumen');
   const sorteoDetallesEl = document.getElementById('sorteo-detalles');
-  const formasPanelEl = document.getElementById('formas-panel');
   const formasMensajeEl = document.getElementById('formas-mensaje');
   const formasFlotantesEl = document.getElementById('formas-flotantes');
   const misCartonesSectionEl = document.getElementById('mis-cartones-section');
@@ -1464,9 +1461,6 @@
   }
 
   function limpiarPanelFormas(){
-    if(formasPanelEl){
-      formasPanelEl.innerHTML='';
-    }
     if(formasMensajeEl){
       formasMensajeEl.textContent='';
     }
