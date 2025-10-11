@@ -251,81 +251,6 @@
           width: min(100%, clamp(220px, 32vw, 420px));
           box-sizing: border-box;
       }
-      #formas-flotantes {
-          position: fixed;
-          top: 50%;
-          right: clamp(10px, 2.8vw, 28px);
-          transform: translateY(-50%);
-          display: flex;
-          flex-direction: column;
-          gap: clamp(8px, 2vw, 16px);
-          z-index: 40;
-          pointer-events: none;
-      }
-      .forma-flotante-item {
-          display: flex;
-          justify-content: center;
-          pointer-events: auto;
-      }
-      .forma-flotante-btn {
-          position: relative;
-          width: clamp(46px, 9vw, 64px);
-          height: clamp(46px, 9vw, 64px);
-          border-radius: 18px;
-          border: 2px solid transparent;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 2px;
-          font-family: 'Bangers', cursive;
-          font-size: clamp(0.58rem, 2.4vw, 0.95rem);
-          color: #ffffff;
-          cursor: pointer;
-          box-shadow: 0 10px 18px rgba(0,0,0,0.28);
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
-          background: linear-gradient(160deg, rgba(255,255,255,0.85), rgba(0,0,0,0.35));
-      }
-      .forma-flotante-btn:hover,
-      .forma-flotante-btn:focus-visible {
-          transform: translateY(-2px) scale(1.03);
-          box-shadow: 0 12px 22px rgba(0,0,0,0.34);
-          outline: none;
-      }
-      .forma-flotante-btn:disabled,
-      .forma-flotante-btn.sin-ganadores {
-          cursor: default;
-          filter: saturate(0.55);
-          opacity: 0.7;
-          transform: none;
-          box-shadow: 0 6px 12px rgba(0,0,0,0.18);
-          pointer-events: none;
-      }
-      .forma-flotante-btn--propio {
-          box-shadow: 0 0 18px rgba(255, 255, 255, 0.7), 0 0 32px rgba(255, 215, 0, 0.65);
-      }
-      .forma-flotante-texto {
-          text-transform: uppercase;
-          text-shadow: 0 0 8px rgba(0,0,0,0.65);
-      }
-      .forma-flotante-badge {
-          position: absolute;
-          top: -6px;
-          right: -6px;
-          min-width: 20px;
-          height: 20px;
-          border-radius: 999px;
-          background: rgba(0,0,0,0.7);
-          color: #ffffff;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: clamp(0.55rem, 1.8vw, 0.7rem);
-          border: 2px solid rgba(255,255,255,0.8);
-          font-family: 'Bangers', cursive;
-          padding: 0 4px;
-          box-shadow: 0 4px 10px rgba(0,0,0,0.45);
-      }
       #carton-destacado {
           display: none;
           flex-direction: column;
@@ -538,14 +463,14 @@
           text-shadow: 0 0 6px rgba(0,0,0,0.75);
       }
       .carton-tabla--principal {
-          --cell-size: min(clamp(28px, min(5.6vw, 11vh), 46px), calc(100% / 5));
+          --cell-size: clamp(28px, 5.6vmin, 46px);
       }
       .carton-tabla--mini {
           --cell-size: clamp(22px, 4.8vw, 28px);
       }
       #carton-destacado .carton-tabla {
-          width: min(100%, 330px);
-          max-width: min(88vw, 330px);
+          width: calc(var(--cell-size) * 5);
+          max-width: calc(var(--cell-size) * 5);
           margin: 0 auto;
       }
       #carton-destacado .carton-visor-info {
@@ -559,28 +484,69 @@
       .carton-visor-info {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 2px;
-          font-size: 0.7rem;
+          gap: 6px 12px;
+          font-size: 0.72rem;
           font-weight: 600;
           color: var(--texto-primario);
           text-align: left;
       }
       .carton-visor-info .carton-visor-numero {
           grid-column: 1 / -1;
-          font-size: 0.82rem;
+          font-size: 0.88rem;
           font-weight: 700;
           color: var(--texto-primario);
       }
-      .carton-visor-info .carton-visor-forma {
+      .carton-visor-forma {
           grid-column: 1;
-          font-size: 0.68rem;
-          font-weight: 600;
-      }
-      .carton-visor-info .carton-visor-total {
-          grid-column: 2;
+          display: inline-flex;
+          align-items: baseline;
+          gap: 4px;
           font-size: 0.74rem;
+          font-weight: 600;
+          letter-spacing: 0.4px;
+      }
+      .carton-visor-forma-label {
           font-weight: 700;
-          color: #1f7a3d;
+          text-transform: uppercase;
+      }
+      .carton-visor-forma-valor {
+          font-weight: 800;
+      }
+      .carton-visor-ganadores {
+          grid-column: 2;
+          font-size: 0.78rem;
+          font-weight: 600;
+          text-align: right;
+          background: transparent;
+          border: none;
+          padding: 0;
+          cursor: pointer;
+          font-family: inherit;
+          transition: transform 0.2s ease;
+      }
+      .carton-visor-ganadores:hover,
+      .carton-visor-ganadores:focus-visible {
+          transform: translateY(-1px);
+          outline: none;
+      }
+      .carton-visor-ganadores:disabled {
+          cursor: not-allowed;
+          opacity: 0.55;
+          transform: none;
+      }
+      .carton-visor-total-label {
+          grid-column: 1 / -1;
+          font-size: 0.82rem;
+          font-weight: 700;
+          color: #138a3d;
+          text-transform: uppercase;
+      }
+      .carton-visor-total-valor {
+          grid-column: 1 / -1;
+          font-size: 2.1rem;
+          font-weight: 800;
+          color: #13a547;
+          line-height: 1;
       }
       .mensaje {
           font-size: 0.85rem;
@@ -732,9 +698,6 @@
           #panel-derecho {
               width: min(100%, clamp(200px, 46vw, 360px));
           }
-          #formas-flotantes {
-              right: clamp(8px, 3vw, 22px);
-          }
       }
 
       @media (max-width: 768px) {
@@ -759,7 +722,7 @@
               gap: 10px;
           }
           #carton-destacado .carton-tabla {
-              max-width: clamp(220px, 96vw, 360px);
+              max-width: calc(var(--cell-size) * 5);
           }
           #mis-cartones-grid {
               grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
@@ -773,15 +736,6 @@
           }
           .ganador-card {
               grid-template-columns: 1fr;
-          }
-          #formas-flotantes {
-              flex-direction: row;
-              bottom: clamp(12px, 4vw, 20px);
-              top: auto;
-              right: auto;
-              left: 50%;
-              transform: translate(-50%, 0);
-              gap: clamp(6px, 3vw, 14px);
           }
       }
       @media (max-width: 480px) {
@@ -807,26 +761,8 @@
               grid-template-columns: repeat(2, minmax(0, 1fr));
               gap: 8px;
           }
-          #formas-flotantes {
-              right: clamp(8px, 3vw, 20px);
-              top: clamp(70px, 22vh, 240px);
-              transform: none;
-          }
-          .forma-flotante-btn {
-              width: clamp(36px, 6vw, 52px);
-              height: clamp(36px, 6vw, 52px);
-              border-radius: 14px;
-              font-size: clamp(0.48rem, 1.8vw, 0.75rem);
-          }
-          .forma-flotante-badge {
-              min-width: 16px;
-              height: 16px;
-              font-size: clamp(0.45rem, 1.5vw, 0.62rem);
-              top: -4px;
-              right: -4px;
-          }
           #carton-destacado .carton-tabla {
-              max-width: clamp(220px, 60vw, 360px);
+              max-width: calc(var(--cell-size) * 5);
           }
       }
   </style>
@@ -854,8 +790,6 @@
       <div id="mis-cartones-grid" aria-live="polite"></div>
     </section>
   </main>
-
-  <div id="formas-flotantes" role="list" aria-label="Cartones ganadores disponibles"></div>
 
   <div id="login-footer">
     <div id="fecha-hora"></div>
@@ -889,7 +823,6 @@
   const sorteoResumenEl = document.getElementById('sorteo-resumen');
   const sorteoDetallesEl = document.getElementById('sorteo-detalles');
   const formasMensajeEl = document.getElementById('formas-mensaje');
-  const formasFlotantesEl = document.getElementById('formas-flotantes');
   const misCartonesSectionEl = document.getElementById('mis-cartones-section');
   const misCartonesGridEl = document.getElementById('mis-cartones-grid');
   const cartonesMensajeEl = document.getElementById('cartones-mensaje');
@@ -1597,9 +1530,6 @@
     if(formasMensajeEl){
       formasMensajeEl.textContent='';
     }
-    if(formasFlotantesEl){
-      formasFlotantesEl.innerHTML='';
-    }
   }
 
   function limpiarCartonesRenderizados(){
@@ -1615,66 +1545,6 @@
         formasMensajeEl.textContent='No hay formas registradas para este sorteo.';
       }
       return;
-    }
-    const fragment=document.createDocumentFragment();
-    const usuarioIdActual=usuarioActual?usuarioActual.uid:null;
-    formasActivas.forEach(forma=>{
-      const indice=Number(forma.idx||1);
-      const colorBase=FORM_COLORS[(Number.isFinite(indice)&&indice>0?indice-1:0)%FORM_COLORS.length];
-      const item=document.createElement('div');
-      item.className='forma-flotante-item';
-      item.setAttribute('role','listitem');
-      const boton=document.createElement('button');
-      boton.type='button';
-      boton.className='forma-flotante-btn';
-      const colorSuperior=ajustarLuminosidad(colorBase,0.35);
-      const colorInferior=ajustarLuminosidad(colorBase,-0.12);
-      const colorBorde=ajustarLuminosidad(colorBase,-0.45);
-      boton.style.background=`linear-gradient(165deg, ${colorSuperior}, ${colorInferior})`;
-      boton.style.borderColor=colorBorde;
-      boton.style.boxShadow=`0 0 12px rgba(0,0,0,0.35), 0 0 18px ${colorConTransparencia(colorBase,0.55)}`;
-      const indiceTexto=forma.idx!==undefined&&forma.idx!==null?String(forma.idx).replace(/^0+/,''):'';
-      const indiceReferencia=indiceTexto || (forma.idx!==undefined&&forma.idx!==null?String(forma.idx):'');
-      const etiquetaIndice=indiceTexto?`F${indiceTexto}`:'FORMA';
-      const textoSpan=document.createElement('span');
-      textoSpan.className='forma-flotante-texto';
-      textoSpan.textContent=etiquetaIndice;
-      boton.appendChild(textoSpan);
-      const ganadoresInfo=cartonesGanadoresPorForma.get(forma.idx)||{cartones:[]};
-      const ganadoresLista=Array.isArray(ganadoresInfo.cartones)?ganadoresInfo.cartones:[];
-      const totalGanadores=ganadoresLista.length;
-      const badge=document.createElement('span');
-      badge.className='forma-flotante-badge';
-      badge.textContent=totalGanadores;
-      badge.style.background=totalGanadores>0?colorConTransparencia(colorBase,0.9):'rgba(0,0,0,0.45)';
-      badge.style.borderColor=ajustarLuminosidad(colorBase,-0.25);
-      boton.appendChild(badge);
-      const hayGanadorPropio=usuarioIdActual && ganadoresLista.some(c=>c.userId===usuarioIdActual);
-      if(hayGanadorPropio){
-        boton.classList.add('forma-flotante-btn--propio');
-      }
-      if(totalGanadores>0){
-        boton.addEventListener('click',()=>abrirModalGanadores(forma));
-        const descripcionForma=forma.nombre?`, ${forma.nombre}`:'';
-        const etiquetaAccesible=indiceReferencia?
-          `Ver ganadores de la forma ${indiceReferencia}${descripcionForma}`:
-          `Ver ganadores de la forma disponible${descripcionForma}`;
-        boton.setAttribute('aria-label',etiquetaAccesible);
-      }else{
-        boton.classList.add('sin-ganadores');
-        boton.setAttribute('aria-disabled','true');
-        boton.disabled=true;
-        const etiquetaSinGanadores=indiceReferencia?
-          `Forma ${indiceReferencia} sin ganadores registrados.`:
-          'Forma sin ganadores registrados.';
-        boton.setAttribute('aria-label',etiquetaSinGanadores);
-      }
-      boton.title=forma.nombre?`Ganadores ${forma.nombre}`:`Ganadores forma ${indiceReferencia||''}`;
-      item.appendChild(boton);
-      fragment.appendChild(item);
-    });
-    if(formasFlotantesEl){
-      formasFlotantesEl.appendChild(fragment);
     }
     if(formasMensajeEl){
       formasMensajeEl.textContent='';
@@ -1773,19 +1643,55 @@
       etiquetaNumero.textContent=formatearDetalleCarton(seleccionado);
       infoDetalle.appendChild(etiquetaNumero);
       const resumenGanancias=obtenerResumenGananciasCarton(seleccionado,5);
+      const coloresForma=new Map();
+      const obtenerColorBase=idx=>{
+        if(!coloresForma.has(idx)){
+          coloresForma.set(idx, obtenerColorParaForma(idx));
+        }
+        return coloresForma.get(idx);
+      };
       resumenGanancias.formas.forEach(({idx,valor})=>{
         const etiqueta=document.createElement('small');
         etiqueta.className='carton-visor-forma';
         etiqueta.dataset.formaIdx=String(idx).padStart(2,'0');
-        const colorBase=obtenerColorParaForma(idx);
-        etiqueta.style.color=ajustarLuminosidad(colorBase,-0.45);
-        etiqueta.textContent=`Ganado con Forma${String(idx).padStart(2,'0')}: ${formatearCreditos(valor)}`;
+        const colorBase=obtenerColorBase(idx);
+        const colorEtiqueta=ajustarLuminosidad(colorBase,0.12);
+        const label=document.createElement('span');
+        label.className='carton-visor-forma-label';
+        label.style.color=colorEtiqueta;
+        label.textContent=`Ganado con Forma${String(idx).padStart(2,'0')}:`;
+        const valorSpan=document.createElement('span');
+        valorSpan.className='carton-visor-forma-valor';
+        valorSpan.style.color=colorBase;
+        valorSpan.textContent=formatearCreditos(valor);
+        etiqueta.append(label, valorSpan);
         infoDetalle.appendChild(etiqueta);
       });
-      const totalGanado=document.createElement('small');
-      totalGanado.className='carton-visor-total';
-      totalGanado.textContent=`Total Ganado: ${formatearCreditos(resumenGanancias.total)}`;
-      infoDetalle.appendChild(totalGanado);
+      for(let idx=1; idx<=5; idx++){
+        const forma=formasActivas.find(f=>Number(f.idx)===idx) || {idx};
+        const infoGanadores=cartonesGanadoresPorForma.get(idx) || {cartones:[]};
+        const totalGanadores=Array.isArray(infoGanadores.cartones)?infoGanadores.cartones.length:0;
+        const boton=document.createElement('button');
+        boton.type='button';
+        boton.className='carton-visor-ganadores';
+        boton.dataset.formaIdx=String(idx).padStart(2,'0');
+        const colorBase=obtenerColorBase(idx);
+        boton.style.color=ajustarLuminosidad(colorBase,0.1);
+        boton.textContent=`(${totalGanadores}) Ganadores F${idx}`;
+        boton.addEventListener('click',()=>abrirModalGanadores(forma));
+        const referenciaNombre=forma && forma.nombre?`, ${forma.nombre}`:'';
+        boton.setAttribute('aria-label',`Ver cartones ganadores de la forma ${String(idx).padStart(2,'0')}${referenciaNombre}`);
+        boton.title=forma && forma.nombre?`Ganadores ${forma.nombre}`:`Ganadores Forma ${String(idx).padStart(2,'0')}`;
+        infoDetalle.appendChild(boton);
+      }
+      const totalEtiqueta=document.createElement('small');
+      totalEtiqueta.className='carton-visor-total-label';
+      totalEtiqueta.textContent='Total Ganado:';
+      infoDetalle.appendChild(totalEtiqueta);
+      const totalValor=document.createElement('span');
+      totalValor.className='carton-visor-total-valor';
+      totalValor.textContent=formatearCreditos(resumenGanancias.total);
+      infoDetalle.appendChild(totalValor);
       cartonDestacadoEl.appendChild(infoDetalle);
       cartonDestacadoEl.classList.add('activo');
       configurarEventosCartonPrincipal(seleccionado,tablaInfoPrincipal);
