@@ -266,7 +266,9 @@
       #formas-panel {
           display: flex;
           flex-wrap: wrap;
-          justify-content: flex-end;
+          justify-content: flex-start;
+          align-items: flex-start;
+          align-content: flex-start;
           gap: 4px;
           width: 100%;
       }
@@ -337,24 +339,24 @@
           display: flex;
       }
       #mis-cartones-section {
-          background: var(--panel-bg);
-          box-shadow: var(--panel-shadow);
-          border-radius: 16px;
-          padding: 16px;
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+          display: flex;
+          flex-direction: column;
           gap: 12px;
           margin-top: 6px;
           width: 100%;
-          align-items: stretch;
-      }
-      #mis-cartones-section > h2,
-      #mis-cartones-section > #cartones-mensaje {
-          grid-column: 1 / -1;
       }
       #mis-cartones-section h2 {
           text-align: center;
           margin: 0;
+      }
+      #mis-cartones-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+          gap: 12px;
+          width: 100%;
+      }
+      #mis-cartones-grid:empty {
+          display: none;
       }
       .carton-mini-wrapper {
           display: flex;
@@ -363,6 +365,11 @@
           gap: 6px;
           cursor: pointer;
           width: 100%;
+          background: var(--panel-bg);
+          box-shadow: var(--panel-shadow);
+          border-radius: 16px;
+          padding: 14px 12px;
+          box-sizing: border-box;
       }
       .carton-mini-wrapper .carton-visual {
           width: 100%;
@@ -557,6 +564,8 @@
           align-items: center;
           justify-content: center;
           z-index: 100;
+          padding: 20px;
+          box-sizing: border-box;
       }
       .modal.activa {
           display: flex;
@@ -565,14 +574,15 @@
           background: #fff;
           border-radius: 18px;
           padding: 18px;
-          max-width: 840px;
-          max-height: 90vh;
+          max-width: min(720px, calc(100vw - 32px));
+          width: min(720px, calc(100vw - 32px));
+          max-height: min(85vh, 640px);
           overflow-y: auto;
           box-shadow: 0 10px 25px rgba(0,0,0,0.3);
           display: flex;
           flex-direction: column;
           gap: 12px;
-          width: min(90vw, 840px);
+          box-sizing: border-box;
       }
       .modal-cerrar {
           align-self: flex-end;
@@ -707,7 +717,7 @@
           #carton-destacado .carton-tabla {
               max-width: clamp(220px, 96vw, 340px);
           }
-          #mis-cartones-section {
+          #mis-cartones-grid {
               grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
               gap: 10px;
           }
@@ -732,7 +742,7 @@
           #panel-superior {
               grid-template-columns: minmax(200px, 0.9fr) minmax(240px, 1fr);
           }
-          #mis-cartones-section {
+          #mis-cartones-grid {
               grid-template-columns: repeat(2, minmax(0, 1fr));
               gap: 8px;
           }
@@ -763,6 +773,7 @@
     <section id="mis-cartones-section">
       <h2>Mis cartones</h2>
       <div id="cartones-mensaje" class="mensaje"></div>
+      <div id="mis-cartones-grid" aria-live="polite"></div>
     </section>
   </main>
 
@@ -800,6 +811,7 @@
   const formasPanelEl = document.getElementById('formas-panel');
   const formasMensajeEl = document.getElementById('formas-mensaje');
   const misCartonesSectionEl = document.getElementById('mis-cartones-section');
+  const misCartonesGridEl = document.getElementById('mis-cartones-grid');
   const cartonesMensajeEl = document.getElementById('cartones-mensaje');
   const cartonDestacadoEl = document.getElementById('carton-destacado');
   const modalGanadores = document.getElementById('modal-ganadores');
@@ -1322,7 +1334,9 @@
   }
 
   function limpiarCartonesRenderizados(){
-    misCartonesSectionEl.querySelectorAll('.carton-mini-wrapper').forEach(el=>el.remove());
+    if(misCartonesGridEl){
+      misCartonesGridEl.innerHTML='';
+    }
   }
 
   function renderFormas(){
@@ -1441,7 +1455,9 @@
       });
       fragment.appendChild(wrapper);
     });
-    misCartonesSectionEl.appendChild(fragment);
+    if(misCartonesGridEl){
+      misCartonesGridEl.appendChild(fragment);
+    }
     const seleccionado=decorados.find(c=>c.id===cartonSeleccionadoId);
     if(seleccionado){
       const tablaInfoPrincipal=crearTablaCartonVisual(seleccionado,'principal');
