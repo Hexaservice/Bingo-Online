@@ -900,6 +900,10 @@
   const animacionesCartones = new Map();
   let cartonPrincipalInfo = null;
   let resaltadoTemporal = {timer:null, tablas:null, cartonId:null};
+  let observadorTamanoCartonPrincipal = null;
+  let listenerResizeCartonPrincipal = null;
+  let ajustePendienteCartonPrincipal = false;
+  let timeoutAjusteCartonPrincipal = null;
 
   let unsubscribeSorteos = null;
   let unsubscribeCantos = null;
@@ -1161,6 +1165,85 @@
     resaltadoTemporal.cartonId=null;
   }
 
+  function sincronizarAlturaCartonPrincipal(){
+    if(!cartonPrincipalInfo || !cartonPrincipalInfo.info) return;
+    const tabla=cartonPrincipalInfo.info.tabla;
+    if(!tabla || !tabla.isConnected) return;
+    const celdaReferencia=tabla.querySelector('tbody td, thead th');
+    if(!celdaReferencia) return;
+    const ancho=celdaReferencia.getBoundingClientRect().width;
+    if(!Number.isFinite(ancho) || ancho<=0) return;
+    const estilos=getComputedStyle(celdaReferencia);
+    const bordeSuperior=parseFloat(estilos.borderTopWidth||'0');
+    const bordeInferior=parseFloat(estilos.borderBottomWidth||'0');
+    const alturaContenido=Math.max(0, ancho - bordeSuperior - bordeInferior);
+    const alturaPx=`${alturaContenido}px`;
+    tabla.style.setProperty('--cell-size', `${ancho}px`);
+    tabla.querySelectorAll('th, td').forEach(celda=>{
+      celda.style.height=alturaPx;
+      celda.style.minHeight=alturaPx;
+      celda.style.maxHeight=alturaPx;
+    });
+  }
+
+  function programarSincronizacionCartonPrincipal(){
+    if(ajustePendienteCartonPrincipal) return;
+    ajustePendienteCartonPrincipal=true;
+    const ejecutar=()=>{
+      ajustePendienteCartonPrincipal=false;
+      sincronizarAlturaCartonPrincipal();
+    };
+    if(typeof requestAnimationFrame==='function'){
+      requestAnimationFrame(ejecutar);
+    }else{
+      setTimeout(ejecutar,16);
+    }
+  }
+
+  function detenerMonitoreoTamanoCartonPrincipal(){
+    if(observadorTamanoCartonPrincipal){
+      observadorTamanoCartonPrincipal.disconnect();
+      observadorTamanoCartonPrincipal=null;
+    }
+    if(listenerResizeCartonPrincipal){
+      window.removeEventListener('resize', listenerResizeCartonPrincipal);
+      listenerResizeCartonPrincipal=null;
+    }
+    ajustePendienteCartonPrincipal=false;
+    if(timeoutAjusteCartonPrincipal){
+      clearTimeout(timeoutAjusteCartonPrincipal);
+      timeoutAjusteCartonPrincipal=null;
+    }
+  }
+
+  function iniciarMonitoreoTamanoCartonPrincipal(info){
+    if(!info || !info.tabla) return;
+    detenerMonitoreoTamanoCartonPrincipal();
+    programarSincronizacionCartonPrincipal();
+    timeoutAjusteCartonPrincipal=setTimeout(()=>{
+      timeoutAjusteCartonPrincipal=null;
+      programarSincronizacionCartonPrincipal();
+    },140);
+    if(typeof ResizeObserver==='function'){
+      observadorTamanoCartonPrincipal=new ResizeObserver(entries=>{
+        if(!entries || !entries.length) return;
+        const relevante=entries.some(entry=>entry.target===info.tabla || entry.target===info.contenedor);
+        if(relevante){
+          programarSincronizacionCartonPrincipal();
+        }
+      });
+      observadorTamanoCartonPrincipal.observe(info.tabla);
+      if(info.contenedor){
+        observadorTamanoCartonPrincipal.observe(info.contenedor);
+      }
+    }else{
+      listenerResizeCartonPrincipal=()=>{
+        programarSincronizacionCartonPrincipal();
+      };
+      window.addEventListener('resize', listenerResizeCartonPrincipal);
+    }
+  }
+
   function resaltarFormaTemporal(indice){
     if(!cartonPrincipalInfo || !cartonPrincipalInfo.info) return;
     const idx=Number(indice);
@@ -1211,6 +1294,7 @@
   function configurarEventosCartonPrincipal(carton,info){
     if(!carton || !info) return;
     cartonPrincipalInfo={cartonId:carton.id, info};
+    iniciarMonitoreoTamanoCartonPrincipal(info);
   }
 
   function configurarAnimacionCarton(carton, tablasInfo){
@@ -1561,10 +1645,12 @@
     limpiarCartonesRenderizados();
     cartonDestacadoEl.innerHTML='';
     cartonDestacadoEl.classList.remove('activo');
+    detenerMonitoreoTamanoCartonPrincipal();
     const lista=Array.from(cartonesSorteo.values()).filter(c=>c.userId===(usuarioActual?usuarioActual.uid:null));
     if(!lista.length){
       cartonesMensajeEl.textContent='No tienes cartones participando en este sorteo.';
       cartonSeleccionadoId=null;
+      cartonPrincipalInfo=null;
       return;
     }
     cartonesMensajeEl.textContent='';
