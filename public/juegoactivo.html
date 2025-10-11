@@ -463,7 +463,7 @@
           text-shadow: 0 0 6px rgba(0,0,0,0.75);
       }
       .carton-tabla--principal {
-          --cell-size: clamp(28px, 5.6vmin, 46px);
+          --cell-size: clamp(30px, 6vw, 54px);
       }
       .carton-tabla--mini {
           --cell-size: clamp(22px, 4.8vw, 28px);
@@ -504,17 +504,17 @@
           font-size: 0.74rem;
           font-weight: 600;
           letter-spacing: 0.4px;
+          text-shadow: 0 0 4px rgba(0,0,0,0.55);
       }
       .carton-visor-forma-label {
-          font-weight: 700;
-          text-transform: uppercase;
+          font-weight: 600;
       }
       .carton-visor-forma-valor {
-          font-weight: 800;
+          font-weight: 400;
       }
       .carton-visor-ganadores {
           grid-column: 2;
-          font-size: 0.78rem;
+          font-size: 0.68rem;
           font-weight: 600;
           text-align: right;
           background: transparent;
@@ -523,6 +523,7 @@
           cursor: pointer;
           font-family: inherit;
           transition: transform 0.2s ease;
+          text-shadow: 0 0 4px rgba(0,0,0,0.45);
       }
       .carton-visor-ganadores:hover,
       .carton-visor-ganadores:focus-visible {
@@ -543,10 +544,10 @@
       }
       .carton-visor-total-valor {
           grid-column: 1 / -1;
-          font-size: 2.1rem;
-          font-weight: 800;
+          font-size: 0.41rem;
+          font-weight: 700;
           color: #13a547;
-          line-height: 1;
+          line-height: 1.2;
       }
       .mensaje {
           font-size: 0.85rem;
@@ -853,11 +854,6 @@
   const animacionesCartones = new Map();
   let cartonPrincipalInfo = null;
   let resaltadoTemporal = {timer:null, tablas:null, cartonId:null};
-  let observadorTamanoCartonPrincipal = null;
-  let listenerResizeCartonPrincipal = null;
-  let listenerOrientationCartonPrincipal = null;
-  let ajustePendienteCartonPrincipal = false;
-  let timeoutAjusteCartonPrincipal = null;
 
   let unsubscribeSorteos = null;
   let unsubscribeCantos = null;
@@ -1125,99 +1121,6 @@
     resaltadoTemporal.cartonId=null;
   }
 
-  function sincronizarAlturaCartonPrincipal(){
-    if(!cartonPrincipalInfo || !cartonPrincipalInfo.info) return;
-    const tabla=cartonPrincipalInfo.info.tabla;
-    if(!tabla || !tabla.isConnected) return;
-    const celdaReferencia=tabla.querySelector('tbody td, thead th');
-    if(!celdaReferencia) return;
-    const rect=celdaReferencia.getBoundingClientRect();
-    const ancho=rect.width;
-    if(!Number.isFinite(ancho) || ancho<=0) return;
-    const estilos=getComputedStyle(celdaReferencia);
-    const bordeSuperior=parseFloat(estilos.borderTopWidth||'0');
-    const bordeInferior=parseFloat(estilos.borderBottomWidth||'0');
-    const bordeIzquierdo=parseFloat(estilos.borderLeftWidth||'0');
-    const bordeDerecho=parseFloat(estilos.borderRightWidth||'0');
-    const anchoContenido=Math.max(0, ancho - bordeIzquierdo - bordeDerecho);
-    const alturaContenido=Math.max(0, ancho - bordeSuperior - bordeInferior);
-    const alturaPx=`${alturaContenido}px`;
-    const anchoPx=`${anchoContenido}px`;
-    tabla.style.setProperty('--cell-size', anchoPx);
-    tabla.querySelectorAll('th, td').forEach(celda=>{
-      celda.style.height=alturaPx;
-      celda.style.minHeight=alturaPx;
-      celda.style.maxHeight=alturaPx;
-    });
-  }
-
-  function programarSincronizacionCartonPrincipal(){
-    if(ajustePendienteCartonPrincipal) return;
-    ajustePendienteCartonPrincipal=true;
-    const ejecutar=()=>{
-      ajustePendienteCartonPrincipal=false;
-      sincronizarAlturaCartonPrincipal();
-    };
-    if(typeof requestAnimationFrame==='function'){
-      requestAnimationFrame(ejecutar);
-    }else{
-      setTimeout(ejecutar,16);
-    }
-  }
-
-  function detenerMonitoreoTamanoCartonPrincipal(){
-    if(observadorTamanoCartonPrincipal){
-      observadorTamanoCartonPrincipal.disconnect();
-      observadorTamanoCartonPrincipal=null;
-    }
-    if(listenerResizeCartonPrincipal){
-      window.removeEventListener('resize', listenerResizeCartonPrincipal);
-      listenerResizeCartonPrincipal=null;
-    }
-    if(listenerOrientationCartonPrincipal){
-      window.removeEventListener('orientationchange', listenerOrientationCartonPrincipal);
-      listenerOrientationCartonPrincipal=null;
-    }
-    ajustePendienteCartonPrincipal=false;
-    if(timeoutAjusteCartonPrincipal){
-      clearTimeout(timeoutAjusteCartonPrincipal);
-      timeoutAjusteCartonPrincipal=null;
-    }
-  }
-
-  function iniciarMonitoreoTamanoCartonPrincipal(info){
-    if(!info || !info.tabla) return;
-    detenerMonitoreoTamanoCartonPrincipal();
-    programarSincronizacionCartonPrincipal();
-    timeoutAjusteCartonPrincipal=setTimeout(()=>{
-      timeoutAjusteCartonPrincipal=null;
-      programarSincronizacionCartonPrincipal();
-    },140);
-    listenerOrientationCartonPrincipal=()=>{
-      programarSincronizacionCartonPrincipal();
-      setTimeout(programarSincronizacionCartonPrincipal,160);
-    };
-    window.addEventListener('orientationchange', listenerOrientationCartonPrincipal);
-    if(typeof ResizeObserver==='function'){
-      observadorTamanoCartonPrincipal=new ResizeObserver(entries=>{
-        if(!entries || !entries.length) return;
-        const relevante=entries.some(entry=>entry.target===info.tabla || entry.target===info.contenedor);
-        if(relevante){
-          programarSincronizacionCartonPrincipal();
-        }
-      });
-      observadorTamanoCartonPrincipal.observe(info.tabla);
-      if(info.contenedor){
-        observadorTamanoCartonPrincipal.observe(info.contenedor);
-      }
-    }else{
-      listenerResizeCartonPrincipal=()=>{
-        programarSincronizacionCartonPrincipal();
-      };
-      window.addEventListener('resize', listenerResizeCartonPrincipal);
-    }
-  }
-
   function resaltarFormaTemporal(indice){
     if(!cartonPrincipalInfo || !cartonPrincipalInfo.info) return;
     const idx=Number(indice);
@@ -1268,7 +1171,6 @@
   function configurarEventosCartonPrincipal(carton,info){
     if(!carton || !info) return;
     cartonPrincipalInfo={cartonId:carton.id, info};
-    iniciarMonitoreoTamanoCartonPrincipal(info);
   }
 
   function configurarAnimacionCarton(carton, tablasInfo){
@@ -1556,7 +1458,6 @@
     limpiarCartonesRenderizados();
     cartonDestacadoEl.innerHTML='';
     cartonDestacadoEl.classList.remove('activo');
-    detenerMonitoreoTamanoCartonPrincipal();
     const lista=Array.from(cartonesSorteo.values()).filter(c=>c.userId===(usuarioActual?usuarioActual.uid:null));
     if(!lista.length){
       cartonesMensajeEl.textContent='No tienes cartones participando en este sorteo.';
@@ -1653,13 +1554,16 @@
       resumenGanancias.formas.forEach(({idx,valor})=>{
         const etiqueta=document.createElement('small');
         etiqueta.className='carton-visor-forma';
-        etiqueta.dataset.formaIdx=String(idx).padStart(2,'0');
+        const indiceNormalizado=String(idx).padStart(2,'0');
+        etiqueta.dataset.formaIdx=indiceNormalizado;
         const colorBase=obtenerColorBase(idx);
-        const colorEtiqueta=ajustarLuminosidad(colorBase,0.12);
+        etiqueta.style.color=colorBase;
         const label=document.createElement('span');
         label.className='carton-visor-forma-label';
-        label.style.color=colorEtiqueta;
-        label.textContent=`Ganado con Forma${String(idx).padStart(2,'0')}:`;
+        label.style.color=colorBase;
+        const numeroForma=Number.parseInt(idx,10);
+        const textoForma=Number.isFinite(numeroForma)?numeroForma:idx;
+        label.textContent=`Ganas Forma ${textoForma}:`;
         const valorSpan=document.createElement('span');
         valorSpan.className='carton-visor-forma-valor';
         valorSpan.style.color=colorBase;
@@ -1676,7 +1580,7 @@
         boton.className='carton-visor-ganadores';
         boton.dataset.formaIdx=String(idx).padStart(2,'0');
         const colorBase=obtenerColorBase(idx);
-        boton.style.color=ajustarLuminosidad(colorBase,0.1);
+        boton.style.color=colorBase;
         boton.textContent=`(${totalGanadores}) Ganadores F${idx}`;
         boton.addEventListener('click',()=>abrirModalGanadores(forma));
         const referenciaNombre=forma && forma.nombre?`, ${forma.nombre}`:'';
