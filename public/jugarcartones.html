@@ -1700,38 +1700,45 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
   initFechaHora('fecha-hora');
   iniciarActualizacionFechaActual();
 
-  auth.onAuthStateChanged(async user=>{
-    if(user){
-      const doc=await db.collection('users').doc(user.email).get();
-      if(doc.exists){
-        document.getElementById('alias-jugador').value=doc.data().alias||user.displayName||user.email;
-      }
-      const billeteraRef=db.collection('Billetera').doc(user.email);
-      const billeteraDoc=await billeteraRef.get();
-      if(billeteraDoc.exists){
-        document.getElementById('creditos-label').textContent=billeteraDoc.data().creditos||0;
-        document.getElementById('gratis-label').textContent=billeteraDoc.data().CartonesGratis||0;
-      }else{
-        await billeteraRef.set({creditos:0,CartonesGratis:0});
-        document.getElementById('creditos-label').textContent='0';
-        document.getElementById('gratis-label').textContent='0';
-      }
-      cookieKey='jugarcarton_'+user.email.replace(/[^\w]/g,'_');
-      sorteoCookieKey=`${cookieKey}_sorteo`;
-      loadFromCookie();
-    }else{
-      cookieKey='';
-      sorteoCookieKey='';
-      window.location.href='index.html';
-      return;
-    }
-    await cargarSorteosActivos();
-    const restaurado=await restaurarSorteoSeleccionado();
-    if(!restaurado){
-      actualizarFondoCarton();
-    }
-    await cargarCartonesGuardados();
-  });
+  initFirebase()
+    .then(()=>{
+      auth.onAuthStateChanged(async user=>{
+        if(user){
+          const doc=await db.collection('users').doc(user.email).get();
+          if(doc.exists){
+            document.getElementById('alias-jugador').value=doc.data().alias||user.displayName||user.email;
+          }
+          const billeteraRef=db.collection('Billetera').doc(user.email);
+          const billeteraDoc=await billeteraRef.get();
+          if(billeteraDoc.exists){
+            document.getElementById('creditos-label').textContent=billeteraDoc.data().creditos||0;
+            document.getElementById('gratis-label').textContent=billeteraDoc.data().CartonesGratis||0;
+          }else{
+            await billeteraRef.set({creditos:0,CartonesGratis:0});
+            document.getElementById('creditos-label').textContent='0';
+            document.getElementById('gratis-label').textContent='0';
+          }
+          cookieKey='jugarcarton_'+user.email.replace(/[^\w]/g,'_');
+          sorteoCookieKey=`${cookieKey}_sorteo`;
+          loadFromCookie();
+        }else{
+          cookieKey='';
+          sorteoCookieKey='';
+          window.location.href='index.html';
+          return;
+        }
+        await cargarSorteosActivos();
+        const restaurado=await restaurarSorteoSeleccionado();
+        if(!restaurado){
+          actualizarFondoCarton();
+        }
+        await cargarCartonesGuardados();
+      });
+    })
+    .catch(err=>{
+      console.error('No se pudo inicializar Firebase antes de registrar el observador de sesión',err);
+      alert('Error inicializando la sesión. Por favor recarga la página.');
+    });
 
   createBoard();
   document.querySelectorAll('.carton th').forEach((th,i)=>{
