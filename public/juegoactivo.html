@@ -163,10 +163,10 @@
           grid-template-areas:
               "cantos"
               "mensaje"
-              "carton"
-              "acciones";
+              "carton";
           align-items: start;
-          gap: 10px;
+          row-gap: clamp(6px, 2vw, 12px);
+          column-gap: clamp(4px, 1.8vw, 12px);
           width: 100%;
           margin: 0;
           padding: 0;
@@ -441,7 +441,7 @@
       .carton-forma-accion {
           font-family: 'Bangers', cursive;
           font-size: clamp(0.82rem, 2.8vw, 1rem);
-          padding: 6px 16px;
+          padding: 6px 12px;
           border-radius: 999px;
           border: 2px solid var(--forma-color-borde, rgba(0,0,0,0.2));
           color: #1f1f1f;
@@ -449,21 +449,15 @@
           box-shadow: 0 4px 10px rgba(0,0,0,0.18);
           cursor: pointer;
           transition: transform 0.2s ease, box-shadow 0.2s ease;
-          flex: 0 0 auto;
           text-align: center;
-      }
-      .carton-acciones {
-          display: flex;
-          flex-wrap: wrap;
-          justify-content: center;
+          display: inline-flex;
           align-items: center;
-          gap: 8px;
-          padding: 0;
-          width: 100%;
-          box-sizing: border-box;
+          justify-content: center;
+          gap: 6px;
+          white-space: nowrap;
       }
-      .carton-acciones:empty {
-          display: none;
+      #panel-superior > .carton-forma-accion {
+          justify-self: center;
       }
       .carton-forma-accion:hover,
       .carton-forma-accion:focus-visible {
@@ -485,14 +479,6 @@
           padding: 0;
           align-self: start;
           justify-self: stretch;
-      }
-      #formas-acciones {
-          grid-area: acciones;
-          margin: 0 auto;
-          padding: 0;
-          align-self: start;
-          justify-self: stretch;
-          max-width: clamp(260px, 90vw, 640px);
       }
       #mis-cartones-section h2 {
           text-align: center;
@@ -605,6 +591,7 @@
       .carton-tabla tbody td {
           width: var(--cell-size);
           height: var(--cell-size);
+          aspect-ratio: 1 / 1;
           border: 1px solid rgba(70,70,70,0.35);
           text-align: center;
           font-weight: 700;
@@ -945,8 +932,7 @@
               grid-template-columns: minmax(0, 1fr) minmax(0, clamp(280px, 45vw, 540px));
               grid-template-areas:
                   "cantos mensaje"
-                  "cantos carton"
-                  "cantos acciones";
+                  "cantos carton";
           }
           #cantos-panel {
               height: 100%;
@@ -954,15 +940,19 @@
           #carton-destacado {
               max-width: none;
           }
+          #panel-superior > .carton-forma-accion {
+              grid-column: 2;
+              justify-self: start;
+          }
       }
       @media (max-width: 819px) {
           #panel-superior {
-              gap: 6px;
+              row-gap: clamp(6px, 2.4vw, 12px);
+              column-gap: clamp(3px, 1.6vw, 10px);
               grid-template-columns: minmax(0, 1fr) minmax(0, clamp(200px, 48vw, 360px));
               grid-template-areas:
                   "cantos carton"
-                  "mensaje mensaje"
-                  "acciones acciones";
+                  "mensaje mensaje";
               align-items: start;
               justify-items: stretch;
           }
@@ -988,15 +978,8 @@
           #carton-destacado .carton-front .carton-visual {
               --principal-cell-size: clamp(28px, calc((100% - (var(--carton-principal-padding) * 2)) / 5), 98px);
           }
-          #formas-acciones {
-              width: 100%;
-              display: flex;
-              flex-direction: column;
-              align-items: stretch;
-              gap: 10px;
-          }
-          #formas-acciones .carton-forma-accion {
-              width: 100%;
+          #panel-superior > .carton-forma-accion {
+              grid-column: 1 / -1;
           }
       }
 
@@ -1039,7 +1022,15 @@
       }
       @media (max-width: 480px) {
           #panel-superior {
-              gap: 8px;
+              row-gap: clamp(8px, 3vw, 14px);
+          }
+      }
+      @media (orientation: portrait) {
+          #panel-superior {
+              column-gap: clamp(2px, 0.9vw, 8px);
+          }
+          #carton-destacado .carton-front .carton-visual {
+              --principal-cell-size: clamp(32px, calc((100% - (var(--carton-principal-padding) * 2)) / 5), 112px);
           }
       }
         @media (orientation: landscape) and (max-width: 900px) {
@@ -1051,11 +1042,11 @@
                 padding-top: 46px;
             }
             #panel-superior {
+                column-gap: clamp(4px, 1.4vw, 12px);
                 grid-template-columns: minmax(0, 1fr) minmax(0, clamp(280px, 55vw, 600px));
                 grid-template-areas:
                     "cantos mensaje"
-                    "cantos carton"
-                    "cantos acciones";
+                    "cantos carton";
             }
             #carton-destacado {
                 margin-left: 0;
@@ -1085,8 +1076,7 @@
                 grid-template-columns: minmax(0, 1fr) minmax(0, clamp(320px, 60vw, 640px));
                 grid-template-areas:
                     "cantos mensaje"
-                    "cantos carton"
-                    "cantos acciones";
+                    "cantos carton";
             }
             #carton-destacado {
                 margin-left: 0;
@@ -1117,7 +1107,6 @@
       </div>
       <div id="formas-mensaje" class="mensaje"></div>
       <aside id="carton-destacado" aria-live="polite"></aside>
-      <div id="formas-acciones" class="carton-acciones" aria-live="polite"></div>
     </section>
     <section id="mis-cartones-section">
       <h2>Mis cartones</h2>
@@ -1157,8 +1146,8 @@
   const ultimoCantoEl = document.getElementById('ultimo-canto');
   const sorteoResumenEl = document.getElementById('sorteo-resumen');
   const sorteoDetallesEl = document.getElementById('sorteo-detalles');
+  const panelSuperiorEl = document.getElementById('panel-superior');
   const formasMensajeEl = document.getElementById('formas-mensaje');
-  const formasAccionesEl = document.getElementById('formas-acciones');
   const misCartonesSectionEl = document.getElementById('mis-cartones-section');
   const misCartonesGridEl = document.getElementById('mis-cartones-grid');
   const cartonesMensajeEl = document.getElementById('cartones-mensaje');
@@ -1194,6 +1183,22 @@
   let unsubscribeCantos = null;
   let unsubscribeFormas = null;
   let unsubscribeCartones = null;
+
+  function limpiarBotonesFormas(){
+    if(!panelSuperiorEl) return;
+    panelSuperiorEl.querySelectorAll('.carton-forma-accion[data-forma-boton="dinamico"]').forEach(boton=>boton.remove());
+  }
+
+  function insertarBotonesFormas(botones){
+    if(!panelSuperiorEl || !cartonDestacadoEl || !Array.isArray(botones)) return;
+    let referencia=cartonDestacadoEl;
+    botones.forEach(boton=>{
+      if(!(boton instanceof HTMLElement)) return;
+      boton.dataset.formaBoton='dinamico';
+      referencia.insertAdjacentElement('afterend', boton);
+      referencia=boton;
+    });
+  }
 
   function crearGridCantos(){
     cantosGridEl.innerHTML='';
@@ -1813,9 +1818,7 @@
     if(formasMensajeEl){
       formasMensajeEl.textContent='';
     }
-    if(formasAccionesEl){
-      formasAccionesEl.innerHTML='';
-    }
+    limpiarBotonesFormas();
   }
 
   function limpiarCartonesRenderizados(){
@@ -1830,9 +1833,6 @@
       if(formasMensajeEl){
         formasMensajeEl.textContent='No hay formas registradas para este sorteo.';
       }
-      if(formasAccionesEl){
-        formasAccionesEl.innerHTML='';
-      }
       return;
     }
     if(formasMensajeEl){
@@ -1845,9 +1845,7 @@
     limpiarCartonesRenderizados();
     cartonDestacadoEl.innerHTML='';
     cartonDestacadoEl.classList.remove('activo');
-    if(formasAccionesEl){
-      formasAccionesEl.innerHTML='';
-    }
+    limpiarBotonesFormas();
     const lista=Array.from(cartonesSorteo.values()).filter(c=>c.userId===(usuarioActual?usuarioActual.uid:null));
     if(!lista.length){
       cartonesMensajeEl.textContent='No tienes cartones participando en este sorteo.';
@@ -1967,7 +1965,7 @@
         boton.type='button';
         boton.className='carton-forma-accion';
         boton.dataset.formaIdx=String(idx).padStart(2,'0');
-        boton.textContent=`VER GANADORES FORMA ${idx}`;
+        boton.textContent=`GANADORES F${idx}`;
         boton.style.setProperty('--forma-color', colorForma);
         boton.style.setProperty('--forma-color-borde', obtenerColorOscurecido(colorForma,0.7));
         const referenciaNombre=forma && forma.nombre?`, ${forma.nombre}`:'';
@@ -1994,10 +1992,7 @@
       backLogo.src='https://i.imgur.com/twjhNtZ.png';
       backLogo.alt='Logo HexaBingo';
       cartonBack.appendChild(backLogo);
-      if(formasAccionesEl){
-        formasAccionesEl.innerHTML='';
-        botonesFormas.forEach(btn=>formasAccionesEl.appendChild(btn));
-      }
+      insertarBotonesFormas(botonesFormas);
       cartonDestacadoEl.appendChild(cartonBox);
       tablaInfoPrincipal.wrapper=cartonWrapper;
       tablaInfoPrincipal.cartonBack=cartonBack;
