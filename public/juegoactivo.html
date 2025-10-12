@@ -590,8 +590,6 @@
       .carton-tabla thead th,
       .carton-tabla tbody td {
           width: var(--cell-size);
-          height: var(--cell-size);
-          aspect-ratio: 1 / 1;
           border: 1px solid rgba(70,70,70,0.35);
           text-align: center;
           font-weight: 700;
@@ -601,6 +599,22 @@
           overflow: hidden;
           background: rgba(255,255,255,0.95);
           box-sizing: border-box;
+      }
+      .carton-tabla thead th::before,
+      .carton-tabla tbody td::before {
+          content: '';
+          display: block;
+          padding-bottom: 100%;
+      }
+      .carton-tabla thead th > *,
+      .carton-tabla tbody td > * {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
       }
       .carton-tabla thead th {
           font-size: calc(var(--cell-size) * 0.75);
@@ -645,11 +659,6 @@
           text-shadow: 0 0 4px rgba(0,0,0,0.3);
       }
       .carton-tabla .cell-content {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 100%;
-          height: 100%;
           line-height: 1;
           font-weight: inherit;
       }
@@ -1028,6 +1037,31 @@
       @media (orientation: portrait) {
           #panel-superior {
               column-gap: clamp(2px, 0.9vw, 8px);
+              grid-template-columns: minmax(0, 1fr);
+              grid-template-areas:
+                  "cantos"
+                  "carton"
+                  "mensaje";
+              justify-items: center;
+              grid-auto-flow: row;
+          }
+          #cantos-panel,
+          #formas-mensaje {
+              justify-self: stretch;
+              width: 100%;
+          }
+          #carton-destacado {
+              justify-self: stretch;
+              margin-inline: auto;
+              width: 100%;
+          }
+          #carton-destacado .carton-box {
+              margin-inline: auto;
+          }
+          #panel-superior > .carton-forma-accion {
+              grid-column: 1;
+              justify-self: center;
+              width: min(100%, 360px);
           }
           #carton-destacado .carton-front .carton-visual {
               --principal-cell-size: clamp(32px, calc((100% - (var(--carton-principal-padding) * 2)) / 5), 112px);
