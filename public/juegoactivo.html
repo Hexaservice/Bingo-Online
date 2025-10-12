@@ -279,12 +279,13 @@
       }
       #carton-destacado .carton-wrapper {
           position: relative;
-          width: min(100%, 420px);
-          min-height: clamp(300px, 62vw, 420px);
+          width: fit-content;
+          max-width: 100%;
+          min-height: clamp(320px, 62vw, 480px);
           transform-style: preserve-3d;
           transition: transform 0.6s ease;
           border-radius: 18px;
-          padding: 4px;
+          padding: 8px;
           background: linear-gradient(160deg, rgba(0, 136, 0, 0.92), rgba(255, 215, 0, 0.85));
           box-shadow: 0 18px 32px rgba(0,0,0,0.35);
           cursor: pointer;
@@ -307,9 +308,13 @@
       #carton-destacado .carton-front {
           padding: 6px;
           gap: 8px;
+          width: 100%;
       }
       #carton-destacado .carton-front .carton-visual {
           padding-top: 6px;
+          width: 100%;
+          max-width: clamp(320px, 92vw, 520px);
+          --principal-cell-size: clamp(48px, calc((min(100vw, 520px) - 32px) / 5), 96px);
       }
       #carton-destacado .carton-back {
           padding: 14px 16px;
@@ -342,7 +347,7 @@
           margin: 0;
           font-family: 'Bangers', cursive;
           font-size: clamp(1.1rem, 4.5vw, 1.5rem);
-          color: #4b0082;
+          color: #ffffff;
           text-shadow: 0 0 10px rgba(0,0,0,0.85), 0 0 18px rgba(0,0,0,0.6);
           letter-spacing: 1px;
       }
@@ -359,15 +364,10 @@
           display: flex;
           align-items: center;
           flex-wrap: wrap;
-          gap: 4px;
+          gap: 6px;
           line-height: 1.05;
           width: 100%;
           text-shadow: 0 0 8px rgba(0,0,0,0.85), 0 0 16px rgba(0,0,0,0.55);
-      }
-      #carton-destacado .back-forma-line .back-forma-separador {
-          flex: 1 1 auto;
-          border-bottom: 1px dashed rgba(255,255,255,0.45);
-          min-width: 24px;
       }
       #carton-destacado .back-forma-line .back-forma-valor {
           font-size: clamp(1rem, 3.4vw, 1.25rem);
@@ -383,22 +383,21 @@
           margin-top: -2px;
           margin-bottom: 4px;
       }
-      #carton-destacado .carton-back-total {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-          align-items: center;
+      #carton-destacado .carton-back-total-label,
+      #carton-destacado .carton-back-total-valor {
+          display: block;
+          margin: 0;
           font-family: 'Bangers', cursive;
-          color: #0b5394;
-          text-shadow: 0 0 10px rgba(0,0,0,0.8), 0 0 18px rgba(0,0,0,0.55);
+          color: #ffffff;
+          text-align: center;
+          text-shadow: 0 0 12px rgba(0,0,0,0.85), 0 0 22px rgba(0,0,0,0.6);
       }
       #carton-destacado .carton-back-total-label {
           font-size: clamp(1rem, 3.8vw, 1.3rem);
       }
       #carton-destacado .carton-back-total-valor {
           font-size: clamp(1.6rem, 5vw, 2.1rem);
-          color: #0a8800;
-          text-shadow: 0 0 12px rgba(0,0,0,0.85), 0 0 22px rgba(0,0,0,0.6);
+          margin-top: 4px;
       }
       #carton-destacado .carton-forma-accion {
           font-family: 'Bangers', cursive;
@@ -630,14 +629,14 @@
           text-shadow: 0 0 6px rgba(0,0,0,0.75);
       }
       .carton-tabla--principal {
-          --cell-size: clamp(24px, min(5.6vw, 6.4vh), 30px);
+          --cell-size: var(--principal-cell-size, clamp(24px, min(5.6vw, 6.4vh), 30px));
       }
       .carton-tabla--mini {
           --cell-size: clamp(22px, 4.8vw, 28px);
       }
       #carton-destacado .carton-tabla {
-          width: min(100%, calc(var(--cell-size) * 5));
-          max-width: calc(var(--cell-size) * 5);
+          width: calc(var(--cell-size) * 5);
+          max-width: none;
           margin: 0 auto;
       }
       #carton-destacado .carton-visor-info {
@@ -1809,8 +1808,7 @@
         linea.style.color=colorForma;
         linea.innerHTML=
           `<span class="back-forma-etiqueta">FORMA ${String(idx).padStart(2,'0')}:</span>`+
-          `<span class="back-forma-valor">${formatearCreditos(datosForma.valor||0)}</span>`+
-          `<span class="back-forma-separador"></span>`;
+          `<span class="back-forma-valor">${formatearCreditos(datosForma.valor||0)}</span>`;
         formasContenedor.appendChild(linea);
         if(forma && forma.nombre){
           const nombreLinea=document.createElement('div');
@@ -1835,16 +1833,14 @@
         });
         botonesFormas.push(boton);
       }
-      const totalWrapper=document.createElement('div');
-      totalWrapper.className='carton-back-total';
-      const totalLabel=document.createElement('span');
+      const totalLabel=document.createElement('p');
       totalLabel.className='carton-back-total-label';
       totalLabel.textContent='Total Ganado';
-      const totalValor=document.createElement('span');
+      const totalValor=document.createElement('p');
       totalValor.className='carton-back-total-valor';
       totalValor.textContent=formatearCreditos(resumenGanancias.total);
-      totalWrapper.append(totalLabel,totalValor);
-      backContent.appendChild(totalWrapper);
+      backContent.appendChild(totalLabel);
+      backContent.appendChild(totalValor);
       const backLogo=document.createElement('img');
       backLogo.src='https://i.imgur.com/twjhNtZ.png';
       backLogo.alt='Logo HexaBingo';
