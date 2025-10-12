@@ -414,6 +414,12 @@
           color: #ffffff;
           font-size: calc(var(--cell-size) * 0.65);
       }
+      .carton-tabla--principal td.free .cell-content.numero-carton {
+          color: #1a1a1a;
+          font-weight: 700;
+          text-shadow: 0 0 6px rgba(255,255,255,0.9);
+          letter-spacing: 0.5px;
+      }
       .carton-tabla .estrella {
           font-size: 1.2em;
           line-height: 1;
@@ -464,7 +470,7 @@
           text-shadow: 0 0 6px rgba(0,0,0,0.75);
       }
       .carton-tabla--principal {
-          --cell-size: clamp(34px, 7.8vw, 62px);
+          --cell-size: clamp(28px, 5.8vw, 48px);
       }
       .carton-tabla--mini {
           --cell-size: clamp(22px, 4.8vw, 28px);
@@ -484,18 +490,13 @@
       }
       .carton-visor-info {
           display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
+          grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
           gap: 6px 12px;
           font-size: 0.72rem;
           font-weight: 600;
           color: var(--texto-primario);
           text-align: left;
-      }
-      .carton-visor-info .carton-visor-numero {
-          grid-column: 1 / -1;
-          font-size: 0.88rem;
-          font-weight: 700;
-          color: var(--texto-primario);
+          align-items: center;
       }
       .carton-visor-forma {
           grid-column: 1;
@@ -506,12 +507,15 @@
           font-weight: 600;
           letter-spacing: 0.4px;
           text-shadow: 0 0 6px rgba(255,255,255,0.85);
+          width: 100%;
       }
       .carton-visor-forma-label {
           font-weight: 600;
+          text-shadow: 0 0 6px rgba(255,255,255,0.9);
       }
       .carton-visor-forma-valor {
           font-weight: 700;
+          text-shadow: 0 0 6px rgba(255,255,255,0.9);
       }
       .carton-visor-ganadores {
           grid-column: 2;
@@ -525,6 +529,7 @@
           font-family: inherit;
           transition: transform 0.2s ease;
           text-shadow: 0 0 5px rgba(255,255,255,0.75);
+          justify-self: end;
       }
       .carton-visor-ganadores:hover,
       .carton-visor-ganadores:focus-visible {
@@ -538,19 +543,21 @@
       }
       .carton-visor-total-label {
           grid-column: 1 / -1;
-          font-size: 0.86rem;
+          font-size: 0.78rem;
           font-weight: 700;
           color: #138a3d;
           text-transform: uppercase;
           text-shadow: 0 0 6px rgba(255,255,255,0.85);
+          justify-self: start;
       }
       .carton-visor-total-valor {
           grid-column: 1 / -1;
-          font-size: calc(0.86rem * 3);
-          font-weight: 800;
+          font-size: 1.18rem;
+          font-weight: 700;
           color: #0f8a35;
           line-height: 1.2;
-          text-shadow: 0 0 10px rgba(255,255,255,0.85);
+          text-shadow: 0 0 8px rgba(255,255,255,0.85);
+          justify-self: start;
       }
       .mensaje {
           font-size: 0.85rem;
@@ -955,6 +962,7 @@
       }
     });
     const celdas=new Map();
+    const numeroCartonCentral=modo==='principal'?obtenerNumeroCarton(carton):null;
     for(let r=0;r<5;r++){
       const fila=document.createElement('tr');
       for(let c=0;c<5;c++){
@@ -965,7 +973,12 @@
           td.classList.add('free');
           const icono=document.createElement('span');
           icono.className='cell-content estrella';
-          icono.textContent='★';
+          if(modo==='principal'){
+            icono.classList.add('numero-carton');
+            icono.textContent=numeroCartonCentral && numeroCartonCentral!=='--'?numeroCartonCentral:'★';
+          }else{
+            icono.textContent='★';
+          }
           td.appendChild(icono);
         }else{
           const valor=mapaValor.get(`${r}-${c}`);
@@ -1008,11 +1021,6 @@
   }
 
   function formatearInfoCarton(carton){
-    const numero=obtenerNumeroCarton(carton);
-    return `Cartón ${numero==='--'?'--':`#${numero}`}`;
-  }
-
-  function formatearDetalleCarton(carton){
     const numero=obtenerNumeroCarton(carton);
     return `Cartón ${numero==='--'?'--':`#${numero}`}`;
   }
@@ -1567,10 +1575,6 @@
       cartonDestacadoEl.appendChild(tablaInfoPrincipal.contenedor);
       const infoDetalle=document.createElement('div');
       infoDetalle.className='carton-visor-info';
-      const etiquetaNumero=document.createElement('span');
-      etiquetaNumero.className='carton-visor-numero';
-      etiquetaNumero.textContent=formatearDetalleCarton(seleccionado);
-      infoDetalle.appendChild(etiquetaNumero);
       const resumenGanancias=obtenerResumenGananciasCarton(seleccionado,5);
       const coloresForma=new Map();
       const obtenerColorBase=idx=>{
@@ -1615,8 +1619,7 @@
         const colorOscuro=obtenerColorOscurecido(colorBase);
         boton.style.color=colorOscuro;
         boton.style.textShadow='0 0 5px rgba(255,255,255,0.75)';
-        const etiquetaGanadores=idx===1?`Ganadores F${idx}`:`G F${idx}`;
-        boton.textContent=`(${totalGanadores}) ${etiquetaGanadores}`;
+        boton.textContent=`(${totalGanadores}) G F${idx}`;
         boton.addEventListener('click',()=>abrirModalGanadores(forma));
         const referenciaNombre=forma && forma.nombre?`, ${forma.nombre}`:'';
         boton.setAttribute('aria-label',`Ver cartones ganadores de la forma ${String(idx).padStart(2,'0')}${referenciaNombre}`);
