@@ -45,7 +45,6 @@
           grid-template-columns: minmax(0, 1fr);
           grid-template-areas:
               "header"
-              "carton"
               "panel"
               "mis-cartones";
       }
@@ -159,13 +158,20 @@
       }
       #panel-superior {
           grid-area: panel;
-          display: flex;
-          flex-direction: column;
-          align-items: stretch;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          grid-template-areas:
+              "cantos"
+              "carton"
+              "mensaje";
+          align-items: start;
           gap: 12px;
           width: 100%;
+          margin: 0;
+          padding: 0;
       }
       #cantos-panel {
+          grid-area: cantos;
           display: flex;
           flex-direction: column;
           align-items: flex-start;
@@ -250,6 +256,7 @@
           animation: focoUltimo 1.6s ease-in-out infinite;
       }
       #carton-destacado {
+          grid-area: carton;
           display: none;
           flex-direction: column;
           gap: 16px;
@@ -261,7 +268,6 @@
           justify-self: stretch;
           align-self: stretch;
           margin: 0;
-          grid-area: carton;
           height: 100%;
       }
       #carton-destacado.activo {
@@ -457,6 +463,10 @@
           margin-top: 6px;
           width: 100%;
           grid-area: mis-cartones;
+      }
+      #formas-mensaje {
+          grid-area: mensaje;
+          margin: 0;
       }
       #mis-cartones-section h2 {
           text-align: center;
@@ -900,29 +910,26 @@
           100% { transform: scale(1); }
       }
       @media (min-width: 820px) {
-          main {
+          #panel-superior {
               grid-template-columns: minmax(0, 1fr) minmax(0, clamp(280px, 45vw, 540px));
               grid-template-areas:
-                  "header header"
-                  "panel carton"
-                  "mis-cartones carton";
-              align-items: start;
-          }
-          #panel-superior {
-              align-self: stretch;
-              height: 100%;
+                  "cantos carton"
+                  "mensaje carton";
           }
           #cantos-panel {
               height: 100%;
           }
           #carton-destacado {
-              max-width: clamp(280px, 45vw, 540px);
+              max-width: none;
           }
       }
       @media (max-width: 819px) {
+          #panel-superior {
+              gap: 10px;
+          }
           #carton-destacado {
               max-width: min(100%, clamp(280px, 92vw, 520px));
-              justify-self: center;
+              justify-self: stretch;
               align-items: center;
               height: auto;
           }
@@ -946,9 +953,6 @@
               width: 38px;
               height: 38px;
               font-size: 1.15rem;
-          }
-          #panel-superior {
-              gap: 10px;
           }
           #carton-destacado .carton-tabla {
               max-width: calc(var(--cell-size) * 5);
@@ -979,42 +983,42 @@
               gap: 8px;
           }
       }
-      @media (orientation: landscape) and (max-width: 900px) {
-          :root {
-              --canto-size: clamp(24px, 7vw, 34px);
-              --mini-cell-size: clamp(18px, 4.8vw, 22px);
-          }
-          main {
-              padding-top: 46px;
-              grid-template-columns: minmax(0, 1fr) minmax(0, clamp(280px, 55vw, 600px));
-              grid-template-areas:
-                  "header header"
-                  "panel carton"
-                  "mis-cartones carton";
-          }
-          #carton-destacado {
-              margin-left: auto;
-          }
-          #mis-cartones-grid {
-              grid-template-columns: repeat(2, minmax(0, 1fr));
-              gap: 8px;
-          }
-          #carton-destacado .carton-tabla {
-              max-width: calc(var(--cell-size) * 5);
-          }
-      }
-      @media (min-width: 900px) and (orientation: landscape) {
-          main {
-              grid-template-columns: minmax(0, 1fr) minmax(0, clamp(320px, 60vw, 640px));
-              grid-template-areas:
-                  "header header"
-                  "panel carton"
-                  "mis-cartones carton";
-          }
-          #carton-destacado {
-              margin-left: auto;
-          }
-      }
+        @media (orientation: landscape) and (max-width: 900px) {
+            :root {
+                --canto-size: clamp(24px, 7vw, 34px);
+                --mini-cell-size: clamp(18px, 4.8vw, 22px);
+            }
+            main {
+                padding-top: 46px;
+            }
+            #panel-superior {
+                grid-template-columns: minmax(0, 1fr) minmax(0, clamp(280px, 55vw, 600px));
+                grid-template-areas:
+                    "cantos carton"
+                    "mensaje carton";
+            }
+            #carton-destacado {
+                margin-left: 0;
+            }
+            #mis-cartones-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+            }
+            #carton-destacado .carton-tabla {
+                max-width: calc(var(--cell-size) * 5);
+            }
+        }
+        @media (min-width: 900px) and (orientation: landscape) {
+            #panel-superior {
+                grid-template-columns: minmax(0, 1fr) minmax(0, clamp(320px, 60vw, 640px));
+                grid-template-areas:
+                    "cantos carton"
+                    "mensaje carton";
+            }
+            #carton-destacado {
+                margin-left: 0;
+            }
+        }
   </style>
 </head>
 <body>
@@ -1029,9 +1033,9 @@
         <div id="cantos-grid"></div>
         <div id="ultimo-canto"></div>
       </div>
+      <aside id="carton-destacado" aria-live="polite"></aside>
       <div id="formas-mensaje" class="mensaje"></div>
     </section>
-    <aside id="carton-destacado" aria-live="polite"></aside>
     <section id="mis-cartones-section">
       <h2>Mis cartones</h2>
       <div id="cartones-mensaje" class="mensaje"></div>
