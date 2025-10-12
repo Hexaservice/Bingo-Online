@@ -40,9 +40,14 @@
           max-width: 1200px;
           padding: 4px 14px 14px;
           box-sizing: border-box;
-          display: flex;
-          flex-direction: column;
+          display: grid;
           gap: 12px;
+          grid-template-columns: minmax(0, 1fr);
+          grid-template-areas:
+              "header"
+              "carton"
+              "panel"
+              "mis-cartones";
       }
       .back-btn {
           position: fixed;
@@ -80,6 +85,7 @@
           justify-content: center;
           gap: 2px;
           margin-top: -12px;
+          grid-area: header;
       }
       #sorteo-resumen {
           font-family: 'Bangers', cursive;
@@ -152,10 +158,12 @@
           color: #0b4cc2;
       }
       #panel-superior {
-          display: grid;
-          grid-template-columns: minmax(0, 1fr) minmax(0, clamp(320px, 60vw, 640px));
+          grid-area: panel;
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
           gap: 12px;
-          align-items: start;
+          width: 100%;
       }
       #cantos-panel {
           display: flex;
@@ -248,10 +256,10 @@
           align-items: stretch;
           padding: 0;
           width: min(100%, clamp(280px, 92vw, 520px));
-          align-self: flex-start;
           justify-self: end;
-          margin: 0 0 0 auto;
-          grid-column: 2;
+          align-self: flex-start;
+          margin: 0;
+          grid-area: carton;
       }
       #carton-destacado.activo {
           display: flex;
@@ -421,6 +429,7 @@
           gap: 12px;
           margin-top: 6px;
           width: 100%;
+          grid-area: mis-cartones;
       }
       #mis-cartones-section h2 {
           text-align: center;
@@ -864,13 +873,23 @@
           100% { transform: scale(1); }
       }
       @media (orientation: portrait) {
-          #panel-superior {
-              grid-template-columns: minmax(0, 1fr);
-              align-items: stretch;
+          main {
+              grid-template-areas:
+                  "header"
+                  "carton"
+                  "panel"
+                  "mis-cartones";
           }
-          #carton-destacado,
-          #formas-mensaje {
-              grid-column: 1;
+          #carton-destacado {
+              justify-self: end;
+              margin-right: 0;
+              align-items: flex-end;
+          }
+          .carton-tabla--principal {
+              --cell-size: clamp(24px, min(10vw, 6.6vh), 30px);
+          }
+          #carton-destacado .carton-tabla {
+              width: min(100%, calc(var(--cell-size) * 5));
           }
       }
 
@@ -888,12 +907,7 @@
               font-size: 1.15rem;
           }
           #panel-superior {
-              grid-template-columns: minmax(0, 1fr);
               gap: 10px;
-          }
-          #carton-destacado,
-          #formas-mensaje {
-              grid-column: 1;
           }
           #carton-destacado .carton-tabla {
               max-width: calc(var(--cell-size) * 5);
@@ -921,23 +935,7 @@
       }
       @media (max-width: 480px) {
           #panel-superior {
-              grid-template-columns: minmax(0, 1fr);
-          }
-          #carton-destacado,
-          #formas-mensaje {
-              grid-column: 1;
-          }
-      }
-      @media (orientation: portrait) {
-          #carton-destacado {
-              align-items: flex-end;
-              margin-left: auto;
-          }
-          .carton-tabla--principal {
-              --cell-size: clamp(24px, min(10vw, 6.6vh), 30px);
-          }
-          #carton-destacado .carton-tabla {
-              width: min(100%, calc(var(--cell-size) * 5));
+              gap: 8px;
           }
       }
       @media (orientation: landscape) and (max-width: 900px) {
@@ -947,9 +945,14 @@
           }
           main {
               padding-top: 46px;
-          }
-          #panel-superior {
               grid-template-columns: minmax(0, 1fr) minmax(0, clamp(280px, 55vw, 600px));
+              grid-template-areas:
+                  "header header"
+                  "panel carton"
+                  "mis-cartones carton";
+          }
+          #carton-destacado {
+              margin-left: auto;
           }
           #mis-cartones-grid {
               grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -957,6 +960,18 @@
           }
           #carton-destacado .carton-tabla {
               max-width: calc(var(--cell-size) * 5);
+          }
+      }
+      @media (min-width: 900px) and (orientation: landscape) {
+          main {
+              grid-template-columns: minmax(0, 1fr) minmax(0, clamp(320px, 60vw, 640px));
+              grid-template-areas:
+                  "header header"
+                  "panel carton"
+                  "mis-cartones carton";
+          }
+          #carton-destacado {
+              margin-left: auto;
           }
       }
   </style>
@@ -973,9 +988,9 @@
         <div id="cantos-grid"></div>
         <div id="ultimo-canto"></div>
       </div>
-      <div id="carton-destacado" aria-live="polite"></div>
       <div id="formas-mensaje" class="mensaje"></div>
     </section>
+    <aside id="carton-destacado" aria-live="polite"></aside>
     <section id="mis-cartones-section">
       <h2>Mis cartones</h2>
       <div id="cartones-mensaje" class="mensaje"></div>
