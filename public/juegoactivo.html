@@ -279,6 +279,8 @@
       }
       #carton-destacado .carton-box {
           width: 100%;
+          max-width: 640px;
+          margin: 0 auto;
           display: flex;
           flex-direction: column;
           align-items: stretch;
@@ -303,6 +305,7 @@
           flex: 1 1 auto;
           min-height: 0;
           height: 100%;
+          min-height: clamp(340px, 55vw, 520px);
       }
       #carton-destacado .carton-wrapper.flipped {
           transform: rotateY(180deg);
@@ -312,7 +315,7 @@
           grid-area: 1 / 1;
           display: flex;
           flex-direction: column;
-          align-items: center;
+          align-items: stretch;
           justify-content: center;
           backface-visibility: hidden;
           border-radius: 16px;
@@ -320,15 +323,14 @@
           width: 100%;
           position: relative;
           height: 100%;
+          flex: 1 1 auto;
+          padding: clamp(12px, 2vw, 18px);
       }
       #carton-destacado .carton-front {
-          padding: clamp(10px, 2.6vw, 18px);
           gap: 0;
-          justify-content: center;
           max-width: 100%;
           margin: 0;
           box-shadow: 0 18px 32px rgba(0,0,0,0.2);
-          align-items: stretch;
       }
       #carton-destacado .carton-front .carton-visual {
           width: 100%;
@@ -337,17 +339,21 @@
           display: flex;
           flex-direction: column;
           justify-content: center;
-          align-items: center;
+          align-items: stretch;
           min-height: 0;
           position: relative;
-          --carton-principal-padding: clamp(6px, 1.6vw, 14px);
-          padding: var(--carton-principal-padding);
+          --carton-principal-padding: 0px;
+          padding: 0;
           box-sizing: border-box;
           --principal-cell-size: clamp(28px, calc((100% - (var(--carton-principal-padding) * 2)) / 5), 112px);
           --cell-size: var(--principal-cell-size);
       }
+      #carton-destacado .carton-front .carton-visual .carton-tabla {
+          width: 100%;
+          height: 100%;
+          margin: 0;
+      }
       #carton-destacado .carton-back {
-          padding: 14px 16px;
           background: linear-gradient(160deg, rgba(255,255,255,0.96), rgba(210,210,210,0.92));
           transform: rotateY(180deg);
           justify-content: flex-start;
@@ -371,10 +377,12 @@
           position: relative;
           z-index: 1;
           width: 100%;
-          display: grid;
-          grid-template-columns: minmax(0, 1fr) minmax(0, clamp(140px, 38%, 220px));
-          gap: 6px 12px;
-          align-items: start;
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
+          justify-content: flex-start;
+          gap: 10px;
+          height: 100%;
       }
       #carton-destacado .carton-back-title {
           margin: 0;
@@ -389,16 +397,16 @@
       #carton-destacado .carton-back-formas {
           display: flex;
           flex-direction: column;
-          gap: 2px;
+          gap: 8px;
           width: 100%;
-          align-items: flex-start;
-          grid-column: 1 / 2;
+          align-items: stretch;
       }
       #carton-destacado .back-forma-line {
           font-family: 'Bangers', cursive;
           font-size: clamp(0.88rem, 3vw, 1.08rem);
           display: flex;
           align-items: center;
+          justify-content: space-between;
           flex-wrap: wrap;
           gap: 6px;
           line-height: 1.05;
@@ -411,33 +419,23 @@
       #carton-destacado .back-forma-line .back-forma-etiqueta {
           letter-spacing: 0.5px;
       }
-      #carton-destacado .back-forma-nombre {
-          font-family: 'Poppins', sans-serif;
-          font-size: clamp(0.62rem, 2.4vw, 0.78rem);
-          font-weight: 600;
-          text-shadow: 0 0 6px rgba(0,0,0,0.8), 0 0 14px rgba(0,0,0,0.55);
-          margin-top: -2px;
-          margin-bottom: 4px;
-      }
-      #carton-destacado .carton-back-total-label,
-      #carton-destacado .carton-back-total-valor {
-          display: block;
-          margin: 0;
+      #carton-destacado .carton-back-total {
+          margin-top: 4px;
+          display: flex;
+          align-items: baseline;
+          justify-content: center;
+          gap: 10px;
           font-family: 'Bangers', cursive;
           color: #ffffff;
           text-shadow: 0 0 12px rgba(0,0,0,0.85), 0 0 22px rgba(0,0,0,0.6);
-          grid-column: 2 / 3;
-          justify-self: end;
-          text-align: right;
       }
       #carton-destacado .carton-back-total-label {
-          font-size: clamp(1rem, 3.8vw, 1.3rem);
-          align-self: start;
+          font-size: clamp(1.1rem, 3.8vw, 1.4rem);
+          margin: 0;
       }
       #carton-destacado .carton-back-total-valor {
-          font-size: clamp(1.6rem, 5vw, 2.1rem);
-          margin-top: 4px;
-          align-self: start;
+          font-size: clamp(1.6rem, 5vw, 2.2rem);
+          margin: 0;
       }
       .carton-forma-accion {
           font-family: 'Bangers', cursive;
@@ -1928,13 +1926,6 @@
           `<span class="back-forma-etiqueta">FORMA ${String(idx).padStart(2,'0')}:</span>`+
           `<span class="back-forma-valor">${formatearCreditos(datosForma.valor||0)}</span>`;
         formasContenedor.appendChild(linea);
-        if(forma && forma.nombre){
-          const nombreLinea=document.createElement('div');
-          nombreLinea.className='back-forma-nombre';
-          nombreLinea.style.color=colorForma;
-          nombreLinea.textContent=forma.nombre;
-          formasContenedor.appendChild(nombreLinea);
-        }
         const boton=document.createElement('button');
         boton.type='button';
         boton.className='carton-forma-accion';
@@ -1951,14 +1942,17 @@
         });
         botonesFormas.push(boton);
       }
-      const totalLabel=document.createElement('p');
+      const totalContenedor=document.createElement('div');
+      totalContenedor.className='carton-back-total';
+      const totalLabel=document.createElement('span');
       totalLabel.className='carton-back-total-label';
-      totalLabel.textContent='Total Ganado';
-      const totalValor=document.createElement('p');
+      totalLabel.textContent='TOTAL GANADO:';
+      const totalValor=document.createElement('span');
       totalValor.className='carton-back-total-valor';
       totalValor.textContent=formatearCreditos(resumenGanancias.total);
-      backContent.appendChild(totalLabel);
-      backContent.appendChild(totalValor);
+      totalContenedor.appendChild(totalLabel);
+      totalContenedor.appendChild(totalValor);
+      backContent.appendChild(totalContenedor);
       const backLogo=document.createElement('img');
       backLogo.src='https://i.imgur.com/twjhNtZ.png';
       backLogo.alt='Logo HexaBingo';
