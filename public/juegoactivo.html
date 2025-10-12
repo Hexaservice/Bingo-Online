@@ -321,7 +321,7 @@
           height: 100%;
       }
       #carton-destacado .carton-front {
-          padding: 0;
+          padding: clamp(10px, 2.6vw, 18px);
           gap: 0;
           justify-content: center;
           max-width: 100%;
@@ -330,14 +330,20 @@
           align-items: stretch;
       }
       #carton-destacado .carton-front .carton-visual {
-          padding-top: 0;
           width: 100%;
           max-width: 100%;
-          --principal-cell-size: clamp(24px, calc((min(100%, 520px) - 16px) / 5), 86px);
           flex: 1 1 auto;
           display: flex;
           flex-direction: column;
           justify-content: center;
+          align-items: center;
+          min-height: 0;
+          position: relative;
+          --carton-principal-padding: clamp(6px, 1.6vw, 14px);
+          padding: var(--carton-principal-padding);
+          box-sizing: border-box;
+          --principal-cell-size: clamp(28px, calc((100% - (var(--carton-principal-padding) * 2)) / 5), 112px);
+          --cell-size: var(--principal-cell-size);
       }
       #carton-destacado .carton-back {
           padding: 14px 16px;
@@ -364,11 +370,10 @@
           position: relative;
           z-index: 1;
           width: 100%;
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-          align-items: stretch;
-          text-align: center;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(0, clamp(140px, 38%, 220px));
+          gap: 6px 12px;
+          align-items: start;
       }
       #carton-destacado .carton-back-title {
           margin: 0;
@@ -377,6 +382,8 @@
           color: #ffffff;
           text-shadow: 0 0 10px rgba(0,0,0,0.85), 0 0 18px rgba(0,0,0,0.6);
           letter-spacing: 1px;
+          grid-column: 1 / -1;
+          text-align: center;
       }
       #carton-destacado .carton-back-formas {
           display: flex;
@@ -384,6 +391,7 @@
           gap: 2px;
           width: 100%;
           align-items: flex-start;
+          grid-column: 1 / 2;
       }
       #carton-destacado .back-forma-line {
           font-family: 'Bangers', cursive;
@@ -416,15 +424,19 @@
           margin: 0;
           font-family: 'Bangers', cursive;
           color: #ffffff;
-          text-align: center;
           text-shadow: 0 0 12px rgba(0,0,0,0.85), 0 0 22px rgba(0,0,0,0.6);
+          grid-column: 2 / 3;
+          justify-self: end;
+          text-align: right;
       }
       #carton-destacado .carton-back-total-label {
           font-size: clamp(1rem, 3.8vw, 1.3rem);
+          align-self: start;
       }
       #carton-destacado .carton-back-total-valor {
           font-size: clamp(1.6rem, 5vw, 2.1rem);
           margin-top: 4px;
+          align-self: start;
       }
       #carton-destacado .carton-forma-accion {
           font-family: 'Bangers', cursive;
@@ -528,9 +540,10 @@
       }
       .carton-forma-leyenda {
           position: absolute;
-          top: 0;
-          transform: translateY(-60%);
-          background: #ffffff;
+          top: clamp(6px, 2vw, 16px);
+          left: 50%;
+          transform: translateX(-50%);
+          background: rgba(255, 255, 255, 0.92);
           color: #333333;
           font-size: 0.55rem;
           font-weight: 600;
@@ -543,6 +556,7 @@
           transition: opacity 0.3s ease;
           box-shadow: 0 0 10px rgba(255, 215, 0, 0.75);
           border: 1px solid rgba(0,0,0,0.1);
+          z-index: 2;
       }
       .carton-visual--principal .carton-forma-leyenda {
           font-size: 0.62rem;
@@ -673,7 +687,7 @@
           text-shadow: 0 0 6px rgba(0,0,0,0.75);
       }
       .carton-tabla--principal {
-          --cell-size: var(--principal-cell-size, clamp(24px, min(5.6vw, 6.4vh), 30px));
+          --cell-size: var(--principal-cell-size, clamp(24px, 5.6vw, 38px));
       }
       .carton-tabla--mini {
           --cell-size: clamp(22px, 4.8vw, 28px);
@@ -941,8 +955,8 @@
               align-items: stretch;
               height: auto;
           }
-          .carton-tabla--principal {
-              --cell-size: clamp(26px, min(12vw, 7.2vh), 34px);
+          #carton-destacado .carton-front .carton-visual {
+              --principal-cell-size: clamp(26px, calc((100% - (var(--carton-principal-padding) * 2)) / 5), 96px);
           }
       }
 
@@ -1009,8 +1023,8 @@
                 grid-template-columns: repeat(2, minmax(0, 1fr));
                 gap: 8px;
             }
-            #carton-destacado .carton-tabla {
-                max-width: calc(var(--cell-size) * 5);
+            #carton-destacado .carton-front .carton-visual {
+                --principal-cell-size: clamp(26px, calc((100% - (var(--carton-principal-padding) * 2)) / 5), 90px);
             }
         }
         @media (min-width: 900px) and (orientation: landscape) {
@@ -1022,6 +1036,9 @@
             }
             #carton-destacado {
                 margin-left: 0;
+            }
+            #carton-destacado .carton-front .carton-visual {
+                --principal-cell-size: clamp(30px, calc((100% - (var(--carton-principal-padding) * 2)) / 5), 108px);
             }
         }
   </style>
