@@ -162,10 +162,11 @@
           grid-template-columns: minmax(0, 1fr);
           grid-template-areas:
               "cantos"
+              "mensaje"
               "carton"
-              "mensaje";
+              "acciones";
           align-items: start;
-          gap: 12px;
+          gap: 10px;
           width: 100%;
           margin: 0;
           padding: 0;
@@ -266,7 +267,7 @@
           width: 100%;
           max-width: 100%;
           justify-self: stretch;
-          align-self: stretch;
+          align-self: start;
           margin: 0;
           height: 100%;
       }
@@ -438,7 +439,7 @@
           margin-top: 4px;
           align-self: start;
       }
-      #carton-destacado .carton-forma-accion {
+      .carton-forma-accion {
           font-family: 'Bangers', cursive;
           font-size: clamp(0.82rem, 2.8vw, 1rem);
           padding: 6px 16px;
@@ -452,18 +453,21 @@
           flex: 0 0 auto;
           text-align: center;
       }
-      #carton-destacado .carton-acciones {
+      .carton-acciones {
           display: flex;
           flex-wrap: wrap;
           justify-content: center;
           align-items: center;
-          gap: 10px;
-          padding: 0 4px 8px;
+          gap: 8px;
+          padding: 0;
           width: 100%;
           box-sizing: border-box;
       }
-      #carton-destacado .carton-forma-accion:hover,
-      #carton-destacado .carton-forma-accion:focus-visible {
+      .carton-acciones:empty {
+          display: none;
+      }
+      .carton-forma-accion:hover,
+      .carton-forma-accion:focus-visible {
           transform: translateY(-1px);
           box-shadow: 0 6px 16px rgba(0,0,0,0.22);
           outline: none;
@@ -479,6 +483,16 @@
       #formas-mensaje {
           grid-area: mensaje;
           margin: 0;
+          padding: 0;
+          align-self: start;
+          justify-self: stretch;
+      }
+      #formas-acciones {
+          grid-area: acciones;
+          margin: 0;
+          padding: 0;
+          align-self: start;
+          justify-self: stretch;
       }
       #mis-cartones-section h2 {
           text-align: center;
@@ -791,10 +805,6 @@
       #formas-mensaje {
           text-align: center;
       }
-      #formas-mensaje {
-          text-align: center;
-          grid-column: 2;
-      }
       #resultados-contenedor {
           display: none;
       }
@@ -927,8 +937,9 @@
           #panel-superior {
               grid-template-columns: minmax(0, 1fr) minmax(0, clamp(280px, 45vw, 540px));
               grid-template-areas:
+                  "cantos mensaje"
                   "cantos carton"
-                  "mensaje carton";
+                  "cantos acciones";
           }
           #cantos-panel {
               height: 100%;
@@ -943,8 +954,9 @@
               grid-template-columns: minmax(0, 1fr);
               grid-template-areas:
                   "cantos"
+                  "mensaje"
                   "carton"
-                  "mensaje";
+                  "acciones";
               align-items: start;
           }
           #cantos-panel {
@@ -1021,8 +1033,9 @@
             #panel-superior {
                 grid-template-columns: minmax(0, 1fr) minmax(0, clamp(280px, 55vw, 600px));
                 grid-template-areas:
+                    "cantos mensaje"
                     "cantos carton"
-                    "mensaje carton";
+                    "cantos acciones";
             }
             #carton-destacado {
                 margin-left: 0;
@@ -1039,8 +1052,9 @@
             #panel-superior {
                 grid-template-columns: minmax(0, 1fr) minmax(0, clamp(320px, 60vw, 640px));
                 grid-template-areas:
+                    "cantos mensaje"
                     "cantos carton"
-                    "mensaje carton";
+                    "cantos acciones";
             }
             #carton-destacado {
                 margin-left: 0;
@@ -1063,8 +1077,9 @@
         <div id="cantos-grid"></div>
         <div id="ultimo-canto"></div>
       </div>
-      <aside id="carton-destacado" aria-live="polite"></aside>
       <div id="formas-mensaje" class="mensaje"></div>
+      <aside id="carton-destacado" aria-live="polite"></aside>
+      <div id="formas-acciones" class="carton-acciones" aria-live="polite"></div>
     </section>
     <section id="mis-cartones-section">
       <h2>Mis cartones</h2>
@@ -1105,6 +1120,7 @@
   const sorteoResumenEl = document.getElementById('sorteo-resumen');
   const sorteoDetallesEl = document.getElementById('sorteo-detalles');
   const formasMensajeEl = document.getElementById('formas-mensaje');
+  const formasAccionesEl = document.getElementById('formas-acciones');
   const misCartonesSectionEl = document.getElementById('mis-cartones-section');
   const misCartonesGridEl = document.getElementById('mis-cartones-grid');
   const cartonesMensajeEl = document.getElementById('cartones-mensaje');
@@ -1759,6 +1775,9 @@
     if(formasMensajeEl){
       formasMensajeEl.textContent='';
     }
+    if(formasAccionesEl){
+      formasAccionesEl.innerHTML='';
+    }
   }
 
   function limpiarCartonesRenderizados(){
@@ -1773,6 +1792,9 @@
       if(formasMensajeEl){
         formasMensajeEl.textContent='No hay formas registradas para este sorteo.';
       }
+      if(formasAccionesEl){
+        formasAccionesEl.innerHTML='';
+      }
       return;
     }
     if(formasMensajeEl){
@@ -1785,6 +1807,9 @@
     limpiarCartonesRenderizados();
     cartonDestacadoEl.innerHTML='';
     cartonDestacadoEl.classList.remove('activo');
+    if(formasAccionesEl){
+      formasAccionesEl.innerHTML='';
+    }
     const lista=Array.from(cartonesSorteo.values()).filter(c=>c.userId===(usuarioActual?usuarioActual.uid:null));
     if(!lista.length){
       cartonesMensajeEl.textContent='No tienes cartones participando en este sorteo.';
@@ -1935,10 +1960,10 @@
       backLogo.src='https://i.imgur.com/twjhNtZ.png';
       backLogo.alt='Logo HexaBingo';
       cartonBack.appendChild(backLogo);
-      const accionesContenedor=document.createElement('div');
-      accionesContenedor.className='carton-acciones';
-      botonesFormas.forEach(btn=>accionesContenedor.appendChild(btn));
-      cartonBox.appendChild(accionesContenedor);
+      if(formasAccionesEl){
+        formasAccionesEl.innerHTML='';
+        botonesFormas.forEach(btn=>formasAccionesEl.appendChild(btn));
+      }
       cartonDestacadoEl.appendChild(cartonBox);
       tablaInfoPrincipal.wrapper=cartonWrapper;
       tablaInfoPrincipal.cartonBack=cartonBack;
