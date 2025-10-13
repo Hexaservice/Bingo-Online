@@ -336,7 +336,10 @@
           justify-content: flex-start;
           gap: 6px;
           flex: 1;
-          --principal-cell-size: clamp(40px, calc((100% - 12px) / 5), 80px);
+          --carton-principal-padding: clamp(6px, 1.8vw, 12px);
+          padding: var(--carton-principal-padding);
+          box-sizing: border-box;
+          --principal-cell-size: clamp(40px, calc((100% - (var(--carton-principal-padding) * 2)) / 5), 80px);
       }
       #carton-destacado .carton-front .carton-visual .carton-tabla {
           width: 100%;
@@ -425,7 +428,7 @@
       .carton-forma-accion {
           font-family: 'Bangers', cursive;
           font-size: clamp(0.82rem, 2.8vw, 1rem);
-          padding: 6px 12px;
+          padding: 4px 10px;
           border-radius: 999px;
           border: 2px solid var(--forma-color-borde, rgba(0,0,0,0.2));
           color: #1f1f1f;
@@ -439,9 +442,17 @@
           justify-content: center;
           gap: 6px;
           white-space: nowrap;
+          width: auto;
+          min-width: 0;
       }
       #panel-superior > .carton-forma-accion {
           justify-self: center;
+          grid-column: 1 / -1;
+          align-self: start;
+          margin-top: clamp(4px, 1vw, 10px);
+      }
+      #panel-superior > .carton-forma-accion + .carton-forma-accion {
+          margin-top: clamp(3px, 0.8vw, 8px);
       }
       .carton-forma-accion:hover,
       .carton-forma-accion:focus-visible {
@@ -938,7 +949,9 @@
           }
           #panel-superior > .carton-forma-accion {
               grid-column: 2;
+              grid-row: 3;
               justify-self: start;
+              margin-top: clamp(4px, 0.9vw, 10px);
           }
       }
       @media (max-width: 819px) {
@@ -977,6 +990,8 @@
           }
           #panel-superior > .carton-forma-accion {
               grid-column: 1 / -1;
+              align-self: center;
+              margin-top: clamp(3px, 1.2vw, 8px);
           }
       }
 
@@ -1024,30 +1039,16 @@
       }
       @media (orientation: portrait) {
           #panel-superior {
-              column-gap: clamp(4px, 1.5vw, 16px);
-              grid-template-columns: minmax(0, 1fr) minmax(0, clamp(280px, 52vw, 560px));
-              grid-template-areas:
-                  "cantos carton"
-                  "mensaje carton";
-              align-items: start;
-              align-content: start;
-              justify-items: stretch;
-              grid-auto-flow: row;
-              row-gap: clamp(6px, 2vw, 14px);
-          }
-          #cantos-panel {
-              grid-area: cantos;
-              width: 100%;
-          }
-          #formas-mensaje {
-              grid-area: mensaje;
-              justify-self: stretch;
-              width: 100%;
+              display: flex;
+              flex-direction: column;
+              align-items: stretch;
+              justify-content: flex-start;
+              gap: clamp(4px, 1.6vw, 12px);
           }
           #carton-destacado {
-              grid-area: carton;
+              order: 1;
               justify-self: stretch;
-              align-self: start;
+              align-self: stretch;
               margin: 0;
               width: 100%;
               max-width: 100%;
@@ -1059,20 +1060,37 @@
           #carton-destacado .carton-wrapper {
               width: 100%;
               max-width: none;
+              padding: clamp(4px, 1.2vw, 8px);
+              min-height: clamp(260px, 72vw, 460px);
           }
-          #panel-superior > .carton-forma-accion {
-              grid-column: 2;
-              justify-self: center;
-              margin: 0;
-              width: auto;
-              max-width: 100%;
-              min-width: min(100%, 220px);
-          }
-          #panel-superior > .carton-forma-accion + .carton-forma-accion {
-              margin-top: clamp(4px, 1.2vw, 10px);
+          #carton-destacado .carton-front,
+          #carton-destacado .carton-back {
+              inset: clamp(1px, 0.6vw, 4px);
+              padding: clamp(4px, 1.2vw, 8px);
           }
           #carton-destacado .carton-front .carton-visual {
-              --principal-cell-size: clamp(32px, calc((100% - (var(--carton-principal-padding) * 2)) / 5), 112px);
+              --carton-principal-padding: clamp(2px, 0.8vw, 6px);
+              gap: clamp(3px, 1vw, 6px);
+              padding: var(--carton-principal-padding);
+              --principal-cell-size: clamp(22px, calc((100% - (var(--carton-principal-padding) * 2)) / 5), 64px);
+          }
+          #panel-superior > .carton-forma-accion {
+              order: 2;
+              align-self: center;
+              margin-top: clamp(2px, 0.8vw, 6px);
+              width: auto;
+              min-width: 0;
+          }
+          #panel-superior > .carton-forma-accion + .carton-forma-accion {
+              margin-top: clamp(2px, 0.7vw, 6px);
+          }
+          #cantos-panel {
+              order: 3;
+              width: 100%;
+          }
+          #formas-mensaje {
+              order: 4;
+              width: 100%;
           }
       }
         @media (orientation: landscape) and (max-width: 900px) {
