@@ -302,11 +302,12 @@
           min-height: 0;
           display: flex;
           flex-direction: column;
+          --carton-wrapper-altura: calc((var(--destacado-cell-size) * 5) + clamp(140px, 32vw, 240px));
       }
       #carton-destacado .carton-wrapper::before {
           content: '';
           display: block;
-          padding-bottom: clamp(118%, 135%, 150%);
+          padding-bottom: var(--carton-wrapper-altura);
           pointer-events: none;
       }
       #carton-destacado .carton-wrapper.flipped {
@@ -1112,8 +1113,8 @@
               max-width: none;
               padding: 0;
           }
-          #carton-destacado .carton-wrapper::before {
-              padding-bottom: calc((var(--destacado-cell-size) * 5) + clamp(140px, 32vw, 240px));
+          #carton-destacado .carton-wrapper {
+              --carton-wrapper-altura: calc((var(--destacado-cell-size) * 5) + clamp(140px, 32vw, 240px));
           }
           #carton-destacado .carton-front,
           #carton-destacado .carton-back {
@@ -1306,6 +1307,41 @@
   const animacionesCartones = new Map();
   let cartonPrincipalInfo = null;
   let resaltadoTemporal = {timer:null, tablas:null, cartonId:null};
+
+  let recalculoAlturaCartonProgramado = false;
+
+  function actualizarAlturaCartonWrapper(wrapper){
+    if(!wrapper) return;
+    requestAnimationFrame(()=>{
+      const frente=wrapper.querySelector('.carton-front');
+      const reverso=wrapper.querySelector('.carton-back');
+      const altoFrente=frente?frente.scrollHeight:0;
+      const altoReverso=reverso?reverso.scrollHeight:0;
+      const alturaCalculada=Math.max(altoFrente, altoReverso, 0);
+      if(alturaCalculada>0){
+        const alturaFinal=Math.ceil(alturaCalculada+8);
+        wrapper.style.setProperty('--carton-wrapper-altura', `${alturaFinal}px`);
+      }else{
+        wrapper.style.removeProperty('--carton-wrapper-altura');
+      }
+    });
+  }
+
+  function programarRecalculoAlturaCarton(){
+    if(recalculoAlturaCartonProgramado) return;
+    recalculoAlturaCartonProgramado=true;
+    requestAnimationFrame(()=>{
+      recalculoAlturaCartonProgramado=false;
+      const wrapperActual=cartonPrincipalInfo?.info?.wrapper;
+      if(wrapperActual){
+        actualizarAlturaCartonWrapper(wrapperActual);
+      }
+    });
+  }
+
+  window.addEventListener('resize', programarRecalculoAlturaCarton);
+  window.addEventListener('orientationchange', programarRecalculoAlturaCarton);
+  window.addEventListener('load', programarRecalculoAlturaCarton);
 
   let unsubscribeSorteos = null;
   let unsubscribeCantos = null;
@@ -2127,6 +2163,8 @@
       tablaInfoPrincipal.celdaCentral=tablaInfoPrincipal.celdas.get('2-2');
       cartonDestacadoEl.classList.add('activo');
       configurarEventosCartonPrincipal(seleccionado,tablaInfoPrincipal);
+      actualizarAlturaCartonWrapper(cartonWrapper);
+      programarRecalculoAlturaCarton();
     }
     decorados.forEach(carton=>{
       const tablas=tablasPorCarton.get(carton.id)||[];
