@@ -341,18 +341,28 @@
           width: 100%;
           display: flex;
           flex-direction: column;
-          align-items: stretch;
+          align-items: center;
           justify-content: center;
           gap: clamp(0px, 0.4vw, 6px);
           flex: 1;
           --carton-principal-padding: 0px;
           padding: var(--carton-principal-padding);
           box-sizing: border-box;
-          --principal-cell-size: min(var(--destacado-cell-size), calc((100% - (var(--carton-principal-padding) * 2)) / 5));
+          --principal-cell-size: clamp(
+              40px,
+              min(
+                  var(--destacado-cell-size),
+                  calc((100% - (var(--carton-principal-padding) * 2)) / 5)
+              ),
+              var(--destacado-cell-size)
+          );
       }
       #carton-destacado .carton-front .carton-visual .carton-tabla {
-          width: min(100%, calc(var(--principal-cell-size) * 5));
-          max-width: calc(var(--principal-cell-size) * 5);
+          display: grid;
+          grid-template-columns: repeat(5, minmax(0, var(--principal-cell-size, var(--cell-size))));
+          grid-auto-rows: var(--principal-cell-size, var(--cell-size));
+          width: min(100%, calc(var(--principal-cell-size, var(--cell-size)) * 5));
+          max-width: calc(var(--principal-cell-size, var(--cell-size)) * 5);
           margin: 0 auto;
       }
       #carton-destacado .carton-back {
@@ -718,15 +728,30 @@
           max-width: calc(var(--principal-cell-size, var(--cell-size)) * 5);
           margin: 0 auto;
       }
+      #carton-destacado .carton-tabla thead,
+      #carton-destacado .carton-tabla tbody,
+      #carton-destacado .carton-tabla tr {
+          display: contents;
+      }
       #carton-destacado .carton-tabla thead th,
       #carton-destacado .carton-tabla tbody td {
-          min-height: var(--principal-cell-size, var(--cell-size));
+          min-height: 0;
+          height: 100%;
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
       }
       #carton-destacado .carton-tabla--principal thead th {
-          font-size: calc(var(--cell-size) * 0.78);
+          font-size: calc(var(--principal-cell-size, var(--cell-size)) * 0.78);
       }
       #carton-destacado .carton-tabla--principal tbody td {
-          font-size: calc(var(--cell-size) * 0.6);
+          font-size: calc(var(--principal-cell-size, var(--cell-size)) * 0.6);
+      }
+      #carton-destacado .carton-tabla thead th > *,
+      #carton-destacado .carton-tabla tbody td > * {
+          width: 100%;
+          height: 100%;
       }
       #carton-destacado .carton-visor-info {
           margin-top: 6px;
