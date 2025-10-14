@@ -1135,7 +1135,7 @@
       }
       @media (orientation: portrait) {
           #panel-superior {
-              grid-template-columns: minmax(0, 1fr) minmax(0, clamp(240px, 58vw, 420px));
+              grid-template-columns: auto minmax(clamp(240px, 58vw, 420px), 1fr);
               grid-template-areas:
                   "cantos carton"
                   "mensaje botones";
@@ -1225,6 +1225,7 @@
           }
           #carton-destacado .carton-front .carton-visual {
               --carton-principal-padding: clamp(2px, 0.6vw, 2px);
+              --principal-cell-size: calc((100% - (var(--carton-principal-padding) * 2)) / 5);
               gap: 0;
               padding: var(--carton-principal-padding);
               margin-bottom: 0;
@@ -1239,9 +1240,11 @@
               margin-bottom: 0;
               width: 100%;
               max-width: none;
-              aspect-ratio: auto;
+              aspect-ratio: 5 / 6;
               height: auto;
               max-height: none;
+              grid-template-columns: repeat(5, minmax(0, var(--principal-cell-size, 1fr)));
+              grid-auto-rows: var(--principal-cell-size, 1fr);
           }
           #carton-destacado {
               --destacado-cell-size: clamp(40px, 14vw, 120px);
