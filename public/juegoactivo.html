@@ -1111,30 +1111,32 @@
               grid-template-columns: minmax(0, 1fr) minmax(0, clamp(210px, 56vw, 420px));
               grid-template-areas:
                   "cantos carton"
-                  "mensaje carton";
+                  "mensaje carton"
+                  "botones botones";
               gap: clamp(4px, 1.6vw, 12px);
-              padding-bottom: calc(var(--panel-botones-altura, 0px) + var(--panel-botones-separacion, 0px));
+              padding-bottom: 0;
           }
           #panel-botones-formas {
-              position: absolute;
-              top: calc(var(--panel-botones-top, 100%) + var(--panel-botones-separacion, 0px));
-              left: 50%;
-              transform: translateX(-50%);
-              width: min(100%, clamp(210px, 56vw, 420px));
+              grid-area: botones;
+              position: static;
+              left: auto;
+              top: auto;
+              transform: none;
+              width: min(100%, clamp(210px, 80vw, 420px));
               max-width: 100%;
-              margin: 0;
+              margin: clamp(8px, 2.8vw, 16px) auto 0;
               display: flex;
               flex-direction: column;
-              align-items: stretch;
+              align-items: center;
               justify-content: flex-start;
               gap: clamp(6px, 2vw, 14px);
-              z-index: 10;
+              z-index: auto;
           }
           #panel-botones-formas:empty {
               display: none;
           }
           #panel-botones-formas .carton-forma-accion {
-              align-self: center;
+              align-self: stretch;
               width: 100%;
               min-width: 0;
           }
@@ -1413,32 +1415,25 @@
 
   let recalculoAlturaCartonProgramado = false;
   const actualizarAlturaBotonesRetrato = (() => {
-    const separacionRetrato = 'clamp(8px, 2.8vw, 16px)';
     const consultaRetrato = window.matchMedia('(orientation: portrait)');
     return () => {
       if(!panelSuperiorEl) return;
       requestAnimationFrame(() => {
         const enModoRetrato = consultaRetrato.matches;
-        let altura = 0;
-        let separacion = '0px';
-        let posicionTop = '100%';
-        if(enModoRetrato && panelBotonesFormasEl && panelBotonesFormasEl.childElementCount > 0){
-          altura = panelBotonesFormasEl.offsetHeight || 0;
-          separacion = separacionRetrato;
-          if(cartonDestacadoEl){
-            const panelRect = panelSuperiorEl.getBoundingClientRect();
-            const cartonRect = cartonDestacadoEl.getBoundingClientRect();
-            if(panelRect && cartonRect){
-              const desplazamiento = cartonRect.bottom - panelRect.top;
-              if(Number.isFinite(desplazamiento)){
-                posicionTop = `${Math.max(desplazamiento, 0)}px`;
-              }
-            }
+        if(enModoRetrato){
+          if(panelBotonesFormasEl){
+            panelBotonesFormasEl.style.removeProperty('top');
+            panelBotonesFormasEl.style.removeProperty('left');
+            panelBotonesFormasEl.style.removeProperty('transform');
           }
+          panelSuperiorEl.style.setProperty('--panel-botones-altura', '0px');
+          panelSuperiorEl.style.setProperty('--panel-botones-separacion', '0px');
+          panelSuperiorEl.style.setProperty('--panel-botones-top', '100%');
+          return;
         }
-        panelSuperiorEl.style.setProperty('--panel-botones-altura', `${altura}px`);
-        panelSuperiorEl.style.setProperty('--panel-botones-separacion', separacion);
-        panelSuperiorEl.style.setProperty('--panel-botones-top', posicionTop);
+        panelSuperiorEl.style.setProperty('--panel-botones-altura', '0px');
+        panelSuperiorEl.style.setProperty('--panel-botones-separacion', '0px');
+        panelSuperiorEl.style.setProperty('--panel-botones-top', '100%');
       });
     };
   })();
