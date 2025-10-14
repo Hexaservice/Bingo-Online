@@ -172,6 +172,7 @@
           position: relative;
           --panel-botones-altura: 0px;
           --panel-botones-separacion: 0px;
+          --panel-botones-top: 100%;
       }
       #cantos-panel {
           grid-area: cantos;
@@ -1116,7 +1117,7 @@
           }
           #panel-botones-formas {
               position: absolute;
-              top: calc(100% + var(--panel-botones-separacion, 0px));
+              top: calc(var(--panel-botones-top, 100%) + var(--panel-botones-separacion, 0px));
               left: 50%;
               transform: translateX(-50%);
               width: min(100%, clamp(210px, 56vw, 420px));
@@ -1336,7 +1337,7 @@
       </div>
       <div id="formas-mensaje" class="mensaje"></div>
       <aside id="carton-destacado" aria-live="polite"></aside>
-      <section id="panel-botones-formas" aria-label="Ganadores por forma"></section>
+      <div id="panel-botones-formas" role="region" aria-label="Ganadores por forma"></div>
     </section>
     <section id="mis-cartones-section">
       <h2>Mis cartones</h2>
@@ -1420,12 +1421,24 @@
         const enModoRetrato = consultaRetrato.matches;
         let altura = 0;
         let separacion = '0px';
+        let posicionTop = '100%';
         if(enModoRetrato && panelBotonesFormasEl && panelBotonesFormasEl.childElementCount > 0){
           altura = panelBotonesFormasEl.offsetHeight || 0;
           separacion = separacionRetrato;
+          if(cartonDestacadoEl){
+            const panelRect = panelSuperiorEl.getBoundingClientRect();
+            const cartonRect = cartonDestacadoEl.getBoundingClientRect();
+            if(panelRect && cartonRect){
+              const desplazamiento = cartonRect.bottom - panelRect.top;
+              if(Number.isFinite(desplazamiento)){
+                posicionTop = `${Math.max(desplazamiento, 0)}px`;
+              }
+            }
+          }
         }
         panelSuperiorEl.style.setProperty('--panel-botones-altura', `${altura}px`);
         panelSuperiorEl.style.setProperty('--panel-botones-separacion', separacion);
+        panelSuperiorEl.style.setProperty('--panel-botones-top', posicionTop);
       });
     };
   })();
@@ -1456,6 +1469,7 @@
           wrapper.style.removeProperty('--carton-wrapper-altura');
         }
       }
+      actualizarAlturaBotonesRetrato();
     });
   }
 
