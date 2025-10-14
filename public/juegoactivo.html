@@ -169,6 +169,7 @@
           width: 100%;
           margin: 0;
           padding: 0;
+          padding-bottom: calc(var(--panel-botones-altura, 0px) + var(--panel-botones-separacion, 0px));
           position: relative;
           --panel-botones-altura: 0px;
           --panel-botones-separacion: 0px;
@@ -473,6 +474,33 @@
       }
       #panel-botones-formas:empty {
           display: none;
+      }
+      #panel-botones-formas.flotante {
+          position: absolute;
+          left: 50%;
+          transform: translateX(-50%);
+          top: calc(var(--panel-botones-top, 100%) + var(--panel-botones-separacion, 0px));
+          margin: 0;
+          padding: clamp(10px, 2.8vw, 16px);
+          width: min(
+              var(--panel-botones-ancho, clamp(210px, 80vw, 420px)),
+              calc(100% - clamp(16px, 5vw, 32px))
+          );
+          max-width: clamp(210px, 80vw, 420px);
+          border-radius: clamp(12px, 3.6vw, 18px);
+          box-shadow: 0 10px 26px rgba(0,0,0,0.22);
+          background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(245,245,245,0.92));
+          backdrop-filter: blur(6px);
+          border: 1px solid rgba(255,255,255,0.85);
+          grid-area: auto;
+          z-index: 30;
+          gap: clamp(6px, 2vw, 14px);
+      }
+      #panel-botones-formas.flotante:empty {
+          display: none;
+      }
+      #panel-botones-formas.flotante .carton-forma-accion {
+          width: 100%;
       }
       .carton-forma-accion {
           font-family: 'Bangers', cursive;
@@ -1132,9 +1160,6 @@
               gap: clamp(6px, 2vw, 14px);
               z-index: auto;
           }
-          #panel-botones-formas:empty {
-              display: none;
-          }
           #panel-botones-formas .carton-forma-accion {
               align-self: stretch;
               width: 100%;
@@ -1416,24 +1441,56 @@
   let recalculoAlturaCartonProgramado = false;
   const actualizarAlturaBotonesRetrato = (() => {
     const consultaRetrato = window.matchMedia('(orientation: portrait)');
+    const calcularSeparacion = () => {
+      const base = Math.max(window.innerWidth, window.innerHeight) || 0;
+      const dinamica = base * 0.02;
+      return Math.round(Math.max(10, Math.min(dinamica, 22)));
+    };
     return () => {
-      if(!panelSuperiorEl) return;
+      if(!panelSuperiorEl || !panelBotonesFormasEl) return;
       requestAnimationFrame(() => {
         const enModoRetrato = consultaRetrato.matches;
-        if(enModoRetrato){
-          if(panelBotonesFormasEl){
-            panelBotonesFormasEl.style.removeProperty('top');
-            panelBotonesFormasEl.style.removeProperty('left');
-            panelBotonesFormasEl.style.removeProperty('transform');
-          }
+        const hayBotones = panelBotonesFormasEl.childElementCount > 0;
+        const cartonVisible = cartonDestacadoEl && cartonDestacadoEl.offsetParent;
+
+        if(!enModoRetrato || !hayBotones || !cartonVisible){
           panelSuperiorEl.style.setProperty('--panel-botones-altura', '0px');
           panelSuperiorEl.style.setProperty('--panel-botones-separacion', '0px');
           panelSuperiorEl.style.setProperty('--panel-botones-top', '100%');
+          panelBotonesFormasEl.classList.remove('flotante');
+          panelBotonesFormasEl.style.removeProperty('--panel-botones-ancho');
           return;
         }
-        panelSuperiorEl.style.setProperty('--panel-botones-altura', '0px');
-        panelSuperiorEl.style.setProperty('--panel-botones-separacion', '0px');
-        panelSuperiorEl.style.setProperty('--panel-botones-top', '100%');
+
+        const rectCarton = cartonDestacadoEl.getBoundingClientRect();
+        const rectPanel = panelSuperiorEl.getBoundingClientRect();
+
+        if(rectCarton.width <= 0 || rectCarton.height <= 0 || rectPanel.width <= 0){
+          panelSuperiorEl.style.setProperty('--panel-botones-altura', '0px');
+          panelSuperiorEl.style.setProperty('--panel-botones-separacion', '0px');
+          panelSuperiorEl.style.setProperty('--panel-botones-top', '100%');
+          panelBotonesFormasEl.classList.remove('flotante');
+          panelBotonesFormasEl.style.removeProperty('--panel-botones-ancho');
+          return;
+        }
+
+        const separacion = calcularSeparacion();
+        const topRelativo = Math.max(0, rectCarton.bottom - rectPanel.top);
+        const anchoDisponible = Math.max(0, rectPanel.width - 24);
+        const anchoObjetivo = Math.min(rectCarton.width, anchoDisponible);
+
+        if(anchoObjetivo > 0){
+          panelBotonesFormasEl.style.setProperty('--panel-botones-ancho', `${anchoObjetivo}px`);
+        }else{
+          panelBotonesFormasEl.style.removeProperty('--panel-botones-ancho');
+        }
+
+        panelBotonesFormasEl.classList.add('flotante');
+        panelSuperiorEl.style.setProperty('--panel-botones-top', `${topRelativo}px`);
+        panelSuperiorEl.style.setProperty('--panel-botones-separacion', `${separacion}px`);
+
+        const alturaBotones = panelBotonesFormasEl.offsetHeight;
+        panelSuperiorEl.style.setProperty('--panel-botones-altura', `${Math.round(alturaBotones)}px`);
       });
     };
   })();
