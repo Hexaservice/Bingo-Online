@@ -1139,23 +1139,31 @@
               grid-template-columns: minmax(0, 1fr) minmax(0, clamp(210px, 56vw, 420px));
               grid-template-areas:
                   "cantos carton"
-                  "mensaje carton"
-                  "botones botones";
+                  "mensaje carton";
               gap: clamp(4px, 1.6vw, 12px);
               padding-bottom: 0;
           }
           #panel-botones-formas {
-              grid-area: botones;
+              grid-area: auto;
+              grid-column: 2;
+              justify-self: center;
+              align-self: start;
               position: static;
               left: auto;
               top: auto;
               transform: none;
-              width: min(100%, clamp(210px, 80vw, 420px));
+              width: min(100%, var(--panel-botones-ancho, clamp(210px, 80vw, 420px)));
               max-width: 100%;
-              margin: clamp(8px, 2.8vw, 16px) auto 0;
+              margin: clamp(8px, 2.8vw, 16px) 0 0;
+              padding: clamp(10px, 2.8vw, 16px);
+              border-radius: clamp(12px, 3.6vw, 18px);
+              box-shadow: 0 10px 26px rgba(0,0,0,0.22);
+              background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(245,245,245,0.92));
+              backdrop-filter: blur(6px);
+              border: 1px solid rgba(255,255,255,0.85);
               display: flex;
               flex-direction: column;
-              align-items: center;
+              align-items: stretch;
               justify-content: flex-start;
               gap: clamp(6px, 2vw, 14px);
               z-index: auto;
@@ -1441,11 +1449,6 @@
   let recalculoAlturaCartonProgramado = false;
   const actualizarAlturaBotonesRetrato = (() => {
     const consultaRetrato = window.matchMedia('(orientation: portrait)');
-    const calcularSeparacion = () => {
-      const base = Math.max(window.innerWidth, window.innerHeight) || 0;
-      const dinamica = base * 0.02;
-      return Math.round(Math.max(10, Math.min(dinamica, 22)));
-    };
     return () => {
       if(!panelSuperiorEl || !panelBotonesFormasEl) return;
       requestAnimationFrame(() => {
@@ -1459,6 +1462,7 @@
           panelSuperiorEl.style.setProperty('--panel-botones-top', '100%');
           panelBotonesFormasEl.classList.remove('flotante');
           panelBotonesFormasEl.style.removeProperty('--panel-botones-ancho');
+          panelBotonesFormasEl.style.removeProperty('max-width');
           return;
         }
 
@@ -1471,26 +1475,23 @@
           panelSuperiorEl.style.setProperty('--panel-botones-top', '100%');
           panelBotonesFormasEl.classList.remove('flotante');
           panelBotonesFormasEl.style.removeProperty('--panel-botones-ancho');
+          panelBotonesFormasEl.style.removeProperty('max-width');
           return;
         }
 
-        const separacion = calcularSeparacion();
-        const topRelativo = Math.max(0, rectCarton.bottom - rectPanel.top);
-        const anchoDisponible = Math.max(0, rectPanel.width - 24);
+        const anchoDisponible = Math.max(0, rectPanel.width);
         const anchoObjetivo = Math.min(rectCarton.width, anchoDisponible);
 
         if(anchoObjetivo > 0){
-          panelBotonesFormasEl.style.setProperty('--panel-botones-ancho', `${anchoObjetivo}px`);
+          panelBotonesFormasEl.style.setProperty('--panel-botones-ancho', `${Math.round(anchoObjetivo)}px`);
         }else{
           panelBotonesFormasEl.style.removeProperty('--panel-botones-ancho');
         }
 
-        panelBotonesFormasEl.classList.add('flotante');
-        panelSuperiorEl.style.setProperty('--panel-botones-top', `${topRelativo}px`);
-        panelSuperiorEl.style.setProperty('--panel-botones-separacion', `${separacion}px`);
-
-        const alturaBotones = panelBotonesFormasEl.offsetHeight;
-        panelSuperiorEl.style.setProperty('--panel-botones-altura', `${Math.round(alturaBotones)}px`);
+        panelBotonesFormasEl.classList.remove('flotante');
+        panelSuperiorEl.style.setProperty('--panel-botones-altura', '0px');
+        panelSuperiorEl.style.setProperty('--panel-botones-separacion', '0px');
+        panelSuperiorEl.style.setProperty('--panel-botones-top', '100%');
       });
     };
   })();
