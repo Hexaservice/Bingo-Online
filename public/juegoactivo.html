@@ -458,6 +458,18 @@
           font-size: clamp(1.6rem, 5vw, 2.2rem);
           margin: 0;
       }
+      #panel-botones-formas {
+          grid-column: 2;
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
+          gap: clamp(4px, 1vw, 10px);
+          margin: 0;
+          padding: 0;
+      }
+      #panel-botones-formas:empty {
+          display: none;
+      }
       .carton-forma-accion {
           font-family: 'Bangers', cursive;
           font-size: clamp(0.82rem, 2.8vw, 1rem);
@@ -478,15 +490,24 @@
           width: auto;
           min-width: 0;
       }
-      #panel-superior > .carton-forma-accion {
-          grid-column: 2;
-          justify-self: stretch;
-          align-self: start;
-          margin-top: clamp(4px, 1vw, 10px);
-          min-width: 0;
+      #panel-botones-formas .carton-forma-accion {
+          align-self: stretch;
       }
-      #panel-superior > .carton-forma-accion + .carton-forma-accion {
-          margin-top: clamp(4px, 1vw, 8px);
+      .carton-forma-accion .carton-forma-texto {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          line-height: 1.1;
+      }
+      .carton-forma-accion .carton-forma-contador {
+          font-size: 0.9em;
+          font-weight: 700;
+          color: var(--forma-color-contador, #1f1f1f);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding-left: 6px;
+          min-width: 1.8em;
       }
       .carton-forma-accion:hover,
       .carton-forma-accion:focus-visible {
@@ -1002,9 +1023,6 @@
           #carton-destacado {
               max-width: none;
           }
-          #panel-superior > .carton-forma-accion {
-              margin-top: clamp(4px, 0.9vw, 10px);
-          }
       }
       @media (max-width: 819px) {
           #panel-superior {
@@ -1039,10 +1057,6 @@
           }
           #carton-destacado {
               --destacado-cell-size: clamp(30px, 11.6vw, 92px);
-          }
-          #panel-superior > .carton-forma-accion {
-              grid-column: 2;
-              margin-top: clamp(3px, 1.2vw, 8px);
           }
       }
 
@@ -1093,7 +1107,8 @@
               grid-template-columns: minmax(0, 1fr) minmax(0, clamp(210px, 56vw, 420px));
               grid-template-areas:
                   "cantos carton"
-                  "mensaje carton";
+                  "mensaje carton"
+                  ". botones";
               gap: clamp(4px, 1.6vw, 12px);
           }
           #carton-destacado {
@@ -1199,14 +1214,22 @@
               margin-top: clamp(1px, 0.8vw, 5px);
               gap: clamp(2px, 1vw, 6px);
           }
-          #panel-superior > .carton-forma-accion {
-              grid-column: 2;
-              width: 100%;
-              margin-top: clamp(2px, 1vw, 6px);
+          #panel-botones-formas {
+              grid-area: botones;
+              margin: 0;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: clamp(6px, 2vw, 14px);
+          }
+          #panel-botones-formas .carton-forma-accion {
+              align-self: center;
+              padding: 4px clamp(12px, 4vw, 18px);
+              width: auto;
               min-width: 0;
           }
-          #panel-superior > .carton-forma-accion + .carton-forma-accion {
-              margin-top: clamp(2px, 1vw, 6px);
+          #panel-botones-formas .carton-forma-accion .carton-forma-contador {
+              font-size: clamp(0.88rem, 2.6vw, 1rem);
           }
           #cantos-panel,
           #formas-mensaje {
@@ -1287,6 +1310,7 @@
       </div>
       <div id="formas-mensaje" class="mensaje"></div>
       <aside id="carton-destacado" aria-live="polite"></aside>
+      <section id="panel-botones-formas" aria-label="Ganadores por forma"></section>
     </section>
     <section id="mis-cartones-section">
       <h2>Mis cartones</h2>
@@ -1327,6 +1351,7 @@
   const sorteoResumenEl = document.getElementById('sorteo-resumen');
   const sorteoDetallesEl = document.getElementById('sorteo-detalles');
   const panelSuperiorEl = document.getElementById('panel-superior');
+  const panelBotonesFormasEl = document.getElementById('panel-botones-formas');
   const formasMensajeEl = document.getElementById('formas-mensaje');
   const misCartonesSectionEl = document.getElementById('mis-cartones-section');
   const misCartonesGridEl = document.getElementById('mis-cartones-grid');
@@ -1412,12 +1437,26 @@
   let unsubscribeCartones = null;
 
   function limpiarBotonesFormas(){
+    if(panelBotonesFormasEl){
+      panelBotonesFormasEl.innerHTML='';
+      return;
+    }
     if(!panelSuperiorEl) return;
     panelSuperiorEl.querySelectorAll('.carton-forma-accion[data-forma-boton="dinamico"]').forEach(boton=>boton.remove());
   }
 
   function insertarBotonesFormas(botones){
-    if(!panelSuperiorEl || !cartonDestacadoEl || !Array.isArray(botones)) return;
+    if(!cartonDestacadoEl || !Array.isArray(botones)) return;
+    if(panelBotonesFormasEl){
+      panelBotonesFormasEl.innerHTML='';
+      botones.forEach(boton=>{
+        if(!(boton instanceof HTMLElement)) return;
+        boton.dataset.formaBoton='dinamico';
+        panelBotonesFormasEl.appendChild(boton);
+      });
+      return;
+    }
+    if(!panelSuperiorEl) return;
     let referencia=cartonDestacadoEl;
     botones.forEach(boton=>{
       if(!(boton instanceof HTMLElement)) return;
@@ -2192,12 +2231,24 @@
         boton.type='button';
         boton.className='carton-forma-accion';
         boton.dataset.formaIdx=String(idx).padStart(2,'0');
-        boton.textContent=`GANADORES F${idx}`;
+        const textoBoton=document.createElement('span');
+        textoBoton.className='carton-forma-texto';
+        textoBoton.textContent=`GANADORES F${idx}`;
+        const contadorBoton=document.createElement('span');
+        contadorBoton.className='carton-forma-contador';
+        contadorBoton.textContent=String(totalGanadores);
+        boton.appendChild(textoBoton);
+        boton.appendChild(contadorBoton);
         boton.style.setProperty('--forma-color', colorForma);
-        boton.style.setProperty('--forma-color-borde', obtenerColorOscurecido(colorForma,0.7));
+        const colorOscurecido=obtenerColorOscurecido(colorForma,0.7);
+        boton.style.setProperty('--forma-color-borde', colorOscurecido);
+        boton.style.setProperty('--forma-color-contador', obtenerColorOscurecido(colorForma,0.55));
+        boton.dataset.totalGanadores=String(totalGanadores);
         const referenciaNombre=forma && forma.nombre?`, ${forma.nombre}`:'';
-        boton.setAttribute('aria-label',`Ver cartones ganadores de la forma ${String(idx).padStart(2,'0')}${referenciaNombre}`);
-        boton.title=forma && forma.nombre?`Ganadores ${forma.nombre}`:`Ganadores Forma ${String(idx).padStart(2,'0')}`;
+        const descripcionGanadores=totalGanadores===1?'1 cartón ganador':`${totalGanadores} cartones ganadores`;
+        boton.setAttribute('aria-label',`Ver cartones ganadores de la forma ${String(idx).padStart(2,'0')}${referenciaNombre}, ${descripcionGanadores}`);
+        const tituloBase=forma && forma.nombre?`Ganadores ${forma.nombre}`:`Ganadores Forma ${String(idx).padStart(2,'0')}`;
+        boton.title=`${tituloBase} (${descripcionGanadores})`;
         boton.addEventListener('click',evento=>{
           evento.stopPropagation();
           abrirModalGanadores(forma);
