@@ -1112,7 +1112,7 @@
             width: min(100%, clamp(200px, 52vw, 420px));
             max-width: none;
             padding: 0;
-            --carton-wrapper-altura: calc((var(--destacado-cell-size) * 6.2) + clamp(0px, 2.2vw, 12px));
+            --carton-wrapper-altura: calc((var(--destacado-cell-size) * 6.2) + clamp(18px, 6vw, 36px));
         }
           #carton-destacado .carton-front,
           #carton-destacado .carton-back {
@@ -1326,10 +1326,6 @@
   function actualizarAlturaCartonWrapper(wrapper){
     if(!wrapper) return;
     const enModoRetrato = window.matchMedia('(orientation: portrait)').matches;
-    if(enModoRetrato){
-      wrapper.style.removeProperty('--carton-wrapper-altura');
-      return;
-    }
     requestAnimationFrame(()=>{
       const frente=wrapper.querySelector('.carton-front');
       const reverso=wrapper.querySelector('.carton-back');
@@ -1337,7 +1333,8 @@
       const altoReverso=reverso?reverso.scrollHeight:0;
       const alturaCalculada=Math.max(altoFrente, altoReverso, 0);
       if(alturaCalculada>0){
-        const alturaFinal=Math.ceil(alturaCalculada+8);
+        const margenExtra=enModoRetrato?2:8;
+        const alturaFinal=Math.ceil(alturaCalculada+margenExtra);
         wrapper.style.setProperty('--carton-wrapper-altura', `${alturaFinal}px`);
       }else{
         wrapper.style.removeProperty('--carton-wrapper-altura');
