@@ -169,6 +169,9 @@
           width: 100%;
           margin: 0;
           padding: 0;
+          position: relative;
+          --panel-botones-altura: 0px;
+          --panel-botones-separacion: 0px;
       }
       #cantos-panel {
           grid-area: cantos;
@@ -1107,17 +1110,32 @@
               grid-template-columns: minmax(0, 1fr) minmax(0, clamp(210px, 56vw, 420px));
               grid-template-areas:
                   "cantos carton"
-                  "mensaje carton"
-                  "botones botones";
+                  "mensaje carton";
               gap: clamp(4px, 1.6vw, 12px);
+              padding-bottom: calc(var(--panel-botones-altura, 0px) + var(--panel-botones-separacion, 0px));
           }
           #panel-botones-formas {
-              grid-area: botones;
-              align-self: start;
-              justify-self: center;
+              position: absolute;
+              top: calc(100% + var(--panel-botones-separacion, 0px));
+              left: 50%;
+              transform: translateX(-50%);
+              width: min(100%, clamp(210px, 56vw, 420px));
+              max-width: 100%;
+              margin: 0;
+              display: flex;
+              flex-direction: column;
+              align-items: stretch;
+              justify-content: flex-start;
+              gap: clamp(6px, 2vw, 14px);
+              z-index: 10;
+          }
+          #panel-botones-formas:empty {
+              display: none;
+          }
+          #panel-botones-formas .carton-forma-accion {
+              align-self: center;
               width: 100%;
-              max-width: clamp(210px, 56vw, 420px);
-              margin: clamp(4px, 1.6vw, 12px) auto 0;
+              min-width: 0;
           }
           #carton-destacado {
               justify-self: stretch;
@@ -1393,6 +1411,24 @@
   let resaltadoTemporal = {timer:null, tablas:null, cartonId:null};
 
   let recalculoAlturaCartonProgramado = false;
+  const actualizarAlturaBotonesRetrato = (() => {
+    const separacionRetrato = 'clamp(8px, 2.8vw, 16px)';
+    const consultaRetrato = window.matchMedia('(orientation: portrait)');
+    return () => {
+      if(!panelSuperiorEl) return;
+      requestAnimationFrame(() => {
+        const enModoRetrato = consultaRetrato.matches;
+        let altura = 0;
+        let separacion = '0px';
+        if(enModoRetrato && panelBotonesFormasEl && panelBotonesFormasEl.childElementCount > 0){
+          altura = panelBotonesFormasEl.offsetHeight || 0;
+          separacion = separacionRetrato;
+        }
+        panelSuperiorEl.style.setProperty('--panel-botones-altura', `${altura}px`);
+        panelSuperiorEl.style.setProperty('--panel-botones-separacion', separacion);
+      });
+    };
+  })();
 
   function actualizarAlturaCartonWrapper(wrapper){
     if(!wrapper) return;
@@ -1438,6 +1474,9 @@
   window.addEventListener('resize', programarRecalculoAlturaCarton);
   window.addEventListener('orientationchange', programarRecalculoAlturaCarton);
   window.addEventListener('load', programarRecalculoAlturaCarton);
+  window.addEventListener('resize', actualizarAlturaBotonesRetrato);
+  window.addEventListener('orientationchange', actualizarAlturaBotonesRetrato);
+  window.addEventListener('load', actualizarAlturaBotonesRetrato);
 
   let unsubscribeSorteos = null;
   let unsubscribeCantos = null;
@@ -1447,10 +1486,12 @@
   function limpiarBotonesFormas(){
     if(panelBotonesFormasEl){
       panelBotonesFormasEl.innerHTML='';
+      actualizarAlturaBotonesRetrato();
       return;
     }
     if(!panelSuperiorEl) return;
     panelSuperiorEl.querySelectorAll('.carton-forma-accion[data-forma-boton="dinamico"]').forEach(boton=>boton.remove());
+    actualizarAlturaBotonesRetrato();
   }
 
   function insertarBotonesFormas(botones){
@@ -1462,6 +1503,7 @@
         boton.dataset.formaBoton='dinamico';
         panelBotonesFormasEl.appendChild(boton);
       });
+      actualizarAlturaBotonesRetrato();
       return;
     }
     if(!panelSuperiorEl) return;
@@ -1472,6 +1514,7 @@
       referencia.insertAdjacentElement('afterend', boton);
       referencia=boton;
     });
+    actualizarAlturaBotonesRetrato();
   }
 
   function crearGridCantos(){
