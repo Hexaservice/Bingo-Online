@@ -1340,6 +1340,10 @@
     if(!wrapper) return;
     const enModoRetrato = window.matchMedia('(orientation: portrait)').matches;
     requestAnimationFrame(()=>{
+      const valorPrevio=wrapper.style.getPropertyValue('--carton-wrapper-altura');
+      wrapper.style.removeProperty('--carton-wrapper-altura');
+      const estilos=getComputedStyle(wrapper);
+      const alturaBase=parseFloat(estilos.getPropertyValue('--carton-wrapper-altura'))||0;
       const frente=wrapper.querySelector('.carton-front');
       const reverso=wrapper.querySelector('.carton-back');
       const altoFrente=frente?frente.scrollHeight:0;
@@ -1347,10 +1351,16 @@
       const alturaCalculada=Math.max(altoFrente, altoReverso, 0);
       if(alturaCalculada>0){
         const margenExtra=enModoRetrato?2:8;
-        const alturaFinal=Math.ceil(alturaCalculada+margenExtra);
+        const alturaFinal=Math.max(alturaBase, Math.ceil(alturaCalculada+margenExtra));
         wrapper.style.setProperty('--carton-wrapper-altura', `${alturaFinal}px`);
       }else{
-        wrapper.style.removeProperty('--carton-wrapper-altura');
+        if(valorPrevio){
+          wrapper.style.setProperty('--carton-wrapper-altura', valorPrevio);
+        }else if(alturaBase){
+          wrapper.style.setProperty('--carton-wrapper-altura', `${alturaBase}px`);
+        }else{
+          wrapper.style.removeProperty('--carton-wrapper-altura');
+        }
       }
     });
   }
