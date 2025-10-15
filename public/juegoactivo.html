@@ -1159,22 +1159,39 @@
       }
       @media (orientation: portrait) {
           #panel-superior {
-              grid-template-columns: auto minmax(var(--panel-columna-derecha-min, 0px), 1fr);
+              grid-template-columns: minmax(0, 1fr);
               grid-template-areas:
-                  "cantos carton"
-                  "mensaje carton";
+                  "cantos"
+                  "carton"
+                  "botones"
+                  "mensaje";
               align-items: start;
               justify-items: stretch;
               column-gap: clamp(6px, 2vw, 16px);
               row-gap: clamp(6px, 2vw, 16px);
               padding-bottom: 0;
           }
+          #cantos-panel {
+              grid-area: cantos;
+          }
+          #carton-destacado {
+              grid-area: carton;
+          }
+          #formas-mensaje {
+              grid-area: mensaje;
+          }
+          #panel-botones-formas {
+              grid-area: botones;
+              justify-self: center;
+              width: 100%;
+              max-width: min(100%, clamp(260px, 88vw, 520px));
+          }
           #panel-botones-formas.flotante-vertical {
-              position: absolute;
-              left: var(--panel-botones-left, 50%);
-              top: calc(var(--panel-botones-top, 100%) + var(--panel-botones-separacion, 0px));
-              transform: translateX(-50%);
-              margin: 0;
+              position: relative;
+              left: auto;
+              top: auto;
+              transform: none;
+              margin: clamp(6px, 2vw, 14px) auto 0;
               padding: 0;
               border: none;
               background: transparent;
@@ -1186,9 +1203,9 @@
               justify-content: flex-start;
               gap: var(--panel-botones-gap, 4px);
               z-index: 40;
-              pointer-events: none;
-              width: auto;
-              max-width: calc(100% - clamp(16px, 5vw, 32px));
+              pointer-events: auto;
+              width: 100%;
+              max-width: min(100%, clamp(260px, 88vw, 520px));
           }
           #panel-botones-formas.flotante-vertical:empty {
               display: none;
@@ -1202,7 +1219,7 @@
               display: flex;
               flex-direction: column;
               align-items: center;
-              justify-content: flex-start;
+              justify-content: center;
               gap: var(--panel-botones-gap, 4px);
           }
           #panel-botones-formas.flotante-vertical .panel-botones-formas__grid {
@@ -1359,6 +1376,14 @@
           #cantos-panel,
           #formas-mensaje {
               width: 100%;
+          }
+          .modal {
+              justify-content: flex-start;
+              align-items: flex-start;
+              padding: clamp(16px, 5vw, 28px);
+          }
+          .modal-contenido {
+              margin-left: 0;
           }
       }
         @media (orientation: landscape) and (max-width: 900px) {
