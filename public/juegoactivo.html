@@ -1162,65 +1162,61 @@
               grid-template-columns: auto minmax(var(--panel-columna-derecha-min, 0px), 1fr);
               grid-template-areas:
                   "cantos carton"
-                  "mensaje botones";
+                  "mensaje carton";
               align-items: start;
               justify-items: stretch;
               column-gap: clamp(6px, 2vw, 16px);
               row-gap: clamp(6px, 2vw, 16px);
               padding-bottom: 0;
           }
-          #panel-botones-formas {
-              grid-area: botones;
-              grid-column: auto;
-              justify-self: stretch;
-              align-self: start;
-              position: static;
-              left: auto;
-              top: auto;
-              transform: none;
-              width: 100%;
-              max-width: 100%;
-              min-width: 0;
-              margin: clamp(8px, 2.6vw, 16px) 0 0;
+          #panel-botones-formas.flotante-vertical {
+              position: absolute;
+              left: var(--panel-botones-left, 50%);
+              top: calc(var(--panel-botones-top, 100%) + var(--panel-botones-separacion, 0px));
+              transform: translateX(-50%);
+              margin: 0;
               padding: 0;
-              border-radius: 0;
-              box-shadow: none;
-              background: transparent;
-              backdrop-filter: none;
               border: none;
+              background: transparent;
+              box-shadow: none;
+              backdrop-filter: none;
               display: flex;
               flex-direction: column;
               align-items: center;
               justify-content: flex-start;
-              gap: clamp(6px, 2vw, 12px);
-              z-index: auto;
-          }
-          #panel-botones-formas .panel-botones-formas__envoltorio,
-          #panel-botones-formas .panel-botones-formas__grid {
+              gap: var(--panel-botones-gap, 4px);
+              z-index: 40;
+              pointer-events: none;
               width: auto;
+              max-width: calc(100% - clamp(16px, 5vw, 32px));
+          }
+          #panel-botones-formas.flotante-vertical:empty {
+              display: none;
+          }
+          #panel-botones-formas.flotante-vertical .panel-botones-formas__envoltorio,
+          #panel-botones-formas.flotante-vertical .panel-botones-formas__grid {
+              width: 100%;
               max-width: 100%;
-              min-width: 0;
               margin: 0;
               padding: 0;
               display: flex;
               flex-direction: column;
               align-items: center;
               justify-content: flex-start;
-              gap: clamp(6px, 2vw, 12px);
+              gap: var(--panel-botones-gap, 4px);
           }
-          #panel-botones-formas .panel-botones-formas__grid {
+          #panel-botones-formas.flotante-vertical .panel-botones-formas__grid {
               width: 100%;
+              align-items: stretch;
+          }
+          #panel-botones-formas.flotante-vertical .carton-forma-accion {
+              width: 100%;
+              pointer-events: auto;
+              white-space: nowrap;
           }
           #cantos-panel {
               width: 100%;
               min-width: 0;
-          }
-          #panel-botones-formas .carton-forma-accion {
-              align-self: center;
-              width: auto;
-              min-width: 0;
-              padding: 4px clamp(12px, 4vw, 18px);
-              white-space: nowrap;
           }
           #carton-destacado {
               justify-self: stretch;
@@ -1358,23 +1354,6 @@
           #carton-destacado .carton-visor-info {
               margin-top: clamp(1px, 0.8vw, 5px);
               gap: clamp(2px, 1vw, 6px);
-          }
-          #panel-botones-formas {
-              grid-area: botones;
-              margin: 0;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              gap: clamp(6px, 2vw, 14px);
-          }
-          #panel-botones-formas .carton-forma-accion {
-              align-self: center;
-              padding: 4px clamp(12px, 4vw, 18px);
-              width: auto;
-              min-width: 0;
-          }
-          #panel-botones-formas .carton-forma-accion .carton-forma-contador {
-              font-size: clamp(0.88rem, 2.6vw, 1rem);
           }
           #cantos-panel,
           #formas-mensaje {
@@ -1537,74 +1516,92 @@
       if(!panelSuperiorEl || !panelBotonesFormasEl) return;
       requestAnimationFrame(() => {
         const enModoRetrato = consultaRetrato.matches;
-        const hayBotones = panelBotonesFormasEl.childElementCount > 0;
+        const botones = Array.from(panelBotonesFormasEl.querySelectorAll('.carton-forma-accion'));
+        const hayBotones = botones.length > 0;
         const cartonVisible = cartonDestacadoEl && cartonDestacadoEl.offsetParent;
         const limpiarMedidas = () => {
-          panelSuperiorEl.style.setProperty('--panel-botones-altura', '0px');
-          panelSuperiorEl.style.setProperty('--panel-botones-separacion', '0px');
-          panelSuperiorEl.style.setProperty('--panel-botones-top', '100%');
-          panelSuperiorEl.style.removeProperty('--panel-columna-derecha-min');
+          panelBotonesFormasEl.classList.remove('flotante-vertical');
           panelBotonesFormasEl.classList.remove('flotante');
-          panelBotonesFormasEl.style.removeProperty('--panel-botones-ancho');
-          panelBotonesFormasEl.style.removeProperty('--panel-botones-minimo');
-          panelBotonesFormasEl.style.removeProperty('--panel-botones-col-min');
-          panelBotonesFormasEl.style.removeProperty('--panel-botones-escala');
-          panelBotonesFormasEl.style.removeProperty('max-width');
+          panelBotonesFormasEl.style.removeProperty('--panel-botones-left');
+          panelBotonesFormasEl.style.removeProperty('--panel-botones-gap');
           panelBotonesFormasEl.style.removeProperty('width');
+          panelBotonesFormasEl.style.removeProperty('max-width');
+          panelSuperiorEl.style.removeProperty('--panel-botones-top');
+          panelSuperiorEl.style.removeProperty('--panel-botones-separacion');
+          panelSuperiorEl.style.removeProperty('--panel-botones-altura');
+          panelSuperiorEl.style.removeProperty('--panel-columna-derecha-min');
         };
 
         panelBotonesFormasEl.style.removeProperty('width');
         panelBotonesFormasEl.style.removeProperty('max-width');
+        panelSuperiorEl.style.removeProperty('--panel-columna-derecha-min');
 
         if(!enModoRetrato || !hayBotones || !cartonVisible){
           limpiarMedidas();
           return;
         }
 
-        const rectCarton = cartonDestacadoEl.getBoundingClientRect();
-        const anchoPanel = panelSuperiorEl.clientWidth || panelSuperiorEl.getBoundingClientRect().width || 0;
+        const rectPanelInicial = panelSuperiorEl.getBoundingClientRect();
+        const rectCartonInicial = cartonDestacadoEl.getBoundingClientRect();
 
-        if(rectCarton.width <= 0 || rectCarton.height <= 0 || anchoPanel <= 0){
+        if(rectPanelInicial.width <= 0 || rectCartonInicial.width <= 0 || rectCartonInicial.height <= 0){
           limpiarMedidas();
           return;
         }
 
-        const botones = panelBotonesFormasEl.querySelectorAll('.carton-forma-accion');
-        let anchoMinBoton = 0;
+        let anchoBotonMayor = 0;
         botones.forEach(boton => {
           if(!(boton instanceof HTMLElement)) return;
+          const rectBoton = boton.getBoundingClientRect();
           const estilosBoton = getComputedStyle(boton);
           const margenHorizontal = (parseFloat(estilosBoton.marginLeft) || 0) + (parseFloat(estilosBoton.marginRight) || 0);
-          const anchoBoton = Math.ceil((boton.scrollWidth || boton.offsetWidth || 0) + margenHorizontal);
-          if(anchoBoton > anchoMinBoton) anchoMinBoton = anchoBoton;
+          const anchoTotal = (rectBoton.width || boton.offsetWidth || 0) + margenHorizontal;
+          if(anchoTotal > anchoBotonMayor) anchoBotonMayor = anchoTotal;
         });
 
-        if(anchoMinBoton <= 0){
+        if(anchoBotonMayor <= 0){
           const envoltorio = panelBotonesFormasEl.querySelector('.panel-botones-formas__envoltorio');
           if(envoltorio){
-            anchoMinBoton = Math.ceil(envoltorio.scrollWidth || 0);
+            const rectEnvoltorio = envoltorio.getBoundingClientRect();
+            anchoBotonMayor = rectEnvoltorio.width || 0;
           }
         }
 
-        const anchoCarton = Math.max(rectCarton.width, 0);
-        const anchoBotones = Math.max(anchoMinBoton, 0);
-        const anchoColumnaNecesario = Math.max(anchoCarton, anchoBotones);
-
-        if(anchoColumnaNecesario > 0){
-          panelSuperiorEl.style.setProperty('--panel-columna-derecha-min', `${Math.round(anchoColumnaNecesario)}px`);
-        }else{
+        const anchoColumnaNecesario = Math.max(rectCartonInicial.width, anchoBotonMayor);
+        if(anchoColumnaNecesario <= 0){
           limpiarMedidas();
           return;
         }
 
-        panelBotonesFormasEl.classList.remove('flotante');
-        panelBotonesFormasEl.style.removeProperty('--panel-botones-ancho');
-        panelBotonesFormasEl.style.removeProperty('--panel-botones-minimo');
-        panelBotonesFormasEl.style.removeProperty('--panel-botones-col-min');
-        panelBotonesFormasEl.style.removeProperty('--panel-botones-escala');
-        panelSuperiorEl.style.setProperty('--panel-botones-altura', '0px');
-        panelSuperiorEl.style.setProperty('--panel-botones-separacion', '0px');
-        panelSuperiorEl.style.setProperty('--panel-botones-top', '100%');
+        panelSuperiorEl.style.setProperty('--panel-columna-derecha-min', `${Math.round(anchoColumnaNecesario)}px`);
+
+        const rectPanel = panelSuperiorEl.getBoundingClientRect();
+        const rectCarton = cartonDestacadoEl.getBoundingClientRect();
+
+        if(rectPanel.width <= 0 || rectCarton.width <= 0){
+          limpiarMedidas();
+          return;
+        }
+
+        const centroCarton = rectCarton.left - rectPanel.left + rectCarton.width / 2;
+        const centroClamp = Math.min(Math.max(centroCarton, 0), rectPanel.width);
+        const anchoFinal = Math.min(Math.max(anchoBotonMayor, rectCarton.width), rectPanel.width);
+
+        panelBotonesFormasEl.classList.add('flotante-vertical');
+        panelBotonesFormasEl.style.setProperty('--panel-botones-left', `${Math.round(centroClamp)}px`);
+        panelBotonesFormasEl.style.setProperty('--panel-botones-gap', '4px');
+        panelBotonesFormasEl.style.width = `${Math.round(anchoFinal)}px`;
+        panelBotonesFormasEl.style.maxWidth = `${Math.round(anchoFinal)}px`;
+
+        panelSuperiorEl.style.setProperty('--panel-botones-top', `${Math.round(rectCarton.bottom - rectPanel.top)}px`);
+        panelSuperiorEl.style.setProperty('--panel-botones-separacion', '6px');
+
+        const alturaBotones = panelBotonesFormasEl.getBoundingClientRect().height;
+        if(alturaBotones > 0){
+          panelSuperiorEl.style.setProperty('--panel-botones-altura', `${Math.round(alturaBotones)}px`);
+        }else{
+          panelSuperiorEl.style.removeProperty('--panel-botones-altura');
+        }
       });
     };
   })();
