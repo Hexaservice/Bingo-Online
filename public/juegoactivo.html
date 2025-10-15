@@ -1569,7 +1569,9 @@
           }
         }
 
-        const anchoColumnaNecesario = Math.max(rectCartonInicial.width, anchoBotonMayor);
+        const anchoBotonMayorValido = Math.max(anchoBotonMayor, 0);
+        const anchoCartonInicial = Math.max(rectCartonInicial.width || 0, 0);
+        const anchoColumnaNecesario = Math.max(anchoCartonInicial, anchoBotonMayorValido);
         if(anchoColumnaNecesario <= 0){
           limpiarMedidas();
           return;
@@ -1585,13 +1587,15 @@
           return;
         }
 
-        const anchoReferencia = anchoBotonMayor > 0 ? anchoBotonMayor : rectCarton.width;
-        const anchoFinal = Math.min(Math.max(anchoReferencia, 0), rectPanel.width);
+        const anchoCarton = Math.max(rectCarton.width || 0, 0);
+        const anchoFinalDeseado = Math.max(anchoCarton, anchoBotonMayorValido);
+        const anchoFinal = Math.min(Math.max(anchoFinalDeseado, 0), rectPanel.width);
         const centroCarton = rectCarton.left - rectPanel.left + rectCarton.width / 2;
         const centroMin = anchoFinal / 2;
         const centroMax = rectPanel.width - anchoFinal / 2;
         const centroAjustado = Math.min(Math.max(centroCarton, centroMin), Math.max(centroMin, centroMax));
 
+        panelBotonesFormasEl.classList.remove('flotante');
         panelBotonesFormasEl.classList.add('flotante-vertical');
         panelBotonesFormasEl.style.setProperty('--panel-botones-left', `${Math.round(centroAjustado)}px`);
         panelBotonesFormasEl.style.setProperty('--panel-botones-gap', '4px');
