@@ -14,6 +14,7 @@
           --verde-canto: #00c853;
           --canto-size: clamp(26px, 7vw, 44px);
           --mini-cell-size: clamp(20px, 4.4vw, 28px);
+          --canto-cell-size: clamp(28px, 4.8vw, 44px);
       }
       body {
           font-family: 'Poppins', sans-serif;
@@ -185,6 +186,7 @@
           padding: 0;
           background: transparent;
           width: 100%;
+          min-width: calc(var(--canto-cell-size) * 5 + clamp(6px, 2vw, 14px));
       }
       h2 {
           margin: 0;
@@ -196,15 +198,16 @@
       }
       #cantos-grid {
           display: grid;
-          grid-template-columns: repeat(5, minmax(0, 1fr));
+          grid-template-columns: repeat(5, var(--canto-cell-size));
           justify-content: flex-start;
           gap: 2px;
           font-family: 'Bangers', cursive;
           margin: 0;
+          width: min(100%, calc(var(--canto-cell-size) * 5));
       }
       .canto-cell {
-          width: clamp(28px, 4.8vw, 44px);
-          height: clamp(28px, 4.8vw, 44px);
+          width: var(--canto-cell-size);
+          height: var(--canto-cell-size);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1159,7 +1162,7 @@
       }
       @media (orientation: portrait) {
           #panel-superior {
-              grid-template-columns: minmax(0, 1fr) minmax(var(--panel-columna-derecha-min, clamp(210px, 52vw, 420px)), clamp(260px, 88vw, 520px));
+              grid-template-columns: minmax(calc(var(--canto-cell-size) * 5 + clamp(6px, 2vw, 16px)), 1fr) minmax(var(--panel-columna-derecha-min, clamp(180px, 48vw, 420px)), clamp(240px, 68vw, 520px));
               grid-template-areas:
                   "cantos carton"
                   "mensaje carton"
@@ -1182,10 +1185,12 @@
           }
           #panel-botones-formas {
               grid-area: botones;
-              justify-self: stretch;
+              justify-self: center;
               align-self: start;
-              width: 100%;
-              max-width: min(100%, clamp(260px, 88vw, 520px));
+              align-items: center;
+              width: auto;
+              max-width: min(100%, clamp(240px, 68vw, 520px));
+              margin-top: clamp(6px, 2vw, 14px);
           }
           #panel-botones-formas.flotante-vertical {
               position: relative;
@@ -1200,38 +1205,43 @@
               backdrop-filter: none;
               display: flex;
               flex-direction: column;
-              align-items: stretch;
-              justify-content: flex-start;
+              align-items: center;
+              justify-content: center;
               gap: var(--panel-botones-gap, 4px);
               z-index: 40;
               pointer-events: auto;
-              width: 100%;
-              max-width: min(100%, clamp(260px, 88vw, 520px));
+              width: auto;
+              max-width: 100%;
           }
           #panel-botones-formas.flotante-vertical:empty {
               display: none;
           }
           #panel-botones-formas.flotante-vertical .panel-botones-formas__envoltorio,
           #panel-botones-formas.flotante-vertical .panel-botones-formas__grid {
-              width: 100%;
+              width: auto;
               max-width: 100%;
               margin: 0;
               padding: 0;
-              display: flex;
-              flex-direction: column;
-              align-items: stretch;
+              display: inline-flex;
+              flex-wrap: wrap;
+              align-items: center;
               justify-content: center;
               gap: var(--panel-botones-gap, 4px);
           }
           #panel-botones-formas.flotante-vertical .panel-botones-formas__grid {
-              align-items: stretch;
+              align-items: center;
           }
           #panel-botones-formas.flotante-vertical .carton-forma-accion {
-              width: 100%;
+              flex: 0 0 auto;
+              width: auto;
+              min-width: 0;
               max-width: 100%;
               pointer-events: auto;
               white-space: nowrap;
-              align-self: stretch;
+              align-self: center;
+          }
+          #panel-botones-formas .carton-forma-accion {
+              align-self: center;
           }
           #cantos-panel {
               width: 100%;
