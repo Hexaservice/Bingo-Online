@@ -1178,41 +1178,49 @@
               left: auto;
               top: auto;
               transform: none;
-              width: min(100%, var(--panel-botones-ancho, 100%));
-              max-width: min(100%, var(--panel-botones-ancho, 100%));
-              min-width: min(100%, var(--panel-botones-minimo, 0px));
-              margin: clamp(10px, 3vw, 18px) 0 0;
-              padding: calc(clamp(10px, 2.8vw, 16px) * var(--panel-botones-escala-limitada, 1));
-              border-radius: clamp(12px, 3.6vw, 18px);
-              box-shadow: 0 10px 26px rgba(0,0,0,0.22);
-              background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(245,245,245,0.92));
-              backdrop-filter: blur(6px);
-              border: 1px solid rgba(255,255,255,0.85);
+              width: 100%;
+              max-width: 100%;
+              min-width: 0;
+              margin: clamp(8px, 2.6vw, 16px) 0 0;
+              padding: 0;
+              border-radius: 0;
+              box-shadow: none;
+              background: transparent;
+              backdrop-filter: none;
+              border: none;
               display: flex;
               flex-direction: column;
-              align-items: stretch;
+              align-items: center;
               justify-content: flex-start;
-              gap: calc(clamp(6px, 2vw, 14px) * var(--panel-botones-escala-limitada, 1));
+              gap: clamp(6px, 2vw, 12px);
               z-index: auto;
-              --panel-botones-col-min: var(--panel-botones-minimo, clamp(140px, 42vw, 220px));
           }
-          #panel-botones-formas .panel-botones-formas__envoltorio {
-              width: min(100%, var(--panel-botones-ancho, 100%));
+          #panel-botones-formas .panel-botones-formas__envoltorio,
+          #panel-botones-formas .panel-botones-formas__grid {
+              width: auto;
               max-width: 100%;
-              min-width: min(100%, var(--panel-botones-minimo, 0px));
-              margin: 0 auto;
+              min-width: 0;
+              margin: 0;
+              padding: 0;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: flex-start;
+              gap: clamp(6px, 2vw, 12px);
           }
           #panel-botones-formas .panel-botones-formas__grid {
-              grid-template-columns: repeat(auto-fit, minmax(min(var(--panel-botones-col-min), 100%), 1fr));
+              width: 100%;
           }
           #cantos-panel {
               width: 100%;
               min-width: 0;
           }
           #panel-botones-formas .carton-forma-accion {
-              align-self: stretch;
-              width: 100%;
+              align-self: center;
+              width: auto;
               min-width: 0;
+              padding: 4px clamp(12px, 4vw, 18px);
+              white-space: nowrap;
           }
           #carton-destacado {
               justify-self: stretch;
@@ -1554,20 +1562,11 @@
         }
 
         const rectCarton = cartonDestacadoEl.getBoundingClientRect();
-        const rectPanel = panelSuperiorEl.getBoundingClientRect();
-        const rectCantos = cantosPanelEl ? cantosPanelEl.getBoundingClientRect() : {width:0};
+        const anchoPanel = panelSuperiorEl.clientWidth || panelSuperiorEl.getBoundingClientRect().width || 0;
 
-        if(rectCarton.width <= 0 || rectCarton.height <= 0 || rectPanel.width <= 0){
+        if(rectCarton.width <= 0 || rectCarton.height <= 0 || anchoPanel <= 0){
           limpiarMedidas();
           return;
-        }
-
-        const estilosPanel = getComputedStyle(panelSuperiorEl);
-        const gapColumnas = parseFloat(estilosPanel.columnGap || estilosPanel.gridColumnGap || estilosPanel.gap || '0') || 0;
-        const anchoPanelInterior = panelSuperiorEl.clientWidth || rectPanel.width;
-        let anchoDisponibleColumna = Math.max(0, anchoPanelInterior - (rectCantos.width || 0) - gapColumnas);
-        if(anchoDisponibleColumna <= 0){
-          anchoDisponibleColumna = Math.max(0, rectPanel.width - (rectCantos.width || 0) - gapColumnas);
         }
 
         const botones = panelBotonesFormasEl.querySelectorAll('.carton-forma-accion');
@@ -1588,44 +1587,21 @@
         }
 
         const anchoCarton = Math.max(rectCarton.width, 0);
-        if(anchoMinBoton <= 0){
-          anchoMinBoton = anchoCarton;
-        }
+        const anchoBotones = Math.max(anchoMinBoton, 0);
+        const anchoColumnaNecesario = Math.max(anchoCarton, anchoBotones);
 
-        const anchoColumnaActual = cartonDestacadoEl.offsetWidth || rectCarton.width || 0;
-        let anchoObjetivo = anchoDisponibleColumna > 0 ? anchoDisponibleColumna : anchoColumnaActual;
-        if(anchoObjetivo <= 0){
-          anchoObjetivo = Math.max(anchoColumnaActual, anchoMinBoton, 0);
-        }
-
-        let escalaBotones = 1;
-        if(anchoMinBoton > 0 && anchoObjetivo > 0){
-          escalaBotones = anchoObjetivo / anchoMinBoton;
-          if(!Number.isFinite(escalaBotones) || escalaBotones <= 0){
-            escalaBotones = 1;
-          }
-        }
-        escalaBotones = Math.min(1, Math.max(0.5, escalaBotones));
-
-        const anchoMinBotonEscalado = anchoMinBoton > 0 ? anchoMinBoton * escalaBotones : anchoObjetivo;
-        const anchoMinimo = Math.max(0, Math.min(anchoObjetivo, anchoMinBotonEscalado));
-
-        if(anchoObjetivo > 0){
-          panelBotonesFormasEl.style.setProperty('--panel-botones-escala', escalaBotones.toFixed(4));
-          panelBotonesFormasEl.style.setProperty('--panel-botones-ancho', `${Math.round(anchoObjetivo)}px`);
-          panelBotonesFormasEl.style.setProperty('--panel-botones-minimo', `${Math.round(anchoMinimo)}px`);
-          if(anchoMinBotonEscalado > 0){
-            panelBotonesFormasEl.style.setProperty('--panel-botones-col-min', `${Math.round(anchoMinBotonEscalado)}px`);
-          }else{
-            panelBotonesFormasEl.style.removeProperty('--panel-botones-col-min');
-          }
-          panelSuperiorEl.style.setProperty('--panel-columna-derecha-min', `${Math.round(Math.max(0, anchoObjetivo))}px`);
+        if(anchoColumnaNecesario > 0){
+          panelSuperiorEl.style.setProperty('--panel-columna-derecha-min', `${Math.round(anchoColumnaNecesario)}px`);
         }else{
           limpiarMedidas();
           return;
         }
 
         panelBotonesFormasEl.classList.remove('flotante');
+        panelBotonesFormasEl.style.removeProperty('--panel-botones-ancho');
+        panelBotonesFormasEl.style.removeProperty('--panel-botones-minimo');
+        panelBotonesFormasEl.style.removeProperty('--panel-botones-col-min');
+        panelBotonesFormasEl.style.removeProperty('--panel-botones-escala');
         panelSuperiorEl.style.setProperty('--panel-botones-altura', '0px');
         panelSuperiorEl.style.setProperty('--panel-botones-separacion', '0px');
         panelSuperiorEl.style.setProperty('--panel-botones-top', '100%');
