@@ -1888,17 +1888,25 @@
     requestAnimationFrame(()=>{
       const valorPrevio=wrapper.style.getPropertyValue('--carton-wrapper-altura');
       const valorAlturaPrevio=wrapper.style.getPropertyValue('--carton-contenido-alto');
+      const cartonBox=wrapper.parentElement;
+      const cartonDestacadoContenedor=cartonDestacadoEl||wrapper.closest('#carton-destacado');
+      const valorCeldaInline=cartonDestacadoContenedor?.style?.getPropertyValue('--destacado-cell-size')||'';
+      const valorCeldaInlineNumero=valorCeldaInline?parseFloat(valorCeldaInline):NaN;
+      if(enModoRetrato && cartonDestacadoContenedor && valorCeldaInline){
+        cartonDestacadoContenedor.style.removeProperty('--destacado-cell-size');
+      }
       wrapper.style.removeProperty('--carton-wrapper-altura');
       wrapper.style.removeProperty('--carton-contenido-alto');
       const estilos=getComputedStyle(wrapper);
       const alturaBase=parseFloat(estilos.getPropertyValue('--carton-wrapper-altura'))||0;
       const frente=wrapper.querySelector('.carton-front');
       const reverso=wrapper.querySelector('.carton-back');
-      const cartonBox=wrapper.parentElement;
-      const cartonDestacadoContenedor=cartonDestacadoEl||wrapper.closest('#carton-destacado');
       const elementosAltura=[cartonBox, cartonDestacadoContenedor];
       const valoresAlturaAnteriores=elementosAltura.map(el=>el?.style?.getPropertyValue('--carton-contenido-alto')||'');
       elementosAltura.forEach(el=>el?.style?.removeProperty('--carton-contenido-alto'));
+      const estilosCartonDestacado=cartonDestacadoContenedor?getComputedStyle(cartonDestacadoContenedor):null;
+      const tamanoCeldaActual=estilosCartonDestacado?parseFloat(estilosCartonDestacado.getPropertyValue('--destacado-cell-size')):NaN;
+      const rectContenedor=cartonDestacadoContenedor?cartonDestacadoContenedor.getBoundingClientRect():null;
       const anchoFrente=frente?frente.getBoundingClientRect().width:0;
       if(anchoFrente>0){
         const anchoFinal=Math.ceil(anchoFrente);
@@ -1914,6 +1922,63 @@
       const altoFrente=frente?frente.scrollHeight:0;
       const altoReverso=reverso?reverso.scrollHeight:0;
       const alturaCalculada=Math.max(altoFrente, altoReverso, 0);
+      let alturaDisponiblePaisaje=0;
+      if(!enModoRetrato){
+        const margenInferiorPaisaje=16;
+        if(rectContenedor){
+          alturaDisponiblePaisaje=Math.max(260, window.innerHeight - rectContenedor.top - margenInferiorPaisaje);
+        }else{
+          alturaDisponiblePaisaje=Math.max(260, Math.floor(window.innerHeight*0.85));
+        }
+      }
+      if(!enModoRetrato && cartonDestacadoContenedor && alturaDisponiblePaisaje>0 && alturaCalculada>0){
+        if(alturaCalculada>alturaDisponiblePaisaje+8 && tamanoCeldaActual && !Number.isNaN(tamanoCeldaActual)){
+          const escalaBruta=alturaDisponiblePaisaje/alturaCalculada;
+          const escalaLimitada=Math.max(0.6, Math.min(escalaBruta,1));
+          const nuevoTamanoCelda=Math.max(32, Math.round(tamanoCeldaActual*escalaLimitada));
+          if(!valorCeldaInline || Math.abs(nuevoTamanoCelda-(Number.isNaN(valorCeldaInlineNumero)?nuevoTamanoCelda:valorCeldaInlineNumero))>=1){
+            cartonDestacadoContenedor.style.setProperty('--destacado-cell-size', `${nuevoTamanoCelda}px`);
+            if(valorPrevio){
+              wrapper.style.setProperty('--carton-wrapper-altura', valorPrevio);
+            }
+            if(valorAlturaPrevio){
+              wrapper.style.setProperty('--carton-contenido-alto', valorAlturaPrevio);
+            }
+            elementosAltura.forEach((el,idx)=>{
+              const valorPrevioAltura=valoresAlturaAnteriores[idx];
+              if(!el) return;
+              if(valorPrevioAltura){
+                el.style.setProperty('--carton-contenido-alto', valorPrevioAltura);
+              }else{
+                el.style.removeProperty('--carton-contenido-alto');
+              }
+            });
+            actualizarAlturaBotonesRetrato();
+            requestAnimationFrame(()=>actualizarAlturaCartonWrapper(wrapper));
+            return;
+          }
+        }else if(valorCeldaInline && alturaDisponiblePaisaje-alturaCalculada>40){
+          cartonDestacadoContenedor.style.removeProperty('--destacado-cell-size');
+          if(valorPrevio){
+            wrapper.style.setProperty('--carton-wrapper-altura', valorPrevio);
+          }
+          if(valorAlturaPrevio){
+            wrapper.style.setProperty('--carton-contenido-alto', valorAlturaPrevio);
+          }
+          elementosAltura.forEach((el,idx)=>{
+            const valorPrevioAltura=valoresAlturaAnteriores[idx];
+            if(!el) return;
+            if(valorPrevioAltura){
+              el.style.setProperty('--carton-contenido-alto', valorPrevioAltura);
+            }else{
+              el.style.removeProperty('--carton-contenido-alto');
+            }
+          });
+          actualizarAlturaBotonesRetrato();
+          requestAnimationFrame(()=>actualizarAlturaCartonWrapper(wrapper));
+          return;
+        }
+      }
       if(alturaCalculada>0){
         const margenExtra=enModoRetrato?2:8;
         const alturaFinal=Math.max(alturaBase, Math.ceil(alturaCalculada+margenExtra));
