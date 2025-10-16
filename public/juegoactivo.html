@@ -1557,6 +1557,7 @@
               width: min(100%, var(--carton-contenido-ancho, var(--carton-destacado-max-width)));
               max-width: var(--carton-contenido-ancho, var(--carton-destacado-max-width));
               align-items: center;
+              --destacado-cell-size: clamp(40px, 11vw, 108px);
           }
           #carton-destacado .carton-box,
           #carton-destacado .carton-wrapper,
@@ -1572,16 +1573,34 @@
           #carton-destacado .carton-box,
           #carton-destacado .carton-wrapper {
               min-width: 0;
+              align-items: stretch;
           }
           #carton-destacado .carton-front .carton-visual {
-              align-self: center;
+              align-self: stretch;
               width: 100%;
               max-width: var(--carton-contenido-ancho, 100%);
+              gap: clamp(0px, 0.6vw, 4px);
+              padding: clamp(4px, 1vw, 8px);
+              grid-template-rows: min-content minmax(0, 1fr);
+              align-content: stretch;
+              justify-items: stretch;
+              overflow: visible;
           }
           #carton-destacado .carton-front,
           #carton-destacado .carton-back {
               min-height: var(--carton-contenido-alto, auto);
               overflow: visible;
+              display: flex;
+              flex-direction: column;
+              align-items: stretch;
+              justify-content: flex-start;
+          }
+          #carton-destacado .carton-front {
+              gap: clamp(0px, 0.6vw, 4px);
+              justify-content: flex-start;
+          }
+          #carton-destacado .carton-front .carton-visual > * {
+              margin: 0;
           }
           #carton-destacado .carton-wrapper::before {
               padding-bottom: var(--carton-contenido-alto, var(--carton-wrapper-altura));
@@ -1591,6 +1610,23 @@
               max-width: 100%;
               height: auto;
               max-height: none;
+              display: grid;
+              grid-template-columns: repeat(5, 1fr);
+              grid-template-rows: repeat(6, 1fr);
+              grid-auto-flow: row;
+              grid-auto-rows: 1fr;
+              aspect-ratio: 5 / 6;
+              align-self: stretch;
+              justify-self: center;
+          }
+          #carton-destacado .carton-front .carton-visual .carton-tabla > * {
+              min-width: 0;
+              min-height: 0;
+          }
+          #carton-destacado .carton-front .carton-visual .carton-tabla thead th,
+          #carton-destacado .carton-front .carton-visual .carton-tabla tbody td {
+              width: 100%;
+              height: 100%;
           }
           #formas-mensaje {
               grid-area: mensaje;
@@ -1655,6 +1691,10 @@
           }
           #formas-mensaje {
               width: 100%;
+          }
+          #carton-destacado .carton-visor-info {
+              margin-top: clamp(2px, 0.8vw, 6px);
+              gap: clamp(3px, 1vw, 8px);
           }
           .modal {
               justify-content: flex-start;
@@ -1847,13 +1887,18 @@
     const enModoRetrato = window.matchMedia('(orientation: portrait)').matches;
     requestAnimationFrame(()=>{
       const valorPrevio=wrapper.style.getPropertyValue('--carton-wrapper-altura');
+      const valorAlturaPrevio=wrapper.style.getPropertyValue('--carton-contenido-alto');
       wrapper.style.removeProperty('--carton-wrapper-altura');
+      wrapper.style.removeProperty('--carton-contenido-alto');
       const estilos=getComputedStyle(wrapper);
       const alturaBase=parseFloat(estilos.getPropertyValue('--carton-wrapper-altura'))||0;
       const frente=wrapper.querySelector('.carton-front');
       const reverso=wrapper.querySelector('.carton-back');
       const cartonBox=wrapper.parentElement;
       const cartonDestacadoContenedor=cartonDestacadoEl||wrapper.closest('#carton-destacado');
+      const elementosAltura=[cartonBox, cartonDestacadoContenedor];
+      const valoresAlturaAnteriores=elementosAltura.map(el=>el?.style?.getPropertyValue('--carton-contenido-alto')||'');
+      elementosAltura.forEach(el=>el?.style?.removeProperty('--carton-contenido-alto'));
       const anchoFrente=frente?frente.getBoundingClientRect().width:0;
       if(anchoFrente>0){
         const anchoFinal=Math.ceil(anchoFrente);
@@ -1875,8 +1920,7 @@
         wrapper.style.setProperty('--carton-wrapper-altura', `${alturaFinal}px`);
         const alturaValor=`${alturaFinal}px`;
         wrapper.style.setProperty('--carton-contenido-alto', alturaValor);
-        if(cartonBox) cartonBox.style.setProperty('--carton-contenido-alto', alturaValor);
-        if(cartonDestacadoContenedor) cartonDestacadoContenedor.style.setProperty('--carton-contenido-alto', alturaValor);
+        elementosAltura.forEach(el=>el?.style?.setProperty('--carton-contenido-alto', alturaValor));
       }else{
         if(valorPrevio){
           wrapper.style.setProperty('--carton-wrapper-altura', valorPrevio);
@@ -1885,9 +1929,20 @@
         }else{
           wrapper.style.removeProperty('--carton-wrapper-altura');
         }
-        wrapper.style.removeProperty('--carton-contenido-alto');
-        if(cartonBox) cartonBox.style.removeProperty('--carton-contenido-alto');
-        if(cartonDestacadoContenedor) cartonDestacadoContenedor.style.removeProperty('--carton-contenido-alto');
+        if(valorAlturaPrevio){
+          wrapper.style.setProperty('--carton-contenido-alto', valorAlturaPrevio);
+        }else{
+          wrapper.style.removeProperty('--carton-contenido-alto');
+        }
+        elementosAltura.forEach((el,idx)=>{
+          const valorPrevioAltura=valoresAlturaAnteriores[idx];
+          if(!el) return;
+          if(valorPrevioAltura){
+            el.style.setProperty('--carton-contenido-alto', valorPrevioAltura);
+          }else{
+            el.style.removeProperty('--carton-contenido-alto');
+          }
+        });
       }
       actualizarAlturaBotonesRetrato();
     });
