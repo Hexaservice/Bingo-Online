@@ -327,6 +327,7 @@
           overflow: visible;
           min-height: 0;
           --destacado-cell-size: clamp(42px, 8.8vw, 108px);
+          --carton-principal-padding: clamp(6px, 1.2vw, 12px);
       }
       #carton-destacado.activo {
           display: flex;
@@ -409,8 +410,7 @@
           flex: 1 1 auto;
           align-self: stretch;
           min-height: 0;
-          --carton-principal-padding: clamp(6px, 1.2vw, 12px);
-          padding: var(--carton-principal-padding);
+          padding: var(--carton-principal-padding, clamp(6px, 1.2vw, 12px));
           box-sizing: border-box;
           aspect-ratio: auto;
           position: relative;
@@ -1551,8 +1551,8 @@
               align-self: stretch;
               margin: 0 auto;
               --carton-destacado-max-width: clamp(320px, 46vw, 560px);
-              width: min(100%, var(--carton-destacado-max-width));
-              max-width: var(--carton-destacado-max-width);
+              width: min(100%, var(--carton-contenido-ancho, var(--carton-destacado-max-width)));
+              max-width: var(--carton-contenido-ancho, var(--carton-destacado-max-width));
           }
           #carton-destacado .carton-box,
           #carton-destacado .carton-wrapper,
@@ -1562,6 +1562,18 @@
           #carton-destacado .carton-visor-info {
               margin-left: auto;
               margin-right: auto;
+              width: min(100%, var(--carton-contenido-ancho, 100%));
+              max-width: var(--carton-contenido-ancho, 100%);
+          }
+          #carton-destacado .carton-front .carton-visual {
+              align-self: center;
+          }
+          #carton-destacado .carton-front,
+          #carton-destacado .carton-back {
+              min-height: var(--carton-contenido-alto, auto);
+          }
+          #carton-destacado .carton-wrapper::before {
+              padding-bottom: var(--carton-contenido-alto, var(--carton-wrapper-altura));
           }
           #formas-mensaje {
               grid-area: mensaje;
@@ -1823,6 +1835,20 @@
       const alturaBase=parseFloat(estilos.getPropertyValue('--carton-wrapper-altura'))||0;
       const frente=wrapper.querySelector('.carton-front');
       const reverso=wrapper.querySelector('.carton-back');
+      const cartonBox=wrapper.parentElement;
+      const cartonDestacadoContenedor=cartonDestacadoEl||wrapper.closest('#carton-destacado');
+      const anchoFrente=frente?frente.getBoundingClientRect().width:0;
+      if(anchoFrente>0){
+        const anchoFinal=Math.ceil(anchoFrente);
+        const anchoValor=`${anchoFinal}px`;
+        wrapper.style.setProperty('--carton-contenido-ancho', anchoValor);
+        if(cartonBox) cartonBox.style.setProperty('--carton-contenido-ancho', anchoValor);
+        if(cartonDestacadoContenedor) cartonDestacadoContenedor.style.setProperty('--carton-contenido-ancho', anchoValor);
+      }else{
+        wrapper.style.removeProperty('--carton-contenido-ancho');
+        if(cartonBox) cartonBox.style.removeProperty('--carton-contenido-ancho');
+        if(cartonDestacadoContenedor) cartonDestacadoContenedor.style.removeProperty('--carton-contenido-ancho');
+      }
       const altoFrente=frente?frente.scrollHeight:0;
       const altoReverso=reverso?reverso.scrollHeight:0;
       const alturaCalculada=Math.max(altoFrente, altoReverso, 0);
@@ -1830,6 +1856,10 @@
         const margenExtra=enModoRetrato?2:8;
         const alturaFinal=Math.max(alturaBase, Math.ceil(alturaCalculada+margenExtra));
         wrapper.style.setProperty('--carton-wrapper-altura', `${alturaFinal}px`);
+        const alturaValor=`${alturaFinal}px`;
+        wrapper.style.setProperty('--carton-contenido-alto', alturaValor);
+        if(cartonBox) cartonBox.style.setProperty('--carton-contenido-alto', alturaValor);
+        if(cartonDestacadoContenedor) cartonDestacadoContenedor.style.setProperty('--carton-contenido-alto', alturaValor);
       }else{
         if(valorPrevio){
           wrapper.style.setProperty('--carton-wrapper-altura', valorPrevio);
@@ -1838,6 +1868,9 @@
         }else{
           wrapper.style.removeProperty('--carton-wrapper-altura');
         }
+        wrapper.style.removeProperty('--carton-contenido-alto');
+        if(cartonBox) cartonBox.style.removeProperty('--carton-contenido-alto');
+        if(cartonDestacadoContenedor) cartonDestacadoContenedor.style.removeProperty('--carton-contenido-alto');
       }
       actualizarAlturaBotonesRetrato();
     });
@@ -2814,6 +2847,8 @@
     limpiarCartonesRenderizados();
     cartonDestacadoEl.innerHTML='';
     cartonDestacadoEl.classList.remove('activo');
+    cartonDestacadoEl.style.removeProperty('--carton-contenido-ancho');
+    cartonDestacadoEl.style.removeProperty('--carton-contenido-alto');
     limpiarBotonesFormas();
     const lista=Array.from(cartonesSorteo.values()).filter(c=>c.userId===(usuarioActual?usuarioActual.uid:null));
     if(!lista.length){
