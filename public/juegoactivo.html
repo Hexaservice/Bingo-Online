@@ -12,6 +12,8 @@
           --texto-primario: #1f1f1f;
           --texto-secundario: #4b4b4b;
           --verde-canto: #00c853;
+          --color-bingo-pagado: #00c853;
+          --color-bingo-gratis: #1d4ed8;
           --canto-size: clamp(26px, 7vw, 44px);
           --mini-cell-size: clamp(20px, 4.4vw, 28px);
           --canto-cell-size: clamp(28px, 4.8vw, 44px);
@@ -621,6 +623,9 @@
           padding-left: calc(6px * var(--panel-botones-escala-limitada, 1));
           min-width: calc(1.8em * var(--panel-botones-escala-limitada, 1));
       }
+      .carton-forma-accion.con-ganadores {
+          animation: zoomPulse 1.8s ease-in-out infinite;
+      }
       .carton-forma-accion:hover,
       .carton-forma-accion:focus-visible {
           transform: translateY(-1px);
@@ -732,12 +737,34 @@
           color: var(--texto-primario);
           text-align: center;
           font-weight: 600;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 2px;
+          line-height: 1.1;
+      }
+      .carton-info-numero {
+          font-size: inherit;
+      }
+      .carton-info-tipo {
+          font-size: 0.58rem;
+          font-weight: 700;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          margin-top: -2px;
+      }
+      .carton-info-tipo--pagado {
+          color: #0aa128;
+      }
+      .carton-info-tipo--gratis {
+          color: #1d4ed8;
       }
       .carton-visual--mini .carton-info {
           margin-top: 6px;
       }
       .carton-tabla {
           --cell-size: clamp(34px, 9vw, 72px);
+          --bingo-encabezado-color: var(--color-bingo-pagado);
           width: min(100%, calc(var(--cell-size) * 5));
           max-width: calc(var(--cell-size) * 5);
           border-collapse: separate;
@@ -747,6 +774,12 @@
           border-radius: 12px;
           overflow: hidden;
           box-shadow: 0 6px 15px rgba(0,0,0,0.25);
+      }
+      .carton-tabla[data-tipocarton="pagado"] {
+          --bingo-encabezado-color: var(--color-bingo-pagado);
+      }
+      .carton-tabla[data-tipocarton="gratis"] {
+          --bingo-encabezado-color: var(--color-bingo-gratis);
       }
       .carton-tabla thead th,
       .carton-tabla tbody td {
@@ -773,12 +806,25 @@
       }
       .carton-tabla thead th {
           font-size: calc(var(--cell-size) * 0.7);
-          background: radial-gradient(circle, #ffffff 0%, #ffffff 60%, var(--verde-canto));
+          background: radial-gradient(circle, #ffffff 0%, #ffffff 60%, var(--bingo-encabezado-color));
           color: #ff6600;
           text-shadow: 2px 2px 0 #000000;
       }
+      .carton-tabla thead th[role="button"] {
+          cursor: pointer;
+      }
+      .carton-tabla thead th.forma-activa {
+          background: radial-gradient(circle, rgba(var(--forma-rgb-vivo, var(--forma-rgb, 0, 120, 255)), 0.45) 0%, rgba(var(--forma-rgb, 0, 120, 255), 0.55) 60%, rgba(var(--forma-rgb, 0, 120, 255), 0.9) 100%);
+          color: #ffffff;
+          text-shadow: 0 0 10px rgba(0,0,0,0.85);
+      }
       .carton-tabla thead th .encabezado-letra {
           display: inline-block;
+          transition: transform 0.25s ease, letter-spacing 0.25s ease;
+      }
+      .carton-tabla thead th.forma-activa .encabezado-letra {
+          transform: scale(1.05);
+          letter-spacing: 1.5px;
       }
       .carton-tabla.ganador thead th .encabezado-letra {
           animation: zoomPulse 1.6s ease-in-out infinite;
@@ -835,10 +881,18 @@
           text-shadow: 0 0 6px rgba(0,0,0,0.85);
       }
       .carton-tabla td.celda-forma-activa {
-          background: linear-gradient(180deg, rgba(var(--forma-rgb, 0, 120, 255), 0.95), rgba(var(--forma-rgb, 0, 120, 255), 0.65));
-          color: #ffffff;
-          box-shadow: inset 0 0 12px rgba(0,0,0,0.45);
+          color: inherit;
+          border-color: rgba(var(--forma-rgb-vivo, var(--forma-rgb, 0, 120, 255)), 0.95);
+          box-shadow: inset 0 0 0 4px rgba(var(--forma-rgb, 0, 120, 255), 0.28), 0 0 10px rgba(var(--forma-rgb-vivo, var(--forma-rgb, 0, 120, 255)), 0.55);
           border-radius: 4px;
+      }
+      .carton-tabla td.celda-forma-activa::before {
+          content: '';
+          position: absolute;
+          inset: 2px;
+          border-radius: inherit;
+          pointer-events: none;
+          background: radial-gradient(circle, rgba(var(--forma-rgb-vivo, var(--forma-rgb, 0, 120, 255)), 0.35) 0%, rgba(var(--forma-rgb, 0, 120, 255), 0.12) 40%, transparent 72%);
       }
       .carton-tabla td.celda-forma-activa .cell-content {
           position: relative;
@@ -853,7 +907,7 @@
           content: '';
           position: absolute;
           inset: 0;
-          background: rgba(var(--forma-rgb, 0, 120, 255), 0.9);
+          background: radial-gradient(circle, rgba(var(--forma-rgb-vivo, var(--forma-rgb, 0, 120, 255)), 0.55) 0%, rgba(var(--forma-rgb, 0, 120, 255), 0.35) 55%, transparent 90%);
           animation: formaTemporalFade 3s ease forwards;
           pointer-events: none;
           border-radius: 4px;
@@ -1604,6 +1658,8 @@
   const animacionesCartones = new Map();
   let cartonPrincipalInfo = null;
   let resaltadoTemporal = {timer:null, tablas:null, cartonId:null};
+  let formaDestacadaSeleccionada = null;
+  let evitarReaplicarFormaDestacada = false;
 
   let recalculoAlturaCartonProgramado = false;
   const actualizarAlturaBotonesRetrato = () => {
@@ -1775,14 +1831,91 @@
     return `#${ajustar(0)}${ajustar(2)}${ajustar(4)}`;
   }
 
+  function normalizarTipoCarton(carton){
+    const valorBruto = carton?.tipocarton ?? carton?.tipoCarton ?? carton?.tipo ?? carton?.categoria;
+    const texto=String(valorBruto ?? '').trim().toLowerCase();
+    if(['gratis','free','libre','sin costo','sin-costo','freebie'].includes(texto)){
+      return 'gratis';
+    }
+    return 'pagado';
+  }
+
+  function normalizarPosicionesEntrada(posiciones){
+    const lista=Array.isArray(posiciones)?posiciones:[];
+    const resultado=[];
+    lista.forEach(pos=>{
+      if(!pos) return;
+      const fila=Number(pos.r ?? pos.row ?? pos.fila);
+      const col=Number(pos.c ?? pos.col ?? pos.columna);
+      if(Number.isInteger(fila) && Number.isInteger(col)){
+        resultado.push({r:fila, c:col});
+      }
+    });
+    return resultado;
+  }
+
+  function obtenerPosicionesNormalizadas(forma){
+    if(!forma) return [];
+    if(Array.isArray(forma.posicionesNormalizadas) && forma.posicionesNormalizadas.length){
+      return normalizarPosicionesEntrada(forma.posicionesNormalizadas);
+    }
+    if(Array.isArray(forma.posiciones) && forma.posiciones.length){
+      return normalizarPosicionesEntrada(forma.posiciones);
+    }
+    return [];
+  }
+
+  function obtenerRgbTexto(hex, fallback='0,120,255'){
+    const rgb=hexToRgb(hex);
+    if(!rgb) return fallback;
+    return `${rgb.r},${rgb.g},${rgb.b}`;
+  }
+
+  function obtenerRgbVivoTexto(hex){
+    const rgb=hexToRgb(hex);
+    if(!rgb) return null;
+    const intensificar=valor=>Math.min(255, Math.round(valor*1.12 + 18));
+    return `${intensificar(rgb.r)},${intensificar(rgb.g)},${intensificar(rgb.b)}`;
+  }
+
+  function actualizarEncabezadoForma(info, indice, colorHex){
+    if(!info || !Array.isArray(info.letras)) return;
+    const indiceNormalizado=Number(indice);
+    const idxActivo=Number.isInteger(indiceNormalizado)?indiceNormalizado:null;
+    info.letras.forEach((span, idx)=>{
+      if(!span) return;
+      const letraBase=BINGO_LETRAS[idx] || '';
+      const th=span.closest('th');
+      const activo=idxActivo===idx+1;
+      span.textContent=activo?`F${idx+1}`:letraBase;
+      span.classList.toggle('encabezado-letra-activa', activo);
+      if(th){
+        th.classList.toggle('forma-activa', activo);
+        th.setAttribute('aria-pressed', activo?'true':'false');
+        if(activo && colorHex){
+          const rgbBasico=obtenerRgbTexto(colorHex);
+          const rgbVivo=obtenerRgbVivoTexto(colorHex) || rgbBasico;
+          if(rgbBasico) th.style.setProperty('--forma-rgb', rgbBasico);
+          if(rgbVivo) th.style.setProperty('--forma-rgb-vivo', rgbVivo);
+        }else{
+          th.style.removeProperty('--forma-rgb');
+          th.style.removeProperty('--forma-rgb-vivo');
+        }
+      }
+    });
+  }
+
   function crearTablaCartonVisual(carton, modo='mini'){
     const contenedor=document.createElement('div');
     contenedor.className=`carton-visual carton-visual--${modo}`;
+    const tipoCarton=normalizarTipoCarton(carton);
+    contenedor.dataset.tipocarton=tipoCarton;
     const leyenda=document.createElement('div');
     leyenda.className='carton-forma-leyenda';
     contenedor.appendChild(leyenda);
     const tabla=document.createElement('table');
     tabla.className=`carton-tabla carton-tabla--${modo}`;
+    tabla.dataset.tipocarton=tipoCarton;
     tabla.dataset.cartonId=carton.id||'';
     const esGanador=Array.isArray(carton.formasGanadas)&&carton.formasGanadas.length>0;
     if(esGanador){
@@ -1916,6 +2049,7 @@
       celda.classList.remove('forma-resaltada');
       celda.classList.remove('celda-forma-activa');
       celda.style.removeProperty('--forma-rgb');
+      celda.style.removeProperty('--forma-rgb-vivo');
       if(celda.dataset.cantada==='1'){
         celda.classList.add('celda-cantada');
       }else{
@@ -1929,27 +2063,70 @@
       info.leyenda.style.removeProperty('border-color');
       info.leyenda.style.removeProperty('text-shadow');
     }
+    if(info.letras){
+      info.letras.forEach((span, idx)=>{
+        if(!span) return;
+        const th=span.closest('th');
+        if(th){
+          th.classList.remove('forma-activa');
+          th.style.removeProperty('--forma-rgb');
+          th.style.removeProperty('--forma-rgb-vivo');
+          th.setAttribute('aria-pressed','false');
+        }
+        span.textContent=BINGO_LETRAS[idx] || '';
+        span.classList.remove('encabezado-letra-activa');
+      });
+    }
+    if(cartonPrincipalInfo && cartonPrincipalInfo.info===info){
+      if(!evitarReaplicarFormaDestacada && Number.isInteger(cartonPrincipalInfo.formaActiva)){
+        const idx=cartonPrincipalInfo.formaActiva;
+        const forma=formasActivas.find(f=>Number(f.idx)===idx);
+        const posiciones=obtenerPosicionesNormalizadas(forma);
+        if(forma && posiciones.length){
+          const color=obtenerColorParaForma(idx);
+          actualizarEncabezadoForma(info, idx, color);
+          aplicarFormaCarton(info,{
+            posiciones,
+            color,
+            nombre:forma.nombre,
+            indice:idx,
+            mostrarLeyenda:false,
+            resaltarTodas:true
+          });
+        }else{
+          formaDestacadaSeleccionada=null;
+          cartonPrincipalInfo.formaActiva=null;
+          actualizarEncabezadoForma(info,null);
+        }
+      }else if(!Number.isInteger(cartonPrincipalInfo.formaActiva)){
+        actualizarEncabezadoForma(info,null);
+      }
+    }
   }
 
   function aplicarFormaCarton(info, datosForma){
     if(!info || !datosForma) return;
-    const rgb=hexToRgb(datosForma.color);
-    const rgbTexto=rgb?`${rgb.r},${rgb.g},${rgb.b}`:'0,120,255';
+    const rgbTexto=obtenerRgbTexto(datosForma.color);
+    const rgbVivoTexto=obtenerRgbVivoTexto(datosForma.color) || rgbTexto;
+    const posiciones=normalizarPosicionesEntrada(datosForma.posiciones || datosForma.posicionesNormalizadas || []);
+    const resaltarTodas=datosForma.resaltarTodas===true;
     info.celdas.forEach(celda=>{
       celda.classList.remove('forma-resaltada');
       celda.classList.remove('celda-forma-activa');
       celda.style.removeProperty('--forma-rgb');
+      celda.style.removeProperty('--forma-rgb-vivo');
       if(celda.dataset.cantada==='1'){
         celda.classList.add('celda-cantada');
       }
     });
-    (datosForma.posiciones||[]).forEach(pos=>{
+    posiciones.forEach(pos=>{
       const clave=`${pos.r}-${pos.c}`;
       const celda=info.celdas.get(clave);
       if(!celda || celda.classList.contains('free')) return;
-      if(celda.dataset.cantada!=='1') return;
+      if(celda.dataset.cantada!=='1' && !resaltarTodas) return;
       celda.classList.add('celda-forma-activa');
       celda.style.setProperty('--forma-rgb',rgbTexto);
+      celda.style.setProperty('--forma-rgb-vivo',rgbVivoTexto);
     });
     if(info.leyenda){
       if(datosForma.mostrarLeyenda===false){
@@ -1985,6 +2162,7 @@
       celda.classList.remove('celda-forma-temporal');
       if(!celda.classList.contains('celda-forma-activa')){
         celda.style.removeProperty('--forma-rgb');
+        celda.style.removeProperty('--forma-rgb-vivo');
       }
     });
   }
@@ -2010,13 +2188,14 @@
     const idx=Number(indice);
     if(!Number.isFinite(idx)) return;
     const forma=formasActivas.find(f=>Number(f.idx)===idx);
-    if(!forma || !(forma.posicionesNormalizadas||[]).length) return;
+    const posiciones=obtenerPosicionesNormalizadas(forma);
+    if(!forma || !posiciones.length) return;
     cancelarResaltadoTemporal();
     const info=cartonPrincipalInfo.info;
     aplicarResumenCarton(info);
     const colorBase=obtenerColorParaForma(idx);
-    const rgb=hexToRgb(colorBase);
-    const rgbTexto=rgb?`${rgb.r},${rgb.g},${rgb.b}`:'0,120,255';
+    const rgbTexto=obtenerRgbTexto(colorBase);
+    const rgbVivoTexto=obtenerRgbVivoTexto(colorBase) || rgbTexto;
     let tablasBackup=null;
     const animacionActual=animacionesCartones.get(cartonPrincipalInfo.cartonId);
     if(animacionActual){
@@ -2024,11 +2203,12 @@
       detenerAnimacionCarton(cartonPrincipalInfo.cartonId);
     }
     let hayCeldas=false;
-    (forma.posicionesNormalizadas||[]).forEach(pos=>{
+    posiciones.forEach(pos=>{
       const celda=info.celdas.get(`${pos.r}-${pos.c}`);
       if(celda){
         celda.classList.add('celda-forma-temporal');
         celda.style.setProperty('--forma-rgb',rgbTexto);
+        celda.style.setProperty('--forma-rgb-vivo',rgbVivoTexto);
         hayCeldas=true;
       }
     });
@@ -2054,7 +2234,7 @@
 
   function configurarEventosCartonPrincipal(carton,info){
     if(!carton || !info) return;
-    cartonPrincipalInfo={cartonId:carton.id, info};
+    cartonPrincipalInfo={cartonId:carton.id, info, formaActiva:formaDestacadaSeleccionada};
     const actualizarAccesibilidad=estado=>{
       if(info.wrapper){
         info.wrapper.setAttribute('aria-pressed', estado?'true':'false');
@@ -2088,6 +2268,88 @@
     }
   }
 
+  function configurarInteraccionFormasDestacadas(info){
+    if(!info || !Array.isArray(info.letras)) return;
+    info.letras.forEach((span, idx)=>{
+      if(!span) return;
+      const th=span.closest('th');
+      if(!th) return;
+      const formaIdx=idx+1;
+      th.dataset.formaIdx=String(formaIdx);
+      th.setAttribute('role','button');
+      th.tabIndex=0;
+      th.setAttribute('aria-pressed','false');
+      th.setAttribute('aria-label',`Resaltar forma ${formaIdx}`);
+      th.addEventListener('click',evento=>{
+        evento.preventDefault();
+        evento.stopPropagation();
+        toggleFormaDestacada(formaIdx);
+      });
+      th.addEventListener('keydown',evento=>{
+        if(evento.key==='Enter' || evento.key===' '){
+          evento.preventDefault();
+          evento.stopPropagation();
+          toggleFormaDestacada(formaIdx);
+        }
+      });
+    });
+    actualizarEncabezadoForma(info,null);
+  }
+
+  function establecerFormaDestacada(indice){
+    if(!cartonPrincipalInfo || !cartonPrincipalInfo.info) return;
+    const idx=Number(indice);
+    if(!Number.isInteger(idx)) return;
+    const forma=formasActivas.find(f=>Number(f.idx)===idx);
+    const posiciones=obtenerPosicionesNormalizadas(forma);
+    if(!forma || !posiciones.length){
+      limpiarFormaDestacada();
+      return;
+    }
+    const info=cartonPrincipalInfo.info;
+    const color=obtenerColorParaForma(idx);
+    formaDestacadaSeleccionada=idx;
+    cartonPrincipalInfo.formaActiva=idx;
+    evitarReaplicarFormaDestacada=true;
+    aplicarResumenCarton(info);
+    evitarReaplicarFormaDestacada=false;
+    actualizarEncabezadoForma(info, idx, color);
+    aplicarFormaCarton(info,{
+      posiciones,
+      color,
+      nombre:forma.nombre,
+      indice:idx,
+      mostrarLeyenda:false,
+      resaltarTodas:true
+    });
+  }
+
+  function limpiarFormaDestacada(){
+    if(!cartonPrincipalInfo || !cartonPrincipalInfo.info) return;
+    formaDestacadaSeleccionada=null;
+    cartonPrincipalInfo.formaActiva=null;
+    evitarReaplicarFormaDestacada=true;
+    aplicarResumenCarton(cartonPrincipalInfo.info);
+    evitarReaplicarFormaDestacada=false;
+    actualizarEncabezadoForma(cartonPrincipalInfo.info,null);
+  }
+
+  function toggleFormaDestacada(indice){
+    const idx=Number(indice);
+    if(!Number.isInteger(idx)) return;
+    if(formaDestacadaSeleccionada===idx){
+      limpiarFormaDestacada();
+    }else{
+      establecerFormaDestacada(idx);
+    }
+  }
+
+  function restaurarFormaDestacada(){
+    if(!cartonPrincipalInfo || !cartonPrincipalInfo.info) return;
+    if(!Number.isInteger(formaDestacadaSeleccionada)) return;
+    establecerFormaDestacada(formaDestacadaSeleccionada);
+  }
+
   function configurarAnimacionCarton(carton, tablasInfo){
     if(!carton || !Array.isArray(tablasInfo) || !tablasInfo.length) return;
     detenerAnimacionCarton(carton.id);
@@ -2095,7 +2357,7 @@
     const formasGanadas=Array.isArray(carton.formasGanadas)?carton.formasGanadas:[];
     const formasPreparadas=formasGanadas
       .map(item=>{
-        const posiciones=item?.forma?.posicionesNormalizadas||[];
+        const posiciones=obtenerPosicionesNormalizadas(item?.forma);
         if(!posiciones.length) return null;
         const idx=item?.forma?.idx ?? item?.idx;
         const nombre=item?.forma?.nombre ?? item?.nombre ?? '';
@@ -2103,7 +2365,8 @@
           posiciones,
           color:obtenerColorParaForma(idx),
           nombre,
-          indice:idx
+          indice:idx,
+          resaltarTodas:true
         };
       })
       .filter(Boolean);
@@ -2247,6 +2510,41 @@
     return numero.toLocaleString('es-ES', {maximumFractionDigits: 0});
   }
 
+  function formatearHoraAmPm(valor){
+    const texto=String(valor ?? '').trim();
+    if(!texto) return '';
+    const match=texto.match(/^(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?\s*(am|pm)?$/i);
+    if(match){
+      let horas=parseInt(match[1],10);
+      if(Number.isNaN(horas)) return texto;
+      const minutos=(match[2]??'00').padStart(2,'0');
+      const segundos=match[3]?match[3].padStart(2,'0'):null;
+      let sufijo=match[4]?match[4].toUpperCase():'';
+      if(!sufijo){
+        sufijo=horas>=12?'PM':'AM';
+        horas=horas%12 || 12;
+      }else{
+        horas=(horas%12)||12;
+      }
+      const base=String(horas).padStart(2,'0');
+      const segmentoSegundos=segundos?`:${segundos}`:'';
+      return `${base}:${minutos}${segmentoSegundos} ${sufijo}`;
+    }
+    const partes=texto.split(':');
+    if(partes.length>=2){
+      const horas=parseInt(partes[0],10);
+      if(!Number.isNaN(horas)){
+        const minutos=partes[1];
+        const segundos=partes.length>2?partes[2]:'';
+        const sufijo=horas>=12?'PM':'AM';
+        const hora12=(horas%12)||12;
+        const segSegmento=segundos?`:${segundos.padStart(2,'0')}`:'';
+        return `${String(hora12).padStart(2,'0')}:${minutos.padStart(2,'0')}${segSegmento} ${sufijo}`;
+      }
+    }
+    return texto;
+  }
+
   function obtenerTotalCreditosSorteo(){
     if(!activeSorteo) return 0;
     const posiblesClaves=['totalPremios','totalpremios','premioTotal','premio','total_premios'];
@@ -2314,7 +2612,9 @@
       partes.push(`<span class="detalle-item"><span class="detalle-label">Fecha:</span><span class="detalle-valor fecha">${formatearFecha(fecha)}</span></span>`);
     }
     if(hora){
-      partes.push(`<span class="detalle-item"><span class="detalle-label">Hora:</span><span class="detalle-valor hora">${hora}</span></span>`);
+      const horaFormateada=formatearHoraAmPm(hora);
+      const horaMostrar=horaFormateada || hora;
+      partes.push(`<span class="detalle-item"><span class="detalle-label">Hora:</span><span class="detalle-valor hora">${horaMostrar}</span></span>`);
     }
     sorteoDetallesEl.innerHTML=partes.join(' ');
   }
@@ -2380,6 +2680,7 @@
       cartonesMensajeEl.textContent='No tienes cartones participando en este sorteo.';
       cartonSeleccionadoId=null;
       cartonPrincipalInfo=null;
+      formaDestacadaSeleccionada=null;
       return;
     }
     cartonesMensajeEl.textContent='';
@@ -2401,6 +2702,7 @@
     });
     if(!cartonSeleccionadoId || !decorados.some(c=>c.id===cartonSeleccionadoId)){
       cartonSeleccionadoId=decorados[0].id;
+      formaDestacadaSeleccionada=null;
     }
     const tablasPorCarton=new Map();
     const registrarTabla=(cartonId,info)=>{
@@ -2426,11 +2728,20 @@
       contenedor.setAttribute('tabindex','0');
       const info=document.createElement('div');
       info.className='carton-info';
-      info.textContent=formatearInfoCarton(carton);
+      const numeroDiv=document.createElement('div');
+      numeroDiv.className='carton-info-numero';
+      numeroDiv.textContent=formatearInfoCarton(carton);
+      info.appendChild(numeroDiv);
+      const tipoCarton=normalizarTipoCarton(carton);
+      const tipoDiv=document.createElement('div');
+      tipoDiv.className=`carton-info-tipo carton-info-tipo--${tipoCarton}`;
+      tipoDiv.textContent=tipoCarton==='gratis'?'GRATIS':'PAGADO';
+      info.appendChild(tipoDiv);
       contenedor.appendChild(info);
       contenedor.addEventListener('click',()=>{
         if(cartonSeleccionadoId!==carton.id){
           cartonSeleccionadoId=carton.id;
+          formaDestacadaSeleccionada=null;
           renderCartonesJugador();
         }
       });
@@ -2438,6 +2749,7 @@
         if((evento.key==='Enter'||evento.key===' ') && cartonSeleccionadoId!==carton.id){
           evento.preventDefault();
           cartonSeleccionadoId=carton.id;
+          formaDestacadaSeleccionada=null;
           renderCartonesJugador();
         }
       });
@@ -2507,6 +2819,7 @@
         boton.style.setProperty('--forma-color-borde', colorOscurecido);
         boton.style.setProperty('--forma-color-contador', obtenerColorOscurecido(colorForma,0.55));
         boton.dataset.totalGanadores=String(totalGanadores);
+        boton.classList.toggle('con-ganadores', totalGanadores>0);
         const referenciaNombre=forma && forma.nombre?`, ${forma.nombre}`:'';
         const descripcionGanadores=totalGanadores===1?'1 cartón ganador':`${totalGanadores} cartones ganadores`;
         boton.setAttribute('aria-label',`Ver cartones ganadores de la forma ${String(idx).padStart(2,'0')}${referenciaNombre}, ${descripcionGanadores}`);
@@ -2540,6 +2853,8 @@
       tablaInfoPrincipal.celdaCentral=tablaInfoPrincipal.celdas.get('2-2');
       cartonDestacadoEl.classList.add('activo');
       configurarEventosCartonPrincipal(seleccionado,tablaInfoPrincipal);
+      configurarInteraccionFormasDestacadas(tablaInfoPrincipal);
+      restaurarFormaDestacada();
       actualizarAlturaCartonWrapper(cartonWrapper);
       programarRecalculoAlturaCarton();
     }
@@ -2580,11 +2895,12 @@
         const tablaInfo=crearTablaCartonVisual(cartonExtendido,'mini');
         aplicarResumenCarton(tablaInfo);
         aplicarFormaCarton(tablaInfo,{
-          posiciones:forma.posicionesNormalizadas||[],
+          posiciones:obtenerPosicionesNormalizadas(forma),
           color:obtenerColorParaForma(forma.idx),
           nombre:forma.nombre,
           indice:forma.idx,
-          mostrarLeyenda:false
+          mostrarLeyenda:false,
+          resaltarTodas:true
         });
         infoCol.appendChild(tablaInfo.contenedor);
         const infoBox=document.createElement('div');
@@ -2631,7 +2947,7 @@
       return;
     }
     formasActivas.forEach(forma=>{
-      const posiciones=forma.posicionesNormalizadas||[];
+      const posiciones=obtenerPosicionesNormalizadas(forma);
       if(!posiciones.length) return;
       let mejorPaso=Infinity;
       const ganadores=[];
