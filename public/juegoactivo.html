@@ -900,6 +900,12 @@
           animation: zoomPulse 1.4s ease-in-out infinite;
           text-shadow: 0 0 10px rgba(0,0,0,0.9);
       }
+      .carton-tabla td.celda-forma-activa.celda-forma-solo-borde::before {
+          display: none;
+      }
+      .carton-tabla td.celda-forma-activa.celda-forma-solo-borde .cell-content {
+          animation: none;
+      }
       .carton-tabla td.celda-forma-temporal {
           position: relative;
       }
@@ -1587,7 +1593,7 @@
       </div>
     </section>
     <section id="mis-cartones-section">
-      <h2>Mis cartones</h2>
+      <h2>MIS CARTONES EN EL SORTEO</h2>
       <div id="cartones-mensaje" class="mensaje"></div>
       <div id="mis-cartones-grid" aria-live="polite"></div>
     </section>
@@ -2091,7 +2097,8 @@
             nombre:forma.nombre,
             indice:idx,
             mostrarLeyenda:false,
-            resaltarTodas:true
+            resaltarTodas:true,
+            soloBorde:true
           });
         }else{
           formaDestacadaSeleccionada=null;
@@ -2110,9 +2117,11 @@
     const rgbVivoTexto=obtenerRgbVivoTexto(datosForma.color) || rgbTexto;
     const posiciones=normalizarPosicionesEntrada(datosForma.posiciones || datosForma.posicionesNormalizadas || []);
     const resaltarTodas=datosForma.resaltarTodas===true;
+    const soloBorde=datosForma.soloBorde===true;
     info.celdas.forEach(celda=>{
       celda.classList.remove('forma-resaltada');
       celda.classList.remove('celda-forma-activa');
+      celda.classList.remove('celda-forma-solo-borde');
       celda.style.removeProperty('--forma-rgb');
       celda.style.removeProperty('--forma-rgb-vivo');
       if(celda.dataset.cantada==='1'){
@@ -2125,6 +2134,7 @@
       if(!celda || celda.classList.contains('free')) return;
       if(celda.dataset.cantada!=='1' && !resaltarTodas) return;
       celda.classList.add('celda-forma-activa');
+      celda.classList.toggle('celda-forma-solo-borde', soloBorde);
       celda.style.setProperty('--forma-rgb',rgbTexto);
       celda.style.setProperty('--forma-rgb-vivo',rgbVivoTexto);
     });
@@ -2320,7 +2330,8 @@
       nombre:forma.nombre,
       indice:idx,
       mostrarLeyenda:false,
-      resaltarTodas:true
+      resaltarTodas:true,
+      soloBorde:true
     });
   }
 
