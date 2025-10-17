@@ -689,6 +689,49 @@
           color: #4b0082;
           text-shadow: 0 0 10px rgba(255,255,255,0.95);
       }
+      .panel-ganancias-totales {
+          display: none;
+          align-items: center;
+          justify-content: center;
+          gap: clamp(6px, 2vw, 12px);
+          padding: clamp(2px, 1vw, 6px) clamp(6px, 2vw, 14px);
+          border-radius: 14px;
+          background: rgba(255, 255, 255, 0.96);
+          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+          max-width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
+      }
+      .panel-ganancias-totales--visible {
+          display: inline-flex;
+      }
+      .panel-ganancias-totales__etiqueta {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          font-size: clamp(0.45rem, 1.3vw, 0.62rem);
+          font-weight: 600;
+          letter-spacing: 0.4px;
+          color: #000000;
+          line-height: 1.05;
+          text-transform: uppercase;
+          text-align: center;
+      }
+      .panel-ganancias-totales__etiqueta span {
+          display: block;
+      }
+      .panel-ganancias-totales__valor {
+          font-family: 'Bangers', cursive;
+          font-size: clamp(1rem, 4.8vw, 1.9rem);
+          color: #00c853;
+          text-shadow: 0 0 12px rgba(255,255,255,0.9), 0 0 24px rgba(0, 200, 83, 0.45);
+          line-height: 1;
+          white-space: nowrap;
+          max-width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+      }
       .panel-botones-formas__mensaje .carton-forma-leyenda {
           position: static;
           transform: none;
@@ -2083,6 +2126,9 @@
   let formaDestacadaSeleccionada = null;
   let evitarReaplicarFormaDestacada = false;
   let panelFormasLeyendaEl = null;
+  let panelGananciasTotalesEl = null;
+  let panelGananciasTotalesValorEl = null;
+  let totalGananciasJugador = 0;
   let ultimoCantoBoton = null;
   let ultimoCantoValorActual = '';
   let ultimoCantoPopupEl = null;
@@ -2266,12 +2312,16 @@
     if(panelBotonesFormasEl){
       panelBotonesFormasEl.innerHTML='';
       panelFormasLeyendaEl=null;
+      panelGananciasTotalesEl=null;
+      panelGananciasTotalesValorEl=null;
       actualizarAlturaBotonesRetrato();
       return;
     }
     if(!panelSuperiorEl) return;
     panelSuperiorEl.querySelectorAll('.carton-forma-accion[data-forma-boton="dinamico"]').forEach(boton=>boton.remove());
     panelFormasLeyendaEl=null;
+    panelGananciasTotalesEl=null;
+    panelGananciasTotalesValorEl=null;
     actualizarAlturaBotonesRetrato();
   }
 
@@ -2289,7 +2339,70 @@
     if(panelFormasLeyendaEl){
       panelFormasLeyendaEl.innerHTML='';
       panelFormasLeyendaEl.appendChild(info.leyenda);
+      if(panelGananciasTotalesEl){
+        panelFormasLeyendaEl.appendChild(panelGananciasTotalesEl);
+      }
+      actualizarVisibilidadPanelGanancias();
     }
+  }
+
+  function hayMensajeGanadorActivo(){
+    const info=cartonPrincipalInfo?.info;
+    if(!info || !info.leyenda) return false;
+    if(!info.leyenda.classList.contains('visible')) return false;
+    return info.leyenda.textContent && info.leyenda.textContent.trim().length>0;
+  }
+
+  function actualizarVisibilidadPanelGanancias(){
+    if(!panelGananciasTotalesEl) return;
+    const total=Number(totalGananciasJugador);
+    const mostrar=Number.isFinite(total) && total>0 && !hayMensajeGanadorActivo();
+    panelGananciasTotalesEl.classList.toggle('panel-ganancias-totales--visible', mostrar);
+    panelGananciasTotalesEl.setAttribute('aria-hidden', mostrar?'false':'true');
+  }
+
+  function actualizarGananciasTotales(){
+    const totalSeguro=Number(totalGananciasJugador);
+    const valorMostrar=Number.isFinite(totalSeguro)?totalSeguro:0;
+    if(!Number.isFinite(totalSeguro)){
+      totalGananciasJugador=0;
+    }else{
+      totalGananciasJugador=totalSeguro;
+    }
+    if(panelGananciasTotalesValorEl){
+      panelGananciasTotalesValorEl.textContent=formatearCreditos(valorMostrar);
+    }
+    actualizarVisibilidadPanelGanancias();
+  }
+
+  function asegurarPanelGananciasTotales(){
+    if(!panelFormasLeyendaEl) return;
+    if(!panelGananciasTotalesEl){
+      panelGananciasTotalesEl=document.createElement('div');
+      panelGananciasTotalesEl.className='panel-ganancias-totales';
+      panelGananciasTotalesEl.setAttribute('aria-hidden','true');
+      const etiqueta=document.createElement('div');
+      etiqueta.className='panel-ganancias-totales__etiqueta';
+      const textoSuperior=document.createElement('span');
+      textoSuperior.textContent='GANANCIAS';
+      const textoInferior=document.createElement('span');
+      textoInferior.textContent='TOTALES';
+      etiqueta.appendChild(textoSuperior);
+      etiqueta.appendChild(textoInferior);
+      const valor=document.createElement('div');
+      valor.className='panel-ganancias-totales__valor';
+      valor.textContent=formatearCreditos(0);
+      panelGananciasTotalesValorEl=valor;
+      panelGananciasTotalesEl.appendChild(etiqueta);
+      panelGananciasTotalesEl.appendChild(valor);
+    }
+    if(panelGananciasTotalesEl.parentElement!==panelFormasLeyendaEl){
+      if(panelGananciasTotalesEl.parentElement){
+        panelGananciasTotalesEl.parentElement.removeChild(panelGananciasTotalesEl);
+      }
+      panelFormasLeyendaEl.appendChild(panelGananciasTotalesEl);
+    }
+    actualizarGananciasTotales();
   }
 
   function insertarBotonesFormas(botones){
@@ -2310,6 +2423,7 @@
       mensaje.className='panel-botones-formas__mensaje';
       rejilla.appendChild(mensaje);
       panelFormasLeyendaEl=mensaje;
+      asegurarPanelGananciasTotales();
       botonesValidos.forEach(boton=>{
         boton.dataset.formaBoton='dinamico';
         rejilla.appendChild(boton);
@@ -2334,6 +2448,7 @@
     mensaje.className='panel-botones-formas__mensaje';
     rejilla.appendChild(mensaje);
     panelFormasLeyendaEl=mensaje;
+    asegurarPanelGananciasTotales();
     referencia.insertAdjacentElement('afterend', envoltorio);
     referencia=envoltorio;
     botonesValidos.forEach(boton=>{
@@ -2728,6 +2843,7 @@
       }else if(!Number.isInteger(cartonPrincipalInfo.formaActiva)){
         actualizarEncabezadoForma(info,null);
       }
+      actualizarVisibilidadPanelGanancias();
     }
   }
 
@@ -2789,6 +2905,9 @@
         }
         info.leyenda.classList.add('visible');
       }
+    }
+    if(cartonPrincipalInfo && cartonPrincipalInfo.info===info){
+      actualizarVisibilidadPanelGanancias();
     }
   }
 
@@ -3356,14 +3475,22 @@
       cartonSeleccionadoId=null;
       cartonPrincipalInfo=null;
       formaDestacadaSeleccionada=null;
+      totalGananciasJugador=0;
+      actualizarGananciasTotales();
       return;
     }
     cartonesMensajeEl.textContent='';
     const decorados=lista.map(carton=>{
       const formasGanadas=formasPorCarton.get(carton.id)||[];
       const primerPaso=formasGanadas.length?Math.min(...formasGanadas.map(f=>f.paso)):Infinity;
-      return {...carton, formasGanadas, primerPaso};
+      const resumenGanancias=obtenerResumenGananciasCarton(carton,5);
+      return {...carton, formasGanadas, primerPaso, resumenGanancias};
     });
+    totalGananciasJugador=decorados.reduce((acum,carton)=>{
+      const total=Number(carton?.resumenGanancias?.total)||0;
+      return acum+total;
+    },0);
+    actualizarGananciasTotales();
     decorados.sort((a,b)=>{
       const aGan=a.formasGanadas.length>0;
       const bGan=b.formasGanadas.length>0;
@@ -3440,7 +3567,7 @@
       const tablaInfoPrincipal=crearTablaCartonVisual(seleccionado,'principal');
       aplicarResumenCarton(tablaInfoPrincipal);
       registrarTabla(seleccionado.id,tablaInfoPrincipal);
-      const resumenGanancias=obtenerResumenGananciasCarton(seleccionado,5);
+      const resumenGanancias=seleccionado.resumenGanancias || obtenerResumenGananciasCarton(seleccionado,5);
       const cartonBox=document.createElement('div');
       cartonBox.className='carton-box';
       const cartonWrapper=document.createElement('div');
@@ -3522,6 +3649,7 @@
       backLogo.alt='Logo HexaBingo';
       cartonBack.appendChild(backLogo);
       insertarBotonesFormas(botonesFormas);
+      actualizarGananciasTotales();
       colocarLeyendaPrincipalEnPanel(tablaInfoPrincipal);
       cartonDestacadoEl.appendChild(cartonBox);
       tablaInfoPrincipal.wrapper=cartonWrapper;
