@@ -189,6 +189,7 @@
           background: transparent;
           width: 100%;
           min-width: calc(var(--canto-cell-size) * 5 + clamp(6px, 2vw, 14px));
+          position: relative;
       }
       h2 {
           margin: 0;
@@ -248,7 +249,7 @@
           font-weight: 600;
           letter-spacing: 0.5px;
           display: flex;
-          gap: 4px;
+          gap: 6px;
           align-items: center;
           justify-content: center;
           flex-wrap: wrap;
@@ -260,12 +261,97 @@
       #ultimo-canto .ultimo-total {
           color: var(--verde-canto);
       }
-      #ultimo-canto .ultimo-numero {
+      #ultimo-canto .ultimo-separador {
+          color: #1a1a1a;
+          font-weight: 700;
+      }
+      #ultimo-canto .ultimo-boton {
+          background: radial-gradient(circle at top, rgba(255,255,255,0.95) 12%, rgba(0,200,83,0.95) 88%);
+          border: none;
+          border-radius: 999px;
+          padding: 6px 18px;
           color: #0b4cc2;
-          font-size: 1em;
-          display: inline-flex;
+          font-size: 1rem;
+          font-weight: 700;
+          font-family: 'Bangers', cursive;
+          letter-spacing: 1px;
+          cursor: pointer;
+          box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+          text-shadow: 0 0 8px rgba(255,255,255,0.9);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          animation: zoomPulse 1.8s ease-in-out infinite;
+      }
+      #ultimo-canto .ultimo-boton:focus-visible {
+          outline: 3px solid rgba(11,76,194,0.4);
+          outline-offset: 2px;
+      }
+      #ultimo-canto .ultimo-boton:active {
+          transform: scale(0.95);
+          box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+      }
+      .ultimo-canto-popup {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%) scale(0.9);
+          background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(230,255,238,0.96));
+          border-radius: 18px;
+          padding: 18px 24px;
+          box-shadow: 0 14px 32px rgba(0,0,0,0.26);
+          border: 2px solid rgba(0,200,83,0.6);
+          display: none;
+          flex-direction: column;
+          gap: 12px;
           align-items: center;
-          animation: focoUltimo 1.6s ease-in-out infinite;
+          justify-content: center;
+          text-align: center;
+          min-width: clamp(180px, 42vw, 260px);
+          z-index: 10;
+      }
+      .ultimo-canto-popup.visible {
+          display: flex;
+          animation: popupEntrada 0.3s ease forwards;
+      }
+      .ultimo-canto-popup h3 {
+          margin: 0;
+          font-size: clamp(0.9rem, 2.4vw, 1.15rem);
+          color: #1a1a1a;
+          font-weight: 600;
+      }
+      .ultimo-canto-popup .popup-numero {
+          font-family: 'Bangers', cursive;
+          font-size: clamp(1.6rem, 4.8vw, 2.4rem);
+          color: #003a87;
+          text-shadow: 0 0 18px rgba(0,255,120,0.8);
+          animation: zoomPulse 1.6s ease-in-out infinite;
+      }
+      .ultimo-canto-popup .popup-accion {
+          padding: 6px 18px;
+          border-radius: 999px;
+          border: none;
+          background: linear-gradient(135deg, rgba(0,200,83,0.92), rgba(0,150,60,0.96));
+          color: #ffffff;
+          font-weight: 600;
+          cursor: pointer;
+          box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .ultimo-canto-popup .popup-accion:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 10px 22px rgba(0,0,0,0.26);
+      }
+      .ultimo-canto-popup .popup-accion:active {
+          transform: scale(0.96);
+      }
+      @keyframes popupEntrada {
+          0% {
+              opacity: 0;
+              transform: translate(-50%, -50%) scale(0.8);
+          }
+          100% {
+              opacity: 1;
+              transform: translate(-50%, -50%) scale(1);
+          }
       }
       #panel-columna-derecha {
           grid-area: carton;
@@ -583,6 +669,33 @@
           gap: calc(clamp(6px, 2vw, 14px) * var(--panel-botones-escala-limitada, 1));
           justify-items: center;
       }
+      .panel-botones-formas__mensaje {
+          width: 100%;
+          min-height: clamp(28px, 3vw, 40px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: clamp(0.62rem, 1.6vw, 0.9rem);
+          font-weight: 700;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          color: #4b0082;
+          text-shadow: 0 0 10px rgba(255,255,255,0.95);
+      }
+      .panel-botones-formas__mensaje .carton-forma-leyenda {
+          position: static;
+          transform: none;
+          background: rgba(255,255,255,0.96);
+          border-radius: 999px;
+          box-shadow: 0 6px 18px rgba(0,0,0,0.16);
+          padding: 6px 18px;
+          opacity: 1;
+          transition: none;
+          font-size: clamp(0.58rem, 1.6vw, 0.82rem);
+      }
+      .panel-botones-formas__mensaje .carton-forma-leyenda.visible {
+          opacity: 1;
+      }
       .panel-botones-formas__grid > .carton-forma-accion {
           width: auto;
       }
@@ -730,6 +843,13 @@
       .carton-visual--principal .carton-forma-leyenda {
           font-size: 0.62rem;
           padding: 3px 12px;
+      }
+      .carton-forma-leyenda--panel {
+          position: static;
+          top: auto;
+          left: auto;
+          transform: none;
+          margin: 0;
       }
       .carton-forma-leyenda.visible {
           opacity: 1;
@@ -917,6 +1037,10 @@
       }
       .carton-tabla td.celda-forma-activa.celda-forma-solo-borde .cell-content {
           animation: none;
+      }
+      .carton-visual--principal.forma-manual-activa .carton-tabla td.celda-forma-activa.celda-forma-solo-borde {
+          border-color: rgba(var(--forma-rgb-borde, var(--forma-rgb, 0, 120, 255)), 0.98);
+          box-shadow: inset 0 0 0 4px rgba(var(--forma-rgb-borde, var(--forma-rgb, 0, 120, 255)), 0.7), 0 0 12px rgba(var(--forma-rgb-borde, var(--forma-rgb, 0, 120, 255)), 0.6);
       }
       .carton-tabla td.celda-forma-temporal {
           position: relative;
@@ -1524,9 +1648,15 @@
               gap: clamp(2px, 1vw, 6px);
           }
           #cantos-panel,
-          #formas-mensaje {
-              width: 100%;
-          }
+      #formas-mensaje {
+          width: 100%;
+      }
+      #panel-botones-formas .panel-botones-formas__mensaje {
+          margin-bottom: calc(clamp(6px, 2vw, 14px) * var(--panel-botones-escala-limitada, 1));
+      }
+      #panel-botones-formas .panel-botones-formas__mensaje:empty {
+          min-height: clamp(28px, 3vw, 40px);
+      }
           .modal {
               justify-content: flex-start;
               align-items: flex-start;
@@ -1940,6 +2070,12 @@
   let resaltadoTemporal = {timer:null, tablas:null, cartonId:null};
   let formaDestacadaSeleccionada = null;
   let evitarReaplicarFormaDestacada = false;
+  let panelFormasLeyendaEl = null;
+  let ultimoCantoBoton = null;
+  let ultimoCantoValorActual = '';
+  let ultimoCantoPopupEl = null;
+  let ultimoCantoPopupNumeroEl = null;
+  let ultimoCantoTimer = null;
 
   let recalculoAlturaCartonProgramado = false;
   const actualizarAlturaBotonesRetrato = () => {
@@ -2117,12 +2253,31 @@
   function limpiarBotonesFormas(){
     if(panelBotonesFormasEl){
       panelBotonesFormasEl.innerHTML='';
+      panelFormasLeyendaEl=null;
       actualizarAlturaBotonesRetrato();
       return;
     }
     if(!panelSuperiorEl) return;
     panelSuperiorEl.querySelectorAll('.carton-forma-accion[data-forma-boton="dinamico"]').forEach(boton=>boton.remove());
+    panelFormasLeyendaEl=null;
     actualizarAlturaBotonesRetrato();
+  }
+
+  function colocarLeyendaPrincipalEnPanel(info=cartonPrincipalInfo?.info){
+    if(!info || !info.leyenda) return;
+    const esPrincipal=info?.contenedor?.classList?.contains('carton-visual--principal');
+    if(!esPrincipal){
+      if(!info.leyenda.parentElement && info.contenedor){
+        info.contenedor.appendChild(info.leyenda);
+      }
+      info.leyenda.classList.remove('carton-forma-leyenda--panel');
+      return;
+    }
+    info.leyenda.classList.add('carton-forma-leyenda--panel');
+    if(panelFormasLeyendaEl){
+      panelFormasLeyendaEl.innerHTML='';
+      panelFormasLeyendaEl.appendChild(info.leyenda);
+    }
   }
 
   function insertarBotonesFormas(botones){
@@ -2139,11 +2294,16 @@
       const rejilla=document.createElement('div');
       rejilla.className='panel-botones-formas__grid';
       envoltorio.appendChild(rejilla);
+      const mensaje=document.createElement('div');
+      mensaje.className='panel-botones-formas__mensaje';
+      rejilla.appendChild(mensaje);
+      panelFormasLeyendaEl=mensaje;
       botonesValidos.forEach(boton=>{
         boton.dataset.formaBoton='dinamico';
         rejilla.appendChild(boton);
       });
       panelBotonesFormasEl.appendChild(envoltorio);
+      colocarLeyendaPrincipalEnPanel();
       actualizarAlturaBotonesRetrato();
       return;
     }
@@ -2158,13 +2318,70 @@
     const rejilla=document.createElement('div');
     rejilla.className='panel-botones-formas__grid';
     envoltorio.appendChild(rejilla);
+    const mensaje=document.createElement('div');
+    mensaje.className='panel-botones-formas__mensaje';
+    rejilla.appendChild(mensaje);
+    panelFormasLeyendaEl=mensaje;
     referencia.insertAdjacentElement('afterend', envoltorio);
     referencia=envoltorio;
     botonesValidos.forEach(boton=>{
       boton.dataset.formaBoton='dinamico';
       rejilla.appendChild(boton);
     });
+    colocarLeyendaPrincipalEnPanel();
     actualizarAlturaBotonesRetrato();
+  }
+
+  function obtenerUltimoCantoPopup(){
+    if(ultimoCantoPopupEl && cantosPanelEl && cantosPanelEl.contains(ultimoCantoPopupEl)){
+      return ultimoCantoPopupEl;
+    }
+    if(!cantosPanelEl) return null;
+    const popup=document.createElement('div');
+    popup.className='ultimo-canto-popup';
+    const titulo=document.createElement('h3');
+    titulo.textContent='ÚLTIMO CANTO:';
+    popup.appendChild(titulo);
+    ultimoCantoPopupNumeroEl=document.createElement('div');
+    ultimoCantoPopupNumeroEl.className='popup-numero';
+    popup.appendChild(ultimoCantoPopupNumeroEl);
+    const boton=document.createElement('button');
+    boton.type='button';
+    boton.className='popup-accion';
+    boton.textContent='Aceptar';
+    boton.addEventListener('click',()=>{
+      cerrarVentanaUltimoCanto();
+    });
+    popup.appendChild(boton);
+    cantosPanelEl.appendChild(popup);
+    ultimoCantoPopupEl=popup;
+    return popup;
+  }
+
+  function cerrarVentanaUltimoCanto(){
+    if(ultimoCantoTimer){
+      clearTimeout(ultimoCantoTimer);
+      ultimoCantoTimer=null;
+    }
+    if(ultimoCantoPopupEl){
+      ultimoCantoPopupEl.classList.remove('visible');
+    }
+  }
+
+  function mostrarVentanaUltimoCanto(){
+    if(!ultimoCantoValorActual) return;
+    const popup=obtenerUltimoCantoPopup();
+    if(!popup) return;
+    if(ultimoCantoPopupNumeroEl){
+      ultimoCantoPopupNumeroEl.textContent=ultimoCantoValorActual;
+    }
+    popup.classList.add('visible');
+    if(ultimoCantoTimer){
+      clearTimeout(ultimoCantoTimer);
+    }
+    ultimoCantoTimer=setTimeout(()=>{
+      cerrarVentanaUltimoCanto();
+    },4000);
   }
 
   function crearGridCantos(){
@@ -2260,16 +2477,25 @@
     return `${intensificar(rgb.r)},${intensificar(rgb.g)},${intensificar(rgb.b)}`;
   }
 
+  function obtenerRgbOscuroTexto(hex, factor=0.45){
+    const rgb=hexToRgb(hex);
+    if(!rgb) return null;
+    const reducir=valor=>Math.max(0, Math.round(valor*(1-factor)));
+    return `${reducir(rgb.r)},${reducir(rgb.g)},${reducir(rgb.b)}`;
+  }
+
   function actualizarEncabezadoForma(info, indice, colorHex){
     if(!info || !Array.isArray(info.letras)) return;
     const indiceNormalizado=Number(indice);
     const idxActivo=Number.isInteger(indiceNormalizado)?indiceNormalizado:null;
+    const esPrincipal=info?.contenedor?.classList?.contains('carton-visual--principal');
     info.letras.forEach((span, idx)=>{
       if(!span) return;
       const letraBase=BINGO_LETRAS[idx] || '';
       const th=span.closest('th');
       const activo=idxActivo===idx+1;
-      span.textContent=letraBase;
+      const textoLetra=activo && esPrincipal?`F${idx+1}`:letraBase;
+      span.textContent=textoLetra;
       span.classList.toggle('encabezado-letra-activa', activo);
       if(th){
         th.classList.toggle('forma-activa', activo);
@@ -2285,6 +2511,9 @@
         }
       }
     });
+    if(esPrincipal && !Number.isInteger(idxActivo)){
+      info.contenedor.classList.remove('forma-manual-activa');
+    }
   }
 
   function crearTablaCartonVisual(carton, modo='mini'){
@@ -2294,7 +2523,9 @@
     contenedor.dataset.tipocarton=tipoCarton;
     const leyenda=document.createElement('div');
     leyenda.className='carton-forma-leyenda';
-    contenedor.appendChild(leyenda);
+    if(modo!=='principal'){
+      contenedor.appendChild(leyenda);
+    }
     const tabla=document.createElement('table');
     tabla.className=`carton-tabla carton-tabla--${modo}`;
     tabla.dataset.tipocarton=tipoCarton;
@@ -2474,7 +2705,8 @@
             indice:idx,
             mostrarLeyenda:false,
             resaltarTodas:true,
-            soloBorde:true
+            soloBorde:true,
+            bordeOscuro:true
           });
         }else{
           formaDestacadaSeleccionada=null;
@@ -2494,12 +2726,15 @@
     const posiciones=normalizarPosicionesEntrada(datosForma.posiciones || datosForma.posicionesNormalizadas || []);
     const resaltarTodas=datosForma.resaltarTodas===true;
     const soloBorde=datosForma.soloBorde===true;
+    const bordeOscuro=datosForma.bordeOscuro===true;
+    const rgbBordeTexto=bordeOscuro?obtenerRgbOscuroTexto(datosForma.color,0.55):null;
     info.celdas.forEach(celda=>{
       celda.classList.remove('forma-resaltada');
       celda.classList.remove('celda-forma-activa');
       celda.classList.remove('celda-forma-solo-borde');
       celda.style.removeProperty('--forma-rgb');
       celda.style.removeProperty('--forma-rgb-vivo');
+      celda.style.removeProperty('--forma-rgb-borde');
       if(celda.dataset.cantada==='1'){
         celda.classList.add('celda-cantada');
       }
@@ -2513,6 +2748,9 @@
       celda.classList.toggle('celda-forma-solo-borde', soloBorde);
       celda.style.setProperty('--forma-rgb',rgbTexto);
       celda.style.setProperty('--forma-rgb-vivo',rgbVivoTexto);
+      if(rgbBordeTexto){
+        celda.style.setProperty('--forma-rgb-borde',rgbBordeTexto);
+      }
     });
     if(info.leyenda){
       if(datosForma.mostrarLeyenda===false){
@@ -2549,6 +2787,7 @@
       if(!celda.classList.contains('celda-forma-activa')){
         celda.style.removeProperty('--forma-rgb');
         celda.style.removeProperty('--forma-rgb-vivo');
+        celda.style.removeProperty('--forma-rgb-borde');
       }
     });
   }
@@ -2621,6 +2860,7 @@
   function configurarEventosCartonPrincipal(carton,info){
     if(!carton || !info) return;
     cartonPrincipalInfo={cartonId:carton.id, info, formaActiva:formaDestacadaSeleccionada};
+    colocarLeyendaPrincipalEnPanel();
     const actualizarAccesibilidad=estado=>{
       if(info.wrapper){
         info.wrapper.setAttribute('aria-pressed', estado?'true':'false');
@@ -2696,6 +2936,9 @@
     const color=obtenerColorParaForma(idx);
     formaDestacadaSeleccionada=idx;
     cartonPrincipalInfo.formaActiva=idx;
+    if(info?.contenedor){
+      info.contenedor.classList.add('forma-manual-activa');
+    }
     evitarReaplicarFormaDestacada=true;
     aplicarResumenCarton(info);
     evitarReaplicarFormaDestacada=false;
@@ -2707,7 +2950,8 @@
       indice:idx,
       mostrarLeyenda:false,
       resaltarTodas:true,
-      soloBorde:true
+      soloBorde:true,
+      bordeOscuro:true
     });
   }
 
@@ -2715,6 +2959,9 @@
     if(!cartonPrincipalInfo || !cartonPrincipalInfo.info) return;
     formaDestacadaSeleccionada=null;
     cartonPrincipalInfo.formaActiva=null;
+    if(cartonPrincipalInfo.info.contenedor){
+      cartonPrincipalInfo.info.contenedor.classList.remove('forma-manual-activa');
+    }
     evitarReaplicarFormaDestacada=true;
     aplicarResumenCarton(cartonPrincipalInfo.info);
     evitarReaplicarFormaDestacada=false;
@@ -3011,7 +3258,7 @@
     cantoCellsMap.forEach(celda=>{
       celda.classList.remove('cantado','ultimo');
     });
-    ultimoCantoEl.textContent='';
+    ultimoCantoEl.innerHTML='';
     const total=cantosOrdenados.length;
     cantosOrdenados.forEach((num,idx)=>{
       const celda=cantoCellsMap.get(num);
@@ -3024,9 +3271,36 @@
     });
     if(total){
       const etiqueta=cantosEtiquetas[total-1] || generarEtiquetaDesdeNumero(cantosOrdenados[total-1]);
-      ultimoCantoEl.innerHTML=`<span class="ultimo-etiqueta">Último</span><span class="ultimo-total">(${total})</span>: <span class="ultimo-numero">${etiqueta}</span>`;
+      ultimoCantoValorActual=etiqueta;
+      if(!ultimoCantoBoton){
+        ultimoCantoBoton=document.createElement('button');
+        ultimoCantoBoton.type='button';
+        ultimoCantoBoton.className='ultimo-boton';
+        ultimoCantoBoton.setAttribute('aria-label','Mostrar ventana del último canto');
+        ultimoCantoBoton.title='Ver detalle del último canto';
+        ultimoCantoBoton.addEventListener('click',evento=>{
+          evento.preventDefault();
+          mostrarVentanaUltimoCanto();
+        });
+      }
+      ultimoCantoBoton.textContent=etiqueta;
+      const etiquetaSpan=document.createElement('span');
+      etiquetaSpan.className='ultimo-etiqueta';
+      etiquetaSpan.textContent='Último';
+      const totalSpan=document.createElement('span');
+      totalSpan.className='ultimo-total';
+      totalSpan.textContent=`(${total})`;
+      const separador=document.createElement('span');
+      separador.className='ultimo-separador';
+      separador.textContent=':';
+      ultimoCantoEl.appendChild(etiquetaSpan);
+      ultimoCantoEl.appendChild(totalSpan);
+      ultimoCantoEl.appendChild(separador);
+      ultimoCantoEl.appendChild(ultimoCantoBoton);
     }else{
+      ultimoCantoValorActual='';
       ultimoCantoEl.textContent='Aún no se han registrado cantos.';
+      cerrarVentanaUltimoCanto();
     }
   }
 
@@ -3236,6 +3510,7 @@
       backLogo.alt='Logo HexaBingo';
       cartonBack.appendChild(backLogo);
       insertarBotonesFormas(botonesFormas);
+      colocarLeyendaPrincipalEnPanel(tablaInfoPrincipal);
       cartonDestacadoEl.appendChild(cartonBox);
       tablaInfoPrincipal.wrapper=cartonWrapper;
       tablaInfoPrincipal.cartonBack=cartonBack;
