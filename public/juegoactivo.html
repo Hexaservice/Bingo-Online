@@ -586,6 +586,7 @@
           text-shadow: 0 0 8px rgba(0,0,0,0.85), 0 0 16px rgba(0,0,0,0.55);
       }
       #carton-destacado .back-forma-line .back-forma-valor {
+          font-family: 'Poppins', sans-serif;
           font-size: clamp(1rem, 3.4vw, 1.25rem);
       }
       #carton-destacado .back-forma-line .back-forma-etiqueta {
@@ -606,6 +607,7 @@
           margin: 0;
       }
       #carton-destacado .carton-back-total-valor {
+          font-family: 'Poppins', sans-serif;
           font-size: clamp(1.6rem, 5vw, 2.2rem);
           margin: 0;
       }
@@ -722,7 +724,7 @@
           display: block;
       }
       .panel-ganancias-totales__valor {
-          font-family: 'Bangers', cursive;
+          font-family: 'Poppins', sans-serif;
           font-size: clamp(1rem, 4.8vw, 1.9rem);
           color: #00c853;
           text-shadow: 0 0 12px rgba(255,255,255,0.9), 0 0 24px rgba(0, 200, 83, 0.45);
@@ -2124,6 +2126,7 @@
   let cartonPrincipalInfo = null;
   let resaltadoTemporal = {timer:null, tablas:null, cartonId:null};
   let formaDestacadaSeleccionada = null;
+  let desplazamientoArribaPendiente = false;
   let evitarReaplicarFormaDestacada = false;
   let panelFormasLeyendaEl = null;
   let panelGananciasTotalesEl = null;
@@ -2302,6 +2305,30 @@
   window.addEventListener('resize', actualizarAlturaBotonesRetrato);
   window.addEventListener('orientationchange', actualizarAlturaBotonesRetrato);
   window.addEventListener('load', actualizarAlturaBotonesRetrato);
+
+  function desplazarVentanaArribaSuavemente(){
+    const inicio = window.scrollY || document.documentElement.scrollTop || 0;
+    if(inicio <= 0) return;
+    const duracionBase = 600;
+    const duracion = Math.min(900, Math.max(400, inicio * 0.6, duracionBase));
+    const momentoInicio = performance.now();
+    const easeInOut = progreso => progreso < 0.5
+      ? 2 * progreso * progreso
+      : 1 - Math.pow(-2 * progreso + 2, 2) / 2;
+
+    function animarScroll(momentoActual){
+      const tiempoTranscurrido = momentoActual - momentoInicio;
+      const progreso = Math.min(tiempoTranscurrido / duracion, 1);
+      const factorSuavizado = easeInOut(progreso);
+      const posicionActual = inicio * (1 - factorSuavizado);
+      window.scrollTo({top: posicionActual, left: 0});
+      if(progreso < 1){
+        requestAnimationFrame(animarScroll);
+      }
+    }
+
+    requestAnimationFrame(animarScroll);
+  }
 
   let unsubscribeSorteos = null;
   let unsubscribeCantos = null;
@@ -3544,6 +3571,7 @@
         if(cartonSeleccionadoId!==carton.id){
           cartonSeleccionadoId=carton.id;
           formaDestacadaSeleccionada=null;
+          desplazamientoArribaPendiente=true;
           renderCartonesJugador();
         }
       });
@@ -3552,6 +3580,7 @@
           evento.preventDefault();
           cartonSeleccionadoId=carton.id;
           formaDestacadaSeleccionada=null;
+          desplazamientoArribaPendiente=true;
           renderCartonesJugador();
         }
       });
@@ -3666,6 +3695,10 @@
       const tablas=tablasPorCarton.get(carton.id)||[];
       configurarAnimacionCarton(carton,tablas);
     });
+    if(desplazamientoArribaPendiente){
+      desplazamientoArribaPendiente=false;
+      requestAnimationFrame(desplazarVentanaArribaSuavemente);
+    }
   }
 
   function abrirModalGanadores(forma){
