@@ -2257,6 +2257,7 @@
   let cantosOrdenados = [];
   let cantosEtiquetas = [];
   let cantosIndiceMap = new Map();
+  let cantosResultadoMap = new Map();
   let formasActivas = [];
   let cartonesSorteo = new Map();
   let cartonesGanadoresPorForma = new Map();
@@ -2905,7 +2906,7 @@
             const texto=Number.isFinite(numero)?String(numero).padStart(2,'0'):String(valor);
             span.textContent=texto;
             td.dataset.valor=numero;
-            if(cantosIndiceMap.has(numero)){
+            if(cantosIndiceMap.has(numero) && esCantoGanador(numero)){
               cantada='1';
               td.classList.add('celda-cantada');
             }
@@ -3388,6 +3389,21 @@
       if(Number.isFinite(n)) return n;
     }
     return null;
+  }
+
+  function esCantoGanador(numero){
+    if(!Number.isFinite(numero)) return false;
+    if(!(cantosResultadoMap instanceof Map) || cantosResultadoMap.size===0){
+      return true;
+    }
+    if(!cantosResultadoMap.has(numero)){
+      return true;
+    }
+    const estado=cantosResultadoMap.get(numero);
+    if(typeof estado==='string' && estado.trim().length){
+      return estado.trim().toLowerCase()==='g';
+    }
+    return true;
   }
 
   function generarEtiquetaDesdeNumero(numero){
@@ -4058,17 +4074,78 @@
   }
 
   function procesarCantos(data){
-    const lista=Array.isArray(data)?data:[];
+    const payload=Array.isArray(data)?{numeros:data}:data&&typeof data==='object'?data:{};
+    const listaNumeros=Array.isArray(payload?.numeros)?payload.numeros:[];
+    const detallesLista=Array.isArray(payload?.detalles)?payload.detalles:[];
+    const detallesNormalizados=new Map();
+    if(detallesLista.length){
+      detallesLista.forEach((item,indice)=>{
+        const textoNumero=(item?.numero ?? item?.valor ?? item?.canto ?? item?.etiqueta ?? '').toString();
+        const numeroNormalizado=normalizarNumero(textoNumero);
+        if(numeroNormalizado===null) return;
+        const ordenRaw=Number(item?.orden);
+        const orden=Number.isFinite(ordenRaw)?ordenRaw:indice;
+        const etiquetaDetalle=obtenerEtiquetaCanto(textoNumero) || generarEtiquetaDesdeNumero(numeroNormalizado);
+        const estadoTexto=(item?.estatus ?? item?.resultado ?? item?.estado ?? item?.status ?? '').toString().trim().toLowerCase();
+        detallesNormalizados.set(numeroNormalizado,{
+          estado:estadoTexto,
+          etiqueta:etiquetaDetalle,
+          orden
+        });
+      });
+    }
+    let valoresBase=[];
+    if(listaNumeros.length){
+      valoresBase=listaNumeros.slice();
+    }else if(Array.isArray(payload?.lista) && payload.lista.length){
+      valoresBase=payload.lista.slice();
+    }else if(detallesNormalizados.size){
+      valoresBase=Array.from(detallesNormalizados.entries())
+        .sort((a,b)=>{
+          const ordenA=a[1]?.orden;
+          const ordenB=b[1]?.orden;
+          if(Number.isFinite(ordenA) && Number.isFinite(ordenB)) return ordenA-ordenB;
+          if(Number.isFinite(ordenA)) return -1;
+          if(Number.isFinite(ordenB)) return 1;
+          return 0;
+        })
+        .map(([numero,info])=>info?.etiqueta || generarEtiquetaDesdeNumero(numero));
+    }
     const normalizados=[];
     const etiquetas=[];
-    lista.forEach(val=>{
-      const n=normalizarNumero(val);
-      if(n!==null){
-        normalizados.push(n);
-        const etiqueta=obtenerEtiquetaCanto(val);
-        etiquetas.push(etiqueta || generarEtiquetaDesdeNumero(n));
+    const resultadoMapa=new Map();
+    const hayDetalles=detallesNormalizados.size>0;
+    valoresBase.forEach(valor=>{
+      const numero=normalizarNumero(valor);
+      if(numero===null) return;
+      normalizados.push(numero);
+      let etiqueta=obtenerEtiquetaCanto(valor);
+      if(!etiqueta){
+        const infoDetalle=detallesNormalizados.get(numero);
+        if(infoDetalle?.etiqueta){
+          etiqueta=infoDetalle.etiqueta;
+        }
+      }
+      if(!etiqueta){
+        etiqueta=generarEtiquetaDesdeNumero(numero);
+      }
+      etiquetas.push(etiqueta);
+      const infoDetalle=detallesNormalizados.get(numero);
+      const estadoNormalizado=typeof infoDetalle?.estado==='string'?infoDetalle.estado.trim().toLowerCase():'';
+      if(estadoNormalizado==='g' || estadoNormalizado==='p'){
+        resultadoMapa.set(numero,estadoNormalizado);
+      }else if(hayDetalles){
+        resultadoMapa.set(numero,'g');
       }
     });
+    detallesNormalizados.forEach((info,numero)=>{
+      if(resultadoMapa.has(numero)) return;
+      const estadoNormalizado=typeof info?.estado==='string'?info.estado.trim().toLowerCase():'';
+      if(estadoNormalizado==='g' || estadoNormalizado==='p'){
+        resultadoMapa.set(numero,estadoNormalizado);
+      }
+    });
+    cantosResultadoMap=resultadoMapa;
     cantosOrdenados=normalizados;
     cantosEtiquetas=etiquetas;
     calcularGanadores();
@@ -4152,8 +4229,13 @@
       todasFormasConGanadores=false;
       indiceUltimoGanador=null;
     }
-    const hayCantos=cantosOrdenados.length>0;
-    cantosComplementariosActivos=hayCantos && todasFormasConGanadores && Number.isInteger(indiceUltimoGanador);
+    const totalCantos=cantosOrdenados.length;
+    if(todasFormasConGanadores && Number.isInteger(indiceUltimoGanador)){
+      const limite=Number(indiceUltimoGanador)+1;
+      cantosComplementariosActivos=totalCantos>limite;
+    }else{
+      cantosComplementariosActivos=false;
+    }
     if(!cantosComplementariosActivos){
       cerrarAvisoComplementarios();
     }else if(!avisoComplementariosMostrado){
@@ -4168,7 +4250,7 @@
     }
     if(!activeSorteoId) return;
     unsubscribeCantos=db.collection('cantos').doc(activeSorteoId).onSnapshot(doc=>{
-      const datos=doc.exists?(doc.data()?.numeros||[]):[];
+      const datos=doc.exists?doc.data():null;
       procesarCantos(datos);
     },err=>console.error('Error escuchando cantos',err));
   }

@@ -454,6 +454,57 @@ let editandoTipo=null;
 let editandoId=null;
 const selladoOverlay=document.getElementById('sellado-overlay');
 const selladoCerrarBtn=document.getElementById('sellado-cerrar-btn');
+const CONSECUTIVOS_COLLECTION='ConsecutivosCarton';
+let unsubscribeConsecutivoCarton=null;
+let ultimoNumeroCartonAsignado=0;
+let siguienteNumeroCarton=1;
+
+function actualizarNumeroCartonLocal(ultimo){
+  const numero=Number(ultimo);
+  if(Number.isFinite(numero) && numero>=0){
+    ultimoNumeroCartonAsignado=numero;
+    siguienteNumeroCarton=numero+1;
+  }else{
+    ultimoNumeroCartonAsignado=0;
+    siguienteNumeroCarton=1;
+  }
+  refrescarNumeroCartonVisual();
+}
+
+function refrescarNumeroCartonVisual(forzar=false){
+  const numEl=document.getElementById('carton-num');
+  if(!numEl) return;
+  if(!forzar && consultando) return;
+  const numeroMostrar=Number(siguienteNumeroCarton);
+  if(Number.isFinite(numeroMostrar) && numeroMostrar>0){
+    numEl.textContent=String(numeroMostrar).padStart(4,'0');
+  }else{
+    numEl.textContent='----';
+  }
+}
+
+function escucharConsecutivoCarton(sorteoId){
+  if(unsubscribeConsecutivoCarton){
+    unsubscribeConsecutivoCarton();
+    unsubscribeConsecutivoCarton=null;
+  }
+  actualizarNumeroCartonLocal(0);
+  if(!sorteoId || typeof db==='undefined' || !db){
+    return;
+  }
+  try{
+    const docRef=db.collection(CONSECUTIVOS_COLLECTION).doc(sorteoId);
+    unsubscribeConsecutivoCarton=docRef.onSnapshot(snapshot=>{
+      const data=snapshot.exists?snapshot.data():{};
+      const ultimo=Number(data?.ultimoNumero ?? data?.ultimo ?? data?.valor ?? 0);
+      actualizarNumeroCartonLocal(Number.isFinite(ultimo)?ultimo:0);
+    },error=>{
+      console.error('Error escuchando consecutivo de cartones',error);
+    });
+  }catch(error){
+    console.error('No se pudo escuchar el consecutivo de cartones',error);
+  }
+}
 
 if(selladoCerrarBtn){
   selladoCerrarBtn.addEventListener('click',ocultarMensajeSellado);
@@ -677,6 +728,7 @@ function toggleForma(idx){
       board.appendChild(tr);
     }
     document.querySelector('.carton-back').addEventListener('click',flipCard);
+    refrescarNumeroCartonVisual(true);
   }
 
   function openModal(cell){
@@ -739,6 +791,7 @@ function toggleForma(idx){
     seleccionadoJugado=null;
     resetForma();
     saveToCookie();
+    refrescarNumeroCartonVisual(true);
   }
 
   function setBoard(carton){
@@ -805,10 +858,7 @@ function toggleForma(idx){
   }else{
     pv.textContent=Math.round(premioActual);
   }
-  const numEl=document.getElementById('carton-num');
-    if(numEl && !consultando){
-      numEl.textContent=(jug+gratisJug+1).toString().padStart(4,'0');
-    }
+  refrescarNumeroCartonVisual();
   renderPremios('back-premios');
   }
 
@@ -921,6 +971,7 @@ function toggleForma(idx){
     currentSorteoNombre=s.nombre;
     currentSorteoTipo=s.tipo;
     currentSorteoEstado=s.estado||'';
+    escucharConsecutivoCarton(currentSorteo);
     ocultarMensajeSellado();
     const btn=document.getElementById('sorteo-btn');
     btn.textContent=s.nombre;
@@ -1004,11 +1055,15 @@ function toggleForma(idx){
 
     const billeteraRef=db.collection('Billetera').doc(user.email);
     const billeteraDoc=await billeteraRef.get();
-    let creditos=billeteraDoc.data().creditos||0;
-    let gratis=billeteraDoc.data().CartonesGratis||0;
+    const creditos=Number(billeteraDoc.data()?.creditos||0);
+    const gratis=Number(billeteraDoc.data()?.CartonesGratis||0);
 
     const sorteoRef=db.collection('sorteos').doc(currentSorteo);
     const sorteoDoc=await sorteoRef.get();
+    if(!sorteoDoc.exists){
+      alert('No se encontró la información del sorteo seleccionado.');
+      return;
+    }
     const sorteoData=sorteoDoc.data();
     currentSorteoEstado=sorteoData?.estado||currentSorteoEstado;
     if(currentSorteoEstado==='Sellado'){
@@ -1039,87 +1094,142 @@ function toggleForma(idx){
       return;
     }
 
-    const ncarton=document.getElementById('carton-num').textContent.toString();
-    const dup=await db.collection('CartonJugado').where('sorteoId','==',currentSorteo).where('Ncarton','==',ncarton).get();
-    if(!dup.empty){
-      alert('Este número de cartón ya fue jugado en este sorteo.');
+    const valor=Number(sorteoData.valorCarton||0);
+    const gratisJugando=Number(sorteoData.cartonesgratisjugando||0);
+    const maxGratis=Number(sorteoData.maxcartongratis||0);
+    const vars=await db.collection('Variablesglobales').doc('Parametros').get();
+    const porcentaje=Number(vars.data()?.porcentaje||0);
+    const porcentajesu=Number(vars.data()?.porcentajesu||0);
+    let jugarGratis=false;
+    if(gratis>0 && (maxGratis<=0 || gratisJugando<maxGratis)){
+      jugarGratis=true;
+    }else if(gratis>0 && maxGratis>0 && gratisJugando>=maxGratis){
+      if(creditos>=valor){
+        jugarGratis=false;
+      }else{
+        alert('No tienes créditos suficientes.');
+        return;
+      }
+    }else if(gratis<=0){
+      if(creditos>=valor){
+        jugarGratis=false;
+      }else{
+        alert('No tienes créditos suficientes.');
+        return;
+      }
+    }else{
+      alert('No tienes créditos ni cartones gratis disponibles.');
       return;
     }
 
-    const valor=Number(sorteoData.valorCarton||0);
-    const jugActual=sorteoData.cartonesjugando||0;
-    const gratisJugando=sorteoData.cartonesgratisjugando||0;
-    const maxGratis=sorteoData.maxcartongratis||0;
-    const cartonNum=jugActual+gratisJugando+1;
-    const vars=await db.collection('Variablesglobales').doc('Parametros').get();
-    const porcentaje=Number(vars.data().porcentaje||0);
-    const porcentajesu=Number(vars.data().porcentajesu||0);
-    let jugarGratis=false;
-    let nuevoCreditos=creditos;
-    let nuevoGratis=gratis;
-    let porcentajeVal=0, porcentajeSuVal=0, paraPremio=0;
-    if(gratis>0){
-      if(gratisJugando < maxGratis){
-        jugarGratis=true;
-        nuevoGratis=gratis-1;
-        const gl=document.getElementById('gratis-label');
-        gl.style.color='';
-        gl.style.animation='';
-      }else{
-        const gl=document.getElementById('gratis-label');
-        gl.style.color='red';
-        gl.style.animation='none';
-        if(creditos>=valor){
-          nuevoCreditos=creditos-valor;
-          porcentajeVal=valor*porcentaje/100;
-          porcentajeSuVal=valor*porcentajesu/100;
-          paraPremio=valor-porcentajeVal-porcentajeSuVal;
-        }else{
-          alert('No tienes créditos suficientes.');
-          return;
+    await initServerTime();
+    const fechaActual=fechaServidor();
+    const horaActual=horaServidor();
+    const consecutivoRef=db.collection(CONSECUTIVOS_COLLECTION).doc(currentSorteo);
+    const cartonRef=db.collection('CartonJugado').doc();
+
+    try{
+      const resultado=await db.runTransaction(async tx=>{
+        const billeteraSnap=await tx.get(billeteraRef);
+        const sorteoSnap=await tx.get(sorteoRef);
+        const consecutivoSnap=await tx.get(consecutivoRef);
+        if(!billeteraSnap.exists){
+          throw new Error('BILLETERA_NO_ENCONTRADA');
         }
+        if(!sorteoSnap.exists){
+          throw new Error('SORTEO_NO_ENCONTRADO');
+        }
+        const estadoActual=(sorteoSnap.data()?.estado||'').toLowerCase();
+        if(estadoActual==='sellado'){
+          throw new Error('SORTEO_SELLADO');
+        }
+        const valorCartonActual=Number(sorteoSnap.data()?.valorCarton||valor);
+        const gratisJugandoActual=Number(sorteoSnap.data()?.cartonesgratisjugando||0);
+        const maxGratisActual=Number(sorteoSnap.data()?.maxcartongratis||0);
+        const porcentajeValTx=valorCartonActual*porcentaje/100;
+        const porcentajeSuValTx=valorCartonActual*porcentajesu/100;
+        const paraPremioTx=valorCartonActual-porcentajeValTx-porcentajeSuValTx;
+        const creditosActual=Number(billeteraSnap.data()?.creditos||0);
+        const gratisActual=Number(billeteraSnap.data()?.CartonesGratis||0);
+        let tipoCarton='pagado';
+        let creditosRestantes=creditosActual;
+        let gratisRestantes=gratisActual;
+        if(jugarGratis){
+          if(gratisActual<=0){
+            throw new Error('SIN_GRATIS');
+          }
+          if(maxGratisActual>0 && gratisJugandoActual>=maxGratisActual){
+            throw new Error('LIMITE_GRATIS');
+          }
+          tx.update(billeteraRef,{CartonesGratis:firebase.firestore.FieldValue.increment(-1)});
+          tx.update(sorteoRef,{cartonesgratisjugando:firebase.firestore.FieldValue.increment(1)});
+          tipoCarton='gratis';
+          gratisRestantes=gratisActual-1;
+        }else{
+          if(creditosActual<valorCartonActual){
+            throw new Error('SIN_CREDITOS');
+          }
+          tx.update(billeteraRef,{creditos:firebase.firestore.FieldValue.increment(-valorCartonActual)});
+          tx.update(sorteoRef,{
+            cartonesjugando:firebase.firestore.FieldValue.increment(1),
+            totalPremios:firebase.firestore.FieldValue.increment(paraPremioTx),
+            totalporcentaje:firebase.firestore.FieldValue.increment(porcentajeValTx),
+            totalporcentajesu:firebase.firestore.FieldValue.increment(porcentajeSuValTx)
+          });
+          creditosRestantes=creditosActual-valorCartonActual;
+        }
+        const ultimoNumero=Number(consecutivoSnap.exists?(consecutivoSnap.data()?.ultimoNumero ?? consecutivoSnap.data()?.ultimo ?? consecutivoSnap.data()?.valor ?? 0):0);
+        const siguienteNumero=Number.isFinite(ultimoNumero) && ultimoNumero>=0?ultimoNumero+1:1;
+        tx.set(consecutivoRef,{
+          ultimoNumero:siguienteNumero,
+          actualizado:firebase.firestore.FieldValue.serverTimestamp()
+        },{merge:true});
+        tx.set(cartonRef,{
+          userId:user.uid,
+          alias,
+          sorteoId:currentSorteo,
+          cartonNum:siguienteNumero,
+          Ncarton:String(siguienteNumero).padStart(4,'0'),
+          tipocarton:tipoCarton,
+          posiciones,
+          fecha:fechaActual,
+          hora:horaActual
+        });
+        return {numero:siguienteNumero, tipoCarton, creditosRestantes, gratisRestantes};
+      });
+      actualizarNumeroCartonLocal(resultado.numero);
+      const creditosLabel=document.getElementById('creditos-label');
+      if(creditosLabel && Number.isFinite(resultado.creditosRestantes)){
+        creditosLabel.textContent=resultado.creditosRestantes;
       }
-    }else if(creditos>=valor){
-      nuevoCreditos=creditos-valor;
-      porcentajeVal=valor*porcentaje/100;
-      porcentajeSuVal=valor*porcentajesu/100;
-      paraPremio=valor-porcentajeVal-porcentajeSuVal;
-    }else{
-      alert('No tienes créditos suficientes.');
+      const gratisLabel=document.getElementById('gratis-label');
+      if(gratisLabel && Number.isFinite(resultado.gratisRestantes)){
+        gratisLabel.textContent=resultado.gratisRestantes;
+      }
+      await actualizarDatosSorteo();
+      await actualizarCartonesJugador();
+      alert('Jugada de Cartón enviada correctamente.');
+      limpiarcarton();
+    }catch(error){
+      let mensaje='No se pudo registrar tu cartón. Inténtalo nuevamente.';
+      if(error?.message==='SIN_CREDITOS'){
+        mensaje='No tienes créditos suficientes.';
+      }else if(error?.message==='SIN_GRATIS'){
+        mensaje='Ya no tienes cartones gratis disponibles.';
+      }else if(error?.message==='LIMITE_GRATIS'){
+        mensaje='Se alcanzó el límite de cartones gratis para este sorteo.';
+      }else if(error?.message==='SORTEO_SELLADO'){
+        mensaje=mostrarMensajeSellado(currentSorteoNombre||sorteoData?.nombre||'este sorteo');
+      }else if(error?.message==='SORTEO_NO_ENCONTRADO'){
+        mensaje='No se encontró la información actual del sorteo seleccionado.';
+      }else if(error?.message==='BILLETERA_NO_ENCONTRADA'){
+        mensaje='No se encontró tu billetera. Actualiza la página e inténtalo nuevamente.';
+      }else{
+        console.error('Error registrando cartón',error);
+      }
+      alert(mensaje);
       return;
     }
-    if(jugarGratis){
-      await billeteraRef.update({CartonesGratis:nuevoGratis});
-      document.getElementById('gratis-label').textContent=nuevoGratis;
-      await sorteoRef.update({
-        cartonesgratisjugando: firebase.firestore.FieldValue.increment(1)
-      });
-    }else{
-      await billeteraRef.update({creditos:nuevoCreditos});
-      document.getElementById('creditos-label').textContent=nuevoCreditos;
-      await sorteoRef.update({
-        cartonesjugando: firebase.firestore.FieldValue.increment(1),
-        totalPremios: firebase.firestore.FieldValue.increment(paraPremio),
-        totalporcentaje: firebase.firestore.FieldValue.increment(porcentajeVal),
-        totalporcentajesu: firebase.firestore.FieldValue.increment(porcentajeSuVal)
-      });
-    }
-    await initServerTime();
-    await db.collection('CartonJugado').add({
-      userId:user.uid,
-      alias:alias,
-      sorteoId:currentSorteo,
-      cartonNum:cartonNum,
-      Ncarton:ncarton,
-      tipocarton:jugarGratis?'gratis':'pagado',
-      posiciones:posiciones,
-      fecha:fechaServidor(),
-      hora:horaServidor()
-    });
-    await actualizarDatosSorteo();
-    await actualizarCartonesJugador();
-    alert('Jugada de Cartón enviada correctamente.');
-    limpiarcarton();
   }
 
   async function confirmarCompra(){
