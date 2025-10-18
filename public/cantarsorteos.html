@@ -2355,7 +2355,7 @@
           estatus: 'g',
           adminId: usuario.uid || '',
           adminEmail: usuario.email || '',
-          creado: firebase.firestore.FieldValue.serverTimestamp()
+          creado: firebase.firestore.Timestamp.now()
         });
         const payload = {
           numeros: numerosExistentes,
@@ -2771,7 +2771,11 @@
         const estatusEsperado = idx <= limiteGanador ? 'g' : 'p';
         const adminId = existente.adminId || existente.administradorId || '';
         const adminEmail = existente.adminEmail || existente.emailAdministrador || '';
-        const creado = existente.creado || existente.timestamp || null;
+        let creado = existente.creado || existente.timestamp || null;
+        if(!creado){
+          creado = firebase.firestore.Timestamp.now();
+          requiereActualizacion = true;
+        }
         if((existente.estatus || '').toLowerCase() !== estatusEsperado){
           requiereActualizacion = true;
         }
