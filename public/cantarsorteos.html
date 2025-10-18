@@ -4956,9 +4956,29 @@
       await db.collection('sorteos').doc(currentSorteoId).update({ estado: 'Finalizado' });
       mensajeEl.textContent = 'El sorteo fue finalizado correctamente.';
       finalizarBtn.classList.remove('attention');
+      abrirPdfResultados();
     } catch (err) {
       console.error('Error finalizando sorteo', err);
       alert('No fue posible finalizar el sorteo.');
+    }
+  }
+
+  function abrirPdfResultados(){
+    if(!currentSorteoId) return;
+    try {
+      const destinoUrl = new URL('pdfresultados.html', window.location.href);
+      destinoUrl.searchParams.set('s', currentSorteoId);
+      const ventana = window.open(destinoUrl.toString(), '_blank', 'noopener');
+      if(!ventana){
+        window.location.assign(destinoUrl.toString());
+      }
+    } catch (error) {
+      const fallback = `pdfresultados.html?s=${encodeURIComponent(currentSorteoId)}`;
+      try {
+        window.open(fallback, '_blank', 'noopener');
+      } catch (fallbackError) {
+        window.location.href = fallback;
+      }
     }
   }
 

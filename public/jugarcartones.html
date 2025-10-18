@@ -1085,8 +1085,11 @@ function toggleForma(idx){
       .where('userId','==',user.uid)
       .get();
     let cartonDuplicado=false;
+    let gratisUsadosJugador=0;
     jugadosJugador.forEach(doc=>{
-      const firmaDoc=generarFirmaPosiciones(doc.data()?.posiciones||[]);
+      const dataDoc=doc.data()||{};
+      const firmaDoc=generarFirmaPosiciones(dataDoc.posiciones||[]);
+      if((dataDoc.tipocarton||'').toString().toLowerCase()==='gratis') gratisUsadosJugador++;
       if(firmaDoc===firmaActual) cartonDuplicado=true;
     });
     if(cartonDuplicado){
@@ -1095,15 +1098,15 @@ function toggleForma(idx){
     }
 
     const valor=Number(sorteoData.valorCarton||0);
-    const gratisJugando=Number(sorteoData.cartonesgratisjugando||0);
     const maxGratis=Number(sorteoData.maxcartongratis||0);
     const vars=await db.collection('Variablesglobales').doc('Parametros').get();
     const porcentaje=Number(vars.data()?.porcentaje||0);
     const porcentajesu=Number(vars.data()?.porcentajesu||0);
     let jugarGratis=false;
-    if(gratis>0 && (maxGratis<=0 || gratisJugando<maxGratis)){
+    const gratisJugandoJugador=gratisUsadosJugador;
+    if(gratis>0 && (maxGratis<=0 || gratisJugandoJugador<maxGratis)){
       jugarGratis=true;
-    }else if(gratis>0 && maxGratis>0 && gratisJugando>=maxGratis){
+    }else if(gratis>0 && maxGratis>0 && gratisJugandoJugador>=maxGratis){
       if(creditos>=valor){
         jugarGratis=false;
       }else{
@@ -1144,13 +1147,13 @@ function toggleForma(idx){
           throw new Error('SORTEO_SELLADO');
         }
         const valorCartonActual=Number(sorteoSnap.data()?.valorCarton||valor);
-        const gratisJugandoActual=Number(sorteoSnap.data()?.cartonesgratisjugando||0);
         const maxGratisActual=Number(sorteoSnap.data()?.maxcartongratis||0);
         const porcentajeValTx=valorCartonActual*porcentaje/100;
         const porcentajeSuValTx=valorCartonActual*porcentajesu/100;
         const paraPremioTx=valorCartonActual-porcentajeValTx-porcentajeSuValTx;
         const creditosActual=Number(billeteraSnap.data()?.creditos||0);
         const gratisActual=Number(billeteraSnap.data()?.CartonesGratis||0);
+        let gratisUsadosTx=0;
         let tipoCarton='pagado';
         let creditosRestantes=creditosActual;
         let gratisRestantes=gratisActual;
@@ -1158,8 +1161,16 @@ function toggleForma(idx){
           if(gratisActual<=0){
             throw new Error('SIN_GRATIS');
           }
-          if(maxGratisActual>0 && gratisJugandoActual>=maxGratisActual){
-            throw new Error('LIMITE_GRATIS');
+          if(maxGratisActual>0){
+            const jugadorGratisQuery=db.collection('CartonJugado')
+              .where('sorteoId','==',currentSorteo)
+              .where('userId','==',user.uid)
+              .where('tipocarton','==','gratis');
+            const jugadorGratisSnap=await tx.get(jugadorGratisQuery);
+            gratisUsadosTx=jugadorGratisSnap.size||0;
+            if(gratisUsadosTx>=maxGratisActual){
+              throw new Error('LIMITE_GRATIS');
+            }
           }
           tx.update(billeteraRef,{CartonesGratis:firebase.firestore.FieldValue.increment(-1)});
           tx.update(sorteoRef,{cartonesgratisjugando:firebase.firestore.FieldValue.increment(1)});
@@ -1259,14 +1270,23 @@ function toggleForma(idx){
       return;
     }
     const valor=Number(sorteoData.valorCarton||0);
+    const jugadosJugador=await db.collection('CartonJugado')
+      .where('sorteoId','==',currentSorteo)
+      .where('userId','==',user.uid)
+      .get();
+    let gratisUsadosJugador=0;
+    jugadosJugador.forEach(doc=>{
+      const dataDoc=doc.data()||{};
+      if((dataDoc.tipocarton||'').toString().toLowerCase()==='gratis') gratisUsadosJugador++;
+    });
     const gratisJugando=sorteoData.cartonesgratisjugando||0;
     const maxGratis=sorteoData.maxcartongratis||0;
     let mensaje='';
     let continuar=false;
-    if(gratis>0 && gratisJugando<maxGratis){
+    if(gratis>0 && (maxGratis<=0 || gratisUsadosJugador<maxGratis)){
       mensaje=`¿Estas seguro de jugar el cartón?\nEstarás usando uno de tus cartones gratis disponible`;
       continuar=true;
-    }else if(gratis>0 && gratisJugando>=maxGratis){
+    }else if(gratis>0 && maxGratis>0 && gratisUsadosJugador>=maxGratis){
       if(creditos>=valor){
         mensaje=`¿Estas seguro de jugar el cartón?\nTienes cartones gratis, pero ya se llego al máximo permitido para este sorteo. se descontaran de tus creditos: ${valor} por el valor del cartón`;
         continuar=true;

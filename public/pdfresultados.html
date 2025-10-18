@@ -1,0 +1,2383 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Resultados</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: only light;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #ffffff;
+      margin: 0;
+      padding: clamp(16px, 2.5vw, 28px) clamp(12px, 2vw, 20px);
+      box-sizing: border-box;
+      color: #1a1a1a;
+    }
+    body.modal-activa {
+      overflow: hidden;
+    }
+    #salir-btn {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      width: 120px;
+      height: 40px;
+      background: orange;
+      border: 4px solid orange;
+      border-radius: 10px;
+      color: white;
+      text-shadow: 2px 2px 4px #000;
+      font-family: 'Bangers', cursive;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s;
+      z-index: 1001;
+    }
+    #salir-btn:hover { transform: scale(1.05); box-shadow: 0 0 15px rgba(255,215,0,0.8); }
+    #salir-btn:active { transform: scale(0.95); }
+    #salir-btn .label { font-size: 1.1rem; }
+    @media (orientation: portrait) {
+      #salir-btn { width: 40px; }
+      #salir-btn .label { display: none; }
+    }
+    #acciones-fixed {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      gap: 10px;
+      z-index: 1001;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      width: min(100%, 420px);
+    }
+    #acciones-fixed button {
+      padding: 10px 18px;
+      font-family: 'Bangers', cursive;
+      font-size: 1.1rem;
+      border-radius: 12px;
+      border: 4px solid #FFD700;
+      color: #ffffff;
+      text-shadow: 1px 1px 2px #000;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      transition: transform 0.3s, box-shadow 0.3s;
+      flex: 0 0 auto;
+      min-width: clamp(120px, 32vw, 180px);
+      white-space: nowrap;
+    }
+    #acciones-fixed button:hover { transform: scale(1.05); }
+    #acciones-fixed button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    #generar-resultados-btn {
+      background: linear-gradient(#005bb5, #33a0ff);
+    }
+    #generar-pdf-btn {
+      background: linear-gradient(#008c3a, #66d17a);
+      display: none;
+    }
+    #pdf-listo-btn {
+      position: relative;
+      display: none;
+      background: linear-gradient(#b85c00, #ffaf40);
+      overflow: visible;
+    }
+    #pdf-listo-btn.pdf-disponible {
+      padding-right: 48px;
+    }
+    #pdf-listo-btn .pdf-floating-icon {
+      position: absolute;
+      top: -38px;
+      right: -18px;
+      width: 44px;
+      height: 52px;
+      opacity: 0;
+      transform: translateY(12px) scale(0.85);
+      pointer-events: none;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+    #pdf-listo-btn .pdf-floating-icon svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 6px 10px rgba(0,0,0,0.35));
+    }
+    #pdf-listo-btn.pdf-disponible .pdf-floating-icon {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      animation: pdfResultadosFloat 3.4s ease-in-out infinite, pdfResultadosGlow 2.8s ease-in-out infinite;
+    }
+    @keyframes pdfResultadosFloat {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-6px) scale(1.05); }
+    }
+    @keyframes pdfResultadosGlow {
+      0%, 100% { filter: drop-shadow(0 6px 10px rgba(255, 220, 120, 0.55)); }
+      50% { filter: drop-shadow(0 10px 14px rgba(255, 240, 180, 0.85)); }
+    }
+    .orientacion-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(6, 18, 42, 0.78);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 1102;
+    }
+    .orientacion-modal.visible {
+      display: flex;
+    }
+    .orientacion-modal-contenido {
+      width: min(420px, 92%);
+      background: linear-gradient(165deg, #b71c1c 0%, #ff6f60 55%, #ff1744 100%);
+      border: 4px solid #ffe082;
+      border-radius: 18px;
+      box-shadow: 0 22px 45px rgba(0,0,0,0.45);
+      padding: clamp(22px, 4vw, 32px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: clamp(12px, 2.4vw, 18px);
+      text-align: center;
+      color: #ffffff;
+      position: relative;
+      overflow: hidden;
+    }
+    .orientacion-modal-contenido::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.28), transparent 55%);
+      pointer-events: none;
+    }
+    .orientacion-modal-icono {
+      font-size: clamp(2.2rem, 6vw, 3rem);
+      text-shadow: 0 4px 10px rgba(0,0,0,0.35);
+      z-index: 1;
+    }
+    .orientacion-modal-titulo {
+      font-family: 'Bangers', cursive;
+      font-size: clamp(1.6rem, 4.8vw, 2.2rem);
+      letter-spacing: 1.2px;
+      margin: 0;
+      z-index: 1;
+    }
+    .orientacion-modal-texto {
+      margin: 0;
+      font-size: clamp(1rem, 3.6vw, 1.1rem);
+      line-height: 1.5;
+      font-weight: 600;
+      z-index: 1;
+    }
+    .orientacion-modal-texto .orientacion-inline-icono {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2em;
+      margin-left: 6px;
+    }
+    #orientacion-modal-aceptar {
+      border: 3px solid #ffe082;
+      border-radius: 12px;
+      background: #ffffff;
+      color: #b71c1c;
+      font-family: 'Bangers', cursive;
+      font-size: clamp(1.1rem, 3.4vw, 1.4rem);
+      padding: 10px 28px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+      z-index: 1;
+    }
+    #orientacion-modal-aceptar:hover {
+      transform: scale(1.05);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.4);
+    }
+    #orientacion-modal-aceptar:active {
+      transform: scale(0.95);
+    }
+    #pdf-wrapper {
+      max-width: none;
+      margin: 0 auto;
+      text-align: center;
+      width: min(1440px, 100%);
+      padding: 0 clamp(8px, 1.6vw, 18px);
+      display: grid;
+      gap: clamp(18px, 2.4vw, 26px);
+    }
+    #resumen-layout {
+      display: grid;
+      gap: clamp(12px, 2vw, 20px);
+      margin: 0 auto;
+      width: 100%;
+      text-align: left;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-auto-rows: minmax(0, auto);
+      align-items: stretch;
+      grid-auto-flow: dense;
+    }
+    .resumen-bloque {
+      background: #ffffff;
+      border: 1px solid rgba(11,83,148,0.16);
+      border-radius: 14px;
+      padding: clamp(16px, 2.2vw, 22px);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    }
+    #resumen-header {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: clamp(10px, 1.8vw, 18px);
+      text-align: left;
+      min-width: 0;
+      grid-column: 1 / -1;
+    }
+    #resumen-header .header-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+    }
+    #logo {
+      width: 110px;
+      display: block;
+    }
+    #resumen-header .header-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: flex-start;
+      flex: 1 1 220px;
+      min-width: 0;
+    }
+    #nombre-sorteo {
+      font-family: 'Bangers', cursive;
+      font-size: clamp(2rem, 4vw, 2.6rem);
+      color: #0b5394;
+      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      overflow-wrap: anywhere;
+    }
+    #tipo-sorteo-titulo {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1rem;
+      color: #0b5394;
+      margin: 2px 0 0;
+      font-weight: 600;
+      text-transform: capitalize;
+      line-height: 1.3;
+    }
+    .dato-inline {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: clamp(8px, 1.4vw, 14px);
+      font-size: 0.95rem;
+      color: #0b5394;
+      text-align: left;
+      padding: clamp(16px, 2.2vw, 22px);
+      border-radius: 14px;
+      background: #ffffff;
+      border: 1px solid rgba(11,83,148,0.16);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+      height: 100%;
+    }
+    .dato-inline .dato-label {
+      font-family: 'Bangers', cursive;
+      font-size: 1rem;
+      letter-spacing: 0.5px;
+    }
+    .dato-inline .dato-valor {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 600;
+      color: #1a1a1a;
+      justify-self: end;
+      text-align: right;
+    }
+    #dato-fecha { color: #005bbb; }
+    #dato-cierre { color: #c62828; }
+    #dato-hora { color: #2e7d32; }
+    #dato-valor { color: #c76a00; }
+    #dato-maxgratis { color: #6a1b9a; }
+    .totales-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: clamp(8px, 1.6vw, 16px);
+      margin: 0;
+      justify-content: center;
+      text-align: center;
+      grid-column: 1 / -1;
+    }
+    .totales-header h2 {
+      font-family: 'Bangers', cursive;
+      font-size: clamp(1.6rem, 4.5vw, 2rem);
+      color: #0b6623;
+      margin: 0;
+      letter-spacing: 0.5px;
+    }
+    #total-premios {
+      font-size: clamp(1.8rem, 6vw, 2.6rem);
+      font-weight: 700;
+      color: #0b6623;
+      text-shadow: 0 0 6px rgba(255,255,255,0.9);
+    }
+    #formas-resumen {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: clamp(10px, 1.8vw, 18px);
+      width: 100%;
+      margin: clamp(18px, 3vw, 28px) auto 0;
+      align-items: stretch;
+    }
+    @media (min-width: 1024px) {
+      #resumen-layout {
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        grid-auto-flow: dense;
+      }
+      #resumen-layout > .dato-inline {
+        min-height: 100%;
+      }
+    }
+    .forma-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) clamp(130px, 28vw, 220px);
+      align-items: stretch;
+      min-width: 0;
+      width: 100%;
+      border-radius: 14px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.95);
+      border: 1px solid rgba(0,0,0,0.08);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.05);
+      gap: 0;
+    }
+    .forma-resumen {
+      display: grid;
+      gap: 6px;
+      padding: 12px 14px;
+      position: relative;
+      min-width: 0;
+      text-align: left;
+      align-content: start;
+      border-right: 1px solid rgba(0,0,0,0.08);
+      background: rgba(255,255,255,0.88);
+    }
+    .forma-info {
+      display: grid;
+      gap: 6px;
+      text-align: left;
+      align-content: start;
+      min-width: 0;
+    }
+    .forma-titulo {
+      font-family: 'Bangers', cursive;
+      font-size: 1.12rem;
+      color: var(--forma-color, #0b5394);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      grid-column: 1 / -1;
+    }
+    .forma-detalle {
+      font-size: 0.92rem;
+      color: #0b1d0b;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 4px 8px;
+      align-items: center;
+      background: rgba(11,83,148,0.04);
+      padding: 6px 10px;
+      border-radius: 10px;
+    }
+    .forma-detalle.sin-valor {
+      grid-template-columns: 1fr;
+    }
+    .forma-detalle.sin-valor .etiqueta {
+      justify-content: flex-start;
+    }
+    .forma-detalle .etiqueta {
+      font-weight: 600;
+      color: #0b5394;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .forma-detalle .valor {
+      font-weight: 700;
+      color: #1a1a1a;
+      font-size: 1.02rem;
+      display: block;
+      width: 100%;
+      text-align: right;
+    }
+    .forma-detalle .carton-icon {
+      width: 20px;
+      height: 20px;
+      flex: 0 0 auto;
+    }
+    .forma-mini-carton-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(6px, 1.4vw, 10px);
+      background: #ffffff;
+      height: 100%;
+      align-self: stretch;
+      min-width: 0;
+      border-left: 1px solid rgba(0,0,0,0.08);
+      width: 100%;
+      max-width: clamp(150px, 30vw, 220px);
+      box-sizing: border-box;
+    }
+    .forma-mini-carton {
+      border-collapse: separate;
+      border-spacing: 0;
+      background: linear-gradient(160deg, rgba(255,255,255,0.95), var(--forma-color-super-suave, #f3f7ff));
+      border-radius: 8px;
+      overflow: hidden;
+      width: 100%;
+      height: auto;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+      position: relative;
+      z-index: 1;
+      aspect-ratio: 5 / 6;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      grid-auto-rows: 1fr;
+      max-width: 100%;
+    }
+    .forma-mini-carton thead,
+    .forma-mini-carton tbody,
+    .forma-mini-carton tr {
+      display: contents;
+    }
+    .forma-mini-carton th,
+    .forma-mini-carton td {
+      border: 1px solid rgba(0,0,0,0.12);
+      font-weight: 700;
+      background: #ffffff;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      aspect-ratio: 1 / 1;
+      font-size: clamp(0.45rem, 1.95vmin, 0.82rem);
+      min-width: 0;
+    }
+    .forma-mini-carton th {
+      font-size: clamp(0.66rem, 2.6vmin, 1.05rem);
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--forma-color-intenso, #0b5394), var(--forma-color, #0b5394));
+      text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+    }
+    .forma-mini-carton td.star {
+      background: linear-gradient(145deg, var(--forma-color-suave, #6fa8dc), rgba(255,255,255,0.9));
+    }
+    .forma-mini-carton td.star .forma-estrella {
+      color: var(--forma-color-intenso, #0b5394);
+    }
+    .forma-mini-carton td.free {
+      background: linear-gradient(135deg, #ffb347, #ff7b00);
+    }
+    .forma-mini-carton td.free .forma-estrella {
+      color: #ffffff;
+    }
+    .forma-mini-carton .forma-estrella {
+      font-size: clamp(0.72rem, 3vmin, 1.2rem);
+      text-shadow: 0 0 4px rgba(0,0,0,0.12);
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+    }
+    #cartones-section {
+      margin-top: clamp(24px, 3.4vw, 32px);
+      text-align: left;
+    }
+    #cartones-section h2 {
+      font-family: 'Bangers', cursive;
+      font-size: 1.8rem;
+      color: #0b5394;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+    #cartones-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(clamp(150px, 20vw, 200px), 1fr));
+      gap: clamp(6px, 1.8vw, 14px);
+      justify-items: center;
+      align-items: flex-start;
+      width: 100%;
+    }
+    .pdf-carton { 
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: center;
+      justify-content: flex-start;
+      background: transparent;
+      border-radius: 10px;
+      padding: 4px;
+      box-shadow: none;
+      border: none;
+      page-break-inside: avoid;
+      width: 100%;
+      max-width: clamp(170px, 26vw, 204px);
+    }
+    .carton-resultado[data-estado="perdedor"]{
+      opacity: 0.96;
+    }
+    .carton-resultado[data-estado="ganador"] .pdf-carton-datos .numero{
+      color: #145a32;
+    }
+    @media (orientation: landscape) and (min-width: 1024px) {
+      #pdf-wrapper {
+        max-width: min(1440px, 100%);
+      }
+      #cartones-grid {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: clamp(6px, 1vw, 12px);
+      }
+      .pdf-carton {
+        max-width: none;
+      }
+      .pdf-carton-table {
+        --cell-size: clamp(22px, 2.6vw, 28px);
+      }
+    }
+    body.forzar-orientacion-landscape #pdf-wrapper {
+      max-width: min(1440px, 100%);
+    }
+    body.forzar-orientacion-landscape #cartones-grid {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: clamp(6px, 1vw, 12px);
+    }
+    body.forzar-orientacion-landscape .pdf-carton {
+      max-width: none;
+    }
+    body.forzar-orientacion-landscape .pdf-carton-table {
+      --cell-size: clamp(22px, 2.6vw, 28px);
+    }
+    @media (min-width: 1500px) {
+      #cartones-grid {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: clamp(6px, 0.8vw, 12px);
+      }
+      .pdf-carton-table {
+        --cell-size: clamp(20px, 2.1vw, 26px);
+      }
+    }
+    @media (max-width: 900px) {
+      body.forzar-orientacion-landscape #cartones-grid {
+        grid-template-columns: repeat(auto-fit, minmax(clamp(140px, 25vw, 200px), 1fr));
+        gap: clamp(8px, 2vw, 14px);
+      }
+      body.forzar-orientacion-landscape .pdf-carton-table {
+        --cell-size: clamp(20px, 4vh, 30px);
+      }
+      body.forzar-orientacion-landscape .pdf-carton {
+        max-width: clamp(170px, 28vw, 210px);
+      }
+    }
+    @media (min-width: 700px) {
+      body.forzar-orientacion-landscape #formas-resumen {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      }
+      body.forzar-orientacion-landscape .forma-item {
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+      }
+      body.forzar-orientacion-landscape .forma-mini-carton-wrapper {
+        max-width: none;
+        align-items: stretch;
+        margin-top: auto;
+        margin-bottom: auto;
+      }
+    }
+    .pdf-carton.gratis .pdf-carton-table {
+      box-shadow: 0 0 0 2px rgba(0,76,153,0.25);
+    }
+    .pdf-carton-table {
+      --cell-size: clamp(22px, 3.6vw, 32px);
+      --bingo-gradient: radial-gradient(circle, #ffffff 0%, #f0fdf4 55%, #009c3a 100%);
+      border-collapse: separate;
+      border-spacing: 0;
+      width: calc(var(--cell-size) * 5);
+      margin: 0 auto;
+      background: linear-gradient(#ffffff,#e8e8e8);
+      border-radius: 12px;
+      overflow: hidden;
+      table-layout: fixed;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+      max-width: 100%;
+    }
+    .pdf-carton-table th,
+    .pdf-carton-table td {
+      border: 1px solid rgba(70,70,70,0.6);
+      width: var(--cell-size);
+      height: var(--cell-size);
+      aspect-ratio: 1 / 1;
+      font-weight: 700;
+      color: #1a1a1a;
+      padding: 0;
+      text-align: center;
+      vertical-align: middle;
+      position: relative;
+      overflow: hidden;
+    }
+    .pdf-carton-table th {
+      font-size: calc(var(--cell-size) * 0.75);
+      color: #000000;
+      background: var(--bingo-gradient);
+      text-shadow: 1px 1px 0 rgba(255,255,255,0.35);
+    }
+    .pdf-carton-table td {
+      font-size: calc(var(--cell-size) * 0.46);
+    }
+    .pdf-carton-table td.free {
+      background: radial-gradient(circle,#ffbd4f,#ffe8b3);
+      font-size: calc(var(--cell-size) * 0.65);
+      color: #ffffff;
+    }
+    .pdf-carton-table .cell-content {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      line-height: 1;
+    }
+    .pdf-carton-table td.free .cell-content {
+      font-weight: 700;
+      font-size: inherit;
+      color: inherit;
+    }
+    .pdf-carton.ganador {
+      border: 2px solid rgba(34, 139, 34, 0.4);
+      box-shadow: 0 8px 20px rgba(34,139,34,0.18);
+      border-radius: 14px;
+      padding: 6px;
+      background: linear-gradient(135deg, rgba(230,255,230,0.85), rgba(255,255,255,0.9));
+    }
+    .pdf-carton-table td.celda-cantada {
+      background: linear-gradient(145deg, rgba(197,232,255,0.9), rgba(158,208,255,0.75));
+      color: #0b2d5c;
+      font-weight: 700;
+    }
+    .pdf-carton-table td.celda-forma {
+      position: relative;
+      background: linear-gradient(160deg, rgba(255,255,255,0.95), rgba(255,255,255,0.35));
+      border: 2px solid rgba(0,0,0,0.25);
+    }
+    .pdf-carton-table td.celda-forma::after {
+      content: '';
+      position: absolute;
+      inset: 1px;
+      border-radius: 6px;
+      background: linear-gradient(140deg, rgba(255,255,255,0.85), rgba(255,255,255,0.35));
+      box-shadow: inset 0 0 0 2px rgba(0,0,0,0.1);
+      pointer-events: none;
+    }
+    .pdf-carton-table td.celda-forma {
+      border-color: rgba(0,0,0,0.25);
+    }
+    .pdf-carton-table td.celda-forma .cell-content {
+      position: relative;
+      z-index: 1;
+      color: #0d2c53;
+    }
+    .pdf-carton-table td.celda-forma {
+      background-image: linear-gradient(135deg, rgba(255,255,255,0.85), var(--forma-color-base, rgba(0,128,0,0.35)));
+    }
+    .pdf-carton-datos {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      text-align: center;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 600;
+      word-break: break-word;
+      line-height: 1.12;
+    }
+    .pdf-carton-datos .numero {
+      font-size: 1.05rem;
+      color: #000000;
+    }
+    .pdf-carton-datos .alias {
+      font-size: 0.98rem;
+      color: #004488;
+    }
+    .pdf-carton-datos .tipo {
+      font-size: 0.88rem;
+      text-transform: uppercase;
+      color: #0b6623;
+    }
+    .pdf-carton.pagado .pdf-carton-table {
+      --bingo-gradient: radial-gradient(circle, #ffffff 0%, #e2ffe8 48%, #00a651 100%);
+    }
+    .pdf-carton.gratis .pdf-carton-table {
+      --bingo-gradient: radial-gradient(circle, #ffffff 0%, #e6f2ff 48%, #0074ff 100%);
+    }
+    .pdf-carton.pagado .pdf-carton-datos .tipo,
+    .pdf-carton-datos .tipo.tipo-pagado {
+      color: #0b6623;
+    }
+    .pdf-carton.gratis .pdf-carton-datos .tipo,
+    .pdf-carton-datos .tipo.tipo-gratis {
+      color: #005bbb;
+    }
+    .forma-extra-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 4px 8px;
+      margin-top: 6px;
+      font-size: 0.78rem;
+      color: #163768;
+    }
+    .forma-extra-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      background: rgba(255,255,255,0.82);
+      border: 1px solid rgba(11,83,148,0.18);
+      border-radius: 8px;
+      padding: 6px 8px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.45);
+    }
+    .forma-extra-item.forma-extra-cartones {
+      grid-column: 1 / -1;
+    }
+    .extra-label {
+      font-weight: 700;
+      color: #0b5394;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .extra-value {
+      font-size: 0.78rem;
+      color: #0d2345;
+      word-break: break-word;
+    }
+    .extra-value.sin-datos {
+      color: #a62828;
+    }
+    .cartones-placeholder {
+      grid-column: 1 / -1;
+      font-family: 'Poppins', sans-serif;
+      font-size: 1rem;
+      color: #1a1a1a;
+      text-align: center;
+      padding: 20px 10px;
+      background: rgba(255,255,255,0.9);
+      border-radius: 16px;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06);
+    }
+    #loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-family: 'Bangers', cursive;
+      font-size: 1.4rem;
+      gap: 12px;
+      z-index: 1200;
+      text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    #loading-overlay.activo { display: flex; }
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 6px solid rgba(255,255,255,0.3);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @media (max-width: 720px) {
+      body {
+        padding: clamp(56px, 10vw, 64px) clamp(10px, 5vw, 18px) clamp(24px, 7vw, 32px);
+      }
+      .resumen-bloque { padding: clamp(18px, 4vw, 24px); }
+      #acciones-fixed {
+        right: 8px;
+        width: min(100%, 360px);
+      }
+      #acciones-fixed button {
+        padding: 8px 14px;
+        font-size: 1rem;
+      }
+      #resumen-header { gap: 12px; }
+      #resumen-header .header-logo { justify-content: flex-start; }
+      #resumen-header .header-info { align-items: flex-start; }
+    }
+    @media (max-width: 520px) {
+      #resumen-header { flex-wrap: wrap; }
+    }
+    @media (max-width: 640px) {
+      #cartones-grid {
+        grid-template-columns: repeat(auto-fit, minmax(clamp(140px, 42vw, 200px), 1fr));
+      }
+      .pdf-carton {
+        max-width: clamp(170px, 48vw, 210px);
+      }
+    }
+    @media (orientation: landscape) and (max-width: 900px) {
+      #cartones-grid {
+        grid-template-columns: repeat(auto-fit, minmax(clamp(140px, 25vw, 200px), 1fr));
+        gap: clamp(8px, 2vw, 14px);
+      }
+      .pdf-carton-table { --cell-size: clamp(20px, 4vh, 30px); }
+      .pdf-carton { max-width: clamp(170px, 28vw, 210px); }
+    }
+    @media (max-width: 480px) {
+      #resumen-layout {
+        grid-template-columns: 1fr;
+      }
+      #acciones-fixed {
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        justify-content: center;
+      }
+      #acciones-fixed button {
+        flex: 0 0 auto;
+        min-width: clamp(120px, 48vw, 180px);
+      }
+    }
+    @media (max-width: 420px) {
+      body {
+        padding: clamp(58px, 14vw, 66px) 8px clamp(22px, 10vw, 30px);
+      }
+      #acciones-fixed {
+        flex-direction: column;
+        gap: 8px;
+        width: auto;
+        align-items: center;
+      }
+      #acciones-fixed button {
+        width: auto;
+        min-width: clamp(140px, 70vw, 200px);
+      }
+      #salir-btn {
+        width: 52px;
+        height: 44px;
+      }
+      #salir-btn .label {
+        display: none;
+      }
+      .pdf-carton-datos .alias {
+        font-size: 0.88rem;
+      }
+      .pdf-carton-datos .numero {
+        font-size: 0.98rem;
+      }
+    }
+    @media (max-width: 720px) {
+      .forma-item {
+        grid-template-columns: minmax(0, 1fr) clamp(150px, 36vw, 220px);
+      }
+      .forma-resumen {
+        padding: 12px;
+      }
+      .forma-titulo {
+        font-size: 1.05rem;
+      }
+      .forma-detalle {
+        font-size: 0.88rem;
+        padding: 6px 10px;
+      }
+      .forma-detalle .valor {
+        font-size: 0.95rem;
+      }
+      .forma-mini-carton-wrapper {
+        max-width: clamp(150px, 42vw, 220px);
+      }
+    }
+    @media (orientation: landscape) and (min-width: 700px) {
+      #formas-resumen {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      }
+      .forma-item {
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+      }
+      .forma-mini-carton-wrapper {
+        max-width: none;
+        align-items: stretch;
+        margin-top: auto;
+        margin-bottom: auto;
+      }
+    }
+    @media (max-width: 640px) {
+      .forma-item {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: stretch;
+      }
+      .forma-resumen {
+        border-right: none;
+        border-bottom: none;
+        padding: clamp(10px, 3.5vw, 14px);
+      }
+      .forma-mini-carton-wrapper {
+        border-left: 1px solid rgba(0,0,0,0.05);
+        padding: clamp(6px, 3vw, 12px);
+        max-width: clamp(140px, 50vw, 200px);
+      }
+    }
+    @media (max-width: 520px) {
+      #formas-resumen {
+        grid-template-columns: 1fr;
+      }
+      .forma-resumen {
+        padding: 10px;
+        gap: 6px;
+      }
+      .forma-titulo {
+        font-size: 0.98rem;
+      }
+      .forma-detalle {
+        font-size: 0.82rem;
+        padding: 6px 8px;
+      }
+      .forma-detalle .valor {
+        font-size: 0.9rem;
+      }
+      .forma-mini-carton-wrapper {
+        max-width: clamp(140px, 50vw, 200px);
+      }
+    }
+    body.pdf-captura {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      width: 100%;
+      margin: 0;
+      padding: clamp(12px, 2vw, 20px);
+      background: #ffffff;
+      --pdf-columnas: 6;
+    }
+    body.pdf-captura #salir-btn,
+    body.pdf-captura #acciones-fixed {
+      display: none !important;
+    }
+    body.pdf-captura #pdf-wrapper {
+      max-width: 1440px;
+      width: min(1440px, 100%);
+      padding: clamp(14px, 2.2vw, 24px) clamp(16px, 2.6vw, 28px);
+      box-sizing: border-box;
+    }
+    body.pdf-captura #resumen-layout {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      column-gap: clamp(16px, 2.4vw, 24px);
+      row-gap: clamp(12px, 2vw, 22px);
+      width: 100%;
+      max-width: none;
+      min-height: clamp(560px, 56vw, 700px);
+      margin: 0 auto;
+      align-content: stretch;
+      grid-auto-flow: dense;
+    }
+    body.pdf-captura #resumen-layout > .resumen-bloque {
+      padding: clamp(20px, 2.8vw, 28px);
+      box-shadow: none;
+      border-width: 0.7px;
+      border-color: rgba(11,83,148,0.28);
+    }
+    body.pdf-captura #nombre-sorteo {
+      font-size: clamp(2.2rem, 4.6vw, 2.9rem);
+    }
+    body.pdf-captura #tipo-sorteo-titulo {
+      font-size: clamp(1.05rem, 1.8vw, 1.2rem);
+    }
+    body.pdf-captura #resumen-header {
+      grid-column: 1 / -1;
+      align-items: center;
+      flex-wrap: nowrap;
+      gap: clamp(12px, 2.2vw, 22px);
+    }
+    body.pdf-captura #resumen-header .header-info {
+      align-items: flex-start;
+      justify-content: center;
+      width: 100%;
+    }
+    body.pdf-captura .totales-header {
+      grid-column: 1 / -1;
+      justify-content: flex-start;
+      text-align: left;
+      align-items: center;
+      gap: clamp(10px, 2vw, 18px);
+    }
+    body.pdf-captura .totales-header h2 {
+      margin-bottom: 0;
+      font-size: clamp(2.2rem, 4.6vw, 3rem);
+    }
+    body.pdf-captura #total-premios {
+      font-size: clamp(2.4rem, 5.2vw, 3.2rem);
+    }
+    body.pdf-captura .dato-inline {
+      font-size: clamp(1.05rem, 1.6vw, 1.25rem);
+      padding: clamp(7px, 1.2vw, 14px);
+      box-shadow: none;
+      border: 0.6px solid rgba(11,83,148,0.32);
+    }
+    body.pdf-captura .dato-inline .dato-label,
+    body.pdf-captura .dato-inline .dato-valor {
+      font-size: clamp(1.05rem, 1.6vw, 1.25rem);
+    }
+    body.pdf-captura #formas-resumen {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: clamp(10px, 1.8vw, 20px);
+      align-items: stretch;
+    }
+    body.pdf-captura #formas-resumen .forma-item {
+      width: 100%;
+      min-height: 100%;
+      border-width: 0.7px;
+      border-color: rgba(11,83,148,0.28);
+    }
+    body.pdf-captura .forma-resumen {
+      padding: clamp(14px, 1.8vw, 20px);
+      border-right-width: 0.6px;
+    }
+    body.pdf-captura .forma-titulo {
+      font-size: clamp(1.18rem, 2vw, 1.35rem);
+    }
+    body.pdf-captura .forma-detalle {
+      font-size: clamp(1rem, 1.7vw, 1.18rem);
+    }
+    body.pdf-captura .forma-detalle .valor {
+      font-size: clamp(1.02rem, 1.8vw, 1.22rem);
+    }
+    body.pdf-captura .forma-mini-carton-wrapper {
+      padding: clamp(8px, 1.4vw, 14px);
+      border-left-width: 0.6px;
+    }
+    body.pdf-captura #cartones-section {
+      margin-top: clamp(20px, 2.6vw, 28px);
+    }
+    body.pdf-captura #cartones-grid {
+      grid-template-columns: repeat(var(--pdf-columnas, 6), minmax(0, 1fr));
+      gap: clamp(5px, 0.7vw, 10px);
+      align-items: stretch;
+    }
+    body.pdf-captura .pdf-carton {
+      max-width: none;
+      width: 100%;
+      padding: clamp(3px, 0.6vw, 6px);
+    }
+    body.pdf-captura .pdf-carton-table {
+      --cell-size: clamp(20px, 2.3vw, 26px);
+    }
+    body.pdf-captura .pdf-carton-datos {
+      gap: 3px;
+    }
+    body.pdf-captura .pdf-carton-datos .numero {
+      font-size: 1rem;
+    }
+    body.pdf-captura .pdf-carton-datos .alias {
+      font-size: 0.94rem;
+    }
+    body.pdf-captura .pdf-carton-datos .tipo {
+      font-size: 0.84rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    <div id="loading-text">Preparando información del sorteo, por favor espera</div>
+  </div>
+  <button id="salir-btn"><span class="tri">&#9664;</span><span class="label">Salir</span></button>
+  <div id="acciones-fixed">
+    <button id="generar-resultados-btn">Resultados</button>
+    <button id="generar-pdf-btn">Generar PDF</button>
+    <button id="pdf-listo-btn">PDF listo
+      <span class="pdf-floating-icon" aria-hidden="true">
+        <svg viewBox="0 0 36 40" role="img" aria-hidden="true">
+          <defs>
+            <linearGradient id="pdfResultadosGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#ffffff" />
+              <stop offset="100%" stop-color="#ffe9eb" />
+            </linearGradient>
+          </defs>
+          <path d="M11 2h12l7 7v23a4 4 0 0 1-4 4H11a4 4 0 0 1-4-4V6a4 4 0 0 1 4-4z" fill="url(#pdfResultadosGradient)" stroke="#e53935" stroke-width="2" stroke-linejoin="round"></path>
+          <path d="M23 2v7h7" fill="#ffffff" stroke="#e53935" stroke-width="2" stroke-linejoin="round"></path>
+          <rect x="11" y="18" width="14" height="10" rx="2" fill="#e53935"></rect>
+          <path d="M14 23l3 3 6-6" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </span>
+    </button>
+  </div>
+  <div id="orientacion-modal" class="orientacion-modal" role="dialog" aria-modal="true" aria-labelledby="orientacion-modal-titulo" aria-hidden="true">
+    <div class="orientacion-modal-contenido">
+      <span class="orientacion-modal-icono" aria-hidden="true">🔄📱</span>
+      <h2 id="orientacion-modal-titulo" class="orientacion-modal-titulo">Gira tu dispositivo</h2>
+      <p class="orientacion-modal-texto">Coloca el celular en orientación Horizontal <span class="orientacion-inline-icono" aria-hidden="true">📱↻</span> para poder generar el PDF.</p>
+      <button id="orientacion-modal-aceptar" type="button">Aceptar</button>
+    </div>
+  </div>
+  <div id="pdf-wrapper">
+    <div id="resumen-layout">
+      <div id="resumen-header" class="resumen-bloque">
+        <div class="header-logo">
+          <img id="logo" src="https://i.imgur.com/twjhNtZ.png" alt="Bingo Online">
+        </div>
+        <div class="header-info">
+          <h1 id="nombre-sorteo">Sorteo</h1>
+          <div id="tipo-sorteo-titulo"></div>
+        </div>
+      </div>
+      <div class="dato-inline">
+        <span class="dato-label">Tipo de sorteo:</span>
+        <span id="dato-tipo" class="dato-valor">-</span>
+      </div>
+      <div class="dato-inline">
+        <span class="dato-label">Fecha del sorteo:</span>
+        <span id="dato-fecha" class="dato-valor">-</span>
+      </div>
+      <div class="dato-inline">
+        <span class="dato-label">Hora de cierre:</span>
+        <span id="dato-cierre" class="dato-valor">-</span>
+      </div>
+      <div class="dato-inline">
+        <span class="dato-label">Hora del sorteo:</span>
+        <span id="dato-hora" class="dato-valor">-</span>
+      </div>
+      <div class="dato-inline">
+        <span class="dato-label">Valor del cartón:</span>
+        <span id="dato-valor" class="dato-valor">-</span>
+      </div>
+      <div class="dato-inline">
+        <span class="dato-label">CARTONES GRATIS MÁXIMOS POR JUGADOR:</span>
+        <span id="dato-maxgratis" class="dato-valor">-</span>
+      </div>
+      <div class="totales-header resumen-bloque">
+        <h2>CRÉDITOS TOTALES A REPARTIR</h2>
+        <div id="total-premios">0</div>
+      </div>
+    </div>
+    <section id="formas-resumen"></section>
+    <section id="cartones-section">
+      <h2>Cartones del sorteo</h2>
+      <div id="cartones-grid"></div>
+    </section>
+  </div>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="js/auth.js"></script>
+  <script>
+  ensureAuth('Administrador');
+
+  const params = new URLSearchParams(window.location.search);
+  const sorteoId = params.get('s');
+  if(!sorteoId){
+    alert('No se indicó un sorteo.');
+    window.location.href = 'cantarsorteos.html';
+  }
+
+  const salirBtn = document.getElementById('salir-btn');
+  const generarResultadosBtn = document.getElementById('generar-resultados-btn');
+  const pdfBtn = document.getElementById('generar-pdf-btn');
+  const pdfListoBtn = document.getElementById('pdf-listo-btn');
+  const loadingOverlay = document.getElementById('loading-overlay');
+  const loadingText = document.getElementById('loading-text');
+  const nombreEl = document.getElementById('nombre-sorteo');
+  const tipoTituloEl = document.getElementById('tipo-sorteo-titulo');
+  const datoFechaEl = document.getElementById('dato-fecha');
+  const datoHoraEl = document.getElementById('dato-hora');
+  const datoCierreEl = document.getElementById('dato-cierre');
+  const datoValorEl = document.getElementById('dato-valor');
+  const datoMaxGratisEl = document.getElementById('dato-maxgratis');
+  const datoTipoEl = document.getElementById('dato-tipo');
+  const totalPremiosEl = document.getElementById('total-premios');
+  const formasCont = document.getElementById('formas-resumen');
+  const cartonesGrid = document.getElementById('cartones-grid');
+  const orientacionModal = document.getElementById('orientacion-modal');
+  const orientacionAceptarBtn = document.getElementById('orientacion-modal-aceptar');
+
+  let sorteoData = null;
+  let formasData = [];
+  let cartonesData = [];
+  let cartonesMapa = new Map();
+  let cantosOrdenados = [];
+  let cantosIndiceMap = new Map();
+  let cartonesGanadoresPorForma = new Map();
+  let formasPorCarton = new Map();
+  let indiceUltimoGanador = null;
+  let todasFormasConGanadores = false;
+  let pdfNombreBase = 'pdf-sorteo';
+  let cartonesCargados = false;
+  let firebaseReadyPromise = null;
+
+  function ensureFirebaseReady(){
+    if(firebaseReadyPromise) return firebaseReadyPromise;
+    if(typeof initFirebase !== 'function'){
+      firebaseReadyPromise = Promise.reject(new Error('initFirebase no disponible'));
+      return firebaseReadyPromise;
+    }
+    firebaseReadyPromise = initFirebase().catch(err => {
+      console.error('Fallo al inicializar Firebase', err);
+      throw err;
+    });
+    return firebaseReadyPromise;
+  }
+
+  const coloresFormas = ['#006400', '#b8860b', '#00008b', '#4b0082', '#8b4513', '#d2691e'];
+
+  function normalizarNumero(valor){
+    if(typeof valor === 'number' && Number.isFinite(valor)) return valor;
+    if(typeof valor === 'string'){
+      const texto = valor.trim();
+      if(!texto) return null;
+      const match = texto.toUpperCase().match(/^([BINGO])[-\s]?0*(\d{1,2})$/);
+      if(match){
+        const numero = parseInt(match[2],10);
+        return Number.isFinite(numero)?numero:null;
+      }
+      const numeroPlano = parseInt(texto,10);
+      if(Number.isFinite(numeroPlano)) return numeroPlano;
+    }
+    return null;
+  }
+
+  function normalizarPosicionesEntrada(posiciones){
+    const lista = Array.isArray(posiciones)?posiciones:[];
+    const resultado = [];
+    lista.forEach(pos=>{
+      if(!pos) return;
+      const fila = Number(pos?.r ?? pos?.row ?? pos?.fila);
+      const col = Number(pos?.c ?? pos?.col ?? pos?.columna);
+      const valor = normalizarNumero(pos?.valor ?? pos?.numero ?? pos?.value);
+      if(Number.isInteger(fila) && Number.isInteger(col)){
+        resultado.push({ r: fila, c: col, valor: valor ?? null });
+      }
+    });
+    return resultado;
+  }
+
+  function obtenerPosicionesForma(forma){
+    if(!forma) return [];
+    const base = Array.isArray(forma.posicionesNormalizadas) && forma.posicionesNormalizadas.length
+      ? forma.posicionesNormalizadas
+      : forma.posiciones;
+    const lista = Array.isArray(base)?base:[];
+    return lista
+      .map(pos=>({
+        r: Number(pos?.r ?? pos?.row ?? pos?.fila),
+        c: Number(pos?.c ?? pos?.col ?? pos?.columna)
+      }))
+      .filter(pos=>Number.isInteger(pos.r) && Number.isInteger(pos.c));
+  }
+
+  function procesarCantos(lista){
+    const entradas = Array.isArray(lista)?lista:[];
+    const normalizados = [];
+    entradas.forEach(item=>{
+      const numero = normalizarNumero(item);
+      if(numero!==null) normalizados.push(numero);
+    });
+    cantosOrdenados = normalizados;
+    cantosIndiceMap = new Map();
+    normalizados.forEach((numero, idx)=>{
+      if(!cantosIndiceMap.has(numero)){
+        cantosIndiceMap.set(numero, idx);
+      }
+    });
+  }
+
+  function obtenerIndiceLimiteGanador(){
+    if(todasFormasConGanadores && Number.isInteger(indiceUltimoGanador)){
+      return indiceUltimoGanador;
+    }
+    return cantosOrdenados.length ? cantosOrdenados.length - 1 : -1;
+  }
+
+  function obtenerCreditosForma(forma){
+    if(!forma) return 0;
+    const directo = Number(forma?.premioCreditos ?? forma?.premiocreditos ?? forma?.creditos);
+    if(Number.isFinite(directo) && directo>0) return Math.round(directo);
+    const porcentaje = Number(forma?.porcentaje ?? forma?.porcentajePremio ?? 0);
+    const totalPremios = Number(sorteoData?.totalPremios) || 0;
+    if(totalPremios>0 && porcentaje>0){
+      return Math.round(totalPremios*(porcentaje/100));
+    }
+    return 0;
+  }
+
+  function obtenerCartonesGratisForma(forma){
+    if(!forma) return 0;
+    const candidatos = [
+      forma?.cartonesGratis,
+      forma?.cartonesgratis,
+      forma?.cartones_gratis,
+      forma?.premioCartonesGratis,
+      forma?.premioCartonesgratis,
+      forma?.cartones
+    ];
+    for(const candidato of candidatos){
+      const numero = Number(candidato);
+      if(Number.isFinite(numero)){
+        return Math.max(0, Math.round(numero));
+      }
+    }
+    return 0;
+  }
+
+  function obtenerNumeroCarton(carton){
+    const bruto = carton?.cartonNum ?? carton?.Ncarton ?? carton?.carton;
+    if(bruto===undefined || bruto===null) return null;
+    const numero = Number(bruto);
+    if(Number.isFinite(numero)) return numero;
+    const texto = String(bruto).trim();
+    const extraido = parseInt(texto.replace(/[^0-9]/g,''),10);
+    return Number.isFinite(extraido)?extraido:null;
+  }
+
+  function formatearNumeroCarton(carton){
+    const numero = obtenerNumeroCarton(carton);
+    if(numero===null) return '--';
+    return `#${String(numero).padStart(4,'0')}`;
+  }
+
+  function obtenerNumeroOrdenCarton(carton){
+    const numero = obtenerNumeroCarton(carton);
+    return numero===null?Number.MAX_SAFE_INTEGER:numero;
+  }
+
+  function actualizarEstadoFormasGanadoras(){
+    let totalEvaluables = 0;
+    let totalGanadoras = 0;
+    let pasoMaximo = -1;
+    formasData.forEach(forma=>{
+      const idx = Number(forma?.idx);
+      if(!Number.isFinite(idx)) return;
+      const posiciones = obtenerPosicionesForma(forma);
+      if(!posiciones.length) return;
+      totalEvaluables++;
+      const registro = cartonesGanadoresPorForma.get(idx);
+      const paso = Number(registro?.paso);
+      if(Number.isFinite(paso)){
+        totalGanadoras++;
+        if(paso>pasoMaximo) pasoMaximo = paso;
+      }
+    });
+    if(totalEvaluables>0 && totalGanadoras===totalEvaluables){
+      todasFormasConGanadores = true;
+      indiceUltimoGanador = pasoMaximo>=0?pasoMaximo:null;
+    }else{
+      todasFormasConGanadores = false;
+      indiceUltimoGanador = null;
+    }
+  }
+
+  function calcularResultados(){
+    cartonesGanadoresPorForma = new Map();
+    formasPorCarton = new Map();
+    cartonesMapa.forEach(carton=>{ carton.formasGanadas = []; });
+    if(!formasData.length || !cartonesMapa.size || !cantosOrdenados.length){
+      actualizarEstadoFormasGanadoras();
+      return;
+    }
+    formasData.forEach(forma=>{
+      const idx = Number(forma?.idx);
+      if(!Number.isFinite(idx)) return;
+      const posiciones = obtenerPosicionesForma(forma);
+      if(!posiciones.length){
+        cartonesGanadoresPorForma.set(idx,{ forma, cartones: [], paso: null });
+        return;
+      }
+      let mejorPaso = Infinity;
+      const ganadores = [];
+      cartonesMapa.forEach(carton=>{
+        let valido = true;
+        let maxPaso = -1;
+        for(const pos of posiciones){
+          const clave = `${pos.r}-${pos.c}`;
+          const valor = carton.valorPorPos.get(clave);
+          if(valor===undefined){
+            valido = false;
+            break;
+          }
+          const paso = cantosIndiceMap.get(valor);
+          if(paso===undefined){
+            valido = false;
+            break;
+          }
+          if(paso>maxPaso) maxPaso = paso;
+        }
+        if(!valido) return;
+        if(maxPaso<mejorPaso){
+          mejorPaso = maxPaso;
+          ganadores.length = 0;
+          ganadores.push(carton);
+        }else if(maxPaso===mejorPaso){
+          ganadores.push(carton);
+        }
+      });
+      cartonesGanadoresPorForma.set(idx,{ forma, cartones: ganadores, paso: mejorPaso });
+      ganadores.forEach(carton=>{
+        if(!formasPorCarton.has(carton.id)) formasPorCarton.set(carton.id, []);
+        formasPorCarton.get(carton.id).push({ forma, paso: mejorPaso });
+      });
+    });
+    formasPorCarton.forEach(lista=>{
+      lista.sort((a,b)=>{
+        if(a.paso!==b.paso) return a.paso-b.paso;
+        return (Number(a.forma?.idx)||0)-(Number(b.forma?.idx)||0);
+      });
+    });
+    cartonesMapa.forEach(carton=>{
+      const lista = formasPorCarton.get(carton.id) || [];
+      carton.formasGanadas = lista.map(item=>item.forma);
+    });
+    actualizarEstadoFormasGanadoras();
+  }
+
+  function construirOrdenCartones(){
+    const orden = [];
+    const ganadoresSet = new Set();
+    const formasOrdenadas = [...formasData].sort((a,b)=>(Number(a?.idx)||0)-(Number(b?.idx)||0));
+    formasOrdenadas.forEach(forma=>{
+      const idx = Number(forma?.idx);
+      if(!Number.isFinite(idx)) return;
+      const registro = cartonesGanadoresPorForma.get(idx);
+      const ganadores = registro && Array.isArray(registro.cartones)?[...registro.cartones]:[];
+      ganadores.sort((a,b)=>obtenerNumeroOrdenCarton(a)-obtenerNumeroOrdenCarton(b));
+      ganadores.forEach(carton=>{
+        orden.push({ carton, forma, estado: 'ganador' });
+        ganadoresSet.add(carton.id);
+      });
+    });
+    const perdedores = Array.from(cartonesMapa.values())
+      .filter(carton=>!ganadoresSet.has(carton.id))
+      .sort((a,b)=>obtenerNumeroOrdenCarton(a)-obtenerNumeroOrdenCarton(b));
+    perdedores.forEach(carton=>orden.push({ carton, forma: null, estado: 'perdedor' }));
+    return orden;
+  }
+
+  function normalizarHex(hex){
+    if(typeof hex !== 'string') return hex;
+    let limpio = hex.replace('#','');
+    if(limpio.length === 3){
+      limpio = limpio.split('').map(ch=>ch+ch).join('');
+    }
+    if(limpio.length !== 6) return null;
+    return limpio;
+  }
+
+  function aclararColorHex(hex, factor = 0.55){
+    const limpio = normalizarHex(hex);
+    if(!limpio) return hex;
+    const r = parseInt(limpio.slice(0,2), 16);
+    const g = parseInt(limpio.slice(2,4), 16);
+    const b = parseInt(limpio.slice(4,6), 16);
+    const mezcla = (canal)=>{
+      if(Number.isNaN(canal)) return canal;
+      return Math.round(canal + (255 - canal) * factor);
+    };
+    const nr = mezcla(r);
+    const ng = mezcla(g);
+    const nb = mezcla(b);
+    const hexCanal = (val)=>{
+      if(!Number.isFinite(val)) return 'ff';
+      return Math.min(255, Math.max(0, val)).toString(16).padStart(2,'0');
+    };
+    return `#${hexCanal(nr)}${hexCanal(ng)}${hexCanal(nb)}`;
+  }
+
+  function oscurecerColorHex(hex, factor = 0.35){
+    const limpio = normalizarHex(hex);
+    if(!limpio) return hex;
+    const clampFactor = Math.min(Math.max(factor, 0), 1);
+    const r = parseInt(limpio.slice(0,2), 16);
+    const g = parseInt(limpio.slice(2,4), 16);
+    const b = parseInt(limpio.slice(4,6), 16);
+    const mezcla = (canal)=>{
+      if(Number.isNaN(canal)) return canal;
+      return Math.round(canal * (1 - clampFactor));
+    };
+    const hexCanal = (val)=>{
+      if(!Number.isFinite(val)) return '00';
+      return Math.min(255, Math.max(0, val)).toString(16).padStart(2,'0');
+    };
+    return `#${hexCanal(mezcla(r))}${hexCanal(mezcla(g))}${hexCanal(mezcla(b))}`;
+  }
+
+  salirBtn.addEventListener('click', ()=>{ window.location.href = 'cantarsorteos.html'; });
+  if(generarResultadosBtn){ generarResultadosBtn.disabled = true; }
+  if(generarResultadosBtn){ generarResultadosBtn.addEventListener('click', manejarGenerarResultados); }
+  if(pdfBtn){ pdfBtn.addEventListener('click', generarPDF); }
+  if(pdfListoBtn){ pdfListoBtn.addEventListener('click', confirmarPdfListo); }
+  if(orientacionAceptarBtn){ orientacionAceptarBtn.addEventListener('click', ocultarModalOrientacion); }
+  if(orientacionModal){
+    orientacionModal.addEventListener('click', (event)=>{
+      if(event.target === orientacionModal){
+        ocultarModalOrientacion();
+      }
+    });
+  }
+
+  const mediaRetrato = (()=>{
+    try {
+      return window.matchMedia ? window.matchMedia('(orientation: portrait)') : null;
+    } catch (e) {
+      return null;
+    }
+  })();
+  if(mediaRetrato){
+    const manejadorCambio = (event)=>{
+      if(!event.matches){
+        ocultarModalOrientacion();
+      }
+    };
+    if(typeof mediaRetrato.addEventListener === 'function'){
+      mediaRetrato.addEventListener('change', manejadorCambio);
+    } else if(typeof mediaRetrato.addListener === 'function'){
+      mediaRetrato.addListener(manejadorCambio);
+    }
+  }
+
+  function esDispositivoMovil(){
+    if(typeof navigator === 'undefined' || !navigator.userAgent) return false;
+    return /(android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini)/i.test(navigator.userAgent);
+  }
+
+  function estaEnOrientacionRetrato(){
+    try {
+      if(window.matchMedia){
+        return window.matchMedia('(orientation: portrait)').matches;
+      }
+    } catch (e) {
+      // ignorado
+    }
+    return window.innerHeight > window.innerWidth;
+  }
+
+  function mostrarModalOrientacion(){
+    if(!orientacionModal) return;
+    orientacionModal.classList.add('visible');
+    orientacionModal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-activa');
+  }
+
+  function ocultarModalOrientacion(){
+    if(!orientacionModal) return;
+    orientacionModal.classList.remove('visible');
+    orientacionModal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-activa');
+  }
+
+  function mostrarLoading(mensaje){
+    if(loadingText && mensaje){ loadingText.textContent = mensaje; }
+    if(loadingOverlay){ loadingOverlay.classList.add('activo'); }
+  }
+
+  function ocultarLoading(){
+    if(loadingOverlay){ loadingOverlay.classList.remove('activo'); }
+  }
+
+  function mostrarMensajeCartonesPendientes(){
+    if(!cartonesGrid) return;
+    cartonesGrid.innerHTML = '<div class="cartones-placeholder">Haz clic en "Resultados" para calcular y mostrar los cartones del sorteo.</div>';
+  }
+
+  function formatearFechaParaMostrar(fecha){
+    if(!fecha) return '-';
+    const partes = fecha.includes('-') ? fecha.split('-') : fecha.split('/');
+    if(partes.length === 3){
+      const [anio, mes, dia] = partes[0].length === 4 ? partes : [partes[2], partes[1], partes[0]];
+      return `${dia.padStart(2,'0')}/${mes.padStart(2,'0')}/${anio}`;
+    }
+    return fecha;
+  }
+
+  function formatearHoraParaMostrar(hora){
+    if(!hora) return '-';
+    const [hh = '00', mm = '00'] = hora.split(':');
+    let h = parseInt(hh, 10);
+    if(Number.isNaN(h)) h = 0;
+    const sufijo = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h.toString().padStart(2,'0')}:${mm.padStart(2,'0')} ${sufijo}`;
+  }
+
+  function formatearNumero(valor){
+    const numero = Number(valor);
+    if(!Number.isFinite(numero)) return '0';
+    return new Intl.NumberFormat('es-ES').format(numero);
+  }
+
+  function normalizarTextoArchivo(texto){
+    if(!texto) return 'sorteo';
+    const sinTildes = texto.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    return sinTildes.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'') || 'sorteo';
+  }
+
+  function formatearFechaArchivo(fecha){
+    if(!fecha) return '00-00-0000';
+    const partes = fecha.split('-');
+    if(partes.length===3){
+      const [anio, mes, dia] = partes;
+      return `${dia.padStart(2,'0')}-${mes.padStart(2,'0')}-${anio}`;
+    }
+    const partesSlash = fecha.split('/');
+    if(partesSlash.length===3){
+      const [dia, mes, anio] = partesSlash;
+      return `${dia.padStart(2,'0')}-${mes.padStart(2,'0')}-${anio}`;
+    }
+    return fecha.replace(/\//g,'-');
+  }
+
+  function construirNombreBaseArchivo(){
+    if(!sorteoData) return 'pdf-sorteo';
+    const nombre = normalizarTextoArchivo(sorteoData.nombre);
+    const fecha = formatearFechaArchivo(sorteoData.fecha || '');
+    return `${nombre}_${fecha}`;
+  }
+
+  function obtenerHoraGeneracionArchivo(fecha = new Date()){
+    if(!(fecha instanceof Date) || Number.isNaN(fecha.getTime())){
+      return '00-00-00-am';
+    }
+    const horas = fecha.getHours();
+    const sufijo = horas >= 12 ? 'pm' : 'am';
+    const hora12 = horas % 12 || 12;
+    const minutos = fecha.getMinutes();
+    const segundos = fecha.getSeconds();
+    return `${hora12.toString().padStart(2,'0')}-${minutos.toString().padStart(2,'0')}-${segundos.toString().padStart(2,'0')}-${sufijo}`;
+  }
+
+  function construirNombreArchivo(){
+    const base = pdfNombreBase || construirNombreBaseArchivo();
+    return `${base}_${obtenerHoraGeneracionArchivo()}`;
+  }
+
+  function crearMiniCartonForma(forma){
+    const posiciones = Array.isArray(forma.posiciones) ? forma.posiciones : [];
+    const wrapper = document.createElement('div');
+    wrapper.className = 'forma-mini-carton-wrapper';
+    const color = obtenerColorForma(forma.idx || 1);
+    const colorSuave = aclararColorHex(color, 0.65);
+    const colorMuySuave = aclararColorHex(color, 0.82);
+    const colorIntenso = oscurecerColorHex(color, 0.2);
+    wrapper.style.setProperty('--forma-color', color);
+    if(colorSuave){ wrapper.style.setProperty('--forma-color-suave', colorSuave); }
+    if(colorMuySuave){ wrapper.style.setProperty('--forma-color-super-suave', colorMuySuave); }
+    if(colorIntenso){ wrapper.style.setProperty('--forma-color-intenso', colorIntenso); }
+
+    const table = document.createElement('table');
+    table.className = 'forma-mini-carton';
+    const thead = document.createElement('thead');
+    const trh = document.createElement('tr');
+    ['B','I','N','G','O'].forEach(l=>{
+      const th = document.createElement('th');
+      th.appendChild(crearContenidoCelda(l));
+      trh.appendChild(th);
+    });
+    thead.appendChild(trh);
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    for(let r=0; r<5; r++){
+      const tr = document.createElement('tr');
+      for(let c=0; c<5; c++){
+        const td = document.createElement('td');
+        if(r===2 && c===2){
+          td.classList.add('free','star');
+          const estrella = document.createElement('span');
+          estrella.className = 'forma-estrella';
+          estrella.textContent = '★';
+          td.appendChild(estrella);
+        }else{
+          const seleccionada = posiciones.some(p=>Number(p.r)===r && Number(p.c)===c);
+          if(seleccionada){
+            td.classList.add('star');
+            const estrella = document.createElement('span');
+            estrella.className = 'forma-estrella';
+            estrella.textContent = '★';
+            td.appendChild(estrella);
+            td.style.backgroundColor = aclararColorHex(color, 0.7);
+          }
+        }
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    wrapper.appendChild(table);
+    return wrapper;
+  }
+
+  function obtenerColorForma(idx){
+    if(!idx) return '#0b5394';
+    const posicion = (idx - 1) % coloresFormas.length;
+    return coloresFormas[posicion] || '#0b5394';
+  }
+
+  function construirMapaPosiciones(posiciones){
+    const mapa = new Map();
+    if(!Array.isArray(posiciones)) return mapa;
+    posiciones.forEach(p=>{
+      const fila = Number(p.r);
+      const col = Number(p.c);
+      if(!Number.isFinite(fila) || !Number.isFinite(col)) return;
+      const key = `${fila}-${col}`;
+      if(typeof p.valor === 'string' || typeof p.valor === 'number'){
+        mapa.set(key, p.valor);
+      }
+    });
+    return mapa;
+  }
+
+  function crearContenidoCelda(valor){
+    const cont = document.createElement('span');
+    cont.className = 'cell-content';
+    if(valor !== undefined && valor !== null){
+      cont.textContent = valor;
+    }
+    return cont;
+  }
+
+  function crearCartonVisual(data, opciones = {}){
+    const { formaDestacada = null, esGanador = false, limiteCanto = -1 } = opciones;
+    const carton = document.createElement('div');
+    carton.className = 'pdf-carton';
+    const tipoCartonRaw = typeof data.tipocarton === 'string' ? data.tipocarton.trim().toLowerCase() : '';
+    const tipoCartonNormalizado = tipoCartonRaw === 'gratis' ? 'gratis' : 'pagado';
+    carton.classList.add(tipoCartonNormalizado);
+    carton.dataset.tipocarton = tipoCartonNormalizado;
+    if(esGanador){
+      carton.classList.add('ganador');
+    }
+
+    const tabla = document.createElement('table');
+    tabla.className = 'pdf-carton-table';
+    const thead = document.createElement('thead');
+    const trh = document.createElement('tr');
+    ['B','I','N','G','O'].forEach(l=>{
+      const th = document.createElement('th');
+      th.appendChild(crearContenidoCelda(l));
+      trh.appendChild(th);
+    });
+    thead.appendChild(trh);
+    tabla.appendChild(thead);
+
+    const cuerpo = document.createElement('tbody');
+    const valorPorPos = data.valorPorPos instanceof Map ? data.valorPorPos : construirMapaPosiciones(data.posiciones);
+    const celdasMapa = new Map();
+    for(let r=0; r<5; r++){
+      const fila = document.createElement('tr');
+      for(let c=0; c<5; c++){
+        const td = document.createElement('td');
+        if(r===2 && c===2){
+          td.classList.add('free');
+          td.appendChild(crearContenidoCelda('★'));
+        }else{
+          const clave = `${r}-${c}`;
+          const valor = valorPorPos.get(clave) ?? '';
+          const contenido = crearContenidoCelda(valor);
+          td.appendChild(contenido);
+          celdasMapa.set(clave, td);
+          const numero = normalizarNumero(valor);
+          const paso = Number.isFinite(numero) ? cantosIndiceMap.get(numero) : undefined;
+          if(paso !== undefined && Number.isInteger(paso) && limiteCanto >= 0 && paso <= limiteCanto){
+            td.classList.add('celda-cantada');
+          }
+        }
+        fila.appendChild(td);
+      }
+      cuerpo.appendChild(fila);
+    }
+    tabla.appendChild(cuerpo);
+    carton.appendChild(tabla);
+
+    const infoInferior = document.createElement('div');
+    infoInferior.className = 'pdf-carton-datos';
+    const numero = document.createElement('div');
+    const numeroOrden = obtenerNumeroCarton(data);
+    carton.dataset.numero = numeroOrden===null?0:numeroOrden;
+    numero.className = 'numero';
+    numero.textContent = `Cartón ${numeroOrden===null ? '--' : String(numeroOrden).padStart(4,'0')}`;
+    infoInferior.appendChild(numero);
+
+    const alias = document.createElement('div');
+    alias.className = 'alias';
+    alias.textContent = data.alias ? `Alias: ${data.alias}` : 'Alias: -';
+    infoInferior.appendChild(alias);
+
+    const tipo = document.createElement('div');
+    tipo.className = `tipo tipo-${tipoCartonNormalizado}`;
+    tipo.textContent = (data.tipocarton || tipoCartonNormalizado).toString().toUpperCase();
+    infoInferior.appendChild(tipo);
+
+    carton.appendChild(infoInferior);
+
+    if(formaDestacada){
+      const posicionesForma = obtenerPosicionesForma(formaDestacada);
+      const color = obtenerColorForma(Number(formaDestacada.idx)||1);
+      posicionesForma.forEach(pos=>{
+        const clave = `${pos.r}-${pos.c}`;
+        const celda = celdasMapa.get(clave);
+        if(celda){
+          celda.classList.add('celda-forma');
+          celda.style.setProperty('--forma-color-base', color);
+          celda.style.borderColor = color;
+        }
+      });
+    }
+
+    return carton;
+  }
+
+  function renderFormas(){
+    formasCont.innerHTML = '';
+    if(!formasData.length){
+      formasCont.innerHTML = '<div class="cartones-placeholder">No se registraron formas para este sorteo.</div>';
+      return;
+    }
+    formasData.sort((a,b)=>{
+      const idxA = Number(a.idx) || 0;
+      const idxB = Number(b.idx) || 0;
+      return idxA - idxB;
+    });
+    formasData.forEach(forma=>{
+      const color = obtenerColorForma(forma.idx || 1);
+      const item = document.createElement('div');
+      item.className = 'forma-item';
+
+      const contenedor = document.createElement('div');
+      contenedor.className = 'forma-resumen';
+      contenedor.style.setProperty('--forma-color', color);
+
+      const info = document.createElement('div');
+      info.className = 'forma-info';
+      const titulo = document.createElement('div');
+      titulo.className = 'forma-titulo';
+      const nombreForma = (forma.nombre && String(forma.nombre).trim())
+        || (forma.idx ? `Forma ${forma.idx}` : 'Forma');
+      titulo.textContent = nombreForma;
+      info.appendChild(titulo);
+
+      const idx = Number(forma.idx) || 0;
+      const registro = cartonesGanadoresPorForma.get(idx) || {};
+      const ganadores = Array.isArray(registro.cartones) ? registro.cartones : [];
+      const cantidadGanadores = ganadores.length;
+      const premioTotal = obtenerCreditosForma(forma);
+      const premioIndividual = cantidadGanadores > 0 ? Math.floor(premioTotal / cantidadGanadores) : 0;
+      const totalCartonesGratis = obtenerCartonesGratisForma(forma);
+      const cartonesGratisPorGanador = cantidadGanadores > 0
+        ? Math.floor(totalCartonesGratis / cantidadGanadores)
+        : totalCartonesGratis;
+
+      const detallePremio = crearDetalleForma('Premio total', premioTotal > 0
+        ? `${formatearNumero(premioTotal)}`
+        : '-');
+      info.appendChild(detallePremio);
+
+      const detalleGratis = crearDetalleForma('Cartones gratis totales', formatearNumero(totalCartonesGratis), { usarIconoCarton: true });
+      info.appendChild(detalleGratis);
+
+      const extraInfo = document.createElement('div');
+      extraInfo.className = 'forma-extra-info';
+
+      const itemGanadores = document.createElement('div');
+      itemGanadores.className = 'forma-extra-item';
+      itemGanadores.innerHTML = `<span class="extra-label">Ganadores:</span><span class="extra-value">${cantidadGanadores}</span>`;
+      extraInfo.appendChild(itemGanadores);
+
+      const itemCartones = document.createElement('div');
+      itemCartones.className = 'forma-extra-item forma-extra-cartones';
+      if(cantidadGanadores){
+        const listado = ganadores.map(carton=>formatearNumeroCarton(carton)).join(', ');
+        itemCartones.innerHTML = `<span class="extra-label">Cartones:</span><span class="extra-value">${listado}</span>`;
+      }else{
+        itemCartones.innerHTML = `<span class="extra-label">Cartones:</span><span class="extra-value sin-datos">Sin ganadores</span>`;
+      }
+      extraInfo.appendChild(itemCartones);
+
+      const itemPremio = document.createElement('div');
+      itemPremio.className = 'forma-extra-item';
+      itemPremio.innerHTML = `<span class="extra-label">Premio por cartón:</span><span class="extra-value">${formatearNumero(premioIndividual)}</span>`;
+      extraInfo.appendChild(itemPremio);
+
+      const itemGratis = document.createElement('div');
+      itemGratis.className = 'forma-extra-item';
+      itemGratis.innerHTML = `<span class="extra-label">Cartones gratis por ganador:</span><span class="extra-value">${formatearNumero(cartonesGratisPorGanador)}</span>`;
+      extraInfo.appendChild(itemGratis);
+
+      info.appendChild(extraInfo);
+
+      contenedor.appendChild(info);
+
+      const miniCarton = crearMiniCartonForma(forma);
+
+      item.appendChild(contenedor);
+      item.appendChild(miniCarton);
+      formasCont.appendChild(item);
+    });
+  }
+
+  function crearDetalleForma(etiqueta, valor, opciones = {}){
+    const cont = document.createElement('div');
+    cont.className = 'forma-detalle';
+    const spanEtiqueta = document.createElement('span');
+    spanEtiqueta.className = 'etiqueta';
+    const usarIconoCarton = Boolean(opciones && opciones.usarIconoCarton);
+    const textoEtiqueta = usarIconoCarton
+      ? 'Gratis:'
+      : `${etiqueta}:`;
+    if(usarIconoCarton){
+      const icono = document.createElement('img');
+      icono.src = 'https://cdn-icons-png.flaticon.com/32/5065/5065890.png';
+      icono.alt = 'Cartón';
+      icono.className = 'carton-icon';
+      spanEtiqueta.appendChild(icono);
+      const texto = document.createElement('span');
+      texto.textContent = textoEtiqueta;
+      spanEtiqueta.appendChild(texto);
+    } else {
+      spanEtiqueta.textContent = textoEtiqueta;
+    }
+    const spanValor = document.createElement('span');
+    spanValor.className = 'valor';
+    spanValor.textContent = valor !== undefined && valor !== null ? valor : '';
+    cont.appendChild(spanEtiqueta);
+    cont.appendChild(spanValor);
+    return cont;
+  }
+
+  function renderCartones(){
+    cartonesGrid.innerHTML = '';
+    if(pdfListoBtn){
+      pdfListoBtn.style.display = 'none';
+      pdfListoBtn.classList.remove('pdf-disponible');
+    }
+    if(!cartonesMapa.size){
+      cartonesGrid.innerHTML = '<div class="cartones-placeholder">No hay cartones generados para este sorteo.</div>';
+      return;
+    }
+    const orden = construirOrdenCartones();
+    if(!orden.length){
+      cartonesGrid.innerHTML = '<div class="cartones-placeholder">No hay resultados para mostrar todavía.</div>';
+      return;
+    }
+    const limiteCanto = obtenerIndiceLimiteGanador();
+    const fragment = document.createDocumentFragment();
+    orden.forEach(entry=>{
+      const elemento = crearCartonVisual(entry.carton, {
+        formaDestacada: entry.forma,
+        esGanador: entry.estado === 'ganador',
+        limiteCanto
+      });
+      elemento.classList.add('carton-resultado');
+      elemento.dataset.estado = entry.estado;
+      if(entry.forma && Number.isFinite(Number(entry.forma.idx))){
+        elemento.dataset.forma = String(entry.forma.idx);
+      }
+      fragment.appendChild(elemento);
+    });
+    cartonesGrid.appendChild(fragment);
+  }
+
+  async function cargarDatosBasicos(){
+    mostrarLoading('Cargando información del sorteo, por favor espera');
+    try {
+      await ensureFirebaseReady();
+      const sorteoDoc = await db.collection('sorteos').doc(sorteoId).get();
+      if(!sorteoDoc.exists){
+        alert('No se encontró el sorteo.');
+        window.location.href = 'cantarsorteos.html';
+        return;
+      }
+      sorteoData = sorteoDoc.data();
+      nombreEl.textContent = sorteoData.nombre || 'Sorteo';
+      tipoTituloEl.textContent = sorteoData.tipo ? sorteoData.tipo : '';
+      datoFechaEl.textContent = formatearFechaParaMostrar(sorteoData.fecha || '');
+      datoHoraEl.textContent = formatearHoraParaMostrar(sorteoData.hora || '');
+      datoCierreEl.textContent = formatearHoraParaMostrar(sorteoData.horacierre || '');
+      datoValorEl.textContent = `${formatearNumero(sorteoData.valorCarton || 0)}`;
+      datoMaxGratisEl.textContent = formatearNumero(sorteoData.maxcartongratis || 0);
+      datoTipoEl.textContent = sorteoData.tipo || '-';
+      totalPremiosEl.textContent = formatearNumero(sorteoData.totalPremios || 0);
+      pdfNombreBase = construirNombreBaseArchivo();
+
+      const formasSnap = await db.collection('formas').where('sorteoId','==',sorteoId).get();
+      formasData = [];
+      formasSnap.forEach(doc=>{
+        const data = doc.data()||{};
+        const idx = Number(data.idx ?? data.indice);
+        if(!Number.isFinite(idx)) return;
+        const posicionesNorm = normalizarPosicionesEntrada(data.posicionesNormalizadas || data.posiciones || []);
+        formasData.push({
+          ...data,
+          id: doc.id,
+          idx,
+          nombre: data.nombre || '',
+          porcentaje: Number(data.porcentaje ?? data.porcentajePremio ?? data.porcentaje_forma ?? data.porcentajeForma ?? 0) || 0,
+          premioCreditos: Number(data.premioCreditos ?? data.premiocreditos ?? data.creditos ?? 0) || 0,
+          cartonesGratis: Number(data.cartonesGratis ?? data.cartonesgratis ?? data.cartones ?? 0) || 0,
+          posicionesNormalizadas: posicionesNorm.map(pos=>({ r: pos.r, c: pos.c }))
+        });
+      });
+      formasData.sort((a,b)=>(a.idx||0)-(b.idx||0));
+
+      let numerosCantos = [];
+      try {
+        const cantosDoc = await db.collection('cantos').doc(sorteoId).get();
+        if(cantosDoc.exists){
+          const cantosData = cantosDoc.data()||{};
+          numerosCantos = Array.isArray(cantosData.numeros)?cantosData.numeros:[];
+        }
+      } catch (errorCantos) {
+        console.warn('No se pudieron cargar los cantos desde la colección cantos', errorCantos);
+      }
+      if(!numerosCantos.length && Array.isArray(sorteoData.cantos)){
+        numerosCantos = sorteoData.cantos;
+      }
+      procesarCantos(numerosCantos);
+
+      renderFormas();
+      mostrarMensajeCartonesPendientes();
+      if(generarResultadosBtn){ generarResultadosBtn.disabled = false; }
+    } catch (err) {
+      console.error('Error cargando datos', err);
+      alert('Ocurrió un error cargando la información del sorteo.');
+      window.location.href = 'cantarsorteos.html';
+    } finally {
+      ocultarLoading();
+    }
+  }
+
+  async function cargarCartones(){
+    mostrarLoading('Calculando resultados del sorteo, por favor espera');
+    try {
+      await ensureFirebaseReady();
+      const cartonesSnap = await db.collection('CartonJugado').where('sorteoId','==',sorteoId).get();
+      cartonesData = [];
+      cartonesMapa = new Map();
+      cartonesSnap.forEach(doc=>{
+        const data = doc.data()||{};
+        const posiciones = normalizarPosicionesEntrada(data.posiciones || []);
+        const valorPorPos = new Map();
+        posiciones.forEach(pos=>{
+          if(Number.isFinite(pos.valor)){
+            valorPorPos.set(`${pos.r}-${pos.c}`, pos.valor);
+          }
+        });
+        const carton = {
+          ...data,
+          id: doc.id,
+          posiciones,
+          valorPorPos,
+          formasGanadas: []
+        };
+        cartonesData.push(carton);
+        cartonesMapa.set(doc.id, carton);
+      });
+      calcularResultados();
+      renderFormas();
+      renderCartones();
+      cartonesCargados = cartonesMapa.size > 0;
+      if(pdfBtn){
+        pdfBtn.style.display = cartonesCargados ? 'block' : 'none';
+        pdfBtn.disabled = !cartonesCargados;
+      }
+      if(pdfListoBtn){
+        pdfListoBtn.style.display = 'none';
+        pdfListoBtn.classList.remove('pdf-disponible');
+      }
+      if(generarResultadosBtn){ generarResultadosBtn.textContent = cartonesCargados ? 'Regenerar resultados' : 'Resultados'; }
+    } catch (err) {
+      cartonesCargados = false;
+      console.error('Error cargando cartones', err);
+      alert('Ocurrió un error al generar los cartones del sorteo.');
+      mostrarMensajeCartonesPendientes();
+      if(pdfBtn){ pdfBtn.style.display = 'none'; }
+      cartonesMapa = new Map();
+      cartonesData = [];
+      cartonesGanadoresPorForma = new Map();
+      formasPorCarton = new Map();
+      renderFormas();
+      renderCartones();
+    } finally {
+      ocultarLoading();
+    }
+  }
+
+  async function manejarGenerarResultados(){
+    if(!sorteoData){ alert('La información del sorteo aún no está disponible.'); return; }
+    if(!generarResultadosBtn || generarResultadosBtn.disabled) return;
+    generarResultadosBtn.disabled = true;
+    await cargarCartones();
+    generarResultadosBtn.disabled = false;
+  }
+
+  async function generarPDF(){
+    if(!sorteoData){ return; }
+    if(!cartonesCargados){ alert('Primero debes generar los cartones del sorteo.'); return; }
+    if(esDispositivoMovil() && estaEnOrientacionRetrato()){
+      mostrarModalOrientacion();
+      return;
+    }
+    const jsPDFLib = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    if(!window.html2canvas || !jsPDFLib){
+      alert('Dependencias para generar PDF no disponibles');
+      return;
+    }
+    if(pdfListoBtn){
+      pdfListoBtn.style.display = 'none';
+      pdfListoBtn.classList.remove('pdf-disponible');
+    }
+    const nombreArchivo = `${construirNombreArchivo()}.pdf`;
+    const resumen = document.getElementById('resumen-layout');
+    if(!resumen){
+      alert('No se encontró el contenido del sorteo para generar el PDF.');
+      return;
+    }
+
+    const textoOriginalPdf = pdfBtn ? pdfBtn.textContent : '';
+    const textoOriginalCartones = generarResultadosBtn ? generarResultadosBtn.textContent : '';
+    const debeForzarPaisaje = (() => {
+      try {
+        return window.matchMedia ? window.matchMedia('(orientation: portrait)').matches : window.innerHeight > window.innerWidth;
+      } catch (e) {
+        return window.innerHeight > window.innerWidth;
+      }
+    })();
+
+    try {
+      await ensureFirebaseReady();
+      if(generarResultadosBtn){ generarResultadosBtn.disabled = true; }
+      if(pdfBtn){
+        pdfBtn.disabled = true;
+        pdfBtn.textContent = 'Generando PDF...';
+      }
+      mostrarLoading('Generando PDF para descargar, por favor espera');
+
+      if(debeForzarPaisaje){
+        document.body.classList.add('forzar-orientacion-landscape');
+        await new Promise(resolve=>requestAnimationFrame(resolve));
+      }
+
+      document.body.classList.add('pdf-captura');
+      await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
+
+      const pdf = new jsPDFLib('landscape', 'pt', 'a4');
+      if(typeof pdf.setCompression === 'function'){
+        pdf.setCompression(true);
+      }
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const marginX = 18;
+      const marginY = 18;
+
+      const canvasScale = Math.min(2.8, Math.max(2, window.devicePixelRatio || 2.2));
+      const canvasOptions = {
+        scale: canvasScale,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      };
+
+      const resumenCanvas = await window.html2canvas(resumen, canvasOptions);
+      const availableWidth = pageWidth - marginX * 2;
+      const availableHeight = pageHeight - marginY * 2;
+      const widthRatio = availableWidth / resumenCanvas.width;
+      const heightRatio = availableHeight / resumenCanvas.height;
+      const resumenRatio = Math.min(widthRatio, heightRatio);
+      const resumenWidth = resumenCanvas.width * resumenRatio;
+      const resumenHeight = resumenCanvas.height * resumenRatio;
+      const resumenX = marginX + (availableWidth - resumenWidth) / 2;
+      const resumenY = marginY + (availableHeight - resumenHeight) / 2;
+      pdf.addImage(resumenCanvas.toDataURL('image/jpeg', 0.85), 'JPEG', resumenX, resumenY, resumenWidth, resumenHeight);
+
+      const cartonElements = Array.from(document.querySelectorAll('.pdf-carton'))
+        .sort((a,b)=>{
+          const numA = Number(a.dataset.numero || 0);
+          const numB = Number(b.dataset.numero || 0);
+          return numA - numB;
+        });
+      if(cartonElements.length){
+        const margenCartonesX = 14;
+        const margenCartonesY = 18;
+        const espacioHorizontal = 8;
+        const espacioVertical = 12;
+        const anchoUtil = pageWidth - margenCartonesX * 2;
+        const altoUtil = pageHeight - margenCartonesY * 2;
+        const muestraRect = cartonElements[0].getBoundingClientRect();
+        const muestraTabla = cartonElements[0].querySelector('.pdf-carton-table');
+        const anchoTabla = muestraTabla ? Math.round(muestraTabla.getBoundingClientRect().width) : Math.round(muestraRect.width);
+        const altoTabla = muestraTabla ? Math.round(muestraTabla.getBoundingClientRect().height) : 0;
+        const altoDatos = (()=>{
+          const datos = cartonElements[0].querySelector('.pdf-carton-datos');
+          return datos ? Math.round(datos.getBoundingClientRect().height) : 0;
+        })();
+        const anchoMuestra = Math.round(muestraRect.width) || Math.round(anchoTabla + 16);
+        const altoMuestra = Math.round(muestraRect.height) || Math.round(altoTabla + altoDatos);
+        const anchoReferencia = Math.max(160, anchoMuestra + 24);
+        const altoReferencia = Math.max(220, altoMuestra + 24);
+        const maxColumnas = 6;
+        const minColumnas = 3;
+        let columnas = Math.floor((anchoUtil + espacioHorizontal) / (anchoReferencia + espacioHorizontal));
+        if(!Number.isFinite(columnas) || columnas < minColumnas){
+          columnas = minColumnas;
+        }
+        columnas = Math.min(maxColumnas, columnas);
+        if(cartonElements.length >= maxColumnas){
+          columnas = maxColumnas;
+        } else {
+          columnas = Math.min(columnas, cartonElements.length);
+        }
+        let filas = Math.floor((altoUtil + espacioVertical) / (altoReferencia + espacioVertical));
+        if(!Number.isFinite(filas) || filas < 3){
+          filas = 3;
+        }
+        const maxFilas = columnas >= maxColumnas ? 3 : 4;
+        filas = Math.min(maxFilas, Math.max(3, filas));
+        const totalPorPagina = columnas * filas;
+        const anchoCelda = (anchoUtil - espacioHorizontal * (columnas - 1)) / columnas;
+        const altoCelda = (altoUtil - espacioVertical * (filas - 1)) / filas;
+
+        const valorOriginalColumnas = document.body.style.getPropertyValue('--pdf-columnas');
+        document.body.style.setProperty('--pdf-columnas', String(columnas));
+        await new Promise(resolve=>requestAnimationFrame(resolve));
+
+        let indiceEnPagina = 0;
+
+        try {
+          for(const elemento of cartonElements){
+            if(indiceEnPagina === 0){
+              if(typeof pdf.addPage === 'function'){
+                pdf.addPage('a4', 'landscape');
+              }
+            }
+
+            const canvas = await window.html2canvas(elemento, { ...canvasOptions });
+            const escala = Math.min(
+              anchoCelda / canvas.width,
+              altoCelda / canvas.height
+            );
+            const renderWidth = canvas.width * escala;
+            const renderHeight = canvas.height * escala;
+
+            const columna = indiceEnPagina % columnas;
+            const fila = Math.floor(indiceEnPagina / columnas);
+            const baseX = margenCartonesX + columna * (anchoCelda + espacioHorizontal);
+            const baseY = margenCartonesY + fila * (altoCelda + espacioVertical);
+            const posX = baseX + (anchoCelda - renderWidth) / 2;
+            const posY = baseY + (altoCelda - renderHeight) / 2;
+
+            pdf.addImage(canvas.toDataURL('image/jpeg', 0.82), 'JPEG', posX, posY, renderWidth, renderHeight);
+
+            indiceEnPagina++;
+            if(indiceEnPagina >= totalPorPagina){
+              indiceEnPagina = 0;
+            }
+          }
+        } finally {
+          if(valorOriginalColumnas){
+            document.body.style.setProperty('--pdf-columnas', valorOriginalColumnas);
+          } else {
+            document.body.style.removeProperty('--pdf-columnas');
+          }
+        }
+      }
+
+      pdf.save(nombreArchivo);
+      if(pdfListoBtn){
+        pdfListoBtn.style.display = 'block';
+        pdfListoBtn.disabled = false;
+        pdfListoBtn.classList.add('pdf-disponible');
+      }
+      alert('El PDF del sorteo ha sido generado. Descárgalo y luego confirma con "PDF listo".');
+    } catch (err) {
+      console.error('Error generando el PDF', err);
+      alert('No se pudo generar el PDF del sorteo. Intenta nuevamente.');
+    } finally {
+      document.body.classList.remove('pdf-captura');
+      if(debeForzarPaisaje){
+        document.body.classList.remove('forzar-orientacion-landscape');
+      }
+      if(pdfBtn){
+        pdfBtn.disabled = false;
+        pdfBtn.textContent = textoOriginalPdf || 'Generar PDF';
+      }
+      if(generarResultadosBtn){
+        generarResultadosBtn.disabled = false;
+        generarResultadosBtn.textContent = textoOriginalCartones || generarResultadosBtn.textContent;
+      }
+      ocultarLoading();
+    }
+  }
+
+  async function confirmarPdfListo(){
+    if(!sorteoId){ return; }
+    const confirmar = await window.confirm('¿Confirmas que el PDF fue descargado correctamente?');
+    if(!confirmar) return;
+    try {
+      await ensureFirebaseReady();
+      if(pdfListoBtn){ pdfListoBtn.disabled = true; }
+      mostrarLoading('Actualizando el estado del PDF, por favor espera');
+      const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+      const eliminar = firebase.firestore.FieldValue.delete();
+      const payload = {
+        pdf: 'si',
+        pdfActualizadoEn: timestamp,
+        pdfUrl: eliminar,
+        pdfStoragePath: eliminar
+      };
+      await Promise.all([
+        db.collection('sorteos').doc(sorteoId).set(payload, { merge: true }),
+        db.collection('cantarsorteos').doc(sorteoId).set(payload, { merge: true })
+      ]);
+      alert('El sorteo se marcó como PDF listo.');
+      window.location.href = 'cantarsorteos.html';
+    } catch (err) {
+      console.error('Error actualizando el estado del PDF', err);
+      alert('No se pudo actualizar el estado del PDF. Intenta nuevamente.');
+      if(pdfListoBtn){ pdfListoBtn.disabled = false; }
+    } finally {
+      ocultarLoading();
+    }
+  }
+
+  cargarDatosBasicos();
+  </script>
+</body>
+</html>
