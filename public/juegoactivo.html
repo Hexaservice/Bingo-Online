@@ -243,6 +243,15 @@
           color: #3b1b00;
           text-shadow: 0 0 8px rgba(255, 236, 179, 0.85);
       }
+      .canto-cell.invalido {
+          background: radial-gradient(circle at center, rgba(255, 204, 128, 0.9), rgba(255, 109, 0, 0.95));
+          color: #ffffff;
+          text-shadow: 0 0 8px rgba(0,0,0,0.9);
+          box-shadow: inset 0 0 10px rgba(0,0,0,0.45);
+      }
+      .canto-cell.cantado.invalido {
+          transform: scale(1.08);
+      }
       .canto-cell.ultimo {
           box-shadow: 0 0 14px rgba(255,215,0,0.9);
           animation: focoUltimo 1.6s ease-in-out infinite;
@@ -1188,6 +1197,15 @@
           border-radius: 4px;
       }
       .carton-tabla td.celda-cantada .cell-content {
+          text-shadow: 0 0 6px rgba(0,0,0,0.85);
+      }
+      .carton-tabla td.celda-canto-penalizado {
+          background: radial-gradient(circle at center, rgba(255, 204, 128, 0.9), rgba(255, 109, 0, 0.95));
+          color: #ffffff;
+          box-shadow: inset 0 0 10px rgba(0,0,0,0.45);
+          border-radius: 4px;
+      }
+      .carton-tabla td.celda-canto-penalizado .cell-content {
           text-shadow: 0 0 6px rgba(0,0,0,0.85);
       }
       .carton-tabla td.celda-forma-activa {
@@ -2268,6 +2286,7 @@
 
   let cartonSeleccionadoId = null;
   const animacionesCartones = new Map();
+  const celdasPenalizadasTimers = new Map();
   let cartonPrincipalInfo = null;
   let resaltadoTemporal = {timer:null, tablas:null, cartonId:null};
   let formaDestacadaSeleccionada = null;
@@ -3362,6 +3381,40 @@
     ejecutar();
   }
 
+  function aplicarPenalizacionTemporalEnCelda(celda){
+    if(!(celda instanceof HTMLElement)) return;
+    celda.classList.remove('celda-cantada');
+    if(celda.dataset){
+      celda.dataset.cantada='0';
+    }
+    celda.classList.add('celda-canto-penalizado');
+    const previo=celdasPenalizadasTimers.get(celda);
+    if(previo){
+      clearTimeout(previo);
+    }
+    const timer=setTimeout(()=>{
+      celda.classList.remove('celda-canto-penalizado');
+      celdasPenalizadasTimers.delete(celda);
+    },1000);
+    celdasPenalizadasTimers.set(celda,timer);
+  }
+
+  function resaltarCeldasPenalizadasTemporalmente(numeros){
+    if(!Array.isArray(numeros) || !numeros.length) return;
+    const unicos=Array.from(new Set(numeros.map(num=>Number(num)).filter(Number.isFinite)));
+    if(!unicos.length) return;
+    requestAnimationFrame(()=>{
+      unicos.forEach(numero=>{
+        const selector=`.carton-tabla td[data-valor="${numero}"]`;
+        document.querySelectorAll(selector).forEach(celda=>{
+          if(!(celda instanceof HTMLElement)) return;
+          if(celda.classList.contains('free')) return;
+          aplicarPenalizacionTemporalEnCelda(celda);
+        });
+      });
+    });
+  }
+
   crearGridCantos();
 
   function formatearFecha(fechaStr){
@@ -3598,7 +3651,7 @@
   function renderCantos(){
     if(!cantoCellsMap.size) crearGridCantos();
     cantoCellsMap.forEach(celda=>{
-      celda.classList.remove('cantado','ultimo','complementario');
+      celda.classList.remove('cantado','ultimo','complementario','invalido');
     });
     ultimoCantoEl.innerHTML='';
     const total=cantosOrdenados.length;
@@ -3606,8 +3659,13 @@
     cantosOrdenados.forEach((num,idx)=>{
       const celda=cantoCellsMap.get(num);
       if(celda){
+        const estado=cantosResultadoMap instanceof Map?cantosResultadoMap.get(num):undefined;
+        const esPenalizado=typeof estado==='string' && estado.trim().toLowerCase()==='p';
         celda.classList.add('cantado');
-        if(complementariosActivos && idx>indiceUltimoGanador){
+        if(esPenalizado){
+          celda.classList.add('invalido');
+          celda.classList.remove('complementario');
+        }else if(complementariosActivos && idx>indiceUltimoGanador){
           celda.classList.add('complementario');
         }
         if(idx===total-1){
@@ -3615,6 +3673,16 @@
         }
       }
     });
+    if(cantosResultadoMap instanceof Map){
+      cantosResultadoMap.forEach((estado,numero)=>{
+        if(typeof estado!=='string') return;
+        if(estado.trim().toLowerCase()!=='p') return;
+        const celda=cantoCellsMap.get(numero);
+        if(!celda) return;
+        celda.classList.add('cantado','invalido');
+        celda.classList.remove('complementario');
+      });
+    }
     ultimoCantoEl.classList.toggle('complementarios-activos', complementariosActivos && total>0);
     if(total){
       const etiqueta=cantosEtiquetas[total-1] || generarEtiquetaDesdeNumero(cantosOrdenados[total-1]);
@@ -4078,6 +4146,7 @@
     const listaNumeros=Array.isArray(payload?.numeros)?payload.numeros:[];
     const detallesLista=Array.isArray(payload?.detalles)?payload.detalles:[];
     const detallesNormalizados=new Map();
+    const estadoAnterior=cantosResultadoMap instanceof Map?new Map(cantosResultadoMap):new Map();
     if(detallesLista.length){
       detallesLista.forEach((item,indice)=>{
         const textoNumero=(item?.numero ?? item?.valor ?? item?.canto ?? item?.etiqueta ?? '').toString();
@@ -4145,11 +4214,23 @@
         resultadoMapa.set(numero,estadoNormalizado);
       }
     });
-    cantosResultadoMap=resultadoMapa;
+    const nuevosPenalizados=[];
+    resultadoMapa.forEach((estado,numero)=>{
+      if(typeof estado!=='string') return;
+      const actual=estado.trim().toLowerCase();
+      if(actual!=='p') return;
+      const previo=estadoAnterior.get(numero);
+      if(typeof previo==='string' && previo.trim().toLowerCase()==='p') return;
+      nuevosPenalizados.push(numero);
+    });
+    cantosResultadoMap=new Map(resultadoMapa);
     cantosOrdenados=normalizados;
     cantosEtiquetas=etiquetas;
     calcularGanadores();
     renderCantos();
+    if(nuevosPenalizados.length){
+      resaltarCeldasPenalizadasTemporalmente(nuevosPenalizados);
+    }
   }
 
   function procesarFormas(snapshot){
