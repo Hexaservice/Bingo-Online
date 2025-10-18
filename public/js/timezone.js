@@ -3,8 +3,34 @@ const serverTime = {
   Pais: '',
   locale: 'es-ES',
   zonaIana: '',
-  diferencia: 0
+  diferencia: 0,
+  offsetMinutos: null
 };
+
+const IANA_OVERRIDES = {
+  Venezuela: 'America/Caracas',
+  Colombia: 'America/Bogota',
+  Mexico: 'America/Mexico_City',
+  España: 'Europe/Madrid',
+  Argentina: 'America/Argentina/Buenos_Aires'
+};
+
+function obtenerOffsetMinutos(zona) {
+  if (typeof zona !== 'string') return null;
+  const match = zona.match(/UTC([+-])(\d{2}):(\d{2})/i);
+  if (!match) return null;
+  const horas = parseInt(match[2], 10);
+  const minutos = parseInt(match[3], 10);
+  if (Number.isNaN(horas) || Number.isNaN(minutos)) return null;
+  const signo = match[1] === '-' ? 1 : -1;
+  return signo * (horas * 60 + minutos);
+}
+
+function diferenciaPorOffset(offsetMinutos) {
+  if (typeof offsetMinutos !== 'number' || Number.isNaN(offsetMinutos)) return 0;
+  const localOffset = new Date().getTimezoneOffset();
+  return (localOffset - offsetMinutos) * 60000;
+}
 
 function parseZona(zona) {
   const match = zona.match(/^UTC([+-])(\d{2}):(\d{2})$/);
@@ -17,8 +43,9 @@ function parseZona(zona) {
 }
 
 async function sincronizarHora() {
+  const fallback = diferenciaPorOffset(serverTime.offsetMinutos);
   if (!serverTime.zonaIana) {
-    serverTime.diferencia = 0;
+    serverTime.diferencia = fallback;
     return;
   }
   try {
@@ -29,11 +56,11 @@ async function sincronizarHora() {
     if (!isNaN(serverDate)) {
       serverTime.diferencia = serverDate.getTime() - Date.now();
     } else {
-      serverTime.diferencia = 0;
+      serverTime.diferencia = fallback;
     }
   } catch (err) {
     console.error('Error obteniendo hora del servidor', err);
-    serverTime.diferencia = 0;
+    serverTime.diferencia = fallback;
   }
 }
 
@@ -71,7 +98,10 @@ async function initServerTime() {
       Argentina: 'es-AR'
     };
     serverTime.locale = locales[Pais] || 'es-ES';
-    serverTime.zonaIana = parseZona(ZonaHoraria);
+    serverTime.offsetMinutos = obtenerOffsetMinutos(ZonaHoraria);
+    const override = IANA_OVERRIDES[Pais];
+    const zonaNormalizada = override || parseZona(ZonaHoraria);
+    serverTime.zonaIana = typeof zonaNormalizada === 'string' ? zonaNormalizada : '';
     await sincronizarHora();
     setInterval(sincronizarHora, 3600000);
   } catch (e) {
@@ -136,6 +166,10 @@ async function initFechaHora(idElemento = "fecha-hora") {
 
   mostrar();
   setInterval(mostrar, 1000);
+}
+
+if (typeof window !== 'undefined') {
+  window.serverTime = serverTime;
 }
 
 window.initServerTime = initServerTime;
