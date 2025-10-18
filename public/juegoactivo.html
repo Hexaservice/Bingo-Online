@@ -238,6 +238,11 @@
           text-shadow: 0 0 6px rgba(0,0,0,0.85);
           transform: scale(1.08);
       }
+      .canto-cell.cantado.complementario {
+          background: radial-gradient(circle at center, rgba(255, 195, 113, 0.95), rgba(255, 94, 0, 0.92));
+          color: #3b1b00;
+          text-shadow: 0 0 8px rgba(255, 236, 179, 0.85);
+      }
       .canto-cell.ultimo {
           box-shadow: 0 0 14px rgba(255,215,0,0.9);
           animation: focoUltimo 1.6s ease-in-out infinite;
@@ -291,6 +296,21 @@
       #ultimo-canto .ultimo-boton:active {
           transform: scale(0.95);
           box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+      }
+      #ultimo-canto.complementarios-activos {
+          color: #ff8f00;
+      }
+      #ultimo-canto.complementarios-activos .ultimo-total {
+          color: #ff8f00;
+      }
+      #ultimo-canto .ultimo-boton.complementarios-activos {
+          background: radial-gradient(circle at top, rgba(255,255,255,0.95) 12%, rgba(255,145,0,0.95) 88%);
+          color: #4a2200;
+          box-shadow: 0 6px 16px rgba(255,145,0,0.32);
+      }
+      #ultimo-canto .ultimo-boton.complementarios-activos:focus-visible {
+          outline: 3px solid rgba(255,145,0,0.45);
+          outline-offset: 2px;
       }
       .ultimo-canto-popup {
           position: absolute;
@@ -349,6 +369,94 @@
       }
       .ultimo-canto-popup .popup-accion:active {
           transform: scale(0.96);
+      }
+      .aviso-overlay {
+          position: fixed;
+          inset: 0;
+          display: none;
+          align-items: center;
+          justify-content: center;
+          background: rgba(0,0,0,0.7);
+          z-index: 1200;
+          padding: 16px;
+      }
+      .aviso-overlay.activa {
+          display: flex;
+      }
+      .aviso-overlay__box {
+          width: min(420px, 92vw);
+          background: linear-gradient(160deg, rgba(255,255,255,0.97), rgba(234,247,255,0.95));
+          border-radius: 18px;
+          padding: 22px 24px;
+          box-shadow: 0 18px 36px rgba(0,0,0,0.32);
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          align-items: center;
+          text-align: center;
+      }
+      .aviso-overlay__titulo {
+          font-family: 'Bangers', cursive;
+          font-size: clamp(1.6rem, 5vw, 2.2rem);
+          margin: 0;
+          color: #0b4cc2;
+          text-shadow: 0 0 10px rgba(255,255,255,0.85);
+          letter-spacing: 1px;
+      }
+      .aviso-overlay__mensaje {
+          margin: 0;
+          font-size: 1rem;
+          line-height: 1.6;
+          color: #1f1f1f;
+          font-weight: 500;
+      }
+      .aviso-overlay__acciones {
+          display: flex;
+          gap: 12px;
+      }
+      .aviso-overlay__acciones button {
+          font-family: 'Bangers', cursive;
+          font-size: 1.2rem;
+          padding: 10px 28px;
+          border-radius: 999px;
+          border: 3px solid rgba(0,120,255,0.75);
+          background: linear-gradient(150deg, rgba(0,150,255,0.9), rgba(179,229,255,0.95));
+          color: #032244;
+          cursor: pointer;
+          box-shadow: 0 10px 22px rgba(0,0,0,0.22);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .aviso-overlay__acciones button:hover {
+          transform: translateY(-1px) scale(1.02);
+          box-shadow: 0 12px 26px rgba(0,0,0,0.26);
+      }
+      .aviso-overlay__acciones button:active {
+          transform: translateY(1px) scale(0.97);
+      }
+      .aviso-overlay--complementarios .aviso-overlay__box {
+          background: linear-gradient(160deg, rgba(255,252,235,0.97), rgba(255,237,213,0.96));
+          border: 3px solid rgba(255,145,0,0.55);
+      }
+      .aviso-overlay--complementarios .aviso-overlay__titulo {
+          color: #c06200;
+          text-shadow: 0 0 12px rgba(255,210,120,0.85);
+      }
+      .aviso-overlay--complementarios .aviso-overlay__acciones button {
+          border-color: rgba(255,145,0,0.75);
+          background: linear-gradient(150deg, rgba(255,168,0,0.92), rgba(255,223,186,0.95));
+          color: #4a1f00;
+      }
+      .ultimo-canto-popup.complementarios-activos {
+          background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(255,228,196,0.95));
+          border-color: rgba(255,145,0,0.7);
+      }
+      .ultimo-canto-popup.complementarios-activos .popup-numero {
+          color: #af4300;
+          text-shadow: 0 0 18px rgba(255,183,77,0.8);
+      }
+      .ultimo-canto-popup.complementarios-activos .popup-accion {
+          background: linear-gradient(135deg, rgba(255,145,0,0.95), rgba(255,109,0,0.96));
+          box-shadow: 0 8px 22px rgba(255,109,0,0.25);
       }
       @keyframes popupEntrada {
           0% {
@@ -2098,6 +2206,16 @@
     </div>
   </div>
 
+  <div id="complementarios-aviso" class="aviso-overlay aviso-overlay--complementarios" role="dialog" aria-modal="true" aria-labelledby="complementarios-aviso-titulo" aria-hidden="true">
+    <div class="aviso-overlay__box">
+      <h2 id="complementarios-aviso-titulo" class="aviso-overlay__titulo">Cantos de transparencia</h2>
+      <p id="complementarios-aviso-mensaje" class="aviso-overlay__mensaje">Ya hay GANADORES en todas las FORMAS, ahora se continua con los cantos de números faltantes para transparencia del SORTEO</p>
+      <div class="aviso-overlay__acciones">
+        <button type="button" id="complementarios-aviso-aceptar">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
@@ -2119,6 +2237,9 @@
   const panelBotonesFormasEl = document.getElementById('panel-botones-formas');
   const formasMensajeEl = document.getElementById('formas-mensaje');
   const misCartonesSectionEl = document.getElementById('mis-cartones-section');
+  const complementariosAvisoEl = document.getElementById('complementarios-aviso');
+  const complementariosAvisoAceptarBtn = document.getElementById('complementarios-aviso-aceptar');
+  const complementariosAvisoMensajeEl = document.getElementById('complementarios-aviso-mensaje');
   const misCartonesGridEl = document.getElementById('mis-cartones-grid');
   const cartonesMensajeEl = document.getElementById('cartones-mensaje');
   const cartonDestacadoEl = document.getElementById('carton-destacado');
@@ -2357,6 +2478,10 @@
   let unsubscribeCantos = null;
   let unsubscribeFormas = null;
   let unsubscribeCartones = null;
+  let todasFormasConGanadores = false;
+  let indiceUltimoGanador = null;
+  let cantosComplementariosActivos = false;
+  let avisoComplementariosMostrado = false;
 
   function limpiarBotonesFormas(){
     if(panelBotonesFormasEl){
@@ -2552,6 +2677,7 @@
     if(ultimoCantoPopupNumeroEl){
       ultimoCantoPopupNumeroEl.textContent=ultimoCantoValorActual;
     }
+    popup.classList.toggle('complementarios-activos', cantosComplementariosActivos && Number.isInteger(indiceUltimoGanador));
     popup.classList.add('visible');
     if(ultimoCantoTimer){
       clearTimeout(ultimoCantoTimer);
@@ -2559,6 +2685,25 @@
     ultimoCantoTimer=setTimeout(()=>{
       cerrarVentanaUltimoCanto();
     },4000);
+  }
+
+  function mostrarAvisoComplementarios(){
+    avisoComplementariosMostrado = true;
+    if(!complementariosAvisoEl){
+      alert('Ya hay GANADORES en todas las FORMAS, ahora se continua con los cantos de números faltantes para transparencia del SORTEO');
+      return;
+    }
+    complementariosAvisoEl.classList.add('activa');
+    complementariosAvisoEl.setAttribute('aria-hidden','false');
+    if(complementariosAvisoAceptarBtn){
+      complementariosAvisoAceptarBtn.focus({ preventScroll: true });
+    }
+  }
+
+  function cerrarAvisoComplementarios(){
+    if(!complementariosAvisoEl) return;
+    complementariosAvisoEl.classList.remove('activa');
+    complementariosAvisoEl.setAttribute('aria-hidden','true');
   }
 
   function crearGridCantos(){
@@ -3437,19 +3582,24 @@
   function renderCantos(){
     if(!cantoCellsMap.size) crearGridCantos();
     cantoCellsMap.forEach(celda=>{
-      celda.classList.remove('cantado','ultimo');
+      celda.classList.remove('cantado','ultimo','complementario');
     });
     ultimoCantoEl.innerHTML='';
     const total=cantosOrdenados.length;
+    const complementariosActivos=cantosComplementariosActivos && Number.isInteger(indiceUltimoGanador);
     cantosOrdenados.forEach((num,idx)=>{
       const celda=cantoCellsMap.get(num);
       if(celda){
         celda.classList.add('cantado');
+        if(complementariosActivos && idx>indiceUltimoGanador){
+          celda.classList.add('complementario');
+        }
         if(idx===total-1){
           celda.classList.add('ultimo');
         }
       }
     });
+    ultimoCantoEl.classList.toggle('complementarios-activos', complementariosActivos && total>0);
     if(total){
       const etiqueta=cantosEtiquetas[total-1] || generarEtiquetaDesdeNumero(cantosOrdenados[total-1]);
       ultimoCantoValorActual=etiqueta;
@@ -3482,6 +3632,12 @@
       ultimoCantoValorActual='';
       ultimoCantoEl.textContent='Aún no se han registrado cantos.';
       cerrarVentanaUltimoCanto();
+    }
+    if(ultimoCantoBoton){
+      ultimoCantoBoton.classList.toggle('complementarios-activos', complementariosActivos && total>0);
+    }
+    if(ultimoCantoPopupEl){
+      ultimoCantoPopupEl.classList.toggle('complementarios-activos', complementariosActivos && total>0);
     }
   }
 
@@ -3825,6 +3981,22 @@
     if(e.target===modalGanadores) cerrarModal();
   });
 
+  if(complementariosAvisoAceptarBtn){
+    complementariosAvisoAceptarBtn.addEventListener('click',cerrarAvisoComplementarios);
+  }
+  if(complementariosAvisoEl){
+    complementariosAvisoEl.addEventListener('click',evento=>{
+      if(evento.target===complementariosAvisoEl){
+        cerrarAvisoComplementarios();
+      }
+    });
+  }
+  document.addEventListener('keydown',evento=>{
+    if(evento.key==='Escape' && complementariosAvisoEl?.classList?.contains('activa')){
+      cerrarAvisoComplementarios();
+    }
+  });
+
   function calcularGanadores(){
     cartonesGanadoresPorForma=new Map();
     formasPorCarton=new Map();
@@ -3833,6 +4005,7 @@
       if(!cantosIndiceMap.has(num)) cantosIndiceMap.set(num,idx);
     });
     if(!formasActivas.length || !cartonesSorteo.size || !cantosOrdenados.length){
+      evaluarEstadoFormasGanadoras();
       renderFormas();
       renderCartonesJugador();
       return;
@@ -3879,6 +4052,7 @@
         return (a.forma.idx||0)-(b.forma.idx||0);
       });
     });
+    evaluarEstadoFormasGanadoras();
     renderFormas();
     renderCartonesJugador();
   }
@@ -3897,8 +4071,8 @@
     });
     cantosOrdenados=normalizados;
     cantosEtiquetas=etiquetas;
-    renderCantos();
     calcularGanadores();
+    renderCantos();
   }
 
   function procesarFormas(snapshot){
@@ -3953,6 +4127,40 @@
     calcularGanadores();
   }
 
+  function evaluarEstadoFormasGanadoras(){
+    const estadoAnterior=todasFormasConGanadores;
+    let totalEvaluables=0;
+    let totalGanadoras=0;
+    let pasoMaximo=-1;
+    formasActivas.forEach(forma=>{
+      const idxNumero=Number(forma?.idx);
+      if(!Number.isFinite(idxNumero)) return;
+      const posiciones=obtenerPosicionesNormalizadas(forma);
+      if(!posiciones.length) return;
+      totalEvaluables++;
+      const registro=cartonesGanadoresPorForma.get(idxNumero);
+      const paso=Number(registro?.paso);
+      if(Number.isFinite(paso)){
+        totalGanadoras++;
+        if(paso>pasoMaximo) pasoMaximo=paso;
+      }
+    });
+    if(totalEvaluables>0 && totalGanadoras===totalEvaluables){
+      todasFormasConGanadores=true;
+      indiceUltimoGanador=pasoMaximo>=0?pasoMaximo:null;
+    }else{
+      todasFormasConGanadores=false;
+      indiceUltimoGanador=null;
+    }
+    const hayCantos=cantosOrdenados.length>0;
+    cantosComplementariosActivos=hayCantos && todasFormasConGanadores && Number.isInteger(indiceUltimoGanador);
+    if(!cantosComplementariosActivos){
+      cerrarAvisoComplementarios();
+    }else if(!avisoComplementariosMostrado){
+      mostrarAvisoComplementarios();
+    }
+  }
+
   function suscribirCantos(){
     if(unsubscribeCantos){
       unsubscribeCantos();
@@ -4000,6 +4208,11 @@
       renderFormas();
       cartonesSorteo=new Map();
       renderCartonesJugador();
+      todasFormasConGanadores=false;
+      indiceUltimoGanador=null;
+      cantosComplementariosActivos=false;
+      avisoComplementariosMostrado=false;
+      cerrarAvisoComplementarios();
       return;
     }
     const existente=activeSorteoId?activos.find(s=>s.id===activeSorteoId):null;
@@ -4009,6 +4222,11 @@
     activeSorteoId=elegido.id;
     actualizarHeader();
     if(cambio){
+      todasFormasConGanadores=false;
+      indiceUltimoGanador=null;
+      cantosComplementariosActivos=false;
+      avisoComplementariosMostrado=false;
+      cerrarAvisoComplementarios();
       procesarCantos([]);
       formasActivas=[];
       renderFormas();

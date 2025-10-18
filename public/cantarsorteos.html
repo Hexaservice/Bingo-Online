@@ -619,6 +619,19 @@
       box-shadow: 0 0 8px rgba(255,255,0,0.8);
       transform: scale(1.03);
     }
+    .canto-cell.complementario {
+      border-color: rgba(255,145,0,0.65);
+    }
+    .canto-cell.selected.complementario {
+      background: radial-gradient(circle at center, rgba(255,183,77,0.95), rgba(255,94,0,0.9));
+      color: #442000;
+      box-shadow: 0 0 10px rgba(255,213,79,0.85);
+    }
+    .canto-cell.selected.complementario .canto-letra,
+    .canto-cell.selected.complementario .canto-numero {
+      color: #442000;
+      text-shadow: 0 0 6px rgba(255,235,205,0.7);
+    }
     .canto-texto {
       display: inline-flex;
       align-items: baseline;
@@ -709,6 +722,84 @@
       flex-direction: column;
       gap: 12px;
       box-sizing: border-box;
+    }
+    .info-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 1800;
+    }
+    .info-overlay.activa {
+      display: flex;
+    }
+    .info-overlay__box {
+      width: min(420px, 92vw);
+      background: linear-gradient(160deg, rgba(255,255,255,0.96), rgba(236,255,236,0.94));
+      border-radius: 18px;
+      padding: 22px 24px;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.35);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .info-overlay__titulo {
+      font-family: 'Bangers', cursive;
+      font-size: 1.9rem;
+      letter-spacing: 1px;
+      margin: 0;
+      color: #0f4c0f;
+      text-shadow: 0 0 10px rgba(255,255,255,0.8);
+    }
+    .info-overlay__mensaje {
+      font-size: 1rem;
+      color: #1f1f1f;
+      line-height: 1.5;
+      margin: 0;
+    }
+    .info-overlay__acciones {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+    .info-overlay__acciones button {
+      font-family: 'Bangers', cursive;
+      font-size: 1.2rem;
+      padding: 10px 30px;
+      border-radius: 999px;
+      border: 3px solid #0f7d0f;
+      background: linear-gradient(160deg, rgba(0,200,83,0.85), rgba(255,255,255,0.92));
+      color: #0b2b0b;
+      cursor: pointer;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.2);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .info-overlay__acciones button:hover {
+      transform: translateY(-1px) scale(1.03);
+      box-shadow: 0 12px 22px rgba(0,0,0,0.28);
+    }
+    .info-overlay__acciones button:active {
+      transform: translateY(1px) scale(0.98);
+    }
+    .info-overlay--complementarios .info-overlay__box {
+      background: radial-gradient(circle at top, rgba(255,244,214,0.98), rgba(255,235,179,0.96));
+      border: 3px solid rgba(255,145,0,0.65);
+    }
+    .info-overlay--complementarios .info-overlay__titulo {
+      color: #c06200;
+      text-shadow: 0 0 12px rgba(255,210,120,0.9);
+    }
+    .info-overlay--complementarios .info-overlay__acciones button {
+      border-color: rgba(255,145,0,0.8);
+      background: linear-gradient(160deg, rgba(255,179,71,0.92), rgba(255,224,178,0.95));
+      color: #512000;
     }
     .modal-ganadores .modal-cerrar {
       align-self: flex-end;
@@ -1410,6 +1501,24 @@
       </div>
     </div>
   </div>
+  <div id="complementarios-modal" class="info-overlay info-overlay--complementarios" role="dialog" aria-modal="true" aria-labelledby="complementarios-modal-titulo" aria-hidden="true">
+    <div class="info-overlay__box">
+      <h2 id="complementarios-modal-titulo" class="info-overlay__titulo">Transparencia en curso</h2>
+      <p id="complementarios-modal-mensaje" class="info-overlay__mensaje">Se han completado los ganadores en todas las formas, se procede a continuar con los cantos complementarios.</p>
+      <div class="info-overlay__acciones">
+        <button type="button" id="complementarios-modal-aceptar">Aceptar</button>
+      </div>
+    </div>
+  </div>
+  <div id="aviso-modal" class="info-overlay" role="dialog" aria-modal="true" aria-labelledby="aviso-modal-titulo" aria-hidden="true">
+    <div class="info-overlay__box">
+      <h2 id="aviso-modal-titulo" class="info-overlay__titulo">Aviso</h2>
+      <p id="aviso-modal-mensaje" class="info-overlay__mensaje"></p>
+      <div class="info-overlay__acciones">
+        <button type="button" id="aviso-modal-aceptar">Aceptar</button>
+      </div>
+    </div>
+  </div>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
@@ -1462,6 +1571,13 @@
   const modalGanadoresSubtituloEl = document.getElementById('modal-ganadores-subtitulo');
   const modalGanadoresListaEl = document.getElementById('modal-ganadores-lista');
   const modalGanadoresSinEl = document.getElementById('modal-ganadores-sin');
+  const modalComplementariosEl = document.getElementById('complementarios-modal');
+  const modalComplementariosMensajeEl = document.getElementById('complementarios-modal-mensaje');
+  const modalComplementariosAceptarBtn = document.getElementById('complementarios-modal-aceptar');
+  const avisoModalEl = document.getElementById('aviso-modal');
+  const avisoModalTituloEl = document.getElementById('aviso-modal-titulo');
+  const avisoModalMensajeEl = document.getElementById('aviso-modal-mensaje');
+  const avisoModalAceptarBtn = document.getElementById('aviso-modal-aceptar');
   const cantoCeldas = new Map();
   let cantosSeleccionados = new Set();
   let cantosUnsub = null;
@@ -1519,6 +1635,16 @@
   let formasUnsub = null;
   let cartonesUnsub = null;
   let cartonesDatosListos = false;
+  let todasFormasConGanadores = false;
+  let indiceUltimoGanador = null;
+  let notificacionComplementariosMostrada = false;
+  let adminActual = null;
+  let cartonesResultadoRegistrado = new Map();
+  let sincronizacionMetadatosNecesaria = false;
+  let sincronizacionMetadatosTimeout = null;
+  let sincronizacionMetadatosEnCurso = false;
+  let sincronizacionResultadosNecesaria = false;
+  let sincronizacionResultadosTimeout = null;
 
   function manejarAceptarConfirmacionCanto(){
     cerrarConfirmacionCanto(true);
@@ -1532,6 +1658,45 @@
     if(evento.target === cantoConfirmModal){
       cerrarConfirmacionCanto(false);
     }
+  }
+
+  function abrirModalComplementarios(){
+    if(!modalComplementariosEl) return;
+    modalComplementariosEl.classList.add('activa');
+    modalComplementariosEl.setAttribute('aria-hidden', 'false');
+    if(modalComplementariosAceptarBtn){
+      modalComplementariosAceptarBtn.focus({ preventScroll: true });
+    }
+  }
+
+  function cerrarModalComplementarios(){
+    if(!modalComplementariosEl) return;
+    modalComplementariosEl.classList.remove('activa');
+    modalComplementariosEl.setAttribute('aria-hidden', 'true');
+  }
+
+  function mostrarAvisoSimple(mensaje, titulo = 'Aviso'){
+    if(!avisoModalEl){
+      window.alert(mensaje);
+      return;
+    }
+    if(avisoModalTituloEl){
+      avisoModalTituloEl.textContent = titulo;
+    }
+    if(avisoModalMensajeEl){
+      avisoModalMensajeEl.textContent = mensaje;
+    }
+    avisoModalEl.classList.add('activa');
+    avisoModalEl.setAttribute('aria-hidden', 'false');
+    if(avisoModalAceptarBtn){
+      avisoModalAceptarBtn.focus({ preventScroll: true });
+    }
+  }
+
+  function cerrarAvisoSimple(){
+    if(!avisoModalEl) return;
+    avisoModalEl.classList.remove('activa');
+    avisoModalEl.setAttribute('aria-hidden', 'true');
   }
 
   function asegurarModalConfirmacionCanto(){
@@ -1878,11 +2043,13 @@
         }
         auth.onAuthStateChanged(async user=>{
           if(!user){
+            adminActual = null;
             sorteoCookieKey = sorteoCookieDefaultKey;
             restauracionPendiente = false;
             if(resolverAuthListo){ resolverAuthListo(); resolverAuthListo = null; }
             return;
           }
+          adminActual = user;
           const nuevoKey = `cantarsorteos_${user.email.replace(/[^\w]/g,'_')}`;
           if(!getCookie(nuevoKey)){
             const general = getCookie(sorteoCookieDefaultKey);
@@ -1919,6 +2086,36 @@
     modalGanadoresEl.addEventListener('click', manejarClickModalGanadores);
   }
   document.addEventListener('keydown', manejarTeclaModalGanadores);
+  if(modalComplementariosAceptarBtn){
+    modalComplementariosAceptarBtn.addEventListener('click', cerrarModalComplementarios);
+  }
+  if(modalComplementariosEl){
+    modalComplementariosEl.addEventListener('click', evento=>{
+      if(evento.target === modalComplementariosEl){
+        cerrarModalComplementarios();
+      }
+    });
+  }
+  if(avisoModalAceptarBtn){
+    avisoModalAceptarBtn.addEventListener('click', cerrarAvisoSimple);
+  }
+  if(avisoModalEl){
+    avisoModalEl.addEventListener('click', evento=>{
+      if(evento.target === avisoModalEl){
+        cerrarAvisoSimple();
+      }
+    });
+  }
+  document.addEventListener('keydown', evento=>{
+    if(evento.key === 'Escape'){
+      if(modalComplementariosEl?.classList?.contains('activa')){
+        cerrarModalComplementarios();
+      }
+      if(avisoModalEl?.classList?.contains('activa')){
+        cerrarAvisoSimple();
+      }
+    }
+  });
 
   document.getElementById('salir-btn').addEventListener('click',()=>{ window.location.href='admin.html'; });
   btnSorteo.addEventListener('click', abrirModalSorteos);
@@ -2129,15 +2326,52 @@
     if(!currentSorteoId || !currentSorteoData) return;
     if(tablaCantosContainer.classList.contains('disabled')) return;
     if(tablaCantosContainer.classList.contains('bloqueado')) return;
-    if(cantosSeleccionados.has(clave)) return;
-    const confirmar = await mostrarConfirmacionCanto(clave);
+    const claveNormalizada = (clave ?? '').toString().toUpperCase();
+    if(!claveNormalizada) return;
+    if(cantosSeleccionados.has(claveNormalizada)) return;
+    const usuario = auth?.currentUser;
+    if(!usuario){
+      mostrarAvisoSimple('Debes iniciar sesión nuevamente para registrar los cantos.');
+      return;
+    }
+    const confirmar = await mostrarConfirmacionCanto(claveNormalizada);
     if(!confirmar) return;
     try {
-      await db.collection('cantos').doc(currentSorteoId).set({
-        numeros: firebase.firestore.FieldValue.arrayUnion(clave),
-        actualizado: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
-      mensajeEl.textContent = `Se registró la jugada ${clave}.`;
+      await db.runTransaction(async tx => {
+        const docRef = db.collection('cantos').doc(currentSorteoId);
+        const snap = await tx.get(docRef);
+        const data = snap.exists ? (snap.data() || {}) : {};
+        const numerosExistentes = Array.isArray(data.numeros)
+          ? data.numeros.map(item => (item ?? '').toString().toUpperCase())
+          : [];
+        if(numerosExistentes.includes(claveNormalizada)){
+          return;
+        }
+        numerosExistentes.push(claveNormalizada);
+        const detallesExistentes = Array.isArray(data.detalles) ? [...data.detalles] : [];
+        detallesExistentes.push({
+          numero: claveNormalizada,
+          orden: numerosExistentes.length - 1,
+          estatus: 'g',
+          adminId: usuario.uid || '',
+          adminEmail: usuario.email || '',
+          creado: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        const payload = {
+          numeros: numerosExistentes,
+          detalles: detallesExistentes,
+          actualizado: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        if(!data.iniciocantos){
+          payload.iniciocantos = firebase.firestore.FieldValue.serverTimestamp();
+        }
+        if(numerosExistentes.length >= 75 && !data.fincantos){
+          payload.fincantos = firebase.firestore.FieldValue.serverTimestamp();
+        }
+        tx.set(docRef, payload, { merge: true });
+      });
+      mensajeEl.textContent = `Se registró la jugada ${claveNormalizada}.`;
+      solicitarSincronizacionMetadatos();
     } catch (err) {
       console.error('Error registrando canto', err);
       alert('No fue posible registrar el canto.');
@@ -2374,6 +2608,7 @@
             valorPorPos.set(`${fila}-${col}`, valor);
           }
         });
+        const resultadoTexto = (data?.resultado || '').toString().trim().toLowerCase();
         mapa.set(doc.id, {
           id: doc.id,
           sorteoId: data?.sorteoId || '',
@@ -2382,8 +2617,14 @@
           cartonNum: data?.cartonNum ?? data?.Ncarton ?? data?.carton ?? null,
           tipocarton: data?.tipocarton ?? data?.tipoCarton ?? data?.tipo ?? '',
           posiciones,
-          valorPorPos
+          valorPorPos,
+          resultado: resultadoTexto
         });
+        if(resultadoTexto){
+          cartonesResultadoRegistrado.set(doc.id, resultadoTexto);
+        } else {
+          cartonesResultadoRegistrado.delete(doc.id);
+        }
       });
     }
     cartonesSorteo = mapa;
@@ -2433,6 +2674,234 @@
     calcularGanadores();
   }
 
+  function obtenerIndiceLimiteGanador(totalCantos){
+    const total = Number(totalCantos);
+    if(!Number.isFinite(total) || total <= 0) return -1;
+    if(todasFormasConGanadores && Number.isInteger(indiceUltimoGanador)){
+      return indiceUltimoGanador;
+    }
+    return total - 1;
+  }
+
+  function actualizarEstilosCantos(){
+    cantoCeldas.forEach(celda=>celda.classList.remove('complementario'));
+    if(!cantosSeleccionados.size) return;
+    if(!(todasFormasConGanadores && Number.isInteger(indiceUltimoGanador))){
+      return;
+    }
+    const valores = Array.from(cantosSeleccionados);
+    valores.forEach((valor, idx)=>{
+      const clave = (valor ?? '').toString().toUpperCase();
+      const celda = cantoCeldas.get(clave);
+      if(!celda) return;
+      if(idx > indiceUltimoGanador){
+        celda.classList.add('complementario');
+      }
+    });
+  }
+
+  function solicitarSincronizacionMetadatos(){
+    if(!currentSorteoId || !db) return;
+    sincronizacionMetadatosNecesaria = true;
+    if(sincronizacionMetadatosTimeout){
+      clearTimeout(sincronizacionMetadatosTimeout);
+    }
+    sincronizacionMetadatosTimeout = setTimeout(ejecutarSincronizacionMetadatos, 280);
+  }
+
+  async function ejecutarSincronizacionMetadatos(){
+    if(sincronizacionMetadatosEnCurso) return;
+    sincronizacionMetadatosTimeout = null;
+    if(!sincronizacionMetadatosNecesaria) return;
+    sincronizacionMetadatosEnCurso = true;
+    try {
+      while(sincronizacionMetadatosNecesaria){
+        sincronizacionMetadatosNecesaria = false;
+        await sincronizarMetadatosCantos();
+      }
+    } finally {
+      sincronizacionMetadatosEnCurso = false;
+    }
+  }
+
+  function solicitarSincronizacionResultados(){
+    if(!db || !currentSorteoId) return;
+    if(!todasFormasConGanadores || !cartonesDatosListos) return;
+    sincronizacionResultadosNecesaria = true;
+    if(sincronizacionResultadosTimeout){
+      clearTimeout(sincronizacionResultadosTimeout);
+    }
+    sincronizacionResultadosTimeout = setTimeout(ejecutarSincronizacionResultados, 420);
+  }
+
+  async function ejecutarSincronizacionResultados(){
+    sincronizacionResultadosTimeout = null;
+    if(!sincronizacionResultadosNecesaria) return;
+    sincronizacionResultadosNecesaria = false;
+    try {
+      await sincronizarResultadosCartones();
+    } catch (error) {
+      console.error('Error actualizando resultados de cartones', error);
+    }
+  }
+
+  async function sincronizarMetadatosCantos(){
+    if(!db || !currentSorteoId) return;
+    try {
+      const docRef = db.collection('cantos').doc(currentSorteoId);
+      const snap = await docRef.get();
+      if(!snap.exists) return;
+      const data = snap.data() || {};
+      const numeros = Array.isArray(data.numeros)
+        ? data.numeros.map(item => (item ?? '').toString().toUpperCase())
+        : [];
+      if(!numeros.length) return;
+      const detallesActuales = Array.isArray(data.detalles) ? data.detalles : [];
+      const mapaDetalles = new Map();
+      detallesActuales.forEach(item=>{
+        const clave = (item?.numero ?? '').toString().toUpperCase();
+        if(!clave) return;
+        mapaDetalles.set(clave, item);
+      });
+      const limiteGanador = obtenerIndiceLimiteGanador(numeros.length);
+      let requiereActualizacion = detallesActuales.length !== numeros.length;
+      const nuevosDetalles = numeros.map((numero, idx)=>{
+        const clave = (numero ?? '').toString().toUpperCase();
+        const existente = mapaDetalles.get(clave) || {};
+        const estatusEsperado = idx <= limiteGanador ? 'g' : 'p';
+        const adminId = existente.adminId || existente.administradorId || '';
+        const adminEmail = existente.adminEmail || existente.emailAdministrador || '';
+        const creado = existente.creado || existente.timestamp || null;
+        if((existente.estatus || '').toLowerCase() !== estatusEsperado){
+          requiereActualizacion = true;
+        }
+        if(existente.orden !== idx){
+          requiereActualizacion = true;
+        }
+        if(!mapaDetalles.has(clave)){
+          requiereActualizacion = true;
+        }
+        let idFinal = adminId;
+        let emailFinal = adminEmail;
+        if(idx === numeros.length - 1){
+          if(!idFinal && adminActual?.uid){
+            idFinal = adminActual.uid;
+            requiereActualizacion = true;
+          }
+          if(!emailFinal && adminActual?.email){
+            emailFinal = adminActual.email;
+            requiereActualizacion = true;
+          }
+        }
+        return {
+          numero: clave,
+          orden: idx,
+          estatus: estatusEsperado,
+          adminId: idFinal,
+          adminEmail: emailFinal,
+          creado
+        };
+      });
+      const updates = {};
+      if(requiereActualizacion){
+        updates.detalles = nuevosDetalles;
+      }
+      if(numeros.length >= 75 && !data.fincantos){
+        updates.fincantos = firebase.firestore.FieldValue.serverTimestamp();
+      }
+      if(Object.keys(updates).length){
+        await docRef.set(updates, { merge: true });
+      }
+    } catch (error) {
+      console.error('Error sincronizando metadatos de cantos', error);
+    }
+  }
+
+  async function sincronizarResultadosCartones(){
+    if(!db || !currentSorteoId) return;
+    if(!todasFormasConGanadores || !cartonesDatosListos) return;
+    const ganadoresSet = new Set();
+    cartonesGanadoresPorForma.forEach(info=>{
+      if(Array.isArray(info?.cartones)){
+        info.cartones.forEach(carton=>{
+          if(carton?.id) ganadoresSet.add(carton.id);
+        });
+      }
+    });
+    const actualizaciones = [];
+    cartonesSorteo.forEach((carton, id)=>{
+      if(!id) return;
+      const estado = ganadoresSet.has(id) ? 'ganador' : 'perdedor';
+      if(cartonesResultadoRegistrado.get(id) === estado) return;
+      actualizaciones.push({ id, estado });
+    });
+    if(!actualizaciones.length) return;
+    const lotes = [];
+    for(let i = 0; i < actualizaciones.length; i += 400){
+      lotes.push(actualizaciones.slice(i, i + 400));
+    }
+    try {
+      for(const lote of lotes){
+        const batch = db.batch();
+        lote.forEach(({ id, estado })=>{
+          const ref = db.collection('CartonJugado').doc(id);
+          batch.set(ref, { resultado: estado }, { merge: true });
+        });
+        await batch.commit();
+      }
+      actualizaciones.forEach(({ id, estado })=>{
+        cartonesResultadoRegistrado.set(id, estado);
+      });
+    } catch (error) {
+      console.error('Error registrando resultados de cartones', error);
+    }
+  }
+
+  function evaluarEstadoFormasGanadoras(){
+    const estadoAnterior = todasFormasConGanadores;
+    let totalEvaluables = 0;
+    let totalGanadoras = 0;
+    let pasoMaximo = -1;
+    formasActivas.forEach(forma=>{
+      const idx = Number(forma?.idx);
+      if(!Number.isFinite(idx)) return;
+      const posiciones = obtenerPosicionesForma(forma);
+      if(!posiciones.length) return;
+      totalEvaluables++;
+      const registro = cartonesGanadoresPorForma.get(idx);
+      const paso = Number(registro?.paso);
+      if(Number.isFinite(paso)){
+        totalGanadoras++;
+        if(paso > pasoMaximo) pasoMaximo = paso;
+      }
+    });
+    if(totalEvaluables > 0 && totalGanadoras === totalEvaluables){
+      todasFormasConGanadores = true;
+      indiceUltimoGanador = pasoMaximo >= 0 ? pasoMaximo : null;
+    } else {
+      todasFormasConGanadores = false;
+      indiceUltimoGanador = null;
+    }
+    if(!todasFormasConGanadores){
+      cerrarModalComplementarios();
+      notificacionComplementariosMostrada = false;
+    } else {
+      const transicion = !estadoAnterior
+        && Number.isInteger(indiceUltimoGanador)
+        && cantosOrdenados.length > 0
+        && indiceUltimoGanador === cantosOrdenados.length - 1;
+      if(transicion && !notificacionComplementariosMostrada){
+        abrirModalComplementarios();
+        notificacionComplementariosMostrada = true;
+      }
+    }
+    actualizarEstilosCantos();
+    solicitarSincronizacionMetadatos();
+    if(todasFormasConGanadores && cartonesDatosListos){
+      solicitarSincronizacionResultados();
+    }
+  }
+
   function obtenerCreditosForma(forma){
     if(!forma) return 0;
     const directo = Number(forma?.premioCreditos ?? forma?.premiocreditos ?? forma?.creditos);
@@ -2450,6 +2919,7 @@
     formasPorCarton = new Map();
     if(!formasActivas.length || !cartonesSorteo.size || !cantosOrdenados.length){
       actualizarBotonesFormas();
+      evaluarEstadoFormasGanadoras();
       return;
     }
     formasActivas.forEach(forma=>{
@@ -2499,6 +2969,7 @@
         return (Number(a.forma?.idx) || 0) - (Number(b.forma?.idx) || 0);
       });
     });
+    evaluarEstadoFormasGanadoras();
     actualizarBotonesFormas();
   }
 
@@ -2945,6 +3416,23 @@
     cantosOrdenados = [];
     cantosIndiceMap = new Map();
     cartonesDatosListos = false;
+    todasFormasConGanadores = false;
+    indiceUltimoGanador = null;
+    notificacionComplementariosMostrada = false;
+    cartonesResultadoRegistrado = new Map();
+    sincronizacionMetadatosNecesaria = false;
+    if(sincronizacionMetadatosTimeout){
+      clearTimeout(sincronizacionMetadatosTimeout);
+      sincronizacionMetadatosTimeout = null;
+    }
+    sincronizacionMetadatosEnCurso = false;
+    sincronizacionResultadosNecesaria = false;
+    if(sincronizacionResultadosTimeout){
+      clearTimeout(sincronizacionResultadosTimeout);
+      sincronizacionResultadosTimeout = null;
+    }
+    cerrarModalComplementarios();
+    cerrarAvisoSimple();
     cantoCeldas.forEach(celda=>celda.classList.remove('no-jugado'));
     actualizarBotonesFormas();
   }
@@ -3488,6 +3976,13 @@
     return (currentSorteoData && currentSorteoData.nombre) ? currentSorteoData.nombre : 'este sorteo';
   }
 
+  function obtenerTotalCantosRegistrados(){
+    if(currentSorteoData && Array.isArray(currentSorteoData.cantos)){
+      return currentSorteoData.cantos.length;
+    }
+    return 0;
+  }
+
   function actualizarAnimaciones(){
     [sellarBtn, pdfBtn, jugarBtn, finalizarBtn].forEach(btn=>btn.classList.remove('attention'));
     actualizarBotones();
@@ -3500,7 +3995,9 @@
       if(pdfEstado === 'si') jugarBtn.classList.add('attention');
       else pdfBtn.classList.add('attention');
     } else if(estadoLower === 'jugando'){
-      finalizarBtn.classList.add('attention');
+      if(obtenerTotalCantosRegistrados() >= 75){
+        finalizarBtn.classList.add('attention');
+      }
     }
   }
 
@@ -4381,6 +4878,10 @@
     if(!currentSorteoId || !currentSorteoData){ alert('Selecciona un sorteo primero.'); return; }
     if((currentSorteoData.estado || '').toLowerCase() !== 'jugando'){
       alert('El sorteo debe estar en estado Jugando para finalizar.');
+      return;
+    }
+    if(obtenerTotalCantosRegistrados() < 75){
+      mostrarAvisoSimple('Aún falta cantar hasta el último número del BINGO para poder finalizar el sorteo', 'Finalización no disponible');
       return;
     }
     const nombre = obtenerNombreSorteoActual();
