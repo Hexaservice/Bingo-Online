@@ -1541,6 +1541,13 @@
           color: #6a0dad;
           text-shadow: none;
       }
+      .ganador-premio-monto--cartones.sin-premio {
+          color: #5f5f5f;
+          opacity: 0.9;
+      }
+      .ganador-premio-item--sin-premio .ganador-premio-label {
+          color: #3a3a3a;
+      }
       .modal-mensaje {
           font-size: 0.85rem;
           color: var(--texto-secundario);
@@ -3688,6 +3695,25 @@
     return 0;
   }
 
+  function obtenerCartonesGratisForma(forma){
+    if(!forma) return 0;
+    const candidatos=[
+      forma?.cartonesGratis,
+      forma?.cartonesgratis,
+      forma?.cartones_gratis,
+      forma?.premioCartonesGratis,
+      forma?.premioCartonesgratis,
+      forma?.cartones
+    ];
+    for(const candidato of candidatos){
+      const numero=Number(candidato);
+      if(Number.isFinite(numero)){
+        return Math.max(0, Math.round(numero));
+      }
+    }
+    return 0;
+  }
+
   function actualizarHeader(){
     if(!activeSorteo){
       sorteoResumenEl.className='sorteo-titulo-basico';
@@ -3734,6 +3760,7 @@
     ultimoCantoEl.innerHTML='';
     const total=cantosOrdenados.length;
     const complementariosActivos=cantosComplementariosActivos && Number.isInteger(indiceUltimoGanador);
+    let ultimoEstadoNormalizado='';
     cantosOrdenados.forEach((num,idx)=>{
       const celda=cantoCellsMap.get(num);
       if(celda){
@@ -3748,6 +3775,7 @@
         }
         if(idx===total-1){
           celda.classList.add('ultimo');
+          ultimoEstadoNormalizado=typeof estado==='string'?estado.trim().toLowerCase():'';
         }
       }
     });
@@ -3761,7 +3789,8 @@
         celda.classList.remove('complementario');
       });
     }
-    ultimoCantoEl.classList.toggle('complementarios-activos', complementariosActivos && total>0);
+    const ultimoEstadoEsPenalizado=total>0 && (ultimoEstadoNormalizado==='p' || (!ultimoEstadoNormalizado && complementariosActivos));
+    ultimoCantoEl.classList.toggle('complementarios-activos', ultimoEstadoEsPenalizado);
     if(total){
       const etiqueta=cantosEtiquetas[total-1] || generarEtiquetaDesdeNumero(cantosOrdenados[total-1]);
       ultimoCantoValorActual=etiqueta;
@@ -3796,10 +3825,10 @@
       cerrarVentanaUltimoCanto();
     }
     if(ultimoCantoBoton){
-      ultimoCantoBoton.classList.toggle('complementarios-activos', complementariosActivos && total>0);
+      ultimoCantoBoton.classList.toggle('complementarios-activos', ultimoEstadoEsPenalizado);
     }
     if(ultimoCantoPopupEl){
-      ultimoCantoPopupEl.classList.toggle('complementarios-activos', complementariosActivos && total>0);
+      ultimoCantoPopupEl.classList.toggle('complementarios-activos', ultimoEstadoEsPenalizado);
     }
   }
 
@@ -4071,7 +4100,7 @@
       const premioFormaTotal=obtenerCreditosForma(forma);
       const totalGanadores=ordenados.length;
       const premioIndividual=totalGanadores>0?Math.floor(premioFormaTotal/totalGanadores):0;
-      const cartonesGratisForma=Number(forma?.cartonesGratis ?? forma?.cartones ?? 0);
+      const cartonesGratisForma=obtenerCartonesGratisForma(forma);
       ordenados.forEach(carton=>{
         const card=document.createElement('div');
         card.className='ganador-card';
@@ -4112,20 +4141,21 @@
         creditosItem.appendChild(premioMonto);
         premiosCol.appendChild(creditosItem);
 
-        const cartonesGratisValor=Number.isFinite(cartonesGratisForma) && cartonesGratisForma>0?cartonesGratisForma:0;
-        if(cartonesGratisValor>0){
-          const cartonesItem=document.createElement('div');
-          cartonesItem.className='ganador-premio-item';
-          const cartonesLabel=document.createElement('div');
-          cartonesLabel.className='ganador-premio-label';
-          cartonesLabel.textContent='CARTONES GRATIS:';
-          const cartonesValor=document.createElement('div');
-          cartonesValor.className='ganador-premio-monto ganador-premio-monto--cartones';
-          cartonesValor.textContent=formatearCreditos(cartonesGratisValor);
-          cartonesItem.appendChild(cartonesLabel);
-          cartonesItem.appendChild(cartonesValor);
-          premiosCol.appendChild(cartonesItem);
+        const cartonesItem=document.createElement('div');
+        cartonesItem.className='ganador-premio-item';
+        const cartonesLabel=document.createElement('div');
+        cartonesLabel.className='ganador-premio-label';
+        cartonesLabel.textContent='CARTONES GRATIS:';
+        const cartonesValor=document.createElement('div');
+        cartonesValor.className='ganador-premio-monto ganador-premio-monto--cartones';
+        cartonesValor.textContent=formatearCreditos(cartonesGratisForma);
+        if(cartonesGratisForma<=0){
+          cartonesItem.classList.add('ganador-premio-item--sin-premio');
+          cartonesValor.classList.add('sin-premio');
         }
+        cartonesItem.appendChild(cartonesLabel);
+        cartonesItem.appendChild(cartonesValor);
+        premiosCol.appendChild(cartonesItem);
 
         card.appendChild(premiosCol);
         modalListaEl.appendChild(card);
