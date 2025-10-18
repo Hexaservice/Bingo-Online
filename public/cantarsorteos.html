@@ -883,6 +883,13 @@
       color: #6a0dad;
       text-shadow: none;
     }
+    .ganador-premio-monto--cartones.sin-premio {
+      color: #5f5f5f;
+      opacity: 0.9;
+    }
+    .ganador-premio-item--sin-premio .ganador-premio-label {
+      color: #3a3a3a;
+    }
     .carton-visual {
       position: relative;
       display: flex;
@@ -2952,6 +2959,25 @@
     return 0;
   }
 
+  function obtenerCartonesGratisForma(forma){
+    if(!forma) return 0;
+    const candidatos = [
+      forma?.cartonesGratis,
+      forma?.cartonesgratis,
+      forma?.cartones_gratis,
+      forma?.premioCartonesGratis,
+      forma?.premioCartonesgratis,
+      forma?.cartones
+    ];
+    for(const candidato of candidatos){
+      const numero = Number(candidato);
+      if(Number.isFinite(numero)){
+        return Math.max(0, Math.round(numero));
+      }
+    }
+    return 0;
+  }
+
   function calcularGanadores(){
     cartonesGanadoresPorForma = new Map();
     formasPorCarton = new Map();
@@ -3357,7 +3383,7 @@
     const premio = obtenerCreditosForma(forma);
     const totalGanadores = Math.max(1, (cartonesGanadoresPorForma.get(Number(forma?.idx))?.cartones?.length) || 1);
     const montoIndividual = premio > 0 ? Math.floor(premio / totalGanadores) : 0;
-    const cartonesGratisForma = Number(forma?.cartonesGratis ?? forma?.cartones ?? 0);
+    const cartonesGratisForma = obtenerCartonesGratisForma(forma);
     const premiosCol = document.createElement('div');
     premiosCol.className = 'ganador-premios';
 
@@ -3373,20 +3399,21 @@
     creditosItem.appendChild(premioMonto);
     premiosCol.appendChild(creditosItem);
 
-    const cartonesGratisValor = Number.isFinite(cartonesGratisForma) && cartonesGratisForma > 0 ? cartonesGratisForma : 0;
-    if(cartonesGratisValor > 0){
-      const cartonesItem = document.createElement('div');
-      cartonesItem.className = 'ganador-premio-item';
-      const cartonesLabel = document.createElement('div');
-      cartonesLabel.className = 'ganador-premio-label';
-      cartonesLabel.textContent = 'CARTONES GRATIS:';
-      const cartonesValor = document.createElement('div');
-      cartonesValor.className = 'ganador-premio-monto ganador-premio-monto--cartones';
-      cartonesValor.textContent = formatearNumero(cartonesGratisValor);
-      cartonesItem.appendChild(cartonesLabel);
-      cartonesItem.appendChild(cartonesValor);
-      premiosCol.appendChild(cartonesItem);
+    const cartonesItem = document.createElement('div');
+    cartonesItem.className = 'ganador-premio-item';
+    const cartonesLabel = document.createElement('div');
+    cartonesLabel.className = 'ganador-premio-label';
+    cartonesLabel.textContent = 'CARTONES GRATIS:';
+    const cartonesValor = document.createElement('div');
+    cartonesValor.className = 'ganador-premio-monto ganador-premio-monto--cartones';
+    cartonesValor.textContent = formatearNumero(cartonesGratisForma);
+    if(cartonesGratisForma <= 0){
+      cartonesItem.classList.add('ganador-premio-item--sin-premio');
+      cartonesValor.classList.add('sin-premio');
     }
+    cartonesItem.appendChild(cartonesLabel);
+    cartonesItem.appendChild(cartonesValor);
+    premiosCol.appendChild(cartonesItem);
 
     card.appendChild(premiosCol);
     return card;
