@@ -291,7 +291,7 @@
           font-weight: 700;
       }
       #ultimo-canto .ultimo-boton {
-          background: radial-gradient(circle at top, rgba(255,255,255,0.95) 12%, rgba(0,200,83,0.95) 88%);
+          background: linear-gradient(135deg, rgba(244,255,246,0.96) 0%, rgba(0,200,83,0.95) 45%, rgba(0,164,68,0.95) 100%);
           border: none;
           border-radius: 999px;
           padding: 4px 12px;
@@ -323,7 +323,7 @@
           color: #ff8f00;
       }
       #ultimo-canto .ultimo-boton.complementarios-activos {
-          background: radial-gradient(circle at top, rgba(255,255,255,0.95) 12%, rgba(255,145,0,0.95) 88%);
+          background: linear-gradient(135deg, rgba(255, 236, 208, 0.96) 0%, rgba(255, 167, 38, 0.95) 52%, rgba(255, 111, 0, 0.95) 100%);
           color: #4a2200;
           box-shadow: 0 6px 16px rgba(255,145,0,0.32);
       }
@@ -1208,6 +1208,18 @@
       }
       .carton-tabla td.celda-cantada .cell-content {
           text-shadow: 0 0 6px rgba(0,0,0,0.85);
+      }
+      .carton-tabla td.celda-complementario-flash {
+          background: radial-gradient(circle at center,
+              rgba(255, 240, 220, 0.94) 12%,
+              rgba(255, 183, 77, 0.96) 58%,
+              rgba(255, 111, 0, 0.96) 100%);
+          color: #4a2200;
+          box-shadow: inset 0 0 10px rgba(0,0,0,0.28);
+          border-radius: 4px;
+      }
+      .carton-tabla td.celda-complementario-flash .cell-content {
+          text-shadow: 0 0 6px rgba(255, 244, 230, 0.9);
       }
       .carton-tabla td.celda-canto-penalizado {
           background: radial-gradient(circle at center,
@@ -2301,6 +2313,7 @@
   let cartonSeleccionadoId = null;
   const animacionesCartones = new Map();
   const celdasPenalizadasTimers = new Map();
+  const celdasComplementariasTimers = new Map();
   let cartonPrincipalInfo = null;
   let resaltadoTemporal = {timer:null, tablas:null, cartonId:null};
   let formaDestacadaSeleccionada = null;
@@ -3019,6 +3032,7 @@
       celda.classList.remove('celda-forma-activa');
       celda.style.removeProperty('--forma-rgb');
       celda.style.removeProperty('--forma-rgb-vivo');
+      celda.classList.remove('celda-complementario-flash');
       if(celda.dataset.cantada==='1'){
         celda.classList.add('celda-cantada');
       }else{
@@ -3092,6 +3106,7 @@
       celda.style.removeProperty('--forma-rgb');
       celda.style.removeProperty('--forma-rgb-vivo');
       celda.style.removeProperty('--forma-rgb-borde');
+      celda.classList.remove('celda-complementario-flash');
       if(celda.dataset.cantada==='1'){
         celda.classList.add('celda-cantada');
       }
@@ -3401,6 +3416,7 @@
     celda.classList.remove('celda-forma-activa');
     celda.classList.remove('celda-forma-solo-borde');
     celda.classList.remove('forma-resaltada');
+    celda.classList.remove('celda-complementario-flash');
     if(celda.dataset){
       celda.dataset.cantada='0';
     }
@@ -3427,6 +3443,41 @@
           if(!(celda instanceof HTMLElement)) return;
           if(celda.classList.contains('free')) return;
           aplicarPenalizacionTemporalEnCelda(celda);
+        });
+      });
+    });
+  }
+
+  function aplicarResaltadoComplementarioEnCelda(celda){
+    if(!(celda instanceof HTMLElement)) return;
+    celda.classList.remove('celda-cantada');
+    celda.classList.remove('celda-canto-penalizado');
+    celda.classList.remove('celda-forma-activa');
+    celda.classList.remove('celda-forma-solo-borde');
+    celda.classList.remove('forma-resaltada');
+    const previo=celdasComplementariasTimers.get(celda);
+    if(previo){
+      clearTimeout(previo);
+    }
+    celda.classList.add('celda-complementario-flash');
+    const timer=setTimeout(()=>{
+      celda.classList.remove('celda-complementario-flash');
+      celdasComplementariasTimers.delete(celda);
+    },1000);
+    celdasComplementariasTimers.set(celda,timer);
+  }
+
+  function resaltarCeldasComplementariasTemporalmente(numeros){
+    if(!Array.isArray(numeros) || !numeros.length) return;
+    const unicos=Array.from(new Set(numeros.map(num=>Number(num)).filter(Number.isFinite)));
+    if(!unicos.length) return;
+    requestAnimationFrame(()=>{
+      unicos.forEach(numero=>{
+        const selector=`.carton-tabla td[data-valor="${numero}"]`;
+        document.querySelectorAll(selector).forEach(celda=>{
+          if(!(celda instanceof HTMLElement)) return;
+          if(celda.classList.contains('free')) return;
+          aplicarResaltadoComplementarioEnCelda(celda);
         });
       });
     });
@@ -3461,8 +3512,18 @@
     return null;
   }
 
+  function esCantoComplementario(numero){
+    if(!Number.isFinite(numero)) return false;
+    if(!todasFormasConGanadores || !Number.isInteger(indiceUltimoGanador)) return false;
+    if(!(cantosIndiceMap instanceof Map)) return false;
+    if(!cantosIndiceMap.has(numero)) return false;
+    const idx=cantosIndiceMap.get(numero);
+    return Number.isInteger(idx) && idx>indiceUltimoGanador;
+  }
+
   function esCantoGanador(numero){
     if(!Number.isFinite(numero)) return false;
+    if(esCantoComplementario(numero)) return false;
     if(!(cantosResultadoMap instanceof Map) || cantosResultadoMap.size===0){
       return true;
     }
@@ -4160,6 +4221,7 @@
 
   function procesarCantos(data){
     const payload=Array.isArray(data)?{numeros:data}:data&&typeof data==='object'?data:{};
+    const cantosPrevios=Array.isArray(cantosOrdenados)?new Set(cantosOrdenados):new Set();
     const listaNumeros=Array.isArray(payload?.numeros)?payload.numeros:[];
     const detallesLista=Array.isArray(payload?.detalles)?payload.detalles:[];
     const detallesNormalizados=new Map();
@@ -4243,10 +4305,15 @@
     cantosResultadoMap=new Map(resultadoMapa);
     cantosOrdenados=normalizados;
     cantosEtiquetas=etiquetas;
+    const nuevosCantos=normalizados.filter(num=>!cantosPrevios.has(num));
     calcularGanadores();
     renderCantos();
     if(nuevosPenalizados.length){
       resaltarCeldasPenalizadasTemporalmente(nuevosPenalizados);
+    }
+    const nuevosComplementarios=nuevosCantos.filter(esCantoComplementario);
+    if(nuevosComplementarios.length){
+      resaltarCeldasComplementariasTemporalmente(nuevosComplementarios);
     }
   }
 
