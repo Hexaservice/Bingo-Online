@@ -2184,6 +2184,28 @@
     return new Date(Date.now() + (st?.diferencia || 0));
   }
 
+  function getServerTimestamp(){
+    const timestampCtor = firebase?.firestore?.Timestamp;
+    if(!timestampCtor){
+      return null;
+    }
+    try {
+      const ahora = getServerNow();
+      if(ahora instanceof Date && !Number.isNaN(ahora.getTime())){
+        return timestampCtor.fromDate(ahora);
+      }
+    } catch (error) {
+      console.error('Error obteniendo la fecha/hora del servidor', error);
+    }
+    if(typeof timestampCtor.now === 'function'){
+      return timestampCtor.now();
+    }
+    if(typeof timestampCtor.fromMillis === 'function'){
+      return timestampCtor.fromMillis(Date.now());
+    }
+    return null;
+  }
+
   function esModoManual(){
     return modoManual === true;
   }
@@ -2349,24 +2371,29 @@
         }
         numerosExistentes.push(claveNormalizada);
         const detallesExistentes = Array.isArray(data.detalles) ? [...data.detalles] : [];
+        const timestampServidor = getServerTimestamp();
+        const timestampFallback = firebase?.firestore?.Timestamp?.now?.()
+          ?? firebase?.firestore?.Timestamp?.fromMillis?.(Date.now())
+          ?? null;
+        const marcaTiempo = timestampServidor || timestampFallback;
         detallesExistentes.push({
           numero: claveNormalizada,
           orden: numerosExistentes.length - 1,
           estatus: 'g',
           adminId: usuario.uid || '',
           adminEmail: usuario.email || '',
-          creado: firebase.firestore.Timestamp.now()
+          creado: marcaTiempo
         });
         const payload = {
           numeros: numerosExistentes,
           detalles: detallesExistentes,
-          actualizado: firebase.firestore.FieldValue.serverTimestamp()
+          actualizado: marcaTiempo
         };
         if(!data.iniciocantos){
-          payload.iniciocantos = firebase.firestore.FieldValue.serverTimestamp();
+          payload.iniciocantos = marcaTiempo;
         }
         if(numerosExistentes.length >= 75 && !data.fincantos){
-          payload.fincantos = firebase.firestore.FieldValue.serverTimestamp();
+          payload.fincantos = marcaTiempo;
         }
         tx.set(docRef, payload, { merge: true });
       });
@@ -2773,7 +2800,11 @@
         const adminEmail = existente.adminEmail || existente.emailAdministrador || '';
         let creado = existente.creado || existente.timestamp || null;
         if(!creado){
-          creado = firebase.firestore.Timestamp.now();
+          const nuevoTimestamp = getServerTimestamp()
+            || firebase?.firestore?.Timestamp?.now?.()
+            || firebase?.firestore?.Timestamp?.fromMillis?.(Date.now())
+            || null;
+          creado = nuevoTimestamp;
           requiereActualizacion = true;
         }
         if((existente.estatus || '').toLowerCase() !== estatusEsperado){
@@ -2811,7 +2842,10 @@
         updates.detalles = nuevosDetalles;
       }
       if(numeros.length >= 75 && !data.fincantos){
-        updates.fincantos = firebase.firestore.FieldValue.serverTimestamp();
+        updates.fincantos = getServerTimestamp()
+          || firebase?.firestore?.Timestamp?.now?.()
+          || firebase?.firestore?.Timestamp?.fromMillis?.(Date.now())
+          || null;
       }
       if(Object.keys(updates).length){
         await docRef.set(updates, { merge: true });
