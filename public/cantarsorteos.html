@@ -431,12 +431,26 @@
     #jugar-btn { background: linear-gradient(#4b0082,#ffffff); }
     #finalizar-btn { background: linear-gradient(#8b0000,#ffffff); }
     #centro-pagos-btn {
-      background: linear-gradient(165deg, #fdd835 0%, #ffe082 55%, #fbc02d 100%);
-      border-color: #ffe082;
-      box-shadow: 0 6px 14px rgba(251, 192, 45, 0.35);
+      background: linear-gradient(180deg, #ff9800 0%, #ffb74d 55%, #ffffff 100%);
+      border-color: #ffcc80;
+      box-shadow: 0 6px 14px rgba(255, 152, 0, 0.32);
     }
     .estado-btn img,
     .estado-btn svg { width: 24px; height: 24px; }
+    .estado-btn .pdf-floating-icon {
+      position: absolute;
+      top: -28px;
+      right: -6px;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      transform-origin: center;
+      pointer-events: auto;
+      cursor: pointer;
+    }
     #centro-pagos-btn img {
       width: 26px;
       height: 26px;
@@ -447,21 +461,24 @@
       height: 30px;
       filter: drop-shadow(0 2px 2px rgba(0,0,0,0.35));
     }
+    #pdf-btn .pdf-floating-icon {
+      background: radial-gradient(circle at 35% 30%, #ffffff 0%, #ffebee 58%, #ffcdd2 100%);
+      border: 2px solid rgba(211, 47, 47, 0.35);
+      box-shadow: 0 8px 16px rgba(211, 47, 47, 0.25);
+    }
+    #pdf-btn .pdf-floating-icon svg {
+      width: 20px;
+      height: 24px;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.18));
+    }
+    #pdf-btn.pdf-disponible .pdf-floating-icon {
+      display: flex;
+      animation: pdfFloat 3.4s ease-in-out infinite, pdfGlowRojo 2.8s ease-in-out infinite;
+    }
     #finalizar-btn .pdf-floating-icon {
-      position: absolute;
-      top: -28px;
-      right: -6px;
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
       background: radial-gradient(circle at 35% 30%, #ffffff 0%, #e8f5e9 58%, #a5d6a7 100%);
       border: 2px solid rgba(56, 142, 60, 0.35);
       box-shadow: 0 8px 16px rgba(46, 125, 50, 0.28);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      transform-origin: center;
-      pointer-events: auto;
     }
     #finalizar-btn .pdf-floating-icon svg {
       width: 20px;
@@ -476,6 +493,11 @@
       0% { transform: translateY(0px); }
       50% { transform: translateY(-10px); }
       100% { transform: translateY(0px); }
+    }
+    @keyframes pdfGlowRojo {
+      0% { box-shadow: 0 10px 20px rgba(211, 47, 47, 0.25), 0 0 0 rgba(255, 255, 255, 0); }
+      50% { box-shadow: 0 12px 26px rgba(229, 57, 53, 0.38), 0 0 16px rgba(255, 205, 210, 0.95); }
+      100% { box-shadow: 0 10px 20px rgba(211, 47, 47, 0.25), 0 0 0 rgba(255, 255, 255, 0); }
     }
     @keyframes pdfGlowVerde {
       0% { box-shadow: 0 10px 20px rgba(56, 142, 60, 0.25), 0 0 0 rgba(255, 255, 255, 0); }
@@ -1451,6 +1473,22 @@
           <rect x="14" y="22" width="20" height="16" rx="3" fill="#d32f2f"></rect>
           <text x="24" y="33" text-anchor="middle" font-family="'Poppins', sans-serif" font-weight="700" font-size="11" fill="#ffffff" letter-spacing="1">PDF</text>
         </svg>
+        <span class="pdf-floating-icon" aria-hidden="true">
+          <svg viewBox="0 0 36 40" role="img" aria-hidden="true">
+            <defs>
+              <linearGradient id="pdfFloatGradientRojo" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#ffffff" />
+                <stop offset="100%" stop-color="#ffdde0" />
+              </linearGradient>
+            </defs>
+            <path d="M11 2h12l7 7v23a4 4 0 0 1-4 4H11a4 4 0 0 1-4-4V6a4 4 0 0 1 4-4z" fill="url(#pdfFloatGradientRojo)" stroke="#c62828" stroke-width="2" stroke-linejoin="round"></path>
+            <path d="M23 2v7h7" fill="#ffffff" stroke="#c62828" stroke-width="2" stroke-linejoin="round"></path>
+            <path d="M18 11v12" stroke="#c62828" stroke-width="2.4" stroke-linecap="round"></path>
+            <path d="M14 19l4 4 4-4" fill="none" stroke="#c62828" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
+            <rect x="11" y="22" width="14" height="10" rx="2" fill="#c62828"></rect>
+            <path d="M14 27h8" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"></path>
+          </svg>
+        </span>
       </button>
       <button id="jugar-btn" class="estado-btn" title="Cambiar a Jugando">
         <img src="https://api.iconify.design/mdi/slot-machine.svg?color=white" alt="Jugar">
@@ -1590,7 +1628,8 @@
   const pdfBtn = document.getElementById('pdf-btn');
   const jugarBtn = document.getElementById('jugar-btn');
   const finalizarBtn = document.getElementById('finalizar-btn');
-  const pdfFloatingIcon = finalizarBtn ? finalizarBtn.querySelector('.pdf-floating-icon') : null;
+  const pdfGeneradoFloatingIcon = pdfBtn ? pdfBtn.querySelector('.pdf-floating-icon') : null;
+  const pdfResultadosFloatingIcon = finalizarBtn ? finalizarBtn.querySelector('.pdf-floating-icon') : null;
   const centroPagosBtn = document.getElementById('centro-pagos-btn');
   const modoManualSwitch = document.getElementById('modo-manual-switch');
   const modoManualEstadoEl = document.getElementById('modo-manual-estado');
@@ -2153,8 +2192,11 @@
   btnSorteo.addEventListener('click', abrirModalSorteos);
   sellarBtn.addEventListener('click', sellarSorteo);
   pdfBtn.addEventListener('click', abrirPDF);
-  if(pdfFloatingIcon){
-    pdfFloatingIcon.addEventListener('click', manejarClickPdfAlmacenado);
+  if(pdfGeneradoFloatingIcon){
+    pdfGeneradoFloatingIcon.addEventListener('click', manejarClickPdfAlmacenado);
+  }
+  if(pdfResultadosFloatingIcon){
+    pdfResultadosFloatingIcon.addEventListener('click', manejarClickPdfResultadosAlmacenado);
   }
   jugarBtn.addEventListener('click', cambiarAJugando);
   finalizarBtn.addEventListener('click', finalizarSorteo);
@@ -5080,6 +5122,21 @@
         window.location.href = fallback;
       }
     }
+  }
+
+  function manejarClickPdfResultadosAlmacenado(evento){
+    evento.preventDefault();
+    evento.stopPropagation();
+    if(!currentSorteoId || !currentSorteoData){
+      alert('Selecciona un sorteo primero.');
+      return;
+    }
+    const estadoPdfResultado = (currentSorteoData.pdfresul || '').toString().trim().toLowerCase();
+    if(estadoPdfResultado !== 'si'){
+      alert('Aún no se ha confirmado la descarga del PDF de resultados.');
+      return;
+    }
+    abrirPdfResultados();
   }
 
   async function inicializar(){

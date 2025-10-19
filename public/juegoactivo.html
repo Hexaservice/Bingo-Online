@@ -138,15 +138,15 @@
           display: none;
           flex-direction: column;
           align-items: center;
-          gap: 6px;
+          gap: 8px;
       }
       .sin-sorteo-contenedor.visible {
           display: flex;
       }
       .sin-sorteo-boton {
           font-family: 'Bangers', cursive;
-          font-size: clamp(0.78rem, 2.6vw, 1rem);
-          padding: 6px 18px;
+          font-size: clamp(0.9rem, 2.8vw, 1.1rem);
+          padding: 8px 20px;
           border-radius: 999px;
           border: 3px solid #FFD700;
           background: linear-gradient(145deg, rgba(0, 128, 255, 0.85), rgba(0, 68, 204, 0.92));
@@ -155,6 +155,15 @@
           cursor: pointer;
           box-shadow: 0 6px 16px rgba(0,0,0,0.25);
           transition: transform 0.2s ease, box-shadow 0.2s ease;
+          text-align: center;
+      }
+      .sin-sorteo-boton--titulo {
+          font-size: clamp(1.15rem, 4.6vw, 1.7rem);
+          padding: 10px 28px;
+          border-radius: 16px;
+      }
+      .sin-sorteo-boton--titulo.con-seleccion {
+          background: linear-gradient(145deg, rgba(63, 81, 181, 0.92), rgba(33, 53, 163, 0.95));
       }
       .sin-sorteo-boton:hover {
           transform: translateY(-1px) scale(1.02);
@@ -170,6 +179,20 @@
           text-align: center;
           text-transform: uppercase;
           letter-spacing: 0.6px;
+      }
+      .sin-sorteo-mensaje.parpadeo {
+          animation: sinSorteoParpadeo 2s ease-in-out infinite;
+      }
+      @keyframes sinSorteoParpadeo {
+          0% { opacity: 0; }
+          40% { opacity: 1; }
+          100% { opacity: 0; }
+      }
+      #sorteo-header.sin-sorteo-activo {
+          gap: 8px;
+      }
+      #sorteo-header.sin-sorteo-activo #sorteo-resumen {
+          display: none;
       }
       #sorteo-detalles .detalle-item {
           display: inline-flex;
@@ -1547,6 +1570,18 @@
           text-align: left;
           font-family: 'Poppins', sans-serif;
       }
+      .modal-sorteo-item--especial {
+          border-color: rgba(255, 123, 0, 0.72);
+      }
+      .modal-sorteo-item--especial .modal-sorteo-detalles span {
+          color: #ff7b00;
+      }
+      .modal-sorteo-item--diario {
+          border-color: rgba(16, 158, 52, 0.65);
+      }
+      .modal-sorteo-item--diario .modal-sorteo-detalles span {
+          color: #0aa128;
+      }
       .modal-sorteo-item:hover {
           transform: translateY(-1px);
           box-shadow: 0 8px 18px rgba(15, 76, 194, 0.25);
@@ -1572,6 +1607,59 @@
       }
       .modal-sorteos .modal-mensaje {
           margin-top: 6px;
+      }
+      .modal-formas-sin .modal-contenido {
+          max-width: min(420px, calc(100vw - 32px));
+          width: min(420px, calc(100vw - 32px));
+          align-items: stretch;
+      }
+      .modal-formas-sin-titulo {
+          font-family: 'Bangers', cursive;
+          font-size: clamp(1.3rem, 4vw, 1.6rem);
+          text-align: center;
+          margin: 0;
+          color: #8b0000;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+      }
+      .modal-formas-sin-lista {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+      }
+      .modal-formas-sin-item {
+          background: linear-gradient(145deg, rgba(255,255,255,0.96), rgba(245,245,245,0.94));
+          border-radius: 12px;
+          padding: 12px 14px;
+          font-family: 'Poppins', sans-serif;
+          font-weight: 600;
+          color: #b71c1c;
+          text-align: center;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      }
+      .modal-formas-sin-acciones {
+          display: flex;
+          justify-content: center;
+          margin-top: 4px;
+      }
+      .modal-formas-sin-aceptar {
+          font-family: 'Bangers', cursive;
+          font-size: clamp(0.9rem, 2.4vw, 1.1rem);
+          padding: 8px 24px;
+          border-radius: 999px;
+          border: 3px solid #FFD700;
+          background: linear-gradient(145deg, rgba(255, 138, 26, 0.92), rgba(230, 81, 0, 0.94));
+          color: #ffffff;
+          cursor: pointer;
+          box-shadow: 0 6px 16px rgba(230, 81, 0, 0.28);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .modal-formas-sin-aceptar:hover {
+          transform: translateY(-1px) scale(1.02);
+          box-shadow: 0 10px 22px rgba(191, 54, 12, 0.32);
+      }
+      .modal-formas-sin-aceptar:active {
+          transform: translateY(1px) scale(0.98);
       }
       .ganador-card {
           background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(240,240,240,0.96));
@@ -2316,7 +2404,7 @@
       <div id="sorteo-resumen" class="sorteo-titulo-basico">Cargando sorteo en vivo...</div>
       <div id="sorteo-detalles"></div>
       <div id="sin-sorteo-contenedor" class="sin-sorteo-contenedor" hidden>
-        <button id="seleccionar-finalizado-btn" type="button" class="sin-sorteo-boton">Seleccionar sorteo finalizado</button>
+        <button id="seleccionar-finalizado-btn" type="button" class="sin-sorteo-boton sin-sorteo-boton--titulo">CONSULTAR SORTEOS FINALIZADOS</button>
         <div id="sin-sorteo-mensaje" class="sin-sorteo-mensaje">NO HAY SORTEOS EN VIVO EN ESTE MOMENTO</div>
       </div>
     </header>
@@ -2366,6 +2454,17 @@
     </div>
   </div>
 
+  <div id="modal-formas-sin-ganadores" class="modal modal-formas-sin" role="dialog" aria-modal="true" aria-labelledby="modal-formas-sin-ganadores-titulo" aria-hidden="true">
+    <div class="modal-contenido" role="document">
+      <button type="button" id="modal-formas-sin-ganadores-cerrar" class="modal-cerrar" aria-label="Cerrar">✖</button>
+      <h2 id="modal-formas-sin-ganadores-titulo" class="modal-formas-sin-titulo">Formas sin ganadores</h2>
+      <div id="modal-formas-sin-ganadores-lista" class="modal-formas-sin-lista"></div>
+      <div class="modal-formas-sin-acciones">
+        <button type="button" id="modal-formas-sin-ganadores-aceptar" class="modal-formas-sin-aceptar">Entendido</button>
+      </div>
+    </div>
+  </div>
+
   <div id="complementarios-aviso" class="aviso-overlay aviso-overlay--complementarios" role="dialog" aria-modal="true" aria-labelledby="complementarios-aviso-titulo" aria-hidden="true">
     <div class="aviso-overlay__box">
       <h2 id="complementarios-aviso-titulo" class="aviso-overlay__titulo">Cantos de transparencia</h2>
@@ -2390,6 +2489,7 @@
 
   const cantosGridEl = document.getElementById('cantos-grid');
   const ultimoCantoEl = document.getElementById('ultimo-canto');
+  const sorteoHeaderEl = document.getElementById('sorteo-header');
   const sorteoResumenEl = document.getElementById('sorteo-resumen');
   const sorteoDetallesEl = document.getElementById('sorteo-detalles');
   const sinSorteoContenedorEl = document.getElementById('sin-sorteo-contenedor');
@@ -2416,10 +2516,15 @@
   const modalSorteosFinalizadosListaEl = document.getElementById('modal-sorteos-finalizados-lista');
   const modalSorteosFinalizadosMensajeEl = document.getElementById('modal-sorteos-finalizados-mensaje');
   const modalSorteosFinalizadosCerrarBtn = document.getElementById('modal-sorteos-finalizados-cerrar');
+  const modalFormasSinGanadoresEl = document.getElementById('modal-formas-sin-ganadores');
+  const modalFormasSinGanadoresListaEl = document.getElementById('modal-formas-sin-ganadores-lista');
+  const modalFormasSinGanadoresCerrarBtn = document.getElementById('modal-formas-sin-ganadores-cerrar');
+  const modalFormasSinGanadoresAceptarBtn = document.getElementById('modal-formas-sin-ganadores-aceptar');
 
   const FORM_COLORS = ['#90ee90', '#fffacd', '#add8e6', '#d8b0ff', '#ffcc99', '#f77fb3', '#9ad3bc', '#fecf6a'];
   const BINGO_LETRAS = ['B','I','N','G','O'];
 
+  const TEXTO_BOTON_CONSULTAR_FINALIZADOS = 'CONSULTAR SORTEOS FINALIZADOS';
   const cantoCellsMap = new Map();
   let cantosOrdenados = [];
   let cantosEtiquetas = [];
@@ -2454,6 +2559,7 @@
   let ultimoCantoPopupEl = null;
   let ultimoCantoPopupNumeroEl = null;
   let ultimoCantoTimer = null;
+  let formasSinGanadoresAlertaClave = '';
 
   let recalculoAlturaCartonProgramado = false;
   const actualizarAlturaBotonesRetrato = () => {
@@ -2471,6 +2577,100 @@
       panelSuperiorEl.style.removeProperty('--panel-columna-derecha-min');
     });
   };
+
+  function actualizarTituloFinalizadoBtn(){
+    if(!seleccionarFinalizadoBtn) return;
+    if(haySorteoJugando){
+      seleccionarFinalizadoBtn.textContent = TEXTO_BOTON_CONSULTAR_FINALIZADOS;
+      seleccionarFinalizadoBtn.classList.remove('con-seleccion');
+    }else if(activeSorteo && sorteoManualSeleccionadoId){
+      const nombre = (activeSorteo.nombre || '').toString().trim();
+      seleccionarFinalizadoBtn.textContent = nombre || TEXTO_BOTON_CONSULTAR_FINALIZADOS;
+      seleccionarFinalizadoBtn.classList.add('con-seleccion');
+    }else{
+      seleccionarFinalizadoBtn.textContent = TEXTO_BOTON_CONSULTAR_FINALIZADOS;
+      seleccionarFinalizadoBtn.classList.remove('con-seleccion');
+    }
+  }
+
+  function cerrarModalFormasSinGanadores(){
+    if(!modalFormasSinGanadoresEl) return;
+    modalFormasSinGanadoresEl.classList.remove('activa');
+    modalFormasSinGanadoresEl.setAttribute('aria-hidden','true');
+  }
+
+  function reiniciarAlertaFormasSinGanadores(){
+    formasSinGanadoresAlertaClave = '';
+    cerrarModalFormasSinGanadores();
+  }
+
+  function obtenerEtiquetaFormaSinGanador(forma){
+    const nombre = (forma?.nombre || '').toString().trim();
+    if(nombre) return nombre;
+    const indiceNumerico = Number(forma?.idx);
+    if(Number.isFinite(indiceNumerico)){
+      return `F${String(indiceNumerico).padStart(2,'0')}`;
+    }
+    const indiceTexto = (forma?.idx ?? '').toString().trim();
+    if(indiceTexto){
+      return `F${indiceTexto.padStart(2,'0')}`;
+    }
+    return 'sin identificar';
+  }
+
+  function mostrarModalFormasSinGanadores(formas){
+    if(!Array.isArray(formas) || !formas.length) return;
+    if(!modalFormasSinGanadoresEl || !modalFormasSinGanadoresListaEl){
+      const mensaje = formas.map(forma=>`No hay ganadores para la Forma ${obtenerEtiquetaFormaSinGanador(forma)}`).join('\n');
+      alert(mensaje);
+      return;
+    }
+    modalFormasSinGanadoresListaEl.innerHTML = '';
+    formas.forEach(forma=>{
+      const item = document.createElement('p');
+      item.className = 'modal-formas-sin-item';
+      const etiqueta = obtenerEtiquetaFormaSinGanador(forma);
+      item.textContent = `No hay ganadores para la Forma ${etiqueta}`;
+      modalFormasSinGanadoresListaEl.appendChild(item);
+    });
+    modalFormasSinGanadoresEl.classList.add('activa');
+    modalFormasSinGanadoresEl.setAttribute('aria-hidden','false');
+    if(modalFormasSinGanadoresAceptarBtn){
+      modalFormasSinGanadoresAceptarBtn.focus({ preventScroll: true });
+    }
+  }
+
+  function evaluarFormasSinGanadores(totalCantos){
+    if(totalCantos < 75 || !Array.isArray(formasActivas) || !formasActivas.length){
+      formasSinGanadoresAlertaClave = '';
+      cerrarModalFormasSinGanadores();
+      return;
+    }
+    const sinGanadores = formasActivas.filter(forma=>{
+      const idxNumero = Number(forma?.idx);
+      if(!Number.isFinite(idxNumero)) return false;
+      const registro = cartonesGanadoresPorForma.get(idxNumero);
+      const total = Array.isArray(registro?.cartones) ? registro.cartones.length : 0;
+      return total === 0;
+    });
+    if(!sinGanadores.length){
+      formasSinGanadoresAlertaClave = '';
+      cerrarModalFormasSinGanadores();
+      return;
+    }
+    const clave = sinGanadores
+      .map(forma=>{
+        const idxNumero = Number(forma?.idx);
+        const idxTexto = Number.isFinite(idxNumero) ? `#${idxNumero}` : (forma?.idx ?? '').toString().trim();
+        const nombreBase = obtenerEtiquetaFormaSinGanador(forma).toLowerCase();
+        return `${idxTexto}|${nombreBase}`;
+      })
+      .sort()
+      .join('||');
+    if(clave && clave === formasSinGanadoresAlertaClave) return;
+    formasSinGanadoresAlertaClave = clave;
+    mostrarModalFormasSinGanadores(sinGanadores);
+  }
 
   function actualizarAlturaCartonWrapper(wrapper){
     if(!wrapper) return;
@@ -2877,6 +3077,7 @@
     if(!complementariosAvisoEl) return;
     complementariosAvisoEl.classList.remove('activa');
     complementariosAvisoEl.setAttribute('aria-hidden','true');
+    avisoComplementariosMostrado = false;
   }
 
   function crearGridCantos(){
@@ -3783,10 +3984,23 @@
     if(haySorteoJugando){
       sinSorteoContenedorEl.classList.remove('visible');
       sinSorteoContenedorEl.setAttribute('hidden','');
+      if(sorteoHeaderEl){
+        sorteoHeaderEl.classList.remove('sin-sorteo-activo');
+      }
+      if(sinSorteoMensajeEl){
+        sinSorteoMensajeEl.classList.remove('parpadeo');
+      }
     }else{
       sinSorteoContenedorEl.classList.add('visible');
       sinSorteoContenedorEl.removeAttribute('hidden');
+      if(sorteoHeaderEl){
+        sorteoHeaderEl.classList.add('sin-sorteo-activo');
+      }
+      if(sinSorteoMensajeEl){
+        sinSorteoMensajeEl.classList.add('parpadeo');
+      }
     }
+    actualizarTituloFinalizadoBtn();
   }
 
   function obtenerTotalCreditosSorteo(){
@@ -3849,6 +4063,7 @@
       sorteoResumenEl.className='sorteo-titulo-basico';
       sorteoResumenEl.textContent='Sorteo en vivo';
       sorteoDetallesEl.innerHTML='';
+      actualizarTituloFinalizadoBtn();
       return;
     }
     const {nombre='',fecha='',tipo='',hora=''}=activeSorteo;
@@ -3880,6 +4095,7 @@
       partes.push(`<span class="detalle-item"><span class="detalle-label">Hora:</span><span class="detalle-valor hora">${horaMostrar}</span></span>`);
     }
     sorteoDetallesEl.innerHTML=partes.join(' ');
+    actualizarTituloFinalizadoBtn();
   }
 
   function renderCantos(){
@@ -4319,6 +4535,19 @@
       }
     });
   }
+  if(modalFormasSinGanadoresCerrarBtn){
+    modalFormasSinGanadoresCerrarBtn.addEventListener('click',cerrarModalFormasSinGanadores);
+  }
+  if(modalFormasSinGanadoresAceptarBtn){
+    modalFormasSinGanadoresAceptarBtn.addEventListener('click',cerrarModalFormasSinGanadores);
+  }
+  if(modalFormasSinGanadoresEl){
+    modalFormasSinGanadoresEl.addEventListener('click',evento=>{
+      if(evento.target===modalFormasSinGanadoresEl){
+        cerrarModalFormasSinGanadores();
+      }
+    });
+  }
 
   if(complementariosAvisoAceptarBtn){
     complementariosAvisoAceptarBtn.addEventListener('click',cerrarAvisoComplementarios);
@@ -4337,6 +4566,9 @@
     }
     if(modalSorteosFinalizadosEl?.classList?.contains('activa')){
       cerrarModalSorteosFinalizados();
+    }
+    if(modalFormasSinGanadoresEl?.classList?.contains('activa')){
+      cerrarModalFormasSinGanadores();
     }
     if(modalGanadores?.classList?.contains('activa')){
       cerrarModal();
@@ -4585,11 +4817,13 @@
     }else{
       cantosComplementariosActivos=false;
     }
-    if(!cantosComplementariosActivos){
+    if(!cantosComplementariosActivos || !haySorteoJugando){
+      avisoComplementariosMostrado=false;
       cerrarAvisoComplementarios();
     }else if(!avisoComplementariosMostrado){
       mostrarAvisoComplementarios();
     }
+    evaluarFormasSinGanadores(totalCantos);
   }
 
   function suscribirCantos(){
@@ -4631,6 +4865,7 @@
     haySorteoJugando=lista.length>0;
     if(haySorteoJugando){
       sorteoManualSeleccionadoId=null;
+      reiniciarAlertaFormasSinGanadores();
     }
     actualizarSinSorteoUI();
     if(!lista.length){
@@ -4642,6 +4877,7 @@
       activeSorteo=null;
       activeSorteoId=null;
       actualizarHeader();
+      reiniciarAlertaFormasSinGanadores();
       if(unsubscribeCantos){unsubscribeCantos();unsubscribeCantos=null;}
       if(unsubscribeFormas){unsubscribeFormas();unsubscribeFormas=null;}
       if(unsubscribeCartones){unsubscribeCartones();unsubscribeCartones=null;}
@@ -4664,6 +4900,7 @@
     activeSorteoId=elegido.id;
     actualizarHeader();
     if(cambio){
+      reiniciarAlertaFormasSinGanadores();
       todasFormasConGanadores=false;
       indiceUltimoGanador=null;
       cantosComplementariosActivos=false;
@@ -4718,6 +4955,12 @@
       }
       boton.innerHTML=`<span class="modal-sorteo-nombre">${nombre}</span>`+
         `<div class="modal-sorteo-detalles">${detalles.join('')}</div>`;
+      const tipoNormalizado=tipoTexto.toLowerCase();
+      if(tipoNormalizado.includes('especial')){
+        boton.classList.add('modal-sorteo-item--especial');
+      }else if(tipoNormalizado.includes('diario')){
+        boton.classList.add('modal-sorteo-item--diario');
+      }
       boton.addEventListener('click',()=>{
         seleccionarSorteoFinalizado(info);
       });
@@ -4815,6 +5058,7 @@
       sorteoManualSeleccionadoId=info.id;
       haySorteoJugando=false;
       actualizarSinSorteoUI();
+      reiniciarAlertaFormasSinGanadores();
       activeSorteo={id:info.id,...data};
       activeSorteoId=info.id;
       actualizarHeader();
