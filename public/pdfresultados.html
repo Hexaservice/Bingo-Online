@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF Resultados</title>
+  <title>Resultado del sorteo</title>
   <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -194,6 +194,12 @@
       display: grid;
       gap: clamp(12px, 1.6vw, 18px);
     }
+    #first-page-layout {
+      display: grid;
+      gap: clamp(12px, 1.8vw, 20px);
+      align-items: start;
+      grid-template-columns: minmax(0, 1fr);
+    }
     #resumen-layout {
       display: grid;
       gap: clamp(8px, 1.4vw, 16px);
@@ -317,10 +323,13 @@
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: clamp(8px, 1.2vw, 16px);
       width: 100%;
-      margin: clamp(12px, 2vw, 20px) auto 0;
+      margin: 0;
       align-items: stretch;
     }
     @media (min-width: 1024px) {
+      #first-page-layout {
+        grid-template-columns: minmax(0, 0.62fr) minmax(0, 0.38fr);
+      }
       #resumen-layout {
         grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
         grid-auto-flow: dense;
@@ -659,9 +668,16 @@
       background: linear-gradient(135deg, rgba(230,255,230,0.85), rgba(255,255,255,0.9));
     }
     .pdf-carton-table td.celda-cantada {
-      background: linear-gradient(145deg, rgba(197,232,255,0.9), rgba(158,208,255,0.75));
-      color: #0b2d5c;
+      background: linear-gradient(140deg, rgba(186, 241, 195, 0.92), rgba(139, 215, 154, 0.78));
+      color: #0a3d1a;
       font-weight: 700;
+      box-shadow: inset 0 0 0 1px rgba(12, 61, 26, 0.15);
+    }
+    .pdf-carton-table td.celda-canto-penalizado {
+      background: #ffffff;
+      color: #1f1f1f;
+      font-weight: 700;
+      box-shadow: inset 0 0 0 2px rgba(0,0,0,0.08);
     }
     .pdf-carton-table td.celda-forma {
       position: relative;
@@ -906,6 +922,9 @@
       }
     }
     @media (orientation: landscape) and (min-width: 700px) {
+      #first-page-layout {
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+      }
       #formas-resumen {
         grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       }
@@ -978,14 +997,19 @@
       padding: clamp(14px, 2.2vw, 24px) clamp(16px, 2.6vw, 28px);
       box-sizing: border-box;
     }
+    body.pdf-captura #first-page-layout {
+      grid-template-columns: minmax(0, 0.62fr) minmax(0, 0.38fr);
+      gap: clamp(16px, 2.4vw, 26px);
+      width: 100%;
+    }
     body.pdf-captura #resumen-layout {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       column-gap: clamp(16px, 2.4vw, 24px);
       row-gap: clamp(12px, 2vw, 22px);
       width: 100%;
       max-width: none;
-      min-height: clamp(560px, 56vw, 700px);
+      min-height: clamp(520px, 48vw, 640px);
       margin: 0 auto;
       align-content: stretch;
       grid-auto-flow: dense;
@@ -1106,7 +1130,7 @@
   <div id="acciones-fixed">
     <button id="generar-resultados-btn">Resultados</button>
     <button id="generar-pdf-btn">Generar PDF</button>
-    <button id="pdf-listo-btn">PDF listo</button>
+    <button id="pdf-listo-btn">PDF LISTO</button>
   </div>
   <div id="orientacion-modal" class="orientacion-modal" role="dialog" aria-modal="true" aria-labelledby="orientacion-modal-titulo" aria-hidden="true">
     <div class="orientacion-modal-contenido">
@@ -1117,46 +1141,48 @@
     </div>
   </div>
   <div id="pdf-wrapper">
-    <div id="resumen-layout">
-      <div id="resumen-header" class="resumen-bloque">
-        <div class="header-logo">
-          <img id="logo" src="https://i.imgur.com/twjhNtZ.png" alt="Bingo Online">
+    <div id="first-page-layout">
+      <div id="resumen-layout">
+        <div id="resumen-header" class="resumen-bloque">
+          <div class="header-logo">
+            <img id="logo" src="https://i.imgur.com/twjhNtZ.png" alt="Bingo Online">
+          </div>
+          <div class="header-info">
+            <h1 id="nombre-sorteo">Sorteo</h1>
+            <div id="tipo-sorteo-titulo"></div>
+          </div>
         </div>
-        <div class="header-info">
-          <h1 id="nombre-sorteo">Sorteo</h1>
-          <div id="tipo-sorteo-titulo"></div>
+        <div class="dato-inline">
+          <span class="dato-label">Tipo de sorteo:</span>
+          <span id="dato-tipo" class="dato-valor">-</span>
+        </div>
+        <div class="dato-inline">
+          <span class="dato-label">Fecha del sorteo:</span>
+          <span id="dato-fecha" class="dato-valor">-</span>
+        </div>
+        <div class="dato-inline">
+          <span class="dato-label">Hora de cierre:</span>
+          <span id="dato-cierre" class="dato-valor">-</span>
+        </div>
+        <div class="dato-inline">
+          <span class="dato-label">Hora del sorteo:</span>
+          <span id="dato-hora" class="dato-valor">-</span>
+        </div>
+        <div class="dato-inline">
+          <span class="dato-label">Valor del cartón:</span>
+          <span id="dato-valor" class="dato-valor">-</span>
+        </div>
+        <div class="dato-inline">
+          <span class="dato-label">CARTONES GRATIS MÁXIMOS POR JUGADOR:</span>
+          <span id="dato-maxgratis" class="dato-valor">-</span>
+        </div>
+        <div class="totales-header resumen-bloque">
+          <h2>CRÉDITOS TOTALES A REPARTIR</h2>
+          <div id="total-premios">0</div>
         </div>
       </div>
-      <div class="dato-inline">
-        <span class="dato-label">Tipo de sorteo:</span>
-        <span id="dato-tipo" class="dato-valor">-</span>
-      </div>
-      <div class="dato-inline">
-        <span class="dato-label">Fecha del sorteo:</span>
-        <span id="dato-fecha" class="dato-valor">-</span>
-      </div>
-      <div class="dato-inline">
-        <span class="dato-label">Hora de cierre:</span>
-        <span id="dato-cierre" class="dato-valor">-</span>
-      </div>
-      <div class="dato-inline">
-        <span class="dato-label">Hora del sorteo:</span>
-        <span id="dato-hora" class="dato-valor">-</span>
-      </div>
-      <div class="dato-inline">
-        <span class="dato-label">Valor del cartón:</span>
-        <span id="dato-valor" class="dato-valor">-</span>
-      </div>
-      <div class="dato-inline">
-        <span class="dato-label">CARTONES GRATIS MÁXIMOS POR JUGADOR:</span>
-        <span id="dato-maxgratis" class="dato-valor">-</span>
-      </div>
-      <div class="totales-header resumen-bloque">
-        <h2>CRÉDITOS TOTALES A REPARTIR</h2>
-        <div id="total-premios">0</div>
-      </div>
+      <section id="formas-resumen"></section>
     </div>
-    <section id="formas-resumen"></section>
     <section id="cartones-section">
       <h2>Cartones del sorteo</h2>
       <div id="cartones-grid"></div>
@@ -1205,11 +1231,12 @@
   let cartonesMapa = new Map();
   let cantosOrdenados = [];
   let cantosIndiceMap = new Map();
+  let cantosResultadoMap = new Map();
   let cartonesGanadoresPorForma = new Map();
   let formasPorCarton = new Map();
   let indiceUltimoGanador = null;
   let todasFormasConGanadores = false;
-  let pdfNombreBase = 'pdf-sorteo';
+  let pdfNombreBase = 'result_sorteo';
   let cartonesCargados = false;
   let firebaseReadyPromise = null;
 
@@ -1273,12 +1300,45 @@
       .filter(pos=>Number.isInteger(pos.r) && Number.isInteger(pos.c));
   }
 
-  function procesarCantos(lista){
-    const entradas = Array.isArray(lista)?lista:[];
+  function procesarCantos(datos){
+    const payload = Array.isArray(datos)
+      ? { numeros: datos }
+      : (datos && typeof datos === 'object' ? datos : { numeros: [] });
+    const listaNumeros = Array.isArray(payload.numeros) ? payload.numeros : [];
+    const detalles = Array.isArray(payload.detalles) ? payload.detalles : [];
+    const detallesMap = new Map();
+    detalles.forEach(item=>{
+      const numero = normalizarNumero(item?.numero ?? item?.valor ?? item?.canto ?? item?.etiqueta);
+      if(numero === null) return;
+      const orden = Number.isFinite(item?.orden) ? Number(item.orden) : undefined;
+      const estadoTexto = (item?.estatus ?? item?.resultado ?? item?.estado ?? item?.status ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
+      detallesMap.set(numero, { estado: estadoTexto, orden });
+    });
     const normalizados = [];
-    entradas.forEach(item=>{
-      const numero = normalizarNumero(item);
-      if(numero!==null) normalizados.push(numero);
+    const resultadoMapa = new Map();
+    listaNumeros.forEach((valor, idx)=>{
+      const numero = normalizarNumero(valor);
+      if(numero === null) return;
+      normalizados.push(numero);
+      const infoDetalle = detallesMap.get(numero);
+      let estado = infoDetalle?.estado;
+      if(estado !== 'g' && estado !== 'p'){
+        estado = 'g';
+      }
+      resultadoMapa.set(numero, estado);
+      if(!detallesMap.has(numero)){
+        detallesMap.set(numero, { estado, orden: idx });
+      }
+    });
+    detallesMap.forEach((info, numero)=>{
+      if(resultadoMapa.has(numero)) return;
+      const estado = typeof info?.estado === 'string' ? info.estado.trim().toLowerCase() : '';
+      if(estado === 'g' || estado === 'p'){
+        resultadoMapa.set(numero, estado);
+      }
     });
     cantosOrdenados = normalizados;
     cantosIndiceMap = new Map();
@@ -1287,6 +1347,7 @@
         cantosIndiceMap.set(numero, idx);
       }
     });
+    cantosResultadoMap = resultadoMapa;
   }
 
   function obtenerIndiceLimiteGanador(){
@@ -1593,6 +1654,28 @@
     cartonesGrid.innerHTML = '<div class="cartones-placeholder">Haz clic en "Resultados" para calcular y mostrar los cartones del sorteo.</div>';
   }
 
+  function actualizarBotonPdfListoSegunEstado(opciones = {}){
+    if(!pdfListoBtn) return;
+    const estado = (sorteoData?.pdfresul || '').toString().toLowerCase();
+    const forzarMostrar = opciones.forzarMostrar === true;
+    const mostrar = forzarMostrar || estado === 'si';
+    pdfListoBtn.style.display = mostrar ? 'block' : 'none';
+    if(estado === 'si' && !forzarMostrar){
+      pdfListoBtn.textContent = 'PDF confirmado';
+      pdfListoBtn.disabled = true;
+      pdfListoBtn.classList.add('pdf-disponible');
+      return;
+    }
+    pdfListoBtn.textContent = 'PDF LISTO';
+    const disabled = typeof opciones.disabled === 'boolean' ? opciones.disabled : true;
+    pdfListoBtn.disabled = disabled;
+    const marcarDisponible = opciones.disponible === true;
+    pdfListoBtn.classList.toggle('pdf-disponible', marcarDisponible);
+    if(!marcarDisponible && estado !== 'si'){
+      pdfListoBtn.classList.remove('pdf-disponible');
+    }
+  }
+
   function formatearFechaParaMostrar(fecha){
     if(!fecha) return '-';
     const partes = fecha.includes('-') ? fecha.split('-') : fecha.split('/');
@@ -1641,10 +1724,15 @@
   }
 
   function construirNombreBaseArchivo(){
-    if(!sorteoData) return 'pdf-sorteo';
+    if(!sorteoData) return 'result_sorteo';
     const nombre = normalizarTextoArchivo(sorteoData.nombre);
     const fecha = formatearFechaArchivo(sorteoData.fecha || '');
-    return `${nombre}_${fecha}`;
+    const partes = ['result'];
+    partes.push(nombre || 'sorteo');
+    if(fecha){
+      partes.push(fecha);
+    }
+    return partes.filter(Boolean).join('_');
   }
 
   function obtenerHoraGeneracionArchivo(fecha = new Date()){
@@ -1790,9 +1878,18 @@
           td.appendChild(contenido);
           celdasMapa.set(clave, td);
           const numero = normalizarNumero(valor);
-          const paso = Number.isFinite(numero) ? cantosIndiceMap.get(numero) : undefined;
-          if(paso !== undefined && Number.isInteger(paso) && limiteCanto >= 0 && paso <= limiteCanto){
-            td.classList.add('celda-cantada');
+          const estadoCanto = Number.isFinite(numero) && cantosResultadoMap instanceof Map
+            ? cantosResultadoMap.get(numero)
+            : undefined;
+          if(estadoCanto === 'p'){
+            td.classList.add('celda-canto-penalizado');
+          }else{
+            const paso = Number.isFinite(numero) ? cantosIndiceMap.get(numero) : undefined;
+            if(estadoCanto === 'g'){
+              td.classList.add('celda-cantada');
+            }else if(paso !== undefined && Number.isInteger(paso) && limiteCanto >= 0 && paso <= limiteCanto){
+              td.classList.add('celda-cantada');
+            }
           }
         }
         fila.appendChild(td);
@@ -1959,10 +2056,7 @@
 
   function renderCartones(){
     cartonesGrid.innerHTML = '';
-    if(pdfListoBtn){
-      pdfListoBtn.style.display = 'none';
-      pdfListoBtn.classList.remove('pdf-disponible');
-    }
+    actualizarBotonPdfListoSegunEstado();
     if(!cartonesMapa.size){
       cartonesGrid.innerHTML = '<div class="cartones-placeholder">No hay cartones generados para este sorteo.</div>';
       return;
@@ -2001,7 +2095,10 @@
         return;
       }
       sorteoData = sorteoDoc.data();
-      nombreEl.textContent = sorteoData.nombre || 'Sorteo';
+      const nombreBase = sorteoData.nombre || 'Sorteo';
+      const tituloResultado = `RESULTADO ${nombreBase}`.trim();
+      nombreEl.textContent = tituloResultado;
+      document.title = tituloResultado;
       tipoTituloEl.textContent = sorteoData.tipo ? sorteoData.tipo : '';
       datoFechaEl.textContent = formatearFechaParaMostrar(sorteoData.fecha || '');
       datoHoraEl.textContent = formatearHoraParaMostrar(sorteoData.hora || '');
@@ -2010,6 +2107,14 @@
       datoMaxGratisEl.textContent = formatearNumero(sorteoData.maxcartongratis || 0);
       datoTipoEl.textContent = sorteoData.tipo || '-';
       totalPremiosEl.textContent = formatearNumero(sorteoData.totalPremios || 0);
+      if(typeof sorteoData.pdfresul !== 'string' || !sorteoData.pdfresul.trim()){
+        sorteoData.pdfresul = 'no';
+      } else {
+        sorteoData.pdfresul = sorteoData.pdfresul.toString().trim().toLowerCase();
+        if(sorteoData.pdfresul !== 'si'){
+          sorteoData.pdfresul = 'no';
+        }
+      }
       pdfNombreBase = construirNombreBaseArchivo();
 
       const formasSnap = await db.collection('formas').where('sorteoId','==',sorteoId).get();
@@ -2032,24 +2137,26 @@
       });
       formasData.sort((a,b)=>(a.idx||0)-(b.idx||0));
 
-      let numerosCantos = [];
+      let cantosPayload = [];
       try {
         const cantosDoc = await db.collection('cantos').doc(sorteoId).get();
         if(cantosDoc.exists){
           const cantosData = cantosDoc.data()||{};
-          numerosCantos = Array.isArray(cantosData.numeros)?cantosData.numeros:[];
+          cantosPayload = cantosData;
         }
       } catch (errorCantos) {
         console.warn('No se pudieron cargar los cantos desde la colección cantos', errorCantos);
       }
-      if(!numerosCantos.length && Array.isArray(sorteoData.cantos)){
-        numerosCantos = sorteoData.cantos;
+      if((!cantosPayload || (Array.isArray(cantosPayload.numeros) && !cantosPayload.numeros.length))
+        && Array.isArray(sorteoData.cantos)){
+        cantosPayload = sorteoData.cantos;
       }
-      procesarCantos(numerosCantos);
+      procesarCantos(cantosPayload);
 
       renderFormas();
       mostrarMensajeCartonesPendientes();
       if(generarResultadosBtn){ generarResultadosBtn.disabled = false; }
+      actualizarBotonPdfListoSegunEstado();
     } catch (err) {
       console.error('Error cargando datos', err);
       alert('Ocurrió un error cargando la información del sorteo.');
@@ -2137,13 +2244,9 @@
       alert('Dependencias para generar PDF no disponibles');
       return;
     }
-    if(pdfListoBtn){
-      pdfListoBtn.style.display = 'none';
-      pdfListoBtn.classList.remove('pdf-disponible');
-    }
     const nombreArchivo = `${construirNombreArchivo()}.pdf`;
-    const resumen = document.getElementById('resumen-layout');
-    if(!resumen){
+    const primeraPagina = document.getElementById('first-page-layout');
+    if(!primeraPagina){
       alert('No se encontró el contenido del sorteo para generar el PDF.');
       return;
     }
@@ -2160,11 +2263,23 @@
 
     try {
       await ensureFirebaseReady();
+      try {
+        await Promise.all([
+          db.collection('sorteos').doc(sorteoId).set({ pdfresul: 'no' }, { merge: true }),
+          db.collection('cantarsorteos').doc(sorteoId).set({ pdfresul: 'no' }, { merge: true })
+        ]);
+        if(sorteoData){
+          sorteoData.pdfresul = 'no';
+        }
+      } catch (errActualizar) {
+        console.error('No se pudo reiniciar el estado pdfresul', errActualizar);
+      }
       if(generarResultadosBtn){ generarResultadosBtn.disabled = true; }
       if(pdfBtn){
         pdfBtn.disabled = true;
         pdfBtn.textContent = 'Generando PDF...';
       }
+      actualizarBotonPdfListoSegunEstado({ forzarMostrar: true, disabled: true });
       mostrarLoading('Generando PDF para descargar, por favor espera');
 
       if(debeForzarPaisaje){
@@ -2192,7 +2307,7 @@
         backgroundColor: '#ffffff'
       };
 
-      const resumenCanvas = await window.html2canvas(resumen, canvasOptions);
+      const resumenCanvas = await window.html2canvas(primeraPagina, canvasOptions);
       const availableWidth = pageWidth - marginX * 2;
       const availableHeight = pageHeight - marginY * 2;
       const widthRatio = availableWidth / resumenCanvas.width;
@@ -2203,6 +2318,10 @@
       const resumenX = marginX + (availableWidth - resumenWidth) / 2;
       const resumenY = marginY + (availableHeight - resumenHeight) / 2;
       pdf.addImage(resumenCanvas.toDataURL('image/jpeg', 0.85), 'JPEG', resumenX, resumenY, resumenWidth, resumenHeight);
+      const tituloDocumento = document.title || `Resultado ${sorteoData?.nombre || ''}`.trim();
+      if(tituloDocumento && typeof pdf.setProperties === 'function'){
+        pdf.setProperties({ title: tituloDocumento });
+      }
 
       const cartonElements = Array.from(document.querySelectorAll('.pdf-carton'))
         .sort((a,b)=>{
@@ -2297,15 +2416,12 @@
       }
 
       pdf.save(nombreArchivo);
-      if(pdfListoBtn){
-        pdfListoBtn.style.display = 'block';
-        pdfListoBtn.disabled = false;
-        pdfListoBtn.classList.add('pdf-disponible');
-      }
-      alert('El PDF del sorteo ha sido generado. Descárgalo y luego confirma con "PDF listo".');
+      actualizarBotonPdfListoSegunEstado({ forzarMostrar: true, disponible: true, disabled: false });
+      alert('El PDF del sorteo ha sido generado. Descárgalo y luego confirma con "PDF LISTO".');
     } catch (err) {
       console.error('Error generando el PDF', err);
       alert('No se pudo generar el PDF del sorteo. Intenta nuevamente.');
+      actualizarBotonPdfListoSegunEstado();
     } finally {
       document.body.classList.remove('pdf-captura');
       if(debeForzarPaisaje){
@@ -2337,12 +2453,16 @@
         pdf: 'si',
         pdfActualizadoEn: timestamp,
         pdfUrl: eliminar,
-        pdfStoragePath: eliminar
+        pdfStoragePath: eliminar,
+        pdfresul: 'si'
       };
       await Promise.all([
         db.collection('sorteos').doc(sorteoId).set(payload, { merge: true }),
         db.collection('cantarsorteos').doc(sorteoId).set(payload, { merge: true })
       ]);
+      if(sorteoData){
+        sorteoData.pdfresul = 'si';
+      }
       alert('El sorteo se marcó como PDF listo.');
       window.location.href = 'cantarsorteos.html';
     } catch (err) {

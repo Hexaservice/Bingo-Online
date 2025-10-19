@@ -133,6 +133,44 @@
           justify-content: center;
           flex-wrap: wrap;
       }
+      .sin-sorteo-contenedor {
+          margin-top: 6px;
+          display: none;
+          flex-direction: column;
+          align-items: center;
+          gap: 6px;
+      }
+      .sin-sorteo-contenedor.visible {
+          display: flex;
+      }
+      .sin-sorteo-boton {
+          font-family: 'Bangers', cursive;
+          font-size: clamp(0.78rem, 2.6vw, 1rem);
+          padding: 6px 18px;
+          border-radius: 999px;
+          border: 3px solid #FFD700;
+          background: linear-gradient(145deg, rgba(0, 128, 255, 0.85), rgba(0, 68, 204, 0.92));
+          color: #ffffff;
+          letter-spacing: 0.8px;
+          cursor: pointer;
+          box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .sin-sorteo-boton:hover {
+          transform: translateY(-1px) scale(1.02);
+          box-shadow: 0 10px 22px rgba(0,0,0,0.28);
+      }
+      .sin-sorteo-boton:active {
+          transform: translateY(1px) scale(0.98);
+      }
+      .sin-sorteo-mensaje {
+          font-family: 'Poppins', sans-serif;
+          font-size: clamp(0.58rem, 1.8vw, 0.68rem);
+          color: #111111;
+          text-align: center;
+          text-transform: uppercase;
+          letter-spacing: 0.6px;
+      }
       #sorteo-detalles .detalle-item {
           display: inline-flex;
           align-items: center;
@@ -1477,6 +1515,64 @@
           grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
           gap: 12px;
       }
+      .modal-sorteos .modal-contenido {
+          max-width: min(520px, calc(100vw - 32px));
+          width: min(520px, calc(100vw - 32px));
+          gap: 10px;
+      }
+      .modal-sorteos-titulo {
+          font-family: 'Bangers', cursive;
+          font-size: clamp(1.4rem, 4.2vw, 1.8rem);
+          text-align: center;
+          margin: 0;
+          letter-spacing: 1px;
+          color: #0b4dda;
+          text-transform: uppercase;
+      }
+      .modal-sorteos-lista {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+      }
+      .modal-sorteo-item {
+          border: 2px solid rgba(30, 58, 138, 0.18);
+          border-radius: 12px;
+          padding: 10px 12px;
+          background: linear-gradient(145deg, rgba(255,255,255,0.96), rgba(236,243,255,0.94));
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          cursor: pointer;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          text-align: left;
+          font-family: 'Poppins', sans-serif;
+      }
+      .modal-sorteo-item:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 8px 18px rgba(15, 76, 194, 0.25);
+      }
+      .modal-sorteo-nombre {
+          font-family: 'Bangers', cursive;
+          font-size: 1.05rem;
+          color: #1a237e;
+          text-transform: uppercase;
+          letter-spacing: 0.6px;
+      }
+      .modal-sorteo-detalles {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px 12px;
+          font-size: 0.78rem;
+          color: #1f1f1f;
+      }
+      .modal-sorteo-detalles span {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+      }
+      .modal-sorteos .modal-mensaje {
+          margin-top: 6px;
+      }
       .ganador-card {
           background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(240,240,240,0.96));
           border-radius: 14px;
@@ -2219,6 +2315,10 @@
     <header id="sorteo-header">
       <div id="sorteo-resumen" class="sorteo-titulo-basico">Cargando sorteo en vivo...</div>
       <div id="sorteo-detalles"></div>
+      <div id="sin-sorteo-contenedor" class="sin-sorteo-contenedor" hidden>
+        <button id="seleccionar-finalizado-btn" type="button" class="sin-sorteo-boton">Seleccionar sorteo finalizado</button>
+        <div id="sin-sorteo-mensaje" class="sin-sorteo-mensaje">NO HAY SORTEOS EN VIVO EN ESTE MOMENTO</div>
+      </div>
     </header>
     <section id="panel-superior">
       <div id="cantos-panel">
@@ -2257,6 +2357,15 @@
     </div>
   </div>
 
+  <div id="modal-sorteos-finalizados" class="modal modal-sorteos" role="dialog" aria-modal="true" aria-labelledby="modal-sorteos-finalizados-titulo" aria-hidden="true">
+    <div class="modal-contenido" role="document">
+      <button type="button" id="modal-sorteos-finalizados-cerrar" class="modal-cerrar" aria-label="Cerrar">✖</button>
+      <h2 id="modal-sorteos-finalizados-titulo" class="modal-sorteos-titulo">Sorteos finalizados</h2>
+      <div id="modal-sorteos-finalizados-mensaje" class="modal-mensaje"></div>
+      <div id="modal-sorteos-finalizados-lista" class="modal-sorteos-lista"></div>
+    </div>
+  </div>
+
   <div id="complementarios-aviso" class="aviso-overlay aviso-overlay--complementarios" role="dialog" aria-modal="true" aria-labelledby="complementarios-aviso-titulo" aria-hidden="true">
     <div class="aviso-overlay__box">
       <h2 id="complementarios-aviso-titulo" class="aviso-overlay__titulo">Cantos de transparencia</h2>
@@ -2283,6 +2392,9 @@
   const ultimoCantoEl = document.getElementById('ultimo-canto');
   const sorteoResumenEl = document.getElementById('sorteo-resumen');
   const sorteoDetallesEl = document.getElementById('sorteo-detalles');
+  const sinSorteoContenedorEl = document.getElementById('sin-sorteo-contenedor');
+  const seleccionarFinalizadoBtn = document.getElementById('seleccionar-finalizado-btn');
+  const sinSorteoMensajeEl = document.getElementById('sin-sorteo-mensaje');
   const panelSuperiorEl = document.getElementById('panel-superior');
   const cantosPanelEl = document.getElementById('cantos-panel');
   const panelBotonesFormasEl = document.getElementById('panel-botones-formas');
@@ -2300,6 +2412,10 @@
   const modalSubtituloEl = document.getElementById('modal-subtitulo');
   const modalListaEl = document.getElementById('modal-ganadores-lista');
   const modalSinGanadoresEl = document.getElementById('modal-sin-ganadores');
+  const modalSorteosFinalizadosEl = document.getElementById('modal-sorteos-finalizados');
+  const modalSorteosFinalizadosListaEl = document.getElementById('modal-sorteos-finalizados-lista');
+  const modalSorteosFinalizadosMensajeEl = document.getElementById('modal-sorteos-finalizados-mensaje');
+  const modalSorteosFinalizadosCerrarBtn = document.getElementById('modal-sorteos-finalizados-cerrar');
 
   const FORM_COLORS = ['#90ee90', '#fffacd', '#add8e6', '#d8b0ff', '#ffcc99', '#f77fb3', '#9ad3bc', '#fecf6a'];
   const BINGO_LETRAS = ['B','I','N','G','O'];
@@ -2315,6 +2431,9 @@
   let formasPorCarton = new Map();
   let activeSorteo = null;
   let activeSorteoId = null;
+  let sorteoManualSeleccionadoId = null;
+  let haySorteoJugando = false;
+  let cargandoSorteosFinalizados = false;
   let usuarioActual = null;
 
   let cartonSeleccionadoId = null;
@@ -3659,6 +3778,17 @@
     return texto;
   }
 
+  function actualizarSinSorteoUI(){
+    if(!sinSorteoContenedorEl) return;
+    if(haySorteoJugando){
+      sinSorteoContenedorEl.classList.remove('visible');
+      sinSorteoContenedorEl.setAttribute('hidden','');
+    }else{
+      sinSorteoContenedorEl.classList.add('visible');
+      sinSorteoContenedorEl.removeAttribute('hidden');
+    }
+  }
+
   function obtenerTotalCreditosSorteo(){
     if(!activeSorteo) return 0;
     const posiblesClaves=['totalPremios','totalpremios','premioTotal','premio','total_premios'];
@@ -3717,7 +3847,7 @@
   function actualizarHeader(){
     if(!activeSorteo){
       sorteoResumenEl.className='sorteo-titulo-basico';
-      sorteoResumenEl.textContent='No hay sorteos en vivo en este momento.';
+      sorteoResumenEl.textContent='Sorteo en vivo';
       sorteoDetallesEl.innerHTML='';
       return;
     }
@@ -4168,10 +4298,27 @@
     modalGanadores.classList.remove('activa');
   }
 
-  modalCerrarBtn.addEventListener('click',cerrarModal);
-  modalGanadores.addEventListener('click',e=>{
-    if(e.target===modalGanadores) cerrarModal();
-  });
+  if(modalCerrarBtn){
+    modalCerrarBtn.addEventListener('click',cerrarModal);
+  }
+  if(modalGanadores){
+    modalGanadores.addEventListener('click',e=>{
+      if(e.target===modalGanadores) cerrarModal();
+    });
+  }
+  if(seleccionarFinalizadoBtn){
+    seleccionarFinalizadoBtn.addEventListener('click',abrirModalSorteosFinalizados);
+  }
+  if(modalSorteosFinalizadosCerrarBtn){
+    modalSorteosFinalizadosCerrarBtn.addEventListener('click',cerrarModalSorteosFinalizados);
+  }
+  if(modalSorteosFinalizadosEl){
+    modalSorteosFinalizadosEl.addEventListener('click',evento=>{
+      if(evento.target===modalSorteosFinalizadosEl){
+        cerrarModalSorteosFinalizados();
+      }
+    });
+  }
 
   if(complementariosAvisoAceptarBtn){
     complementariosAvisoAceptarBtn.addEventListener('click',cerrarAvisoComplementarios);
@@ -4184,8 +4331,15 @@
     });
   }
   document.addEventListener('keydown',evento=>{
-    if(evento.key==='Escape' && complementariosAvisoEl?.classList?.contains('activa')){
+    if(evento.key!=='Escape') return;
+    if(complementariosAvisoEl?.classList?.contains('activa')){
       cerrarAvisoComplementarios();
+    }
+    if(modalSorteosFinalizadosEl?.classList?.contains('activa')){
+      cerrarModalSorteosFinalizados();
+    }
+    if(modalGanadores?.classList?.contains('activa')){
+      cerrarModal();
     }
   });
 
@@ -4473,7 +4627,18 @@
   }
 
   function seleccionarSorteo(activos){
-    if(!activos.length){
+    const lista=Array.isArray(activos)?activos:[];
+    haySorteoJugando=lista.length>0;
+    if(haySorteoJugando){
+      sorteoManualSeleccionadoId=null;
+    }
+    actualizarSinSorteoUI();
+    if(!lista.length){
+      if(sorteoManualSeleccionadoId && activeSorteoId===sorteoManualSeleccionadoId && activeSorteo){
+        actualizarHeader();
+        return;
+      }
+      sorteoManualSeleccionadoId=null;
       activeSorteo=null;
       activeSorteoId=null;
       actualizarHeader();
@@ -4492,8 +4657,8 @@
       cerrarAvisoComplementarios();
       return;
     }
-    const existente=activeSorteoId?activos.find(s=>s.id===activeSorteoId):null;
-    const elegido=existente||activos[0];
+    const existente=activeSorteoId?lista.find(s=>s.id===activeSorteoId):null;
+    const elegido=existente||lista[0];
     const cambio=activeSorteoId!==elegido.id;
     activeSorteo=elegido;
     activeSorteoId=elegido.id;
@@ -4512,6 +4677,163 @@
       suscribirCantos();
       suscribirFormas();
       suscribirCartones();
+    }
+  }
+
+  function cerrarModalSorteosFinalizados(){
+    if(!modalSorteosFinalizadosEl) return;
+    modalSorteosFinalizadosEl.classList.remove('activa');
+    modalSorteosFinalizadosEl.setAttribute('aria-hidden','true');
+  }
+
+  function renderListaSorteosFinalizados(lista){
+    if(!modalSorteosFinalizadosListaEl) return;
+    modalSorteosFinalizadosListaEl.innerHTML='';
+    if(!Array.isArray(lista) || !lista.length){
+      if(modalSorteosFinalizadosMensajeEl){
+        modalSorteosFinalizadosMensajeEl.textContent='No hay sorteos finalizados disponibles.';
+      }
+      return;
+    }
+    if(modalSorteosFinalizadosMensajeEl){
+      modalSorteosFinalizadosMensajeEl.textContent='Selecciona un sorteo para ver sus resultados.';
+    }
+    lista.forEach(info=>{
+      const boton=document.createElement('button');
+      boton.type='button';
+      boton.className='modal-sorteo-item';
+      const nombre=info.nombre||'Sorteo';
+      const fechaTexto=formatearFecha(info.fecha||'');
+      const horaTexto=formatearHoraAmPm(info.hora||'');
+      const tipoTexto=info.tipo?info.tipo.toString():'';
+      const detalles=[];
+      if(fechaTexto){
+        detalles.push(`<span>📅 ${fechaTexto}</span>`);
+      }
+      if(horaTexto){
+        detalles.push(`<span>⏰ ${horaTexto}</span>`);
+      }
+      if(tipoTexto){
+        detalles.push(`<span>🎯 ${tipoTexto}</span>`);
+      }
+      boton.innerHTML=`<span class="modal-sorteo-nombre">${nombre}</span>`+
+        `<div class="modal-sorteo-detalles">${detalles.join('')}</div>`;
+      boton.addEventListener('click',()=>{
+        seleccionarSorteoFinalizado(info);
+      });
+      modalSorteosFinalizadosListaEl.appendChild(boton);
+    });
+  }
+
+  async function cargarSorteosFinalizados(){
+    if(!db){
+      throw new Error('Firebase no está disponible');
+    }
+    const lista=[];
+    try{
+      const snap=await db.collection('sorteos').where('estado','==','Finalizado').get();
+      snap.forEach(doc=>{
+        const data=doc.data()||{};
+        const condicionTexto=(data.condicion ?? data['condición'] ?? '').toString().trim().toUpperCase();
+        if(condicionTexto && condicionTexto!=='VISIBLE') return;
+        lista.push({
+          id:doc.id,
+          nombre:data.nombre || 'Sorteo',
+          fecha:data.fecha || '',
+          hora:data.hora || '',
+          tipo:data.tipo || '',
+          estado:(data.estado||'').toString()
+        });
+      });
+      lista.sort((a,b)=>{
+        const fechaA=(a.fecha||'').toString();
+        const fechaB=(b.fecha||'').toString();
+        if(fechaA && fechaB && fechaA!==fechaB){
+          return fechaB.localeCompare(fechaA);
+        }
+        const horaA=(a.hora||'').toString();
+        const horaB=(b.hora||'').toString();
+        if(horaA && horaB && horaA!==horaB){
+          return horaB.localeCompare(horaA);
+        }
+        return (b.nombre||'').localeCompare(a.nombre||'');
+      });
+    }catch(err){
+      console.error('Error cargando sorteos finalizados',err);
+      throw err;
+    }
+    return lista;
+  }
+
+  async function abrirModalSorteosFinalizados(){
+    if(!modalSorteosFinalizadosEl || cargandoSorteosFinalizados) return;
+    modalSorteosFinalizadosEl.classList.add('activa');
+    modalSorteosFinalizadosEl.setAttribute('aria-hidden','false');
+    if(modalSorteosFinalizadosMensajeEl){
+      modalSorteosFinalizadosMensajeEl.textContent='Cargando sorteos disponibles...';
+    }
+    if(modalSorteosFinalizadosListaEl){
+      modalSorteosFinalizadosListaEl.innerHTML='';
+    }
+    try{
+      cargandoSorteosFinalizados=true;
+      const lista=await cargarSorteosFinalizados();
+      renderListaSorteosFinalizados(lista);
+      if(!lista.length && modalSorteosFinalizadosMensajeEl){
+        modalSorteosFinalizadosMensajeEl.textContent='No hay sorteos finalizados disponibles.';
+      }
+    }catch(err){
+      if(modalSorteosFinalizadosMensajeEl){
+        modalSorteosFinalizadosMensajeEl.textContent='No se pudieron cargar los sorteos finalizados.';
+      }
+    }finally{
+      cargandoSorteosFinalizados=false;
+    }
+  }
+
+  async function seleccionarSorteoFinalizado(info){
+    cerrarModalSorteosFinalizados();
+    if(!info || !info.id){
+      return;
+    }
+    if(!db){
+      alert('La base de datos no está disponible en este momento.');
+      return;
+    }
+    try{
+      const doc=await db.collection('sorteos').doc(info.id).get();
+      if(!doc.exists){
+        alert('No se encontró el sorteo seleccionado.');
+        return;
+      }
+      const data=doc.data()||{};
+      const condicionTexto=(data.condicion ?? data['condición'] ?? '').toString().trim().toUpperCase();
+      if(condicionTexto && condicionTexto!=='VISIBLE'){
+        alert('El sorteo seleccionado no está disponible para su visualización.');
+        return;
+      }
+      sorteoManualSeleccionadoId=info.id;
+      haySorteoJugando=false;
+      actualizarSinSorteoUI();
+      activeSorteo={id:info.id,...data};
+      activeSorteoId=info.id;
+      actualizarHeader();
+      todasFormasConGanadores=false;
+      indiceUltimoGanador=null;
+      cantosComplementariosActivos=false;
+      avisoComplementariosMostrado=false;
+      cerrarAvisoComplementarios();
+      procesarCantos([]);
+      formasActivas=[];
+      renderFormas();
+      cartonesSorteo=new Map();
+      renderCartonesJugador();
+      suscribirCantos();
+      suscribirFormas();
+      suscribirCartones();
+    }catch(err){
+      console.error('Error cargando sorteo finalizado',err);
+      alert('No se pudo cargar el sorteo seleccionado. Intenta nuevamente.');
     }
   }
 
