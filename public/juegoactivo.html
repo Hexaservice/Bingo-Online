@@ -134,19 +134,19 @@
           flex-wrap: wrap;
       }
       .sin-sorteo-contenedor {
-          margin-top: 6px;
           display: none;
-          flex-direction: column;
+          width: 100%;
+          justify-content: center;
           align-items: center;
-          gap: 8px;
       }
       .sin-sorteo-contenedor.visible {
           display: flex;
+          margin-bottom: 6px;
       }
       .sin-sorteo-boton {
           font-family: 'Bangers', cursive;
           font-size: clamp(0.9rem, 2.8vw, 1.1rem);
-          padding: 8px 20px;
+          padding: 6px 20px;
           border-radius: 999px;
           border: 3px solid #FFD700;
           background: linear-gradient(145deg, rgba(0, 128, 255, 0.85), rgba(0, 68, 204, 0.92));
@@ -159,8 +159,8 @@
       }
       .sin-sorteo-boton--titulo {
           font-size: clamp(1.15rem, 4.6vw, 1.7rem);
-          padding: 10px 28px;
-          border-radius: 16px;
+          padding: 8px 22px;
+          border-radius: 14px;
       }
       .sin-sorteo-boton--titulo.con-seleccion {
           background: linear-gradient(145deg, rgba(63, 81, 181, 0.92), rgba(33, 53, 163, 0.95));
@@ -179,6 +179,7 @@
           text-align: center;
           text-transform: uppercase;
           letter-spacing: 0.6px;
+          margin-top: 4px;
       }
       .sin-sorteo-mensaje.parpadeo {
           animation: sinSorteoParpadeo 2s ease-in-out infinite;
@@ -190,9 +191,6 @@
       }
       #sorteo-header.sin-sorteo-activo {
           gap: 8px;
-      }
-      #sorteo-header.sin-sorteo-activo #sorteo-resumen {
-          display: none;
       }
       #sorteo-detalles .detalle-item {
           display: inline-flex;
@@ -2401,12 +2399,12 @@
   <button id="volver-btn" class="menu-btn back-btn" aria-label="Volver">&#9664;</button>
   <main>
     <header id="sorteo-header">
-      <div id="sorteo-resumen" class="sorteo-titulo-basico">Cargando sorteo en vivo...</div>
-      <div id="sorteo-detalles"></div>
       <div id="sin-sorteo-contenedor" class="sin-sorteo-contenedor" hidden>
         <button id="seleccionar-finalizado-btn" type="button" class="sin-sorteo-boton sin-sorteo-boton--titulo">CONSULTAR SORTEOS FINALIZADOS</button>
-        <div id="sin-sorteo-mensaje" class="sin-sorteo-mensaje">NO HAY SORTEOS EN VIVO EN ESTE MOMENTO</div>
       </div>
+      <div id="sorteo-resumen" class="sorteo-titulo-basico">Cargando sorteo en vivo...</div>
+      <div id="sorteo-detalles"></div>
+      <div id="sin-sorteo-mensaje" class="sin-sorteo-mensaje" hidden>NO HAY SORTEOS EN VIVO EN ESTE MOMENTO</div>
     </header>
     <section id="panel-superior">
       <div id="cantos-panel">
@@ -3061,6 +3059,10 @@
   }
 
   function mostrarAvisoComplementarios(){
+    if(!haySorteoJugando){
+      avisoComplementariosMostrado = false;
+      return;
+    }
     avisoComplementariosMostrado = true;
     if(!complementariosAvisoEl){
       alert('Ya hay GANADORES en todas las FORMAS, ahora se continua con los cantos de números faltantes para transparencia del SORTEO');
@@ -3989,6 +3991,7 @@
       }
       if(sinSorteoMensajeEl){
         sinSorteoMensajeEl.classList.remove('parpadeo');
+        sinSorteoMensajeEl.setAttribute('hidden','');
       }
     }else{
       sinSorteoContenedorEl.classList.add('visible');
@@ -3998,6 +4001,7 @@
       }
       if(sinSorteoMensajeEl){
         sinSorteoMensajeEl.classList.add('parpadeo');
+        sinSorteoMensajeEl.removeAttribute('hidden');
       }
     }
     actualizarTituloFinalizadoBtn();
