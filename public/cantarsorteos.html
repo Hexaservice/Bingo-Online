@@ -1020,6 +1020,16 @@
     .carton-tabla td.celda-cantada .cell-content {
       text-shadow: 0 0 6px rgba(0,0,0,0.85);
     }
+    .carton-tabla td.celda-canto-penalizado {
+      background: #ffffff;
+      color: #1f1f1f;
+      box-shadow: inset 0 0 0 2px rgba(0,0,0,0.08);
+      border-radius: 4px;
+    }
+    .carton-tabla td.celda-canto-penalizado .cell-content {
+      text-shadow: none;
+      font-weight: 600;
+    }
     .carton-tabla td.celda-forma-activa {
       color: inherit;
       border-color: rgba(var(--forma-rgb-vivo, var(--forma-rgb, 0, 120, 255)), 0.95);
@@ -1653,6 +1663,7 @@
   let cartonesGanadoresPorForma = new Map();
   let cantosOrdenados = [];
   let cantosIndiceMap = new Map();
+  let cantosResultadoMap = new Map();
   let formasUnsub = null;
   let cartonesUnsub = null;
   let cartonesDatosListos = false;
@@ -2441,7 +2452,15 @@
       if(cantosSeleccionados.has(clave)) celda.classList.add('selected');
       else celda.classList.remove('selected');
     });
-    procesarCantos(valores);
+  }
+
+  function aplicarDatosCantos(datos){
+    const payload = Array.isArray(datos)
+      ? { numeros: datos }
+      : (datos && typeof datos === 'object' ? datos : { numeros: [] });
+    const numeros = Array.isArray(payload.numeros) ? payload.numeros : [];
+    actualizarCantosSeleccionados(numeros);
+    procesarCantos(payload);
   }
 
   function obtenerFormaPorIndice(indice){
@@ -2710,12 +2729,45 @@
       .onSnapshot(procesarCartones, err=>console.error('Error escuchando cartones', err));
   }
 
-  function procesarCantos(lista){
-    const entradas = Array.isArray(lista) ? lista : [];
+  function procesarCantos(datos){
+    const payload = Array.isArray(datos)
+      ? { numeros: datos }
+      : (datos && typeof datos === 'object' ? datos : { numeros: [] });
+    const listaNumeros = Array.isArray(payload.numeros) ? payload.numeros : [];
+    const detalles = Array.isArray(payload.detalles) ? payload.detalles : [];
+    const detallesMap = new Map();
+    detalles.forEach(item=>{
+      const numero = normalizarNumero(item?.numero ?? item?.valor ?? item?.canto ?? item?.etiqueta);
+      if(numero === null) return;
+      const orden = Number.isFinite(item?.orden) ? Number(item.orden) : undefined;
+      const estadoTexto = (item?.estatus ?? item?.resultado ?? item?.estado ?? item?.status ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
+      detallesMap.set(numero, { estado: estadoTexto, orden });
+    });
     const normalizados = [];
-    entradas.forEach(item=>{
-      const numero = normalizarNumero(item);
-      if(numero !== null) normalizados.push(numero);
+    const resultadoMapa = new Map();
+    listaNumeros.forEach((valor, idx)=>{
+      const numero = normalizarNumero(valor);
+      if(numero === null) return;
+      normalizados.push(numero);
+      const infoDetalle = detallesMap.get(numero);
+      let estado = infoDetalle?.estado;
+      if(estado !== 'g' && estado !== 'p'){
+        estado = 'g';
+      }
+      resultadoMapa.set(numero, estado);
+      if(!detallesMap.has(numero)){
+        detallesMap.set(numero, { estado, orden: idx });
+      }
+    });
+    detallesMap.forEach((info, numero)=>{
+      if(resultadoMapa.has(numero)) return;
+      const estado = typeof info?.estado === 'string' ? info.estado.trim().toLowerCase() : '';
+      if(estado === 'g' || estado === 'p'){
+        resultadoMapa.set(numero, estado);
+      }
     });
     cantosOrdenados = normalizados;
     cantosIndiceMap = new Map();
@@ -2724,6 +2776,8 @@
         cantosIndiceMap.set(numero, idx);
       }
     });
+    cantosResultadoMap = resultadoMapa;
+    actualizarNumerosNoJugados();
     calcularGanadores();
   }
 
@@ -3259,6 +3313,7 @@
           }
           td.appendChild(icono);
         }else{
+          td.classList.remove('celda-cantada', 'celda-canto-penalizado');
           const valor = mapaValor.get(`${r}-${c}`);
           const span = document.createElement('span');
           span.className = 'cell-content';
@@ -3266,13 +3321,29 @@
             const numero = Number(valor);
             const texto = Number.isFinite(numero) ? String(numero).padStart(2,'0') : String(valor);
             span.textContent = texto;
-            td.dataset.valor = numero;
-            if(Number.isFinite(numero) && cantosIndiceMap.has(numero)){
-              cantada = '1';
-              td.classList.add('celda-cantada');
+            if(Number.isFinite(numero)){
+              td.dataset.valor = numero;
+              const estadoCanto = cantosResultadoMap instanceof Map ? cantosResultadoMap.get(numero) : undefined;
+              if(typeof estadoCanto === 'string'){
+                const estadoNormalizado = estadoCanto.trim().toLowerCase();
+                if(estadoNormalizado === 'p'){
+                  cantada = 'p';
+                  td.classList.add('celda-canto-penalizado');
+                }else if(estadoNormalizado === 'g'){
+                  cantada = '1';
+                  td.classList.add('celda-cantada');
+                }
+              }
+              if(cantada === '0' && cantosIndiceMap.has(numero)){
+                cantada = '1';
+                td.classList.add('celda-cantada');
+              }
+            }else{
+              delete td.dataset.valor;
             }
           }else{
             span.textContent = '—';
+            delete td.dataset.valor;
           }
           td.appendChild(span);
         }
@@ -3290,13 +3361,13 @@
   function aplicarResumenCarton(info){
     if(!info) return;
     info.celdas.forEach(celda=>{
-      celda.classList.remove('forma-resaltada', 'celda-forma-activa', 'celda-forma-solo-borde', 'celda-forma-temporal');
+      celda.classList.remove('forma-resaltada', 'celda-forma-activa', 'celda-forma-solo-borde', 'celda-forma-temporal', 'celda-cantada', 'celda-canto-penalizado');
       celda.style.removeProperty('--forma-rgb');
       celda.style.removeProperty('--forma-rgb-vivo');
       if(celda.dataset.cantada === '1'){
         celda.classList.add('celda-cantada');
-      }else{
-        celda.classList.remove('celda-cantada');
+      }else if(celda.dataset.cantada === 'p'){
+        celda.classList.add('celda-canto-penalizado');
       }
     });
     if(info.leyenda){
@@ -3330,11 +3401,11 @@
     const posiciones = normalizarPosicionesEntrada(datosForma.posiciones || datosForma.posicionesNormalizadas || []);
     const resaltarTodas = datosForma.resaltarTodas === true;
     info.celdas.forEach(celda=>{
-      celda.classList.remove('celda-forma-activa', 'celda-forma-solo-borde', 'celda-forma-temporal');
+      celda.classList.remove('celda-forma-activa', 'celda-forma-solo-borde', 'celda-forma-temporal', 'celda-cantada', 'celda-canto-penalizado');
       if(celda.dataset.cantada === '1'){
         celda.classList.add('celda-cantada');
-      }else{
-        celda.classList.remove('celda-cantada');
+      }else if(celda.dataset.cantada === 'p'){
+        celda.classList.add('celda-canto-penalizado');
       }
       celda.style.removeProperty('--forma-rgb');
       celda.style.removeProperty('--forma-rgb-vivo');
@@ -3499,6 +3570,7 @@
     cartonesGanadoresPorForma = new Map();
     cantosOrdenados = [];
     cantosIndiceMap = new Map();
+    cantosResultadoMap = new Map();
     cartonesDatosListos = false;
     todasFormasConGanadores = false;
     indiceUltimoGanador = null;
@@ -3531,19 +3603,19 @@
   function escucharCantos(id){
     detenerCantos();
     if(!id){
-      actualizarCantosSeleccionados([]);
+      aplicarDatosCantos([]);
       return;
     }
     const ref = db.collection('cantos').doc(id);
     cantosUnsub = ref.onSnapshot(doc=>{
       if(!doc.exists){
-        actualizarCantosSeleccionados([]);
+        aplicarDatosCantos([]);
         if(currentSorteoData) currentSorteoData.cantos = [];
         return;
       }
       const data = doc.data() || {};
+      aplicarDatosCantos(data);
       const numeros = Array.isArray(data.numeros) ? data.numeros : [];
-      actualizarCantosSeleccionados(numeros);
       if(currentSorteoData){
         currentSorteoData.cantos = numeros;
       }
@@ -3570,6 +3642,12 @@
         console.error('Error estableciendo pdf predeterminado', err);
       });
       data.pdf = 'no';
+    }
+    if(typeof data.pdfresul === 'undefined' || data.pdfresul === null || data.pdfresul === ''){
+      db.collection('sorteos').doc(id).set({ pdfresul: 'no' }, { merge: true }).catch(err=>{
+        console.error('Error asegurando pdfresul predeterminado', err);
+      });
+      data.pdfresul = 'no';
     }
     if(id === currentSorteoId){
       const urlPdf = typeof data.pdfUrl === 'string' ? data.pdfUrl.trim() : '';
@@ -4108,13 +4186,14 @@
     }
     const estado = (currentSorteoData.estado || '').toLowerCase();
     const pdfEstado = (currentSorteoData.pdf || '').toString().toLowerCase();
+    const pdfResultadoEstado = (currentSorteoData.pdfresul || '').toString().toLowerCase();
 
     sellarBtn.disabled = estado !== 'activo';
     pdfBtn.disabled = estado !== 'sellado';
     jugarBtn.disabled = estado !== 'sellado' || pdfEstado !== 'si';
     finalizarBtn.disabled = estado !== 'jugando';
     pdfBtn.classList.toggle('pdf-disponible', pdfEstado === 'si');
-    finalizarBtn.classList.toggle('pdf-disponible', pdfEstado === 'si');
+    finalizarBtn.classList.toggle('pdf-disponible', pdfResultadoEstado === 'si');
   }
 
   function mostrarDatos(){
@@ -4141,7 +4220,7 @@
       [sellarBtn, pdfBtn, jugarBtn, finalizarBtn].forEach(btn=>btn.disabled=true);
       pdfBtn.classList.remove('pdf-disponible');
       actualizarAnimaciones();
-      actualizarCantosSeleccionados([]);
+      aplicarDatosCantos([]);
       actualizarTablaEstado();
       reiniciarDatosJuego();
       infoTiempoSorteo = { fecha: null, fechaCierre: null, hora: null, horaCierre: null };
@@ -4591,9 +4670,9 @@
       currentSorteoData.condicion = (currentSorteoData.condicion || currentSorteoData['condición'] || '').toString().trim().toUpperCase() || 'VISIBLE';
       guardarSorteoSeleccionado(currentSorteoData);
       asegurarCampoPdf(currentSorteoId, currentSorteoData);
-      actualizarCantosSeleccionados(currentSorteoData.cantos || []);
+      aplicarDatosCantos(currentSorteoData.cantos || []);
     } else {
-      actualizarCantosSeleccionados([]);
+      aplicarDatosCantos([]);
     }
     escucharSorteo(id);
     escucharCantos(id);
