@@ -4725,6 +4725,48 @@
 
   // Pruebas manuales: se cambió la zona horaria del navegador a "America/Bogota" y "Europe/Madrid"
   // para verificar que el botón de sellado solo se habilita una vez superada la hora oficial de cierre.
+  async function confirmarYAplicarEstadoManual(config = {}){
+    if(!currentSorteoId || !currentSorteoData) return false;
+    const {
+      estado,
+      mensajeConfirmacion,
+      actualizacionesExtra = {},
+      mensajeExito,
+      botonAtencion,
+      mensajeError
+    } = config || {};
+    if(!estado) return false;
+    const confirmar = await preguntarAccionEstado(mensajeConfirmacion || `¿Deseas cambiar el estado del sorteo a ${estado}?`);
+    if(!confirmar) return false;
+    const payload = { estado, ...actualizacionesExtra };
+    try {
+      await db.collection('sorteos').doc(currentSorteoId).update(payload);
+      if(mensajeEl){
+        mensajeEl.textContent = mensajeExito || `El sorteo cambió a estado ${estado}.`;
+      }
+      if(botonAtencion && botonAtencion.classList){
+        botonAtencion.classList.remove('attention');
+      }
+      const actualizacionesLocales = { ...payload };
+      if(currentSorteoData){
+        Object.assign(currentSorteoData, actualizacionesLocales);
+      }
+      const indiceSorteo = sorteos.findIndex(s=>s.id===currentSorteoId);
+      if(indiceSorteo >= 0){
+        sorteos[indiceSorteo] = { ...sorteos[indiceSorteo], ...actualizacionesLocales };
+      }
+      guardarSorteoSeleccionado(currentSorteoData);
+      actualizarBotones();
+      actualizarAnimaciones();
+      mostrarDatos();
+      return true;
+    } catch (error) {
+      console.error(`Error actualizando el sorteo a ${estado}`, error);
+      alert(mensajeError || `No fue posible cambiar el estado a ${estado}.`);
+      return false;
+    }
+  }
+
   async function sellarSorteo(){
     if(!currentSorteoId || !currentSorteoData){ alert('Selecciona un sorteo primero.'); return; }
     const estadoActual = (currentSorteoData.estado || '').toString().toLowerCase();
@@ -4735,17 +4777,15 @@
     }
 
     if(esModoManual()){
-      const ahoraManual = getServerNow() || new Date();
-      const fechaHoraCierreManual = obtenerFechaHoraCierre(currentSorteoData);
-      if(fechaHoraCierreManual instanceof Date && !isNaN(fechaHoraCierreManual.getTime()) && ahoraManual < fechaHoraCierreManual){
-        const fechaTexto = obtenerTextoFechaPreferido(currentSorteoData.fechacierre, fechaHoraCierreManual, currentSorteoData.fecha);
-        const horaTexto = obtenerTextoHoraPreferido(currentSorteoData.horacierre, fechaHoraCierreManual, currentSorteoData.hora);
-        alert(`Aun no se puede sellar el sorteo debe ser despues de ${fechaTexto} a las ${horaTexto}`);
-        return;
-      }
-      const confirmarManual = await preguntarAccionEstado('¿Deseas sellar el sorteo seleccionado?');
-      if(!confirmarManual) return;
-      await ejecutarSellado({ confirmadoManual: true, confirmado: true });
+      const nombre = obtenerNombreSorteoActual();
+      await confirmarYAplicarEstadoManual({
+        estado: 'Sellado',
+        mensajeConfirmacion: `¿Desea pasar el sorteo ${nombre} a SELLADO?`,
+        actualizacionesExtra: { pdf: 'no' },
+        mensajeExito: 'El sorteo cambió a estado Sellado.',
+        botonAtencion: sellarBtn,
+        mensajeError: 'No fue posible cambiar el estado a Sellado.'
+      });
       return;
     }
 
@@ -4946,7 +4986,7 @@
         return;
       }
 
-      alert('El documento pdf ya fue generado para este sorteo');
+      alert('Ya se ha confirmado la descarga del archivo PDF de sellado de este sorteo');
     } catch (error) {
       console.error('Error consultando el estado del PDF', error);
       alert('Ocurrió un error al consultar el estado del documento PDF.');
@@ -4980,6 +5020,8 @@
       return;
     }
 
+    alert('Ya se ha confirmado la descarga del archivo PDF de sellado de este sorteo');
+
     try {
       const ventana = window.open(urlActual, '_blank', 'noopener');
       if(!ventana){
@@ -4998,6 +5040,19 @@
     if(!currentSorteoId || !currentSorteoData){ alert('Selecciona un sorteo primero.'); return; }
     const estadoActual = (currentSorteoData.estado || '').toString().toLowerCase();
     if(estadoActual === 'jugando'){ alert('El sorteo ya está en estado Jugando.'); return; }
+
+    if(esModoManual()){
+      const nombre = obtenerNombreSorteoActual();
+      await confirmarYAplicarEstadoManual({
+        estado: 'Jugando',
+        mensajeConfirmacion: `¿Desea pasar el sorteo ${nombre} a JUGANDO?`,
+        mensajeExito: 'El sorteo cambió a estado Jugando.',
+        botonAtencion: jugarBtn,
+        mensajeError: 'No fue posible cambiar el estado a Jugando.'
+      });
+      return;
+    }
+
     if(estadoActual === 'finalizado'){ alert('El sorteo ya finalizó.'); return; }
     if(estadoActual !== 'sellado'){
       alert('El sorteo debe estar Sellado para iniciar el juego.');
@@ -5005,28 +5060,7 @@
     }
     const pdfEstado = (currentSorteoData.pdf || '').toString().toLowerCase();
     if(pdfEstado !== 'si'){
-      if(esModoManual()){
-        alert('Debes generar el PDF antes de iniciar el juego.');
-      } else {
-        alert('Aún no has generado el pdf de las jugadas, antes de cantar las jugadas debes generar, descargar y compartir el pdf de cierre de jugadas');
-      }
-      return;
-    }
-
-    if(esModoManual()){
-      const fechaJuego = obtenerFechaSorteo(currentSorteoData);
-      if(fechaJuego instanceof Date && !isNaN(fechaJuego.getTime())){
-        const ahoraManual = getServerNow() || new Date();
-        if(ahoraManual < fechaJuego){
-          const fechaTexto = obtenerTextoFechaPreferido(currentSorteoData.fecha, fechaJuego);
-          const horaTexto = obtenerTextoHoraPreferido(currentSorteoData.hora, fechaJuego);
-          alert(`Aun no se puede Jugar el sorteo debe ser despues de ${fechaTexto} a las ${horaTexto}`);
-          return;
-        }
-      }
-      const confirmarManual = await preguntarAccionEstado('¿Deseas cambiar el estado del sorteo a "Jugando"?');
-      if(!confirmarManual) return;
-      await actualizarEstadoJugando({ confirmadoManual: true, confirmado: true });
+      alert('Aún no has generado el pdf de las jugadas, antes de cantar las jugadas debes generar, descargar y compartir el pdf de cierre de jugadas');
       return;
     }
 
@@ -5083,7 +5117,25 @@
 
   async function finalizarSorteo(){
     if(!currentSorteoId || !currentSorteoData){ alert('Selecciona un sorteo primero.'); return; }
-    if((currentSorteoData.estado || '').toLowerCase() !== 'jugando'){
+    const estadoActual = (currentSorteoData.estado || '').toString().toLowerCase();
+    if(estadoActual === 'finalizado'){ alert('El sorteo ya finalizó.'); return; }
+
+    if(esModoManual()){
+      const nombreManual = obtenerNombreSorteoActual();
+      const finalizado = await confirmarYAplicarEstadoManual({
+        estado: 'Finalizado',
+        mensajeConfirmacion: `¿Desea pasar el sorteo ${nombreManual} a FINALIZADO?`,
+        mensajeExito: 'El sorteo fue finalizado correctamente.',
+        botonAtencion: finalizarBtn,
+        mensajeError: 'No fue posible cambiar el estado a Finalizado.'
+      });
+      if(finalizado){
+        abrirPdfResultados();
+      }
+      return;
+    }
+
+    if(estadoActual !== 'jugando'){
       alert('El sorteo debe estar en estado Jugando para finalizar.');
       return;
     }
@@ -5133,9 +5185,10 @@
     }
     const estadoPdfResultado = (currentSorteoData.pdfresul || '').toString().trim().toLowerCase();
     if(estadoPdfResultado !== 'si'){
-      alert('Aún no se ha confirmado la descarga del PDF de resultados.');
+      alert('No se ha confirmado la descarga del archivo PDF de resultados de este sorteo.');
       return;
     }
+    alert('Ya se ha confirmado la descarga del archivo PDF de resultados de este sorteo');
     abrirPdfResultados();
   }
 
