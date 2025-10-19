@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Centro de Pagos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: only light;
+    }
+    body {
+      background: linear-gradient(rgba(255,255,255,0.7),rgba(255,255,255,0.7)),
+                  url('https://img.freepik.com/vectores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg');
+      background-repeat: repeat;
+      font-family: 'Bangers', cursive;
+      margin: 0;
+      padding: 8px;
+      text-align: center;
+    }
+    #volver-btn {
+      position: fixed;
+      top: 6px;
+      left: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 120px;
+      height: 40px;
+      background: orange;
+      border: 4px solid #ffd700;
+      border-radius: 10px;
+      color: #fff;
+      cursor: pointer;
+      text-transform: uppercase;
+      font-size: 1.05rem;
+      text-shadow: 2px 2px 4px #000;
+    }
+    #volver-btn .label { font-size: 1rem; }
+    @media (orientation: portrait) {
+      #volver-btn { width: 42px; }
+      #volver-btn .label { display: none; }
+    }
+    h2.titulo-principal {
+      margin: 50px 0 10px;
+      font-size: clamp(1.8rem, 5vw, 2.6rem);
+      color: #b2ffb2;
+      text-shadow: 0 0 10px #ffee58, 0 0 20px rgba(255,235,59,0.6), 2px 2px 4px rgba(0,0,0,0.6);
+      letter-spacing: 1.5px;
+    }
+    .section {
+      margin: 16px auto;
+      max-width: 1280px;
+      background: rgba(255,255,255,0.78);
+      border-radius: 16px;
+      border: 3px solid rgba(0,0,0,0.1);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+      padding: 12px 10px 18px;
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 12px 8px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(200,230,255,0.6));
+      border-radius: 12px;
+    }
+    .section-header h3 {
+      margin: 0;
+      font-size: clamp(1.3rem, 3vw, 1.8rem);
+      color: #0d47a1;
+      letter-spacing: 1px;
+      text-shadow: 0 0 4px rgba(255,255,255,0.9);
+    }
+    .switch-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .switch-label {
+      font-size: clamp(0.9rem, 2.2vw, 1.1rem);
+      color: #0d47a1;
+      text-shadow: 0 0 4px rgba(255,255,255,0.9);
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 46px;
+      height: 26px;
+    }
+    .switch input { display: none; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #ccc;
+      transition: .3s;
+      border-radius: 26px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #00c853;
+    }
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+    .acciones {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 0;
+      margin-bottom: 6px;
+      background: rgba(255,255,255,0.7);
+      border-radius: 10px;
+    }
+    .icon-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      border: 2px solid #0d47a1;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #0d47a1, #42a5f5);
+      color: #fff;
+      font-size: 0.9rem;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .icon-btn.aprobar { border-color: #2e7d32; background: linear-gradient(135deg,#2e7d32,#66bb6a); }
+    .icon-btn.archivar { border-color: #795548; background: linear-gradient(135deg,#8d6e63,#d7ccc8); color:#3e2723; }
+    .icon-btn.archivo-toggle { border-color: #5d4037; background: linear-gradient(135deg,#a1887f,#ffccbc); color:#3e2723; }
+    .icon-btn.editar { border-color: #1565c0; background: linear-gradient(135deg,#1565c0,#64b5f6); }
+    .icon-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+    .icon-btn:not(:disabled):hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.3);
+    }
+    .archivo-activo {
+      background: linear-gradient(135deg,#6d4c41,#a1887f) !important;
+      color: #fff !important;
+      border-color: #4e342e !important;
+      box-shadow: 0 6px 14px rgba(109,76,65,0.4) !important;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0 auto;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.92rem;
+      background: rgba(255,255,255,0.9);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    thead th {
+      position: sticky;
+      top: 0;
+      background: rgba(13,71,161,0.9);
+      color: #fff;
+      padding: 4px 6px;
+      border: 1px solid rgba(255,255,255,0.2);
+      font-family: 'Bangers', cursive;
+      letter-spacing: 1px;
+    }
+    tbody td {
+      border: 1px solid rgba(0,0,0,0.15);
+      padding: 6px;
+      text-align: center;
+      background: rgba(255,255,255,0.95);
+      font-weight: 600;
+    }
+    tbody tr:nth-child(even) td { background: rgba(240,248,255,0.9); }
+    tbody tr:hover td { background: rgba(224,247,250,0.9); }
+    tbody td.alias, tbody td.gmail { text-align: left; }
+    tbody td.estado span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 90px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .estado-pendiente { background: rgba(255,235,59,0.2); color: #f57f17; border: 1px solid rgba(255,193,7,0.4); }
+    .estado-aprobado { background: rgba(200,230,201,0.55); color: #1b5e20; border: 1px solid rgba(56,142,60,0.5); }
+    .estado-archivado { background: rgba(161,136,127,0.35); color: #3e2723; border: 1px solid rgba(93,64,55,0.5); }
+    .filtros input, .filtros select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 4px 6px;
+      border-radius: 6px;
+      border: 1px solid rgba(0,0,0,0.2);
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.85rem;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      background: #d50000;
+      color: #fff;
+      border-radius: 50%;
+      font-size: 0.9rem;
+      box-shadow: 0 0 10px rgba(213,0,0,0.6);
+    }
+    .badge.oculto { display: none; }
+    .mensaje-tabla {
+      padding: 12px;
+      text-align: center;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.95rem;
+      color: #0d47a1;
+      background: rgba(255,255,255,0.9);
+      border-radius: 10px;
+      border: 1px dashed rgba(13,71,161,0.3);
+    }
+    @media (max-width: 900px) {
+      table { font-size: 0.78rem; }
+      thead th { font-size: 0.82rem; }
+      .icon-btn { font-size: 0.78rem; padding: 5px 10px; }
+      tbody td.estado span { min-width: 72px; font-size: 0.72rem; }
+    }
+  </style>
+</head>
+<body>
+  <button id="volver-btn"><span class="tri">&#9664;</span><span class="label">Volver</span></button>
+  <h2 class="titulo-principal">APROBACIÓN DE PREMIOS</h2>
+
+  <section class="section" id="premios-section">
+    <div class="section-header">
+      <h3>APROBACION PREMIOS</h3>
+      <div class="switch-container">
+        <span id="badge-premios" class="badge oculto">0</span>
+        <span class="switch-label">Mostrar</span>
+        <label class="switch"><input type="checkbox" id="toggle-premios"><span class="slider"></span></label>
+      </div>
+    </div>
+    <div id="premios-content">
+      <div class="acciones">
+        <button class="icon-btn aprobar" id="premios-aprobar">✅ Aprobar</button>
+        <button class="icon-btn archivar" id="premios-archivar">📦 Archivar</button>
+        <button class="icon-btn archivo-toggle" id="premios-ver-archivo">📚 Archivo</button>
+      </div>
+      <table id="tabla-premios">
+        <colgroup>
+          <col style="width:6%">
+          <col style="width:18%">
+          <col style="width:18%">
+          <col style="width:15%">
+          <col style="width:13%">
+          <col style="width:15%">
+          <col style="width:11%">
+          <col style="width:4%">
+        </colgroup>
+        <thead>
+          <tr class="filtros">
+            <th>#</th>
+            <th><input type="text" id="filtro-premios-gmail" placeholder="Gmail"></th>
+            <th><input type="text" id="filtro-premios-alias" placeholder="Alias"></th>
+            <th><input type="text" id="filtro-premios-creditos" placeholder="Créditos"></th>
+            <th><input type="text" id="filtro-premios-cartones" placeholder="C. Gratis"></th>
+            <th><input type="date" id="filtro-premios-fecha"></th>
+            <th>
+              <select id="filtro-premios-estado">
+                <option value="">Estado</option>
+                <option value="PENDIENTE">Pendiente</option>
+                <option value="APROBADO">Aprobado</option>
+              </select>
+            </th>
+            <th></th>
+          </tr>
+          <tr>
+            <th>N°</th>
+            <th>Gmail</th>
+            <th>Alias</th>
+            <th>Créditos ganados</th>
+            <th>C Gratis</th>
+            <th>Fecha</th>
+            <th>Estado</th>
+            <th><span id="premios-marcar" style="cursor:pointer;">✔</span></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section" id="pagos-section">
+    <div class="section-header">
+      <h3>APROBACION PAGOS ADMINSTRACION</h3>
+      <div class="switch-container">
+        <span id="badge-pagos" class="badge oculto">0</span>
+        <span class="switch-label">Mostrar</span>
+        <label class="switch"><input type="checkbox" id="toggle-pagos"><span class="slider"></span></label>
+      </div>
+    </div>
+    <div id="pagos-content">
+      <div class="acciones">
+        <button class="icon-btn aprobar" id="pagos-aprobar">✅ Aprobar</button>
+        <button class="icon-btn editar" id="pagos-editar">✏️ Editar</button>
+        <button class="icon-btn archivar" id="pagos-archivar">📦 Archivar</button>
+        <button class="icon-btn archivo-toggle" id="pagos-ver-archivo">📚 Archivo</button>
+      </div>
+      <table id="tabla-pagos">
+        <colgroup>
+          <col style="width:6%">
+          <col style="width:22%">
+          <col style="width:22%">
+          <col style="width:18%">
+          <col style="width:16%">
+          <col style="width:12%">
+          <col style="width:4%">
+        </colgroup>
+        <thead>
+          <tr class="filtros">
+            <th>#</th>
+            <th><input type="text" id="filtro-pagos-gmail" placeholder="Gmail"></th>
+            <th><input type="text" id="filtro-pagos-nombre" placeholder="Nombre"></th>
+            <th><input type="text" id="filtro-pagos-creditos" placeholder="Créditos"></th>
+            <th><input type="date" id="filtro-pagos-fecha"></th>
+            <th>
+              <select id="filtro-pagos-estado">
+                <option value="">Estado</option>
+                <option value="PENDIENTE">Pendiente</option>
+                <option value="APROBADO">Aprobado</option>
+              </select>
+            </th>
+            <th></th>
+          </tr>
+          <tr>
+            <th>N°</th>
+            <th>Gmail</th>
+            <th>Nombre</th>
+            <th>Créditos</th>
+            <th>Fecha</th>
+            <th>Estado</th>
+            <th><span id="pagos-marcar" style="cursor:pointer;">✔</span></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/timezone.js"></script>
+  <script>
+    ensureAuth('Administrador');
+    initServerTime();
+
+    const dbRef = ()=>firebase.firestore();
+    const authInstance = ()=>firebase.auth();
+
+    const filtrosPremios = { gmail:'', alias:'', creditos:'', cartones:'', fecha:'', estado:'' };
+    const filtrosPagos = { gmail:'', nombre:'', creditos:'', fecha:'', estado:'' };
+
+    let mostrarPremiosArchivo = false;
+    let mostrarPagosArchivo = false;
+
+    const premiosActivos = [];
+    const premiosArchivados = [];
+    const pagosActivos = [];
+    const pagosArchivados = [];
+    const premiosMapa = new Map();
+    const premiosArchivoMapa = new Map();
+    const pagosMapa = new Map();
+    const pagosArchivoMapa = new Map();
+
+    let unsubscribePremios = null;
+    let unsubscribePremiosArchivo = null;
+    let unsubscribePagos = null;
+    let unsubscribePagosArchivo = null;
+
+    const formatNumber = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2, minimumFractionDigits: 0 });
+
+    function escapeHtml(texto = ''){
+      const fuente = texto == null ? '' : String(texto);
+      return fuente.replace(/[&<>"']/g, (c=>({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[c] || c));
+    }
+
+    function normalizarFecha(valor){
+      if(!valor) return { mostrar:'-', filtro:'', orden:0 };
+      let fecha = null;
+      if(valor && typeof valor.toDate === 'function'){ fecha = valor.toDate(); }
+      else if(typeof valor === 'number'){ fecha = new Date(valor); }
+      else if(typeof valor === 'string'){
+        const limpio = valor.trim();
+        if(/\d{4}-\d{2}-\d{2}/.test(limpio)) fecha = new Date(limpio + 'T00:00:00');
+        else if(/\d{2}\/\d{2}\/\d{4}/.test(limpio)){
+          const [d,m,a] = limpio.split('/');
+          fecha = new Date(`${a}-${m}-${d}T00:00:00`);
+        } else {
+          const parseado = new Date(limpio);
+          if(!Number.isNaN(parseado.getTime())) fecha = parseado;
+        }
+      }
+      if(!fecha || Number.isNaN(fecha.getTime())){
+        return { mostrar: valor && valor.toString ? valor.toString() : '-', filtro:'', orden:0 };
+      }
+      const dia = String(fecha.getDate()).padStart(2,'0');
+      const mes = String(fecha.getMonth()+1).padStart(2,'0');
+      const anio = fecha.getFullYear();
+      return { mostrar: `${dia}/${mes}/${anio}`, filtro: `${anio}-${mes}-${dia}`, orden: fecha.getTime() };
+    }
+
+    function normalizarEstado(valor){
+      const texto = (valor || '').toString().trim().toUpperCase();
+      if(texto === 'APROBADO' || texto === 'PENDIENTE' || texto === 'ARCHIVADO') return texto;
+      return 'PENDIENTE';
+    }
+
+    function prepararPremio(id, data = {}){
+      const gmail = (data.gmail || data.email || id || '').toString();
+      const alias = (data.alias || data.aliasJugador || data.aliasGanador || '').toString();
+      const creditos = Number(data.creditosGanados ?? data.creditos ?? data.monto ?? 0) || 0;
+      const cartones = Number(data.cartonesGratis ?? data.cartonesGanados ?? data.cartones ?? 0) || 0;
+      const fechaInfo = normalizarFecha(data.fechaGanado ?? data.fecha ?? data.fechaRegistro ?? data.createdAt);
+      const estado = normalizarEstado(data.estado);
+      const billetera = (data.idBilletera || gmail).toString();
+      return {
+        id,
+        gmail,
+        alias,
+        creditos,
+        cartones,
+        fechaMostrar: fechaInfo.mostrar,
+        fechaFiltro: fechaInfo.filtro,
+        fechaOrden: fechaInfo.orden,
+        estado,
+        billetera
+      };
+    }
+
+    function prepararPago(id, data = {}){
+      const gmail = (data.gmail || data.email || id || '').toString();
+      const nombre = (data.nombre || data.alias || data.colaborador || '').toString();
+      const creditos = Number(data.creditos ?? data.monto ?? 0) || 0;
+      const fechaInfo = normalizarFecha(data.fecha ?? data.fechaAsignacion ?? data.createdAt);
+      const estado = normalizarEstado(data.estado);
+      const billetera = (data.idBilletera || gmail).toString();
+      return {
+        id,
+        gmail,
+        nombre,
+        creditos,
+        fechaMostrar: fechaInfo.mostrar,
+        fechaFiltro: fechaInfo.filtro,
+        fechaOrden: fechaInfo.orden,
+        estado,
+        billetera
+      };
+    }
+
+    function renderTabla(lista, tbodyId, opciones = {}){
+      const tbody = document.querySelector(`#${tbodyId} tbody`);
+      if(!tbody) return;
+      const { mostrarArchivo = false, tipo } = opciones;
+      if(!lista.length){
+        tbody.innerHTML = `<tr><td colspan="${tipo==='premios'?8:7}"><div class="mensaje-tabla">No hay registros para mostrar.</div></td></tr>`;
+        return;
+      }
+      const filas = lista.map((item, indice)=>{
+        const numero = indice + 1;
+        const estadoClase = item.estado === 'APROBADO' ? 'estado-aprobado' : (item.estado === 'PENDIENTE' ? 'estado-pendiente' : 'estado-archivado');
+        const estadoHtml = `<span class="${estadoClase}">${item.estado}</span>`;
+        const disabled = mostrarArchivo ? 'disabled' : '';
+        if(tipo === 'premios'){
+          return `<tr data-id="${item.id}">
+            <td>${numero}</td>
+            <td class="gmail">${escapeHtml(item.gmail)}</td>
+            <td class="alias">${escapeHtml(item.alias)}</td>
+            <td>${formatNumber.format(item.creditos)}</td>
+            <td>${formatNumber.format(item.cartones)}</td>
+            <td>${escapeHtml(item.fechaMostrar)}</td>
+            <td class="estado">${estadoHtml}</td>
+            <td><input type="checkbox" data-id="${item.id}" ${disabled}></td>
+          </tr>`;
+        }
+        return `<tr data-id="${item.id}">
+          <td>${numero}</td>
+          <td class="gmail">${escapeHtml(item.gmail)}</td>
+          <td class="alias">${escapeHtml(item.nombre)}</td>
+          <td>${formatNumber.format(item.creditos)}</td>
+          <td>${escapeHtml(item.fechaMostrar)}</td>
+          <td class="estado">${estadoHtml}</td>
+          <td><input type="checkbox" data-id="${item.id}" ${disabled}></td>
+        </tr>`;
+      }).join('');
+      tbody.innerHTML = filas;
+    }
+
+    function aplicarFiltrosPremios(origen){
+      return origen.filter(item=>{
+        if(filtrosPremios.gmail && !item.gmail.toLowerCase().includes(filtrosPremios.gmail)) return false;
+        if(filtrosPremios.alias && !item.alias.toLowerCase().includes(filtrosPremios.alias)) return false;
+        if(filtrosPremios.creditos && !item.creditos.toString().includes(filtrosPremios.creditos)) return false;
+        if(filtrosPremios.cartones && !item.cartones.toString().includes(filtrosPremios.cartones)) return false;
+        if(filtrosPremios.fecha && item.fechaFiltro !== filtrosPremios.fecha) return false;
+        if(filtrosPremios.estado && item.estado !== filtrosPremios.estado) return false;
+        return true;
+      }).sort((a,b)=>b.fechaOrden - a.fechaOrden || b.creditos - a.creditos);
+    }
+
+    function aplicarFiltrosPagos(origen){
+      return origen.filter(item=>{
+        if(filtrosPagos.gmail && !item.gmail.toLowerCase().includes(filtrosPagos.gmail)) return false;
+        if(filtrosPagos.nombre && !item.nombre.toLowerCase().includes(filtrosPagos.nombre)) return false;
+        if(filtrosPagos.creditos && !item.creditos.toString().includes(filtrosPagos.creditos)) return false;
+        if(filtrosPagos.fecha && item.fechaFiltro !== filtrosPagos.fecha) return false;
+        if(filtrosPagos.estado && item.estado !== filtrosPagos.estado) return false;
+        return true;
+      }).sort((a,b)=>b.fechaOrden - a.fechaOrden || b.creditos - a.creditos);
+    }
+
+    function renderPremios(){
+      const lista = mostrarPremiosArchivo ? aplicarFiltrosPremios(premiosArchivados) : aplicarFiltrosPremios(premiosActivos);
+      renderTabla(lista, 'tabla-premios', { mostrarArchivo: mostrarPremiosArchivo, tipo: 'premios' });
+      actualizarBadge('premios', premiosActivos.filter(item=>item.estado === 'PENDIENTE').length);
+      actualizarEstadoBotones();
+    }
+
+    function renderPagos(){
+      const lista = mostrarPagosArchivo ? aplicarFiltrosPagos(pagosArchivados) : aplicarFiltrosPagos(pagosActivos);
+      renderTabla(lista, 'tabla-pagos', { mostrarArchivo: mostrarPagosArchivo, tipo: 'pagos' });
+      actualizarBadge('pagos', pagosActivos.filter(item=>item.estado === 'PENDIENTE').length);
+      actualizarEstadoBotones();
+    }
+
+    function actualizarBadge(tipo, cantidad){
+      const badge = document.getElementById(`badge-${tipo}`);
+      if(!badge) return;
+      badge.textContent = cantidad;
+      badge.classList.toggle('oculto', !cantidad);
+    }
+
+    function seleccionarTodos(idTabla){
+      const tabla = document.getElementById(idTabla);
+      if(!tabla) return;
+      const checks = tabla.querySelectorAll('tbody input[type="checkbox"]:not(:disabled)');
+      if(!checks.length) return;
+      const marcarTodo = Array.from(checks).some(chk=>!chk.checked);
+      checks.forEach(chk=>{ chk.checked = marcarTodo; });
+    }
+
+    function obtenerSeleccion(idTabla){
+      const tabla = document.getElementById(idTabla);
+      if(!tabla) return [];
+      return Array.from(tabla.querySelectorAll('tbody input[type="checkbox"]:checked')).map(chk=>chk.dataset.id);
+    }
+
+    function actualizarEstadoBotones(){
+      const premiosAprobar = document.getElementById('premios-aprobar');
+      const premiosArchivar = document.getElementById('premios-archivar');
+      if(premiosAprobar) premiosAprobar.disabled = mostrarPremiosArchivo;
+      if(premiosArchivar) premiosArchivar.disabled = mostrarPremiosArchivo;
+      const pagosAprobar = document.getElementById('pagos-aprobar');
+      const pagosEditar = document.getElementById('pagos-editar');
+      const pagosArchivar = document.getElementById('pagos-archivar');
+      if(pagosAprobar) pagosAprobar.disabled = mostrarPagosArchivo;
+      if(pagosEditar) pagosEditar.disabled = mostrarPagosArchivo;
+      if(pagosArchivar) pagosArchivar.disabled = mostrarPagosArchivo;
+      document.getElementById('premios-ver-archivo').classList.toggle('archivo-activo', mostrarPremiosArchivo);
+      document.getElementById('pagos-ver-archivo').classList.toggle('archivo-activo', mostrarPagosArchivo);
+    }
+
+    async function acreditarPremio(enRegistro){
+      const db = dbRef();
+      if(!enRegistro.billetera) return;
+      await db.runTransaction(async tx => {
+        const billeteraRef = db.collection('Billetera').doc(enRegistro.billetera);
+        const billeteraDoc = await tx.get(billeteraRef);
+        const datos = billeteraDoc.exists ? billeteraDoc.data() : {};
+        const nuevosCreditos = (Number(datos.creditos) || 0) + enRegistro.creditos;
+        const nuevosCartones = (Number(datos.CartonesGratis) || 0) + enRegistro.cartones;
+        tx.set(billeteraRef, { creditos: nuevosCreditos, CartonesGratis: nuevosCartones }, { merge: true });
+      });
+    }
+
+    async function acreditarPago(enRegistro){
+      const db = dbRef();
+      if(!enRegistro.billetera) return;
+      await db.runTransaction(async tx => {
+        const billeteraRef = db.collection('Billetera').doc(enRegistro.billetera);
+        const billeteraDoc = await tx.get(billeteraRef);
+        const datos = billeteraDoc.exists ? billeteraDoc.data() : {};
+        const nuevosCreditos = (Number(datos.creditos) || 0) + enRegistro.creditos;
+        tx.set(billeteraRef, { creditos: nuevosCreditos }, { merge: true });
+      });
+    }
+
+    async function aprobarPremios(ids){
+      if(!ids.length) return;
+      const db = dbRef();
+      await initServerTime();
+      for(const id of ids){
+        const registro = premiosMapa.get(id);
+        if(!registro){ console.warn('Premio no encontrado', id); continue; }
+        if(registro.estado === 'APROBADO'){ continue; }
+        try {
+          await db.runTransaction(async tx => {
+            const ref = db.collection('PremiosSorteos').doc(id);
+            const snap = await tx.get(ref);
+            if(!snap.exists) return;
+            const data = snap.data();
+            const estadoActual = normalizarEstado(data.estado);
+            if(estadoActual === 'APROBADO') return;
+            tx.update(ref, {
+              estado: 'APROBADO',
+              fechaGestion: fechaServidor(),
+              horaGestion: horaServidor(),
+              gestionadoPor: authInstance().currentUser?.email || '',
+              rolGestor: window.currentRole || ''
+            });
+          });
+          await acreditarPremio(registro);
+        } catch (err) {
+          console.error('Error aprobando premio', err);
+          alert('Ocurrió un error al aprobar un premio. Revisa la consola para más detalles.');
+          break;
+        }
+      }
+    }
+
+    async function aprobarPagos(ids){
+      if(!ids.length) return;
+      const db = dbRef();
+      await initServerTime();
+      for(const id of ids){
+        const registro = pagosMapa.get(id);
+        if(!registro){ console.warn('Pago no encontrado', id); continue; }
+        if(registro.estado === 'APROBADO'){ continue; }
+        try {
+          await db.runTransaction(async tx => {
+            const ref = db.collection('PagosAdministracion').doc(id);
+            const snap = await tx.get(ref);
+            if(!snap.exists) return;
+            const data = snap.data();
+            const estadoActual = normalizarEstado(data.estado);
+            if(estadoActual === 'APROBADO') return;
+            tx.update(ref, {
+              estado: 'APROBADO',
+              fechaGestion: fechaServidor(),
+              horaGestion: horaServidor(),
+              gestionadoPor: authInstance().currentUser?.email || '',
+              rolGestor: window.currentRole || ''
+            });
+          });
+          await acreditarPago(registro);
+        } catch (err) {
+          console.error('Error aprobando pago', err);
+          alert('Ocurrió un error al aprobar un pago. Revisa la consola para más detalles.');
+          break;
+        }
+      }
+    }
+
+    async function archivarRegistros(ids, tipo){
+      if(!ids.length) return;
+      const db = dbRef();
+      await initServerTime();
+      const coleccionBase = tipo === 'premios' ? db.collection('PremiosSorteos') : db.collection('PagosAdministracion');
+      const coleccionArchivo = tipo === 'premios' ? db.collection('PremiosSorteosArchivo') : db.collection('PagosAdministracionArchivo');
+      for(const id of ids){
+        try {
+          await db.runTransaction(async tx => {
+            const ref = coleccionBase.doc(id);
+            const snap = await tx.get(ref);
+            if(!snap.exists) return;
+            const data = snap.data();
+            const datosArchivo = {
+              ...data,
+              estado: normalizarEstado(data.estado),
+              archivadoEn: fechaServidor(),
+              horaArchivado: horaServidor(),
+              archivadoPor: authInstance().currentUser?.email || ''
+            };
+            tx.set(coleccionArchivo.doc(id), datosArchivo, { merge: true });
+            tx.delete(ref);
+          });
+        } catch (err) {
+          console.error('Error archivando registro', tipo, err);
+          alert('No se pudo archivar uno de los registros seleccionados.');
+          break;
+        }
+      }
+    }
+
+    async function editarPago(ids){
+      if(ids.length !== 1){
+        alert('Selecciona un único registro para editar.');
+        return;
+      }
+      const id = ids[0];
+      const registro = pagosMapa.get(id);
+      if(!registro){ alert('No se encontró el registro seleccionado.'); return; }
+      const nuevoValor = await prompt('Nuevo monto de créditos para este pago:', registro.creditos);
+      if(nuevoValor === null) return;
+      const valor = Number(nuevoValor);
+      if(!Number.isFinite(valor) || valor < 0){
+        alert('Ingresa un valor numérico válido.');
+        return;
+      }
+      try {
+        await dbRef().collection('PagosAdministracion').doc(id).update({ creditos: valor });
+      } catch (err) {
+        console.error('Error editando pago', err);
+        alert('No se pudo editar el pago seleccionado.');
+      }
+    }
+
+    function configurarFiltros(){
+      document.getElementById('filtro-premios-gmail').addEventListener('input', e=>{ filtrosPremios.gmail = e.target.value.toLowerCase().trim(); renderPremios(); });
+      document.getElementById('filtro-premios-alias').addEventListener('input', e=>{ filtrosPremios.alias = e.target.value.toLowerCase().trim(); renderPremios(); });
+      document.getElementById('filtro-premios-creditos').addEventListener('input', e=>{ filtrosPremios.creditos = e.target.value.replace(/[^0-9.]/g,''); renderPremios(); });
+      document.getElementById('filtro-premios-cartones').addEventListener('input', e=>{ filtrosPremios.cartones = e.target.value.replace(/[^0-9]/g,''); renderPremios(); });
+      document.getElementById('filtro-premios-fecha').addEventListener('change', e=>{ filtrosPremios.fecha = e.target.value; renderPremios(); });
+      document.getElementById('filtro-premios-estado').addEventListener('change', e=>{ filtrosPremios.estado = e.target.value; renderPremios(); });
+
+      document.getElementById('filtro-pagos-gmail').addEventListener('input', e=>{ filtrosPagos.gmail = e.target.value.toLowerCase().trim(); renderPagos(); });
+      document.getElementById('filtro-pagos-nombre').addEventListener('input', e=>{ filtrosPagos.nombre = e.target.value.toLowerCase().trim(); renderPagos(); });
+      document.getElementById('filtro-pagos-creditos').addEventListener('input', e=>{ filtrosPagos.creditos = e.target.value.replace(/[^0-9.]/g,''); renderPagos(); });
+      document.getElementById('filtro-pagos-fecha').addEventListener('change', e=>{ filtrosPagos.fecha = e.target.value; renderPagos(); });
+      document.getElementById('filtro-pagos-estado').addEventListener('change', e=>{ filtrosPagos.estado = e.target.value; renderPagos(); });
+    }
+
+    function configurarBotones(){
+      document.getElementById('premios-marcar').addEventListener('click', ()=>seleccionarTodos('tabla-premios'));
+      document.getElementById('pagos-marcar').addEventListener('click', ()=>seleccionarTodos('tabla-pagos'));
+
+      document.getElementById('premios-aprobar').addEventListener('click', async()=>{
+        const seleccion = obtenerSeleccion('tabla-premios');
+        if(!seleccion.length){ alert('Selecciona al menos un registro.'); return; }
+        await aprobarPremios(seleccion);
+      });
+      document.getElementById('premios-archivar').addEventListener('click', async()=>{
+        const seleccion = obtenerSeleccion('tabla-premios');
+        if(!seleccion.length){ alert('Selecciona registros para archivar.'); return; }
+        if(!(await confirm('¿Deseas archivar los registros seleccionados?'))) return;
+        await archivarRegistros(seleccion, 'premios');
+      });
+      document.getElementById('premios-ver-archivo').addEventListener('click', ()=>{
+        mostrarPremiosArchivo = !mostrarPremiosArchivo;
+        renderPremios();
+      });
+
+      document.getElementById('pagos-aprobar').addEventListener('click', async()=>{
+        const seleccion = obtenerSeleccion('tabla-pagos');
+        if(!seleccion.length){ alert('Selecciona al menos un registro.'); return; }
+        await aprobarPagos(seleccion);
+      });
+      document.getElementById('pagos-editar').addEventListener('click', ()=>{
+        const seleccion = obtenerSeleccion('tabla-pagos');
+        editarPago(seleccion);
+      });
+      document.getElementById('pagos-archivar').addEventListener('click', async()=>{
+        const seleccion = obtenerSeleccion('tabla-pagos');
+        if(!seleccion.length){ alert('Selecciona registros para archivar.'); return; }
+        if(!(await confirm('¿Deseas archivar los registros seleccionados?'))) return;
+        await archivarRegistros(seleccion, 'pagos');
+      });
+      document.getElementById('pagos-ver-archivo').addEventListener('click', ()=>{
+        mostrarPagosArchivo = !mostrarPagosArchivo;
+        renderPagos();
+      });
+
+      const togglePremios = document.getElementById('toggle-premios');
+      const contenidoPremios = document.getElementById('premios-content');
+      togglePremios.addEventListener('change', ()=>{ contenidoPremios.style.display = togglePremios.checked ? 'block' : 'none'; });
+      contenidoPremios.style.display = 'none';
+
+      const togglePagos = document.getElementById('toggle-pagos');
+      const contenidoPagos = document.getElementById('pagos-content');
+      togglePagos.addEventListener('change', ()=>{ contenidoPagos.style.display = togglePagos.checked ? 'block' : 'none'; });
+      contenidoPagos.style.display = 'none';
+
+      document.getElementById('volver-btn').addEventListener('click', volverConFallback);
+    }
+
+    function volverConFallback(){
+      if(window.history.length > 1){
+        window.history.back();
+        return;
+      }
+      const role = (window.currentRole)||'';
+      if(role === 'Administrador'){ window.location.href = 'admin.html'; }
+      else if(role === 'Superadmin'){ window.location.href = 'super.html'; }
+      else { window.location.href = 'cantarsorteos.html'; }
+    }
+
+    function suscribirColecciones(){
+      const db = dbRef();
+      unsubscribePremios = db.collection('PremiosSorteos').onSnapshot(snapshot => {
+        premiosActivos.length = 0;
+        premiosMapa.clear();
+        snapshot.forEach(doc => {
+          const registro = prepararPremio(doc.id, doc.data());
+          premiosActivos.push(registro);
+          premiosMapa.set(doc.id, registro);
+        });
+        renderPremios();
+      });
+      unsubscribePremiosArchivo = db.collection('PremiosSorteosArchivo').onSnapshot(snapshot => {
+        premiosArchivados.length = 0;
+        premiosArchivoMapa.clear();
+        snapshot.forEach(doc => {
+          const registro = prepararPremio(doc.id, doc.data());
+          registro.estado = normalizarEstado(doc.data().estado || 'ARCHIVADO');
+          premiosArchivados.push(registro);
+          premiosArchivoMapa.set(doc.id, registro);
+        });
+        if(mostrarPremiosArchivo) renderPremios();
+      });
+      unsubscribePagos = db.collection('PagosAdministracion').onSnapshot(snapshot => {
+        pagosActivos.length = 0;
+        pagosMapa.clear();
+        snapshot.forEach(doc => {
+          const registro = prepararPago(doc.id, doc.data());
+          pagosActivos.push(registro);
+          pagosMapa.set(doc.id, registro);
+        });
+        renderPagos();
+      });
+      unsubscribePagosArchivo = db.collection('PagosAdministracionArchivo').onSnapshot(snapshot => {
+        pagosArchivados.length = 0;
+        pagosArchivoMapa.clear();
+        snapshot.forEach(doc => {
+          const registro = prepararPago(doc.id, doc.data());
+          registro.estado = normalizarEstado(doc.data().estado || 'ARCHIVADO');
+          pagosArchivados.push(registro);
+          pagosArchivoMapa.set(doc.id, registro);
+        });
+        if(mostrarPagosArchivo) renderPagos();
+      });
+    }
+
+    window.addEventListener('beforeunload', ()=>{
+      [unsubscribePremios, unsubscribePremiosArchivo, unsubscribePagos, unsubscribePagosArchivo].forEach(unsub=>{
+        if(typeof unsub === 'function') unsub();
+      });
+    });
+
+    configurarFiltros();
+    configurarBotones();
+    suscribirColecciones();
+  </script>
+</body>
+</html>
