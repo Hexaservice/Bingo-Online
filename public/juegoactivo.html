@@ -2400,11 +2400,11 @@
   <main>
     <header id="sorteo-header">
       <div id="sin-sorteo-contenedor" class="sin-sorteo-contenedor" hidden>
-        <button id="seleccionar-finalizado-btn" type="button" class="sin-sorteo-boton sin-sorteo-boton--titulo">CONSULTAR SORTEOS FINALIZADOS</button>
+        <button id="seleccionar-finalizado-btn" type="button" class="sin-sorteo-boton sin-sorteo-boton--titulo">CONSULTAR SORTEOS SELECCIONADOS</button>
       </div>
-      <div id="sorteo-resumen" class="sorteo-titulo-basico">Cargando sorteo en vivo...</div>
-      <div id="sorteo-detalles"></div>
-      <div id="sin-sorteo-mensaje" class="sin-sorteo-mensaje" hidden>NO HAY SORTEOS EN VIVO EN ESTE MOMENTO</div>
+      <div id="sorteo-resumen" class="sorteo-titulo-basico" hidden aria-hidden="true"></div>
+      <div id="sorteo-detalles" hidden aria-hidden="true"></div>
+      <div id="sin-sorteo-mensaje" class="sin-sorteo-mensaje" hidden aria-hidden="true">NO HAY SORTEOS EN VIVO EN ESTE MOMENTO</div>
     </header>
     <section id="panel-superior">
       <div id="cantos-panel">
@@ -2522,7 +2522,7 @@
   const FORM_COLORS = ['#90ee90', '#fffacd', '#add8e6', '#d8b0ff', '#ffcc99', '#f77fb3', '#9ad3bc', '#fecf6a'];
   const BINGO_LETRAS = ['B','I','N','G','O'];
 
-  const TEXTO_BOTON_CONSULTAR_FINALIZADOS = 'CONSULTAR SORTEOS FINALIZADOS';
+  const TEXTO_BOTON_CONSULTAR_SELECCIONADOS = 'CONSULTAR SORTEOS SELECCIONADOS';
   const cantoCellsMap = new Map();
   let cantosOrdenados = [];
   let cantosEtiquetas = [];
@@ -2579,14 +2579,14 @@
   function actualizarTituloFinalizadoBtn(){
     if(!seleccionarFinalizadoBtn) return;
     if(haySorteoJugando){
-      seleccionarFinalizadoBtn.textContent = TEXTO_BOTON_CONSULTAR_FINALIZADOS;
+      seleccionarFinalizadoBtn.textContent = TEXTO_BOTON_CONSULTAR_SELECCIONADOS;
       seleccionarFinalizadoBtn.classList.remove('con-seleccion');
     }else if(activeSorteo && sorteoManualSeleccionadoId){
       const nombre = (activeSorteo.nombre || '').toString().trim();
-      seleccionarFinalizadoBtn.textContent = nombre || TEXTO_BOTON_CONSULTAR_FINALIZADOS;
+      seleccionarFinalizadoBtn.textContent = nombre || TEXTO_BOTON_CONSULTAR_SELECCIONADOS;
       seleccionarFinalizadoBtn.classList.add('con-seleccion');
     }else{
-      seleccionarFinalizadoBtn.textContent = TEXTO_BOTON_CONSULTAR_FINALIZADOS;
+      seleccionarFinalizadoBtn.textContent = TEXTO_BOTON_CONSULTAR_SELECCIONADOS;
       seleccionarFinalizadoBtn.classList.remove('con-seleccion');
     }
   }
@@ -3981,6 +3981,30 @@
     return texto;
   }
 
+  function alternarVisibilidadEncabezadoSorteo(visible){
+    const mostrar = !!visible;
+    if(sorteoResumenEl){
+      if(mostrar){
+        sorteoResumenEl.removeAttribute('hidden');
+        sorteoResumenEl.setAttribute('aria-hidden','false');
+      }else{
+        sorteoResumenEl.setAttribute('hidden','');
+        sorteoResumenEl.setAttribute('aria-hidden','true');
+        sorteoResumenEl.textContent='';
+      }
+    }
+    if(sorteoDetallesEl){
+      if(mostrar){
+        sorteoDetallesEl.removeAttribute('hidden');
+        sorteoDetallesEl.setAttribute('aria-hidden','false');
+      }else{
+        sorteoDetallesEl.setAttribute('hidden','');
+        sorteoDetallesEl.setAttribute('aria-hidden','true');
+        sorteoDetallesEl.innerHTML='';
+      }
+    }
+  }
+
   function actualizarSinSorteoUI(){
     if(!sinSorteoContenedorEl) return;
     if(haySorteoJugando){
@@ -3989,9 +4013,11 @@
       if(sorteoHeaderEl){
         sorteoHeaderEl.classList.remove('sin-sorteo-activo');
       }
+      alternarVisibilidadEncabezadoSorteo(true);
       if(sinSorteoMensajeEl){
         sinSorteoMensajeEl.classList.remove('parpadeo');
         sinSorteoMensajeEl.setAttribute('hidden','');
+        sinSorteoMensajeEl.setAttribute('aria-hidden','true');
       }
     }else{
       sinSorteoContenedorEl.classList.add('visible');
@@ -3999,9 +4025,11 @@
       if(sorteoHeaderEl){
         sorteoHeaderEl.classList.add('sin-sorteo-activo');
       }
+      alternarVisibilidadEncabezadoSorteo(false);
       if(sinSorteoMensajeEl){
-        sinSorteoMensajeEl.classList.add('parpadeo');
-        sinSorteoMensajeEl.removeAttribute('hidden');
+        sinSorteoMensajeEl.classList.remove('parpadeo');
+        sinSorteoMensajeEl.setAttribute('hidden','');
+        sinSorteoMensajeEl.setAttribute('aria-hidden','true');
       }
     }
     actualizarTituloFinalizadoBtn();
@@ -4063,10 +4091,25 @@
   }
 
   function actualizarHeader(){
+    if(!haySorteoJugando){
+      if(sorteoResumenEl){
+        sorteoResumenEl.className='sorteo-titulo-basico';
+        sorteoResumenEl.textContent='';
+      }
+      if(sorteoDetallesEl){
+        sorteoDetallesEl.innerHTML='';
+      }
+      actualizarTituloFinalizadoBtn();
+      return;
+    }
     if(!activeSorteo){
-      sorteoResumenEl.className='sorteo-titulo-basico';
-      sorteoResumenEl.textContent='Sorteo en vivo';
-      sorteoDetallesEl.innerHTML='';
+      if(sorteoResumenEl){
+        sorteoResumenEl.className='sorteo-titulo-basico';
+        sorteoResumenEl.textContent='Sorteo en vivo';
+      }
+      if(sorteoDetallesEl){
+        sorteoDetallesEl.innerHTML='';
+      }
       actualizarTituloFinalizadoBtn();
       return;
     }
@@ -4078,8 +4121,10 @@
     }else if(tipoNormalizado.includes('diario')){
       claseTitulo.push('sorteo-titulo-diario');
     }
-    sorteoResumenEl.className=claseTitulo.join(' ');
-    sorteoResumenEl.textContent=nombre||'Sorteo en vivo';
+    if(sorteoResumenEl){
+      sorteoResumenEl.className=claseTitulo.join(' ');
+      sorteoResumenEl.textContent=nombre||'Sorteo en vivo';
+    }
     const partes=[];
     if(tipo){
       let claseTipo='detalle-tipo';
@@ -4098,7 +4143,9 @@
       const horaMostrar=horaFormateada || hora;
       partes.push(`<span class="detalle-item"><span class="detalle-label">Hora:</span><span class="detalle-valor hora">${horaMostrar}</span></span>`);
     }
-    sorteoDetallesEl.innerHTML=partes.join(' ');
+    if(sorteoDetallesEl){
+      sorteoDetallesEl.innerHTML=partes.join(' ');
+    }
     actualizarTituloFinalizadoBtn();
   }
 
@@ -4563,6 +4610,7 @@
       }
     });
   }
+  actualizarSinSorteoUI();
   document.addEventListener('keydown',evento=>{
     if(evento.key!=='Escape') return;
     if(complementariosAvisoEl?.classList?.contains('activa')){
