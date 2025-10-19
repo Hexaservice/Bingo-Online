@@ -197,7 +197,8 @@
           align-items: center;
           gap: 4px;
       }
-      #sorteo-detalles .detalle-tipo {
+      #sorteo-detalles .detalle-tipo,
+      #sorteo-detalles .detalle-valor.tipo {
           text-transform: uppercase;
           font-weight: 700;
       }
@@ -2400,11 +2401,11 @@
   <main>
     <header id="sorteo-header">
       <div id="sin-sorteo-contenedor" class="sin-sorteo-contenedor" hidden>
-        <button id="seleccionar-finalizado-btn" type="button" class="sin-sorteo-boton sin-sorteo-boton--titulo">CONSULTAR SORTEOS SELECCIONADOS</button>
+        <button id="seleccionar-finalizado-btn" type="button" class="sin-sorteo-boton sin-sorteo-boton--titulo">CONSULTAR SORTEOS FINALIZADOS</button>
       </div>
       <div id="sorteo-resumen" class="sorteo-titulo-basico" hidden aria-hidden="true"></div>
       <div id="sorteo-detalles" hidden aria-hidden="true"></div>
-      <div id="sin-sorteo-mensaje" class="sin-sorteo-mensaje" hidden aria-hidden="true">NO HAY SORTEOS EN VIVO EN ESTE MOMENTO</div>
+      <div id="sin-sorteo-mensaje" class="sin-sorteo-mensaje" hidden aria-hidden="true">EN ESTE MOMENTO NO HAY SORTEOS JUGANDO</div>
     </header>
     <section id="panel-superior">
       <div id="cantos-panel">
@@ -2522,7 +2523,7 @@
   const FORM_COLORS = ['#90ee90', '#fffacd', '#add8e6', '#d8b0ff', '#ffcc99', '#f77fb3', '#9ad3bc', '#fecf6a'];
   const BINGO_LETRAS = ['B','I','N','G','O'];
 
-  const TEXTO_BOTON_CONSULTAR_SELECCIONADOS = 'CONSULTAR SORTEOS SELECCIONADOS';
+  const TEXTO_BOTON_CONSULTAR_SELECCIONADOS = 'CONSULTAR SORTEOS FINALIZADOS';
   const cantoCellsMap = new Map();
   let cantosOrdenados = [];
   let cantosEtiquetas = [];
@@ -4025,11 +4026,13 @@
       if(sorteoHeaderEl){
         sorteoHeaderEl.classList.add('sin-sorteo-activo');
       }
-      alternarVisibilidadEncabezadoSorteo(false);
+      const mostrarDetalles = !!(activeSorteo && sorteoManualSeleccionadoId);
+      alternarVisibilidadEncabezadoSorteo(mostrarDetalles);
       if(sinSorteoMensajeEl){
-        sinSorteoMensajeEl.classList.remove('parpadeo');
-        sinSorteoMensajeEl.setAttribute('hidden','');
-        sinSorteoMensajeEl.setAttribute('aria-hidden','true');
+        sinSorteoMensajeEl.textContent='EN ESTE MOMENTO NO HAY SORTEOS JUGANDO';
+        sinSorteoMensajeEl.classList.add('parpadeo');
+        sinSorteoMensajeEl.removeAttribute('hidden');
+        sinSorteoMensajeEl.setAttribute('aria-hidden','false');
       }
     }
     actualizarTituloFinalizadoBtn();
@@ -4091,7 +4094,8 @@
   }
 
   function actualizarHeader(){
-    if(!haySorteoJugando){
+    const mostrarManual = !haySorteoJugando && !!(activeSorteo && sorteoManualSeleccionadoId);
+    if(!haySorteoJugando && !mostrarManual){
       if(sorteoResumenEl){
         sorteoResumenEl.className='sorteo-titulo-basico';
         sorteoResumenEl.textContent='';
@@ -4099,6 +4103,7 @@
       if(sorteoDetallesEl){
         sorteoDetallesEl.innerHTML='';
       }
+      alternarVisibilidadEncabezadoSorteo(false);
       actualizarTituloFinalizadoBtn();
       return;
     }
@@ -4113,6 +4118,7 @@
       actualizarTituloFinalizadoBtn();
       return;
     }
+    alternarVisibilidadEncabezadoSorteo(true);
     const {nombre='',fecha='',tipo='',hora=''}=activeSorteo;
     const claseTitulo=['sorteo-titulo-basico'];
     const tipoNormalizado=(tipo||'').toLowerCase();
@@ -4127,13 +4133,13 @@
     }
     const partes=[];
     if(tipo){
-      let claseTipo='detalle-tipo';
+      let claseTipo='detalle-valor tipo';
       if(tipoNormalizado.includes('especial')){
         claseTipo+=' detalle-tipo-especial';
       }else if(tipoNormalizado.includes('diario')){
         claseTipo+=' detalle-tipo-diario';
       }
-      partes.push(`<span class="detalle-item"><span class="${claseTipo}">${tipo}</span></span>`);
+      partes.push(`<span class="detalle-item"><span class="detalle-label">Tipo de sorteo:</span><span class="${claseTipo}">${tipo}</span></span>`);
     }
     if(fecha){
       partes.push(`<span class="detalle-item"><span class="detalle-label">Fecha:</span><span class="detalle-valor fecha">${formatearFecha(fecha)}</span></span>`);
