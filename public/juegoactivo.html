@@ -2640,6 +2640,11 @@
   }
 
   function evaluarFormasSinGanadores(totalCantos){
+    if(!haySorteoJugando){
+      formasSinGanadoresAlertaClave = '';
+      cerrarModalFormasSinGanadores();
+      return;
+    }
     if(totalCantos < 75 || !Array.isArray(formasActivas) || !formasActivas.length){
       formasSinGanadoresAlertaClave = '';
       cerrarModalFormasSinGanadores();
@@ -4129,7 +4134,13 @@
     }
     if(sorteoResumenEl){
       sorteoResumenEl.className=claseTitulo.join(' ');
-      sorteoResumenEl.textContent=nombre||'Sorteo en vivo';
+      if(haySorteoJugando){
+        sorteoResumenEl.textContent=nombre||'Sorteo en vivo';
+        sorteoResumenEl.removeAttribute('hidden');
+      }else{
+        sorteoResumenEl.textContent='';
+        sorteoResumenEl.setAttribute('hidden','');
+      }
     }
     const partes=[];
     if(tipo){
@@ -4139,7 +4150,14 @@
       }else if(tipoNormalizado.includes('diario')){
         claseTipo+=' detalle-tipo-diario';
       }
-      partes.push(`<span class="detalle-item"><span class="detalle-label">Tipo de sorteo:</span><span class="${claseTipo}">${tipo}</span></span>`);
+      if(haySorteoJugando){
+        partes.push(`<span class="detalle-item"><span class="detalle-label">Tipo de sorteo:</span><span class="${claseTipo}">${tipo}</span></span>`);
+      }else{
+        const tipoMostrar=(tipo||'').toString().trim().toUpperCase();
+        if(tipoMostrar){
+          partes.push(`<span class="${claseTipo}">${tipoMostrar}</span>`);
+        }
+      }
     }
     if(fecha){
       partes.push(`<span class="detalle-item"><span class="detalle-label">Fecha:</span><span class="detalle-valor fecha">${formatearFecha(fecha)}</span></span>`);
