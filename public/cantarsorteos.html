@@ -4769,13 +4769,6 @@
 
   async function sellarSorteo(){
     if(!currentSorteoId || !currentSorteoData){ alert('Selecciona un sorteo primero.'); return; }
-    const estadoActual = (currentSorteoData.estado || '').toString().toLowerCase();
-    if(estadoActual === 'sellado'){ alert('El sorteo ya está sellado.'); return; }
-    if(estadoActual === 'jugando' || estadoActual === 'finalizado'){
-      alert('El sorteo ya se encuentra en una fase posterior.');
-      return;
-    }
-
     if(esModoManual()){
       const nombre = obtenerNombreSorteoActual();
       await confirmarYAplicarEstadoManual({
@@ -4786,6 +4779,13 @@
         botonAtencion: sellarBtn,
         mensajeError: 'No fue posible cambiar el estado a Sellado.'
       });
+      return;
+    }
+
+    const estadoActual = (currentSorteoData.estado || '').toString().toLowerCase();
+    if(estadoActual === 'sellado'){ alert('El sorteo ya está sellado.'); return; }
+    if(estadoActual === 'jugando' || estadoActual === 'finalizado'){
+      alert('El sorteo ya se encuentra en una fase posterior.');
       return;
     }
 
@@ -5001,6 +5001,12 @@
       return;
     }
 
+    const pdfEstadoActual = (currentSorteoData.pdf || '').toString().trim().toLowerCase();
+    if(pdfEstadoActual !== 'si'){
+      alert('No se ha confirmado la descarga del archivo PDF de sellado de este sorteo.');
+      return;
+    }
+
     let urlActual = (currentSorteoData.pdfUrl || pdfDestinoUrl || '').toString().trim();
     if(!urlActual){
       try {
@@ -5038,9 +5044,6 @@
 
   async function cambiarAJugando(){
     if(!currentSorteoId || !currentSorteoData){ alert('Selecciona un sorteo primero.'); return; }
-    const estadoActual = (currentSorteoData.estado || '').toString().toLowerCase();
-    if(estadoActual === 'jugando'){ alert('El sorteo ya está en estado Jugando.'); return; }
-
     if(esModoManual()){
       const nombre = obtenerNombreSorteoActual();
       await confirmarYAplicarEstadoManual({
@@ -5053,6 +5056,8 @@
       return;
     }
 
+    const estadoActual = (currentSorteoData.estado || '').toString().toLowerCase();
+    if(estadoActual === 'jugando'){ alert('El sorteo ya está en estado Jugando.'); return; }
     if(estadoActual === 'finalizado'){ alert('El sorteo ya finalizó.'); return; }
     if(estadoActual !== 'sellado'){
       alert('El sorteo debe estar Sellado para iniciar el juego.');
@@ -5117,9 +5122,6 @@
 
   async function finalizarSorteo(){
     if(!currentSorteoId || !currentSorteoData){ alert('Selecciona un sorteo primero.'); return; }
-    const estadoActual = (currentSorteoData.estado || '').toString().toLowerCase();
-    if(estadoActual === 'finalizado'){ alert('El sorteo ya finalizó.'); return; }
-
     if(esModoManual()){
       const nombreManual = obtenerNombreSorteoActual();
       const finalizado = await confirmarYAplicarEstadoManual({
@@ -5135,6 +5137,8 @@
       return;
     }
 
+    const estadoActual = (currentSorteoData.estado || '').toString().toLowerCase();
+    if(estadoActual === 'finalizado'){ alert('El sorteo ya finalizó.'); return; }
     if(estadoActual !== 'jugando'){
       alert('El sorteo debe estar en estado Jugando para finalizar.');
       return;
