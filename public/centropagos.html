@@ -6,252 +6,222 @@
   <title>Centro de Pagos</title>
   <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
   <style>
-    :root {
-      color-scheme: only light;
-    }
+    :root { color-scheme: only light; }
     body {
       background: linear-gradient(rgba(255,255,255,0.7),rgba(255,255,255,0.7)),
-                  url('https://img.freepik.com/vectores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg');
+        url('https://img.freepik.com/vectores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg');
       background-repeat: repeat;
-      font-family: 'Bangers', cursive;
-      margin: 0;
-      padding: 8px;
       text-align: center;
+      font-family: 'Bangers', cursive;
+      padding: 5px;
+      margin: 0;
     }
-    #volver-btn {
-      position: fixed;
-      top: 6px;
-      left: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
+    .menu-btn {
       width: 120px;
       height: 40px;
       background: orange;
-      border: 4px solid #ffd700;
+      border: 4px solid #FFD700;
       border-radius: 10px;
       color: #fff;
-      cursor: pointer;
-      text-transform: uppercase;
-      font-size: 1.05rem;
       text-shadow: 2px 2px 4px #000;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
     }
-    #volver-btn .label { font-size: 1rem; }
-    @media (orientation: portrait) {
-      #volver-btn { width: 42px; }
-      #volver-btn .label { display: none; }
+    .back-btn {
+      position: fixed;
+      top: 5px;
+      left: 5px;
+      font-family: 'Bangers', cursive;
+      font-size: 1.2rem;
+      text-transform: uppercase;
     }
     h2.titulo-principal {
       margin: 50px 0 10px;
-      font-size: clamp(1.8rem, 5vw, 2.6rem);
-      color: #b2ffb2;
-      text-shadow: 0 0 10px #ffee58, 0 0 20px rgba(255,235,59,0.6), 2px 2px 4px rgba(0,0,0,0.6);
-      letter-spacing: 1.5px;
+      color: #000;
+      text-shadow: 0 0 5px #fff, 2px 2px 3px #000;
+      letter-spacing: 1px;
     }
     .section {
-      margin: 16px auto;
+      margin: 12px auto;
       max-width: 1280px;
-      background: rgba(255,255,255,0.78);
-      border-radius: 16px;
-      border: 3px solid rgba(0,0,0,0.1);
-      box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-      padding: 12px 10px 18px;
+      background: rgba(255,255,255,0.4);
+      border-radius: 12px;
+      padding: 6px 8px 12px;
     }
     .section-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 10px;
-      padding: 4px 12px 8px;
-      background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(200,230,255,0.6));
-      border-radius: 12px;
+      padding: 2px 5px;
+      background: rgba(255,255,255,0.4);
+      margin-bottom: 4px;
     }
-    .section-header h3 {
-      margin: 0;
-      font-size: clamp(1.3rem, 3vw, 1.8rem);
-      color: #0d47a1;
-      letter-spacing: 1px;
-      text-shadow: 0 0 4px rgba(255,255,255,0.9);
-    }
-    .switch-container {
+    .header-controls {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 5px;
     }
     .switch-label {
-      font-size: clamp(0.9rem, 2.2vw, 1.1rem);
-      color: #0d47a1;
-      text-shadow: 0 0 4px rgba(255,255,255,0.9);
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 0.8rem;
+      color: #000;
     }
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 46px;
-      height: 26px;
+    #premios-section h3 {
+      margin: 0;
+      color: green;
+      text-shadow: 0 0 5px #fff, 2px 2px 3px #000;
+      font-size: 1.4rem;
     }
+    #pagos-section h3 {
+      margin: 0;
+      color: red;
+      text-shadow: 0 0 5px #fff, 2px 2px 3px #000;
+      font-size: 1.4rem;
+    }
+    .switch { position: relative; display: inline-block; width: 42px; height: 24px; }
     .switch input { display: none; }
     .slider {
       position: absolute;
       cursor: pointer;
       top: 0; left: 0; right: 0; bottom: 0;
       background-color: #ccc;
-      transition: .3s;
-      border-radius: 26px;
+      transition: .4s;
+      border-radius: 24px;
     }
     .slider:before {
       position: absolute;
       content: "";
-      height: 20px;
-      width: 20px;
+      height: 18px;
+      width: 18px;
       left: 3px;
       bottom: 3px;
       background-color: white;
-      transition: .3s;
+      transition: .4s;
       border-radius: 50%;
     }
-    input:checked + .slider {
-      background-color: #00c853;
-    }
-    input:checked + .slider:before {
-      transform: translateX(20px);
-    }
+    input:checked + .slider { background-color: #4caf50; }
+    input:checked + .slider:before { transform: translateX(18px); }
     .acciones {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: rgba(255,255,255,0.9);
       display: flex;
       flex-wrap: wrap;
+      align-items: center;
       justify-content: center;
-      gap: 6px;
-      padding: 8px 0;
-      margin-bottom: 6px;
-      background: rgba(255,255,255,0.7);
-      border-radius: 10px;
+      gap: 4px;
+      padding: 4px 0;
+      margin: 0;
     }
     .icon-btn {
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      padding: 6px 12px;
-      border: 2px solid #0d47a1;
-      border-radius: 999px;
-      background: linear-gradient(135deg, #0d47a1, #42a5f5);
-      color: #fff;
-      font-size: 0.9rem;
+      font-size: 0.7rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 4px 8px;
+      margin: 0 2px;
       cursor: pointer;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.25);
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .icon-btn.aprobar { border-color: #2e7d32; background: linear-gradient(135deg,#2e7d32,#66bb6a); }
-    .icon-btn.archivar { border-color: #795548; background: linear-gradient(135deg,#8d6e63,#d7ccc8); color:#3e2723; }
-    .icon-btn.archivo-toggle { border-color: #5d4037; background: linear-gradient(135deg,#a1887f,#ffccbc); color:#3e2723; }
-    .icon-btn.editar { border-color: #1565c0; background: linear-gradient(135deg,#1565c0,#64b5f6); }
-    .icon-btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      box-shadow: none;
-      transform: none;
-    }
-    .icon-btn:not(:disabled):hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 14px rgba(0,0,0,0.3);
-    }
-    .archivo-activo {
-      background: linear-gradient(135deg,#6d4c41,#a1887f) !important;
-      color: #fff !important;
-      border-color: #4e342e !important;
-      box-shadow: 0 6px 14px rgba(109,76,65,0.4) !important;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 0 auto;
-      font-family: 'Poppins', sans-serif;
-      font-size: 0.92rem;
       background: rgba(255,255,255,0.9);
-      border-radius: 12px;
-      overflow: hidden;
+      font-family: Calibri, Arial, sans-serif;
+      font-weight: bold;
     }
-    thead th {
-      position: sticky;
-      top: 0;
-      background: rgba(13,71,161,0.9);
-      color: #fff;
-      padding: 4px 6px;
-      border: 1px solid rgba(255,255,255,0.2);
-      font-family: 'Bangers', cursive;
-      letter-spacing: 1px;
-    }
-    tbody td {
-      border: 1px solid rgba(0,0,0,0.15);
-      padding: 6px;
-      text-align: center;
-      background: rgba(255,255,255,0.95);
-      font-weight: 600;
-    }
-    tbody tr:nth-child(even) td { background: rgba(240,248,255,0.9); }
-    tbody tr:hover td { background: rgba(224,247,250,0.9); }
-    tbody td.alias, tbody td.gmail { text-align: left; }
-    tbody td.estado span {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 90px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: 0.82rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    .estado-pendiente { background: rgba(255,235,59,0.2); color: #f57f17; border: 1px solid rgba(255,193,7,0.4); }
-    .estado-aprobado { background: rgba(200,230,201,0.55); color: #1b5e20; border: 1px solid rgba(56,142,60,0.5); }
-    .estado-archivado { background: rgba(161,136,127,0.35); color: #3e2723; border: 1px solid rgba(93,64,55,0.5); }
-    .filtros input, .filtros select {
+    .icon-btn .icon.check { color: green; }
+    .icon-btn .icon.edit { color: blue; }
+    .icon-only { padding: 4px; width: 24px; height: 24px; justify-content: center; gap: 0; }
+    .archivo-activo { background: #654321; color: #fff; }
+    table {
+      margin: 5px auto;
+      border-collapse: collapse;
       width: 100%;
-      box-sizing: border-box;
-      padding: 4px 6px;
-      border-radius: 6px;
-      border: 1px solid rgba(0,0,0,0.2);
-      font-family: 'Poppins', sans-serif;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
+      font-family: Calibri, Arial, sans-serif;
+      background: rgba(255,255,255,0.6);
+      table-layout: fixed;
     }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 2px;
+      white-space: nowrap;
+      font-weight: bold;
+    }
+    #tabla-premios th:nth-child(2), #tabla-premios td:nth-child(2),
+    #tabla-premios th:nth-child(3), #tabla-premios td:nth-child(3),
+    #tabla-premios th:nth-child(4), #tabla-premios td:nth-child(4),
+    #tabla-premios th:nth-child(5), #tabla-premios td:nth-child(5),
+    #tabla-pagos th:nth-child(2), #tabla-pagos td:nth-child(2),
+    #tabla-pagos th:nth-child(3), #tabla-pagos td:nth-child(3),
+    #tabla-pagos th:nth-child(4), #tabla-pagos td:nth-child(4) {
+      white-space: normal;
+      word-break: break-word;
+    }
+    thead tr:first-child th { position: sticky; top: 40px; background: rgba(255,255,255,0.8); z-index: 2; }
+    thead tr:nth-child(2) th { position: sticky; top: calc(40px + 34px); background: rgba(255,255,255,0.85); z-index: 1; }
+    tbody tr { background: rgba(255,255,255,0.95); }
     .badge {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-width: 26px;
-      height: 26px;
-      background: #d50000;
+      min-width: 25px;
+      height: 25px;
+      background: red;
       color: #fff;
       border-radius: 50%;
       font-size: 0.9rem;
-      box-shadow: 0 0 10px rgba(213,0,0,0.6);
+      animation: pulse 1s infinite;
     }
     .badge.oculto { display: none; }
+    .filtros input,
+    .filtros select {
+      width: 100%;
+      box-sizing: border-box;
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 0.8rem;
+    }
+    .estado-pendiente { color: orange; }
+    .estado-aprobado { color: green; }
+    .estado-archivado { color: brown; }
     .mensaje-tabla {
       padding: 12px;
       text-align: center;
-      font-family: 'Poppins', sans-serif;
+      font-family: Calibri, Arial, sans-serif;
       font-size: 0.95rem;
       color: #0d47a1;
       background: rgba(255,255,255,0.9);
       border-radius: 10px;
       border: 1px dashed rgba(13,71,161,0.3);
     }
-    @media (max-width: 900px) {
-      table { font-size: 0.78rem; }
-      thead th { font-size: 0.82rem; }
-      .icon-btn { font-size: 0.78rem; padding: 5px 10px; }
-      tbody td.estado span { min-width: 72px; font-size: 0.72rem; }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
     }
+    @media (orientation: portrait) {
+      body { padding: 2px; }
+      table { font-size: 0.6rem; width: 100%; margin: 2px 0; }
+      .acciones { margin: 2px 0; }
+      .section-header { margin-bottom: 2px; }
+      #premios-content,
+      #pagos-content { max-height: 70vh; overflow: auto; }
+      #volver-btn { width: 40px; }
+      #volver-btn .label { display: none; }
+    }
+    @media (orientation: landscape) { table { font-size: 0.9rem; } }
   </style>
 </head>
 <body>
-  <button id="volver-btn"><span class="tri">&#9664;</span><span class="label">Volver</span></button>
+  <button id="volver-btn" class="menu-btn back-btn"><span class="icon">&#9664;</span><span class="label">Volver</span></button>
   <h2 class="titulo-principal">APROBACIÓN DE PREMIOS</h2>
 
   <section class="section" id="premios-section">
     <div class="section-header">
       <h3>APROBACION PREMIOS</h3>
-      <div class="switch-container">
+      <div class="header-controls">
         <span id="badge-premios" class="badge oculto">0</span>
         <span class="switch-label">Mostrar</span>
         <label class="switch"><input type="checkbox" id="toggle-premios"><span class="slider"></span></label>
@@ -259,9 +229,9 @@
     </div>
     <div id="premios-content">
       <div class="acciones">
-        <button class="icon-btn aprobar" id="premios-aprobar">✅ Aprobar</button>
-        <button class="icon-btn archivar" id="premios-archivar">📦 Archivar</button>
-        <button class="icon-btn archivo-toggle" id="premios-ver-archivo">📚 Archivo</button>
+        <button class="icon-btn" id="premios-aprobar"><span class="icon check">&#10004;</span><span>Aprobar</span></button>
+        <button class="icon-btn" id="premios-archivar"><span class="icon">&#128194;</span><span>Archivar</span></button>
+        <button class="icon-btn" id="premios-ver-archivo"><span class="icon">&#128230;</span><span>Archivo</span></button>
       </div>
       <table id="tabla-premios">
         <colgroup>
@@ -310,7 +280,7 @@
   <section class="section" id="pagos-section">
     <div class="section-header">
       <h3>APROBACION PAGOS ADMINSTRACION</h3>
-      <div class="switch-container">
+      <div class="header-controls">
         <span id="badge-pagos" class="badge oculto">0</span>
         <span class="switch-label">Mostrar</span>
         <label class="switch"><input type="checkbox" id="toggle-pagos"><span class="slider"></span></label>
@@ -318,10 +288,10 @@
     </div>
     <div id="pagos-content">
       <div class="acciones">
-        <button class="icon-btn aprobar" id="pagos-aprobar">✅ Aprobar</button>
-        <button class="icon-btn editar" id="pagos-editar">✏️ Editar</button>
-        <button class="icon-btn archivar" id="pagos-archivar">📦 Archivar</button>
-        <button class="icon-btn archivo-toggle" id="pagos-ver-archivo">📚 Archivo</button>
+        <button class="icon-btn" id="pagos-aprobar"><span class="icon check">&#10004;</span><span>Aprobar</span></button>
+        <button class="icon-btn" id="pagos-editar"><span class="icon edit">&#9998;</span><span>Editar</span></button>
+        <button class="icon-btn" id="pagos-archivar"><span class="icon">&#128194;</span><span>Archivar</span></button>
+        <button class="icon-btn" id="pagos-ver-archivo"><span class="icon">&#128230;</span><span>Archivo</span></button>
       </div>
       <table id="tabla-pagos">
         <colgroup>
