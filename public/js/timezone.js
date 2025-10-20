@@ -130,11 +130,9 @@ function obtenerFecha() {
     month: '2-digit',
     year: 'numeric'
   };
-  if (serverTime.zonaIana) {
-    opciones.timeZone = serverTime.zonaIana;
-  }
+  const fechaBase = new Date(Date.now() + serverTime.diferencia);
   const formatter = new Intl.DateTimeFormat(serverTime.locale || 'es-ES', opciones);
-  return formatter.format(new Date(Date.now() + serverTime.diferencia));
+  return formatter.format(fechaBase);
 }
 
 function limpiarMeridiano(valor = '') {
@@ -147,9 +145,6 @@ function obtenerHora() {
     minute: '2-digit',
     hour12: true
   };
-  if (serverTime.zonaIana) {
-    opciones.timeZone = serverTime.zonaIana;
-  }
   const d = new Date(Date.now() + serverTime.diferencia);
   const hora = d.toLocaleTimeString(serverTime.locale, opciones);
   return limpiarMeridiano(hora);
