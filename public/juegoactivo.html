@@ -2620,24 +2620,15 @@
 
   function mostrarModalFormasSinGanadores(formas){
     if(!Array.isArray(formas) || !formas.length) return;
-    if(!modalFormasSinGanadoresEl || !modalFormasSinGanadoresListaEl){
-      const mensaje = formas.map(forma=>`No hay ganadores para la Forma ${obtenerEtiquetaFormaSinGanador(forma)}`).join('\n');
-      alert(mensaje);
-      return;
+    const mensaje = formas
+      .map(forma=>`No hay ganadores para la Forma ${obtenerEtiquetaFormaSinGanador(forma)}`)
+      .join(' · ');
+    if(formasMensajeEl){
+      formasMensajeEl.textContent = mensaje;
+    } else {
+      console.info(mensaje);
     }
-    modalFormasSinGanadoresListaEl.innerHTML = '';
-    formas.forEach(forma=>{
-      const item = document.createElement('p');
-      item.className = 'modal-formas-sin-item';
-      const etiqueta = obtenerEtiquetaFormaSinGanador(forma);
-      item.textContent = `No hay ganadores para la Forma ${etiqueta}`;
-      modalFormasSinGanadoresListaEl.appendChild(item);
-    });
-    modalFormasSinGanadoresEl.classList.add('activa');
-    modalFormasSinGanadoresEl.setAttribute('aria-hidden','false');
-    if(modalFormasSinGanadoresAceptarBtn){
-      modalFormasSinGanadoresAceptarBtn.focus({ preventScroll: true });
-    }
+    cerrarModalFormasSinGanadores();
   }
 
   function evaluarFormasSinGanadores(totalCantos){
