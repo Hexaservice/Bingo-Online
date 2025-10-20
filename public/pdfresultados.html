@@ -197,33 +197,72 @@
     #first-page-layout {
       width: 100%;
     }
-    .pdf-tabla-principal {
+    #first-page-grid {
+      display: grid;
+      gap: clamp(14px, 2vw, 24px);
+      align-items: stretch;
+    }
+    @media (min-width: 900px) {
+      #first-page-grid {
+        grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+      }
+    }
+    body.pdf-captura #first-page-grid {
+      grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+    }
+    .first-page-section {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(12px, 1.6vw, 18px);
+      background: rgba(255,255,255,0.96);
+      border-radius: 16px;
+      padding: clamp(14px, 1.6vw, 20px);
+      box-shadow: 0 6px 18px rgba(15,35,95,0.08);
+      min-width: 0;
+      min-height: 0;
+    }
+    body.pdf-captura .first-page-section {
+      padding: clamp(18px, 2.2vw, 26px);
+      box-shadow: none;
+      border: 1px solid rgba(11,83,148,0.12);
+      background: rgba(255,255,255,0.98);
+    }
+    .formas-header {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      text-align: left;
+    }
+    .formas-header h2 {
+      font-family: 'Bangers', cursive;
+      font-size: clamp(1.4rem, 4vw, 1.9rem);
+      color: #0b5394;
+      margin: 0;
+      letter-spacing: 0.6px;
+    }
+    .formas-header p {
+      margin: 0;
+      font-weight: 600;
+      color: #415a77;
+      font-size: clamp(0.92rem, 2.2vw, 1.02rem);
+    }
+    #formas-resumen {
+      --formas-col-min: clamp(240px, 26vw, 300px);
+      flex: 1 1 auto;
+      display: grid;
+      gap: clamp(12px, 1.6vw, 18px);
+      grid-template-columns: repeat(auto-fit, minmax(var(--formas-min-width, var(--formas-col-min)), 1fr));
       width: 100%;
-      border-collapse: collapse;
-      border-spacing: 0;
-      table-layout: fixed;
-      background: transparent;
+      align-content: start;
     }
-    .pdf-tabla-principal td {
-      padding: 0;
-      vertical-align: top;
-    }
-    .pdf-tabla-formas {
-      width: 100%;
-      border-collapse: collapse;
-      border-spacing: 0;
-      table-layout: fixed;
-      background: transparent;
-    }
-    .pdf-tabla-formas td {
-      padding: 0;
-      vertical-align: top;
+    body.pdf-captura #formas-resumen {
+      --formas-col-min: 260px;
+      grid-template-columns: repeat(auto-fit, minmax(var(--formas-min-width, var(--formas-col-min)), 1fr));
+      gap: clamp(16px, 2vw, 20px);
     }
     .forma-slot {
       display: flex;
       flex-direction: column;
-      height: 100%;
-      width: 100%;
     }
     .forma-slot > .forma-item {
       flex: 1 1 auto;
@@ -347,13 +386,6 @@
       font-weight: 700;
       color: #0b6623;
       text-shadow: 0 0 6px rgba(255,255,255,0.9);
-    }
-    #formas-resumen {
-      width: 100%;
-    }
-    #formas-resumen tbody,
-    #formas-resumen tr {
-      width: 100%;
     }
     @media (min-width: 1024px) {
       #resumen-layout {
@@ -1076,15 +1108,6 @@
     body.pdf-captura .dato-inline .dato-valor {
       font-size: clamp(1.05rem, 1.6vw, 1.25rem);
     }
-    body.pdf-captura #formas-resumen {
-      width: 100%;
-    }
-    body.pdf-captura #formas-resumen tr {
-      width: 100%;
-    }
-    body.pdf-captura #formas-resumen td {
-      width: calc(100% / 3);
-    }
     body.pdf-captura #formas-resumen .forma-item {
       width: 100%;
       min-height: 100%;
@@ -1183,11 +1206,9 @@
   </div>
   <div id="pdf-wrapper">
     <div id="first-page-layout">
-      <table class="pdf-tabla-principal">
-        <tbody>
-          <tr>
-            <td>
-              <div id="resumen-layout">
+      <div id="first-page-grid">
+        <section id="resumen-section" class="first-page-section">
+          <div id="resumen-layout">
         <div id="resumen-header" class="resumen-bloque">
           <div class="header-logo">
             <img id="logo" src="https://i.imgur.com/twjhNtZ.png" alt="Bingo Online">
@@ -1225,18 +1246,16 @@
           <h2>CRÉDITOS TOTALES A REPARTIR</h2>
           <div id="total-premios">0</div>
         </div>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td>
-              <table id="formas-resumen" class="pdf-tabla-formas">
-                <tbody></tbody>
-              </table>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+          </div>
+        </section>
+        <section id="formas-section" class="first-page-section">
+          <div class="formas-header">
+            <h2>Formas premiadas</h2>
+            <p>Cartones ganadores y distribución de premios del sorteo.</p>
+          </div>
+          <div id="formas-resumen" class="formas-grid"></div>
+        </section>
+      </div>
     </div>
     <section id="cartones-section">
       <h2>Cartones del sorteo</h2>
@@ -2494,21 +2513,12 @@
     if(!formasCont){ return; }
     formasCont.innerHTML = '';
 
-    const columnas = 3;
     const sinFormas = !formasData.length;
-    const cuerpo = document.createElement('tbody');
-
     if(sinFormas){
-      const fila = document.createElement('tr');
-      const celda = document.createElement('td');
-      celda.colSpan = columnas;
       const placeholder = document.createElement('div');
       placeholder.className = 'cartones-placeholder';
       placeholder.textContent = 'No se registraron formas para este sorteo.';
-      celda.appendChild(placeholder);
-      fila.appendChild(celda);
-      cuerpo.appendChild(fila);
-      formasCont.appendChild(cuerpo);
+      formasCont.appendChild(placeholder);
       return;
     }
 
@@ -2518,26 +2528,12 @@
       return idxA - idxB;
     });
 
-    const filas = Math.max(2, Math.ceil(formasData.length / columnas));
-    const slots = [];
-    for(let fila = 0; fila < filas; fila++){
-      const tr = document.createElement('tr');
-      for(let col = 0; col < columnas; col++){
-        const td = document.createElement('td');
-        td.className = 'pdf-forma-celda';
-        const slot = document.createElement('div');
-        slot.className = 'forma-slot';
-        td.appendChild(slot);
-        tr.appendChild(td);
-        slots.push(slot);
-      }
-      cuerpo.appendChild(tr);
-    }
+    const fragmento = document.createDocumentFragment();
 
-    formasCont.appendChild(cuerpo);
-
-    formasData.forEach((forma, indice)=>{
+    formasData.forEach((forma)=>{
       const color = obtenerColorForma(forma.idx || 1);
+      const slot = document.createElement('div');
+      slot.className = 'forma-slot';
       const item = document.createElement('div');
       item.className = 'forma-item';
 
@@ -2609,11 +2605,11 @@
 
       item.appendChild(contenedor);
       item.appendChild(miniCarton);
-      const slot = slots[indice];
-      if(slot){
-        slot.appendChild(item);
-      }
+      slot.appendChild(item);
+      fragmento.appendChild(slot);
     });
+
+    formasCont.appendChild(fragmento);
   }
 
   function crearDetalleForma(etiqueta, valor, opciones = {}){

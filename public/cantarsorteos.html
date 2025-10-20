@@ -5136,7 +5136,16 @@
     }
 
     const estadoActual = (currentSorteoData.estado || '').toString().toLowerCase();
-    if(estadoActual === 'finalizado'){ alert('El sorteo ya finalizó.'); return; }
+    if(estadoActual === 'finalizado'){
+      const estadoPdfResultado = (currentSorteoData.pdfresul || '').toString().trim().toLowerCase();
+      if(estadoPdfResultado !== 'si'){
+        mostrarAvisoSimple('El sorteo ya se encuentra finalizado. Se abrirá el PDF de resultados para que confirmes su descarga.', 'PDF pendiente');
+        abrirPdfResultados();
+      } else {
+        alert('El sorteo ya finalizó.');
+      }
+      return;
+    }
     if(estadoActual !== 'jugando'){
       alert('El sorteo debe estar en estado Jugando para finalizar.');
       return;
