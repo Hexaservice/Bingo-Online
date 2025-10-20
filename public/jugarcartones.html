@@ -1167,6 +1167,7 @@ function toggleForma(idx){
         if(!sorteoSnap.exists){
           throw new Error('SORTEO_NO_ENCONTRADO');
         }
+        const sorteoDataTx=sorteoSnap.data()||{};
         const estadoActual=(sorteoSnap.data()?.estado||'').toLowerCase();
         if(estadoActual==='sellado'){
           throw new Error('SORTEO_SELLADO');
@@ -1210,22 +1211,30 @@ function toggleForma(idx){
               throw new Error('LIMITE_GRATIS');
             }
           }
-          tx.update(billeteraRef,{CartonesGratis:firebase.firestore.FieldValue.increment(-1)});
-          tx.update(sorteoRef,{cartonesgratisjugando:firebase.firestore.FieldValue.increment(1)});
+          const nuevosGratis=Math.max(0,gratisActual-1);
+          const cartonesGratisActual=toNumberSafe(sorteoDataTx.cartonesgratisjugando,0);
+          const nuevosCartonesGratisJugando=cartonesGratisActual+1;
+          tx.update(billeteraRef,{CartonesGratis:nuevosGratis});
+          tx.update(sorteoRef,{cartonesgratisjugando:nuevosCartonesGratisJugando});
           tipoCarton='gratis';
-          gratisRestantes=gratisActual-1;
+          gratisRestantes=nuevosGratis;
         }else{
           if(creditosActual<valorCartonActual){
             throw new Error('SIN_CREDITOS');
           }
-          tx.update(billeteraRef,{creditos:firebase.firestore.FieldValue.increment(-valorCartonActual)});
+          const nuevosCreditos=creditosActual-valorCartonActual;
+          const cartonesPagadosActual=toNumberSafe(sorteoDataTx.cartonesjugando,0);
+          const totalPremiosActual=toNumberSafe(sorteoDataTx.totalPremios,0);
+          const totalPorcentajeActual=toNumberSafe(sorteoDataTx.totalporcentaje,0);
+          const totalPorcentajeSuActual=toNumberSafe(sorteoDataTx.totalporcentajesu,0);
+          tx.update(billeteraRef,{creditos:nuevosCreditos});
           tx.update(sorteoRef,{
-            cartonesjugando:firebase.firestore.FieldValue.increment(1),
-            totalPremios:firebase.firestore.FieldValue.increment(paraPremioTx),
-            totalporcentaje:firebase.firestore.FieldValue.increment(porcentajeValTx),
-            totalporcentajesu:firebase.firestore.FieldValue.increment(porcentajeSuValTx)
+            cartonesjugando:cartonesPagadosActual+1,
+            totalPremios:totalPremiosActual+paraPremioTx,
+            totalporcentaje:totalPorcentajeActual+porcentajeValTx,
+            totalporcentajesu:totalPorcentajeSuActual+porcentajeSuValTx
           });
-          creditosRestantes=creditosActual-valorCartonActual;
+          creditosRestantes=nuevosCreditos;
         }
         const ultimoNumero=Number(consecutivoSnap.exists?(consecutivoSnap.data()?.ultimoNumero ?? consecutivoSnap.data()?.ultimo ?? consecutivoSnap.data()?.valor ?? 0):0);
         const siguienteNumero=Number.isFinite(ultimoNumero) && ultimoNumero>=0?ultimoNumero+1:1;
