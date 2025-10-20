@@ -1164,10 +1164,15 @@ function toggleForma(idx){
           if(maxGratisActual>0){
             const jugadorGratisQuery=db.collection('CartonJugado')
               .where('sorteoId','==',currentSorteo)
-              .where('userId','==',user.uid)
-              .where('tipocarton','==','gratis');
+              .where('userId','==',user.uid);
             const jugadorGratisSnap=await tx.get(jugadorGratisQuery);
-            gratisUsadosTx=jugadorGratisSnap.size||0;
+            gratisUsadosTx=0;
+            jugadorGratisSnap.forEach(doc=>{
+              const dataDoc=doc.data()||{};
+              if((dataDoc.tipocarton||'').toString().toLowerCase()==='gratis'){
+                gratisUsadosTx++;
+              }
+            });
             if(gratisUsadosTx>=maxGratisActual){
               throw new Error('LIMITE_GRATIS');
             }
