@@ -42,26 +42,41 @@ function parseZona(zona) {
   return zona;
 }
 
-async function sincronizarHora() {
-  const fallback = diferenciaPorOffset(serverTime.offsetMinutos);
-  if (!serverTime.zonaIana) {
-    serverTime.diferencia = fallback;
-    return;
-  }
+function obtenerOffsetDesdeIana(zona) {
+  if (typeof zona !== 'string' || !zona) return null;
   try {
-    const resp = await fetch(`https://worldtimeapi.org/api/timezone/${encodeURIComponent(serverTime.zonaIana)}`);
-    if (!resp.ok) throw new Error('Respuesta no válida');
-    const data = await resp.json();
-    const serverDate = new Date(data.datetime);
-    if (!isNaN(serverDate)) {
-      serverTime.diferencia = serverDate.getTime() - Date.now();
-    } else {
-      serverTime.diferencia = fallback;
-    }
+    const formato = new Intl.DateTimeFormat('en-US', {
+      timeZone: zona,
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZoneName: 'short'
+    });
+    const partes = formato.formatToParts(new Date());
+    const nombreZona = partes.find(p => p.type === 'timeZoneName')?.value || '';
+    const coincidencia = nombreZona.match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/i);
+    if (!coincidencia) return null;
+    const signo = coincidencia[1] === '-' ? 1 : -1;
+    const horas = parseInt(coincidencia[2], 10);
+    const minutos = coincidencia[3] ? parseInt(coincidencia[3], 10) : 0;
+    if (Number.isNaN(horas) || Number.isNaN(minutos)) return null;
+    return signo * (horas * 60 + minutos);
   } catch (err) {
-    console.error('Error obteniendo hora del servidor', err);
-    serverTime.diferencia = fallback;
+    console.error('No se pudo calcular el offset de la zona IANA', err);
+    return null;
   }
+}
+
+async function sincronizarHora() {
+  let offsetUsado = serverTime.offsetMinutos;
+  if (serverTime.zonaIana) {
+    const offsetZona = obtenerOffsetDesdeIana(serverTime.zonaIana);
+    if (offsetZona !== null) {
+      offsetUsado = offsetZona;
+      serverTime.offsetMinutos = offsetZona;
+    }
+  }
+  const fallback = diferenciaPorOffset(offsetUsado);
+  serverTime.diferencia = fallback;
 }
 
 async function asegurarDb() {
@@ -110,11 +125,16 @@ async function initServerTime() {
 }
 
 function obtenerFecha() {
-  const d = new Date(Date.now() + serverTime.diferencia);
-  const dia = String(d.getDate()).padStart(2, '0');
-  const mes = String(d.getMonth() + 1).padStart(2, '0');
-  const anio = d.getFullYear();
-  return `${dia}/${mes}/${anio}`;
+  const opciones = {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  };
+  if (serverTime.zonaIana) {
+    opciones.timeZone = serverTime.zonaIana;
+  }
+  const formatter = new Intl.DateTimeFormat(serverTime.locale || 'es-ES', opciones);
+  return formatter.format(new Date(Date.now() + serverTime.diferencia));
 }
 
 function limpiarMeridiano(valor = '') {
@@ -122,12 +142,16 @@ function limpiarMeridiano(valor = '') {
 }
 
 function obtenerHora() {
-  const d = new Date(Date.now() + serverTime.diferencia);
-  const hora = d.toLocaleTimeString(serverTime.locale, {
+  const opciones = {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true
-  });
+  };
+  if (serverTime.zonaIana) {
+    opciones.timeZone = serverTime.zonaIana;
+  }
+  const d = new Date(Date.now() + serverTime.diferencia);
+  const hora = d.toLocaleTimeString(serverTime.locale, opciones);
   return limpiarMeridiano(hora);
 }
 
