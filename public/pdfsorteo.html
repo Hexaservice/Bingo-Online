@@ -188,6 +188,13 @@
       display: grid;
       gap: clamp(18px, 2.4vw, 26px);
     }
+    #first-page-layout {
+      display: grid;
+      gap: clamp(18px, 2.6vw, 28px);
+      margin: 0 auto;
+      width: 100%;
+      text-align: left;
+    }
     #resumen-layout {
       display: grid;
       gap: clamp(12px, 2vw, 20px);
@@ -874,6 +881,9 @@
       padding: clamp(12px, 2vw, 20px);
       background: #ffffff;
       --pdf-columnas: 6;
+      --formas-min-width: 280px;
+      --formas-scale: 1;
+      --formas-mini-max: clamp(150px, 30vw, 220px);
     }
     body.pdf-captura #salir-btn,
     body.pdf-captura #acciones-fixed {
@@ -884,6 +894,11 @@
       width: min(1440px, 100%);
       padding: clamp(14px, 2.2vw, 24px) clamp(16px, 2.6vw, 28px);
       box-sizing: border-box;
+    }
+    body.pdf-captura #first-page-layout {
+      display: grid;
+      gap: clamp(14px, 2vw, 22px);
+      width: 100%;
     }
     body.pdf-captura #resumen-layout {
       display: grid;
@@ -946,7 +961,7 @@
     }
     body.pdf-captura #formas-resumen {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(var(--formas-min-width), 1fr));
       gap: clamp(10px, 1.8vw, 20px);
       align-items: stretch;
     }
@@ -972,6 +987,7 @@
     body.pdf-captura .forma-mini-carton-wrapper {
       padding: clamp(8px, 1.4vw, 14px);
       border-left-width: 0.6px;
+      max-width: var(--formas-mini-max);
     }
     body.pdf-captura #cartones-section {
       margin-top: clamp(20px, 2.6vw, 28px);
@@ -1001,6 +1017,28 @@
     body.pdf-captura .pdf-carton-datos .tipo {
       font-size: 0.84rem;
     }
+    body.pdf-captura .forma-item {
+      font-size: calc(1rem * var(--formas-scale));
+    }
+    body.pdf-captura .forma-titulo {
+      font-size: 1.32em;
+    }
+    body.pdf-captura .forma-detalle {
+      font-size: 1em;
+    }
+    body.pdf-captura .forma-detalle .valor {
+      font-size: 1.06em;
+    }
+    body.pdf-captura .forma-mini-carton {
+      font-size: calc(0.92rem * var(--formas-scale));
+    }
+    body.pdf-captura .forma-mini-carton th,
+    body.pdf-captura .forma-mini-carton td {
+      font-size: 1em;
+    }
+    body.pdf-captura .forma-mini-carton .forma-estrella {
+      font-size: 1.25em;
+    }
   </style>
 </head>
 <body>
@@ -1023,12 +1061,13 @@
     </div>
   </div>
   <div id="pdf-wrapper">
-    <div id="resumen-layout">
-      <div id="resumen-header" class="resumen-bloque">
-        <div class="header-logo">
-          <img id="logo" src="https://i.imgur.com/twjhNtZ.png" alt="Bingo Online">
-        </div>
-        <div class="header-info">
+    <div id="first-page-layout">
+      <div id="resumen-layout">
+        <div id="resumen-header" class="resumen-bloque">
+          <div class="header-logo">
+            <img id="logo" src="https://i.imgur.com/twjhNtZ.png" alt="Bingo Online">
+          </div>
+          <div class="header-info">
           <h1 id="nombre-sorteo">Sorteo</h1>
           <div id="tipo-sorteo-titulo"></div>
         </div>
@@ -1057,12 +1096,13 @@
         <span class="dato-label">CARTONES GRATIS MÁXIMOS POR JUGADOR:</span>
         <span id="dato-maxgratis" class="dato-valor">-</span>
       </div>
-      <div class="totales-header resumen-bloque">
-        <h2>CRÉDITOS TOTALES A REPARTIR</h2>
-        <div id="total-premios">0</div>
+        <div class="totales-header resumen-bloque">
+          <h2>CRÉDITOS TOTALES A REPARTIR</h2>
+          <div id="total-premios">0</div>
+        </div>
       </div>
+      <section id="formas-resumen"></section>
     </div>
-    <section id="formas-resumen"></section>
     <section id="cartones-section">
       <h2>Cartones del sorteo</h2>
       <div id="cartones-grid"></div>
@@ -1100,6 +1140,7 @@
   const datoTipoEl = document.getElementById('dato-tipo');
   const totalPremiosEl = document.getElementById('total-premios');
   const formasCont = document.getElementById('formas-resumen');
+  const primeraPaginaEl = document.getElementById('first-page-layout');
   const cartonesGrid = document.getElementById('cartones-grid');
   const orientacionModal = document.getElementById('orientacion-modal');
   const orientacionAceptarBtn = document.getElementById('orientacion-modal-aceptar');
@@ -1569,6 +1610,110 @@
     cartonesGrid.appendChild(fragment);
   }
 
+  function ajustarFormasParaPdf(){
+    const total = Array.isArray(formasData) ? formasData.length : 0;
+    const prevMin = document.body.style.getPropertyValue('--formas-min-width');
+    const prevScale = document.body.style.getPropertyValue('--formas-scale');
+    const prevMiniMax = document.body.style.getPropertyValue('--formas-mini-max');
+
+    let minWidth = 280;
+    let escala = 1;
+    let miniMax = 220;
+    if(total >= 5){
+      minWidth = 250;
+      escala = 0.94;
+      miniMax = 205;
+    }
+    if(total >= 8){
+      minWidth = 220;
+      escala = 0.88;
+      miniMax = 190;
+    }
+    if(total >= 12){
+      minWidth = 200;
+      escala = 0.84;
+      miniMax = 175;
+    }
+    document.body.style.setProperty('--formas-min-width', `${minWidth}px`);
+    document.body.style.setProperty('--formas-scale', escala.toFixed(3));
+    document.body.style.setProperty('--formas-mini-max', `${miniMax}px`);
+
+    return ()=>{
+      if(prevMin){ document.body.style.setProperty('--formas-min-width', prevMin); }
+      else { document.body.style.removeProperty('--formas-min-width'); }
+      if(prevScale){ document.body.style.setProperty('--formas-scale', prevScale); }
+      else { document.body.style.removeProperty('--formas-scale'); }
+      if(prevMiniMax){ document.body.style.setProperty('--formas-mini-max', prevMiniMax); }
+      else { document.body.style.removeProperty('--formas-mini-max'); }
+    };
+  }
+
+  function prepararCartonesParaPdf(cartonElements){
+    if(!Array.isArray(cartonElements) || !cartonElements.length){
+      return ()=>{};
+    }
+    const mediciones = cartonElements.map(carton=>{
+      const rect = carton.getBoundingClientRect();
+      const tabla = carton.querySelector('.pdf-carton-table');
+      const tablaRect = tabla ? tabla.getBoundingClientRect() : rect;
+      return {
+        carton,
+        tabla,
+        rect,
+        tablaRect,
+        widthStyle: carton.style.width,
+        minWidthStyle: carton.style.minWidth,
+        maxWidthStyle: carton.style.maxWidth,
+        heightStyle: carton.style.height,
+        minHeightStyle: carton.style.minHeight,
+        maxHeightStyle: carton.style.maxHeight,
+        flexStyle: carton.style.flex,
+        tablaCellSize: tabla ? tabla.style.getPropertyValue('--cell-size') : ''
+      };
+    });
+
+    const maxWidth = Math.max(...mediciones.map(m=>m.rect.width));
+    const maxHeight = Math.max(...mediciones.map(m=>m.rect.height));
+    const maxTablaWidth = Math.max(...mediciones.map(m=>m.tablaRect.width));
+    const cellSize = Number.isFinite(maxTablaWidth) && maxTablaWidth > 0
+      ? maxTablaWidth / 5
+      : null;
+
+    mediciones.forEach(m=>{
+      const anchoPx = `${maxWidth}px`;
+      const altoPx = `${maxHeight}px`;
+      m.carton.style.width = anchoPx;
+      m.carton.style.minWidth = anchoPx;
+      m.carton.style.maxWidth = anchoPx;
+      m.carton.style.height = altoPx;
+      m.carton.style.minHeight = altoPx;
+      m.carton.style.maxHeight = altoPx;
+      m.carton.style.flex = '0 0 auto';
+      if(m.tabla && Number.isFinite(cellSize) && cellSize > 0){
+        m.tabla.style.setProperty('--cell-size', `${cellSize}px`);
+      }
+    });
+
+    return ()=>{
+      mediciones.forEach(m=>{
+        m.carton.style.width = m.widthStyle;
+        m.carton.style.minWidth = m.minWidthStyle;
+        m.carton.style.maxWidth = m.maxWidthStyle;
+        m.carton.style.height = m.heightStyle;
+        m.carton.style.minHeight = m.minHeightStyle;
+        m.carton.style.maxHeight = m.maxHeightStyle;
+        m.carton.style.flex = m.flexStyle;
+        if(m.tabla){
+          if(m.tablaCellSize){
+            m.tabla.style.setProperty('--cell-size', m.tablaCellSize);
+          } else {
+            m.tabla.style.removeProperty('--cell-size');
+          }
+        }
+      });
+    };
+  }
+
   async function cargarDatosBasicos(){
     mostrarLoading('Cargando información del sorteo, por favor espera');
     try {
@@ -1655,8 +1800,7 @@
       pdfListoBtn.style.display = 'none';
     }
     const nombreArchivo = `${construirNombreArchivo()}.pdf`;
-    const resumen = document.getElementById('resumen-layout');
-    if(!resumen){
+    if(!primeraPaginaEl){
       alert('No se encontró el contenido del sorteo para generar el PDF.');
       return;
     }
@@ -1671,6 +1815,8 @@
       }
     })();
 
+    let restaurarFormas = ()=>{};
+    let restaurarCartones = ()=>{};
     try {
       await ensureFirebaseReady();
       if(generarCartonesBtn){ generarCartonesBtn.disabled = true; }
@@ -1687,6 +1833,9 @@
 
       document.body.classList.add('pdf-captura');
       await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
+
+      restaurarFormas = ajustarFormasParaPdf();
+      await new Promise(resolve=>requestAnimationFrame(resolve));
 
       const pdf = new jsPDFLib('landscape', 'pt', 'a4');
       if(typeof pdf.setCompression === 'function'){
@@ -1705,17 +1854,17 @@
         backgroundColor: '#ffffff'
       };
 
-      const resumenCanvas = await window.html2canvas(resumen, canvasOptions);
+      const primeraPaginaCanvas = await window.html2canvas(primeraPaginaEl, canvasOptions);
       const availableWidth = pageWidth - marginX * 2;
       const availableHeight = pageHeight - marginY * 2;
-      const widthRatio = availableWidth / resumenCanvas.width;
-      const heightRatio = availableHeight / resumenCanvas.height;
+      const widthRatio = availableWidth / primeraPaginaCanvas.width;
+      const heightRatio = availableHeight / primeraPaginaCanvas.height;
       const resumenRatio = Math.min(widthRatio, heightRatio);
-      const resumenWidth = resumenCanvas.width * resumenRatio;
-      const resumenHeight = resumenCanvas.height * resumenRatio;
+      const resumenWidth = primeraPaginaCanvas.width * resumenRatio;
+      const resumenHeight = primeraPaginaCanvas.height * resumenRatio;
       const resumenX = marginX + (availableWidth - resumenWidth) / 2;
       const resumenY = marginY + (availableHeight - resumenHeight) / 2;
-      pdf.addImage(resumenCanvas.toDataURL('image/jpeg', 0.85), 'JPEG', resumenX, resumenY, resumenWidth, resumenHeight);
+      pdf.addImage(primeraPaginaCanvas.toDataURL('image/jpeg', 0.85), 'JPEG', resumenX, resumenY, resumenWidth, resumenHeight);
 
       const cartonElements = Array.from(document.querySelectorAll('.pdf-carton'))
         .sort((a,b)=>{
@@ -1723,6 +1872,8 @@
           const numB = Number(b.dataset.numero || 0);
           return numA - numB;
         });
+      restaurarCartones = prepararCartonesParaPdf(cartonElements);
+      await new Promise(resolve=>requestAnimationFrame(resolve));
       if(cartonElements.length){
         const margenCartonesX = 14;
         const margenCartonesY = 18;
@@ -1816,6 +1967,8 @@
       console.error('Error generando el PDF', err);
       alert('No se pudo generar el PDF del sorteo. Intenta nuevamente.');
     } finally {
+      restaurarCartones();
+      restaurarFormas();
       document.body.classList.remove('pdf-captura');
       if(debeForzarPaisaje){
         document.body.classList.remove('forzar-orientacion-landscape');

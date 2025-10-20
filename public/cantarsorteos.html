@@ -4996,43 +4996,20 @@
       return;
     }
 
-    const pdfEstadoActual = (currentSorteoData.pdf || '').toString().trim().toLowerCase();
-    if(pdfEstadoActual !== 'si'){
-      alert('No se ha confirmado la descarga del archivo PDF de sellado de este sorteo.');
-      return;
-    }
-
-    let urlActual = (currentSorteoData.pdfUrl || pdfDestinoUrl || '').toString().trim();
-    if(!urlActual){
-      try {
-        const docRef = await db.collection('sorteos').doc(currentSorteoId).get();
-        if(docRef.exists){
-          const datos = docRef.data() || {};
-          const { url } = sincronizarDatosPdf(datos);
-          urlActual = url.toString().trim();
-        }
-      } catch (error) {
-        console.error('Error obteniendo la URL del PDF almacenado', error);
-      }
-    }
-
-    if(!urlActual){
-      alert('No hay un archivo PDF almacenado para este sorteo.');
-      return;
-    }
-
-    alert('Ya se ha confirmado la descarga del archivo PDF de sellado de este sorteo');
-
     try {
-      const ventana = window.open(urlActual, '_blank', 'noopener');
+      const destinoUrl = new URL('pdfsorteo.html', window.location.href);
+      destinoUrl.searchParams.set('s', currentSorteoId);
+      const ventana = window.open(destinoUrl.toString(), '_blank', 'noopener');
       if(!ventana){
-        window.location.assign(urlActual);
+        window.location.assign(destinoUrl.toString());
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('No se pudo abrir la ventana de PDF del sorteo', error);
+      const fallback = `pdfsorteo.html?s=${encodeURIComponent(currentSorteoId)}`;
       try {
-        window.location.assign(urlActual);
+        window.location.assign(fallback);
       } catch (fallbackError) {
-        window.location.href = urlActual;
+        window.location.href = fallback;
       }
     }
   }
