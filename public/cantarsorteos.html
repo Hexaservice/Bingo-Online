@@ -2326,16 +2326,11 @@
     function renderFooter(){
       try {
         const st = obtenerServerTime();
-        const diferencia = st?.diferencia || 0;
+        const diferencia = Number.isFinite(st?.diferencia) ? st.diferencia : 0;
         const ahora = new Date(Date.now() + diferencia);
         const locale = st?.locale || 'es-ES';
-        const zona = st?.zonaIana;
         const opcionesFecha = { year: 'numeric', month: 'long', day: 'numeric' };
         const opcionesHora = { hour: '2-digit', minute: '2-digit', hour12: true };
-        if(zona){
-          opcionesFecha.timeZone = zona;
-          opcionesHora.timeZone = zona;
-        }
         const fechaStr = ahora.toLocaleDateString(locale, opcionesFecha);
         let horaStr = ahora.toLocaleTimeString(locale, opcionesHora);
         horaStr = horaStr

@@ -126,8 +126,7 @@ function obtenerHora() {
   const hora = d.toLocaleTimeString(serverTime.locale, {
     hour: '2-digit',
     minute: '2-digit',
-    hour12: true,
-    timeZone: serverTime.zonaIana
+    hour12: true
   });
   return limpiarMeridiano(hora);
 }
