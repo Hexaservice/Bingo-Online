@@ -195,10 +195,40 @@
       gap: clamp(12px, 1.6vw, 18px);
     }
     #first-page-layout {
-      display: grid;
-      gap: clamp(12px, 1.8vw, 20px);
-      align-items: start;
-      grid-template-columns: minmax(0, 1fr);
+      width: 100%;
+    }
+    .pdf-tabla-principal {
+      width: 100%;
+      border-collapse: collapse;
+      border-spacing: 0;
+      table-layout: fixed;
+      background: transparent;
+    }
+    .pdf-tabla-principal td {
+      padding: 0;
+      vertical-align: top;
+    }
+    .pdf-tabla-formas {
+      width: 100%;
+      border-collapse: collapse;
+      border-spacing: 0;
+      table-layout: fixed;
+      background: transparent;
+    }
+    .pdf-tabla-formas td {
+      padding: 0;
+      vertical-align: top;
+    }
+    .forma-slot {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      width: 100%;
+    }
+    .forma-slot > .forma-item {
+      flex: 1 1 auto;
+      width: 100%;
+      height: 100%;
     }
     #resumen-layout {
       display: grid;
@@ -319,17 +349,13 @@
       text-shadow: 0 0 6px rgba(255,255,255,0.9);
     }
     #formas-resumen {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: clamp(8px, 1.2vw, 16px);
       width: 100%;
-      margin: 0;
-      align-items: stretch;
+    }
+    #formas-resumen tbody,
+    #formas-resumen tr {
+      width: 100%;
     }
     @media (min-width: 1024px) {
-      #first-page-layout {
-        grid-template-columns: minmax(0, 0.62fr) minmax(0, 0.38fr);
-      }
       #resumen-layout {
         grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
         grid-auto-flow: dense;
@@ -588,9 +614,6 @@
       }
     }
     @media (min-width: 700px) {
-      body.forzar-orientacion-landscape #formas-resumen {
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      }
       body.forzar-orientacion-landscape .forma-item {
         grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
       }
@@ -922,12 +945,6 @@
       }
     }
     @media (orientation: landscape) and (min-width: 700px) {
-      #first-page-layout {
-        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-      }
-      #formas-resumen {
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      }
       .forma-item {
         grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
       }
@@ -955,9 +972,6 @@
       }
     }
     @media (max-width: 520px) {
-      #formas-resumen {
-        grid-template-columns: 1fr;
-      }
       .forma-resumen {
         padding: 10px;
         gap: 6px;
@@ -1001,8 +1015,6 @@
       box-sizing: border-box;
     }
     body.pdf-captura #first-page-layout {
-      grid-template-columns: minmax(0, 0.62fr) minmax(0, 0.38fr);
-      gap: clamp(16px, 2.4vw, 26px);
       width: 100%;
     }
     body.pdf-captura #resumen-layout {
@@ -1065,10 +1077,13 @@
       font-size: clamp(1.05rem, 1.6vw, 1.25rem);
     }
     body.pdf-captura #formas-resumen {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(var(--formas-min-width), 1fr));
-      gap: clamp(10px, 1.8vw, 20px);
-      align-items: stretch;
+      width: 100%;
+    }
+    body.pdf-captura #formas-resumen tr {
+      width: 100%;
+    }
+    body.pdf-captura #formas-resumen td {
+      width: calc(100% / 3);
     }
     body.pdf-captura #formas-resumen .forma-item {
       width: 100%;
@@ -1168,7 +1183,11 @@
   </div>
   <div id="pdf-wrapper">
     <div id="first-page-layout">
-      <div id="resumen-layout">
+      <table class="pdf-tabla-principal">
+        <tbody>
+          <tr>
+            <td>
+              <div id="resumen-layout">
         <div id="resumen-header" class="resumen-bloque">
           <div class="header-logo">
             <img id="logo" src="https://i.imgur.com/twjhNtZ.png" alt="Bingo Online">
@@ -1206,8 +1225,18 @@
           <h2>CRÉDITOS TOTALES A REPARTIR</h2>
           <div id="total-premios">0</div>
         </div>
-      </div>
-      <section id="formas-resumen"></section>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <table id="formas-resumen" class="pdf-tabla-formas">
+                <tbody></tbody>
+              </table>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
     <section id="cartones-section">
       <h2>Cartones del sorteo</h2>
@@ -2462,17 +2491,52 @@
   }
 
   function renderFormas(){
+    if(!formasCont){ return; }
     formasCont.innerHTML = '';
-    if(!formasData.length){
-      formasCont.innerHTML = '<div class="cartones-placeholder">No se registraron formas para este sorteo.</div>';
+
+    const columnas = 3;
+    const sinFormas = !formasData.length;
+    const cuerpo = document.createElement('tbody');
+
+    if(sinFormas){
+      const fila = document.createElement('tr');
+      const celda = document.createElement('td');
+      celda.colSpan = columnas;
+      const placeholder = document.createElement('div');
+      placeholder.className = 'cartones-placeholder';
+      placeholder.textContent = 'No se registraron formas para este sorteo.';
+      celda.appendChild(placeholder);
+      fila.appendChild(celda);
+      cuerpo.appendChild(fila);
+      formasCont.appendChild(cuerpo);
       return;
     }
+
     formasData.sort((a,b)=>{
       const idxA = Number(a.idx) || 0;
       const idxB = Number(b.idx) || 0;
       return idxA - idxB;
     });
-    formasData.forEach(forma=>{
+
+    const filas = Math.max(2, Math.ceil(formasData.length / columnas));
+    const slots = [];
+    for(let fila = 0; fila < filas; fila++){
+      const tr = document.createElement('tr');
+      for(let col = 0; col < columnas; col++){
+        const td = document.createElement('td');
+        td.className = 'pdf-forma-celda';
+        const slot = document.createElement('div');
+        slot.className = 'forma-slot';
+        td.appendChild(slot);
+        tr.appendChild(td);
+        slots.push(slot);
+      }
+      cuerpo.appendChild(tr);
+    }
+
+    formasCont.appendChild(cuerpo);
+
+    formasData.forEach((forma, indice)=>{
       const color = obtenerColorForma(forma.idx || 1);
       const item = document.createElement('div');
       item.className = 'forma-item';
@@ -2545,7 +2609,10 @@
 
       item.appendChild(contenedor);
       item.appendChild(miniCarton);
-      formasCont.appendChild(item);
+      const slot = slots[indice];
+      if(slot){
+        slot.appendChild(item);
+      }
     });
   }
 

@@ -4950,7 +4950,33 @@
 
   async function abrirPDF(){
     if(!currentSorteoId || !currentSorteoData){ alert('Selecciona un sorteo primero.'); return; }
+
     const estadoActual = (currentSorteoData.estado || '').toString().toLowerCase();
+    if(estadoActual === 'finalizado'){
+      let estadoPdfResultado = (currentSorteoData.pdfresul || '').toString().trim().toLowerCase();
+      if(estadoPdfResultado !== 'si'){
+        try {
+          const docFinal = await db.collection('sorteos').doc(currentSorteoId).get();
+          if(docFinal.exists){
+            const datosFinal = docFinal.data() || {};
+            estadoPdfResultado = (datosFinal.pdfresul || '').toString().trim().toLowerCase() || estadoPdfResultado;
+            currentSorteoData.pdfresul = estadoPdfResultado;
+          }
+        } catch (errFinal) {
+          console.warn('No se pudo actualizar el estado del PDF de resultados', errFinal);
+        }
+      }
+
+      if(estadoPdfResultado === 'no' || !estadoPdfResultado){
+        abrirPdfResultados();
+        return;
+      }
+
+      alert('El sorteo ya está finalizado y se confirmó la descarga del PDF de resultados.');
+      abrirPdfResultados();
+      return;
+    }
+
     if(estadoActual !== 'sellado'){
       if(esModoManual()){
         alert('Para generar el archivo PDF de sellado el sorteo debe estar Sellado primero');
