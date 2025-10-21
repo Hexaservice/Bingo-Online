@@ -208,6 +208,12 @@
     .forma-header{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;font-family:'Bangers',cursive;font-size:0.8rem;line-height:1;text-shadow:1px 1px 0 #000;}
     .carton td{cursor:pointer;font-size:1.8rem;text-shadow:0 0 3px green;}
     .carton td.free{background:radial-gradient(circle,#ffffff,#ffff00);display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:#4B0082;}
+    .carton-center-info{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1;text-transform:uppercase;font-weight:bold;}
+    .carton-center-max,.carton-center-next{display:flex;flex-direction:column;align-items:center;gap:1px;font-size:0.6rem;letter-spacing:0.5px;}
+    .carton-center-max-label,.carton-center-next-label{font-size:0.55rem;color:inherit;}
+    .carton-center-max{color:#4B0082;}
+    .carton-center-next{color:#006400;}
+    #carton-num-max{font-size:1.2rem;color:#d2691e;text-shadow:0 0 4px #fff,0 0 8px rgba(0,0,0,0.3);font-family:'Bangers',cursive;display:block;}
     .carton td.error{border:2px solid red;}
     .carton-back{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:10px;backface-visibility:hidden;transform:rotateY(180deg);background:linear-gradient(white,gray);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:5px;overflow:hidden;}
     .carton-back img{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;height:auto;opacity:0.15;object-fit:contain;pointer-events:none;z-index:0;}
@@ -252,7 +258,7 @@
     #mis-cartones-icon{width:24px;height:24px;cursor:pointer;}
     #mis-cartones-btn-container{position:relative;display:inline-block;margin-left:5px;}
     #guardados-count{position:absolute;top:-8px;right:-8px;background:#006400;color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-family:'Bangers',cursive;z-index:10;}
-    #carton-num{font-family:'Bangers',cursive;text-shadow:0 0 5px green;}
+    #carton-num{font-family:'Bangers',cursive;text-shadow:0 0 5px green;font-size:1rem;color:#006400;display:block;}
     #login-footer{margin-top:20px;}
     #fecha-hora,#derechos{font-size:0.7rem;text-align:center;color:#000;}
     #derechos{font-size:0.6rem;}
@@ -459,6 +465,12 @@ let unsubscribeConsecutivoCarton=null;
 let ultimoNumeroCartonAsignado=0;
 let siguienteNumeroCarton=1;
 
+function formatearNumeroCarton(valor){
+  const numero=Number(valor);
+  if(!Number.isFinite(numero) || numero<0) return '0000';
+  return String(Math.floor(numero)).padStart(4,'0');
+}
+
 function toNumberSafe(value,fallback=0){
   if(typeof value==='number'){
     return Number.isFinite(value)?value:fallback;
@@ -497,15 +509,25 @@ function actualizarNumeroCartonLocal(ultimo){
 }
 
 function refrescarNumeroCartonVisual(forzar=false){
+  const maxEl=document.getElementById('carton-num-max');
+  if(maxEl){
+    if(currentSorteo && currentSorteoEstado==='Activo'){
+      maxEl.textContent=formatearNumeroCarton(ultimoNumeroCartonAsignado);
+    }else{
+      maxEl.textContent='----';
+    }
+  }
   const numEl=document.getElementById('carton-num');
   if(!numEl) return;
   if(!forzar && consultando) return;
-  const numeroMostrar=Number(siguienteNumeroCarton);
-  if(Number.isFinite(numeroMostrar) && numeroMostrar>0){
-    numEl.textContent=String(numeroMostrar).padStart(4,'0');
-  }else{
-    numEl.textContent='----';
+  if(currentSorteo && currentSorteoEstado==='Activo'){
+    const numeroMostrar=Number(siguienteNumeroCarton);
+    if(Number.isFinite(numeroMostrar) && numeroMostrar>0){
+      numEl.textContent=formatearNumeroCarton(numeroMostrar);
+      return;
+    }
   }
+  numEl.textContent='----';
 }
 
 function escucharConsecutivoCarton(sorteoId){
@@ -740,10 +762,34 @@ function toggleForma(idx){
         td.dataset.row=r; td.dataset.col=c;
         if(r===2 && c===2){
           td.classList.add('free');
-          const span=document.createElement('span');
-          span.id='carton-num';
-          span.textContent='0';
-          td.appendChild(span);
+          const info=document.createElement('div');
+          info.className='carton-center-info';
+
+          const maxBlock=document.createElement('div');
+          maxBlock.className='carton-center-max';
+          const maxLabel=document.createElement('span');
+          maxLabel.className='carton-center-max-label';
+          maxLabel.textContent='Máx.';
+          const maxSpan=document.createElement('span');
+          maxSpan.id='carton-num-max';
+          maxSpan.textContent='----';
+          maxBlock.appendChild(maxLabel);
+          maxBlock.appendChild(maxSpan);
+
+          const nextBlock=document.createElement('div');
+          nextBlock.className='carton-center-next';
+          const nextLabel=document.createElement('span');
+          nextLabel.className='carton-center-next-label';
+          nextLabel.textContent='Sig.';
+          const nextSpan=document.createElement('span');
+          nextSpan.id='carton-num';
+          nextSpan.textContent='----';
+          nextBlock.appendChild(nextLabel);
+          nextBlock.appendChild(nextSpan);
+
+          info.appendChild(maxBlock);
+          info.appendChild(nextBlock);
+          td.appendChild(info);
           td.addEventListener('click',flipCard);
         }else{
           td.addEventListener('click',()=>openModal(td));
@@ -856,7 +902,10 @@ function toggleForma(idx){
     const doc=await sorteoRef.get();
     if(!doc.exists) return;
     const data=doc.data();
-  const valor=toNumberSafe(data.valorCarton,0);
+    if(data && typeof data.estado==='string'){
+      currentSorteoEstado=data.estado;
+    }
+    const valor=toNumberSafe(data.valorCarton,0);
   const jug=toNumberSafe(data.cartonesjugando,0);
   const gratisJug=toNumberSafe(data.cartonesgratisjugando,0);
   maxCartonesGratis=Math.max(0,Math.trunc(toNumberSafe(data.maxcartongratis,0)));
@@ -997,6 +1046,7 @@ function toggleForma(idx){
     currentSorteoTipo=s.tipo;
     currentSorteoEstado=s.estado||'';
     escucharConsecutivoCarton(currentSorteo);
+    refrescarNumeroCartonVisual(true);
     ocultarMensajeSellado();
     const btn=document.getElementById('sorteo-btn');
     btn.textContent=s.nombre;
