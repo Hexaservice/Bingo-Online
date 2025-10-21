@@ -16,7 +16,7 @@ npm install
 node initUsers.js
 node initBanks.js
 ```
-Este segundo script poblará la colección `Bancos` con los bancos.
+Este segundo script poblará la colección `Bancos` con los bancos iniciales.
 
 Debe disponer de un archivo `serviceAccountKey.json` con las credenciales de Firebase o definir la variable `GOOGLE_APPLICATION_CREDENTIALS` apuntando al archivo de claves.
 
@@ -112,6 +112,7 @@ Cada secreto debe contener el valor correspondiente del proyecto de Firebase. Si
 - Calcule fechas y horas apoyándose en `public/js/timezone.js` y en el desfase `serverTime.diferencia`; evite usar directamente `Date.now()` sin normalizar al huso horario configurado, tanto en el cliente como en los procesos automáticos.
 - Cuando cree o actualice sorteos, guarde los campos `fecha`, `hora` y `horacierre` en formato `DD/MM/YYYY` y `HH:mm` (24 horas) para asegurar que `cronActualizarEstadosSorteos.js` pueda interpretar los datos sin errores.
 - Documente cualquier ajuste en la colección `Variablesglobales/Parametros` (especialmente `ZonaHoraria`, `Pais` y `Aplicacion`) y coordínelo con los responsables del cron para mantener sincronizados el frontend y las tareas programadas.
+
 
 
 
