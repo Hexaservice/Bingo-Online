@@ -503,14 +503,33 @@ function actualizarNumeroCartonLocal(ultimo){
   refrescarNumeroCartonVisual();
 }
 
+function obtenerNumeroCartonSimulado(){
+  let pagados=Number(cartonesJugando);
+  let gratis=Number(cartonesGratisJugando);
+  if(!Number.isFinite(pagados) || pagados<0){
+    pagados=0;
+  }
+  if(!Number.isFinite(gratis) || gratis<0){
+    gratis=0;
+  }
+  const total=Math.floor(pagados+gratis+1);
+  if(!Number.isFinite(total) || total<=0){
+    return null;
+  }
+  return total;
+}
+
 function refrescarNumeroCartonVisual(){
   const maxEl=document.getElementById('carton-num-max');
   if(!maxEl) return;
-  if(currentSorteo && currentSorteoEstado==='Activo'){
-    maxEl.textContent=formatearNumeroCarton(ultimoNumeroCartonAsignado);
-  }else{
-    maxEl.textContent='----';
+  if(currentSorteo){
+    const proximoNumero=obtenerNumeroCartonSimulado();
+    if(proximoNumero){
+      maxEl.textContent=formatearNumeroCarton(proximoNumero);
+      return;
+    }
   }
+  maxEl.textContent='----';
 }
 
 function escucharConsecutivoCarton(sorteoId){
