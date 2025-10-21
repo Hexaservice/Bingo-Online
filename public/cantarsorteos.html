@@ -741,6 +741,16 @@
     .modal.modal-ganadores.activa {
       display: flex;
     }
+    .modal.modal-nuevos-ganadores {
+      inset: 0;
+      padding: 16px;
+      box-sizing: border-box;
+      background: rgba(8,16,32,0.82);
+      z-index: 1700;
+    }
+    .modal.modal-nuevos-ganadores.activa {
+      display: flex;
+    }
     .modal-ganadores .modal-contenido {
       background: #fff;
       border-radius: 18px;
@@ -754,6 +764,72 @@
       flex-direction: column;
       gap: 12px;
       box-sizing: border-box;
+    }
+    .modal-nuevos-ganadores .modal-contenido {
+      background: linear-gradient(160deg, rgba(24,24,24,0.94), rgba(96,24,24,0.94));
+      border-radius: 20px;
+      padding: 22px 26px;
+      max-width: min(480px, 92vw);
+      width: min(480px, 92vw);
+      box-shadow: 0 20px 45px rgba(0,0,0,0.45);
+      border: 3px solid rgba(255,160,0,0.55);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      align-items: center;
+      text-align: center;
+    }
+    #nuevos-ganadores-titulo {
+      font-family: 'Bangers', cursive;
+      font-size: 1.9rem;
+      letter-spacing: 1px;
+      margin: 0;
+      color: #fff;
+      text-shadow: 0 0 14px rgba(255,120,0,0.95), 0 0 28px rgba(255,69,0,0.75);
+    }
+    #nuevos-ganadores-lista {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+    }
+    .nuevos-ganadores-linea {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #fefefe;
+      text-shadow: 0 0 10px rgba(0,0,0,0.7);
+    }
+    .nuevos-ganadores-linea .nuevos-ganadores-forma {
+      color: var(--forma-color, #ffd54f);
+      text-shadow: 0 0 8px rgba(255,255,255,0.95);
+      font-weight: 700;
+    }
+    .nuevos-ganadores-linea .nuevos-ganadores-cantidad {
+      font-family: 'Bangers', cursive;
+      font-size: 1.5rem;
+      color: #fff;
+      text-shadow: 0 0 14px rgba(255,140,0,0.9);
+      margin-left: 6px;
+    }
+    #nuevos-ganadores-aceptar {
+      font-family: 'Bangers', cursive;
+      font-size: 1.25rem;
+      padding: 10px 34px;
+      border-radius: 999px;
+      border: 3px solid rgba(255,171,64,0.85);
+      background: linear-gradient(160deg, rgba(255,152,0,0.92), rgba(255,234,167,0.95));
+      color: #3b1b00;
+      cursor: pointer;
+      box-shadow: 0 14px 32px rgba(0,0,0,0.4);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    #nuevos-ganadores-aceptar:hover {
+      transform: translateY(-1px) scale(1.03);
+      box-shadow: 0 18px 36px rgba(0,0,0,0.45);
+    }
+    #nuevos-ganadores-aceptar:active {
+      transform: translateY(1px) scale(0.97);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.35);
     }
     .info-overlay {
       position: fixed;
@@ -1528,6 +1604,13 @@
       <div id="modal-ganadores-sin" class="modal-mensaje"></div>
     </div>
   </div>
+  <div id="nuevos-ganadores-modal" class="modal modal-nuevos-ganadores" role="dialog" aria-modal="true" aria-labelledby="nuevos-ganadores-titulo" aria-hidden="true">
+    <div class="modal-contenido" role="document">
+      <h2 id="nuevos-ganadores-titulo">HAY GANADOR O GANADORES NUEVOS</h2>
+      <div id="nuevos-ganadores-lista"></div>
+      <button id="nuevos-ganadores-aceptar" type="button">Aceptar</button>
+    </div>
+  </div>
   <div id="mensaje-area">Selecciona un sorteo para administrar su estado.</div>
   <div id="footer">
     <div id="fecha-hora"></div>
@@ -1641,6 +1724,9 @@
   const modalGanadoresSubtituloEl = document.getElementById('modal-ganadores-subtitulo');
   const modalGanadoresListaEl = document.getElementById('modal-ganadores-lista');
   const modalGanadoresSinEl = document.getElementById('modal-ganadores-sin');
+  const nuevosGanadoresModalEl = document.getElementById('nuevos-ganadores-modal');
+  const nuevosGanadoresListaEl = document.getElementById('nuevos-ganadores-lista');
+  const nuevosGanadoresAceptarBtn = document.getElementById('nuevos-ganadores-aceptar');
   const modalComplementariosEl = document.getElementById('complementarios-modal');
   const modalComplementariosMensajeEl = document.getElementById('complementarios-modal-mensaje');
   const modalComplementariosAceptarBtn = document.getElementById('complementarios-modal-aceptar');
@@ -1716,6 +1802,10 @@
   let sincronizacionMetadatosEnCurso = false;
   let sincronizacionResultadosNecesaria = false;
   let sincronizacionResultadosTimeout = null;
+  let cantosInicializados = false;
+  let nuevosGanadoresModalActivo = false;
+  let mostrarComplementariosPendiente = false;
+  let evaluandoCantoActual = false;
 
   function manejarAceptarConfirmacionCanto(){
     cerrarConfirmacionCanto(true);
@@ -2156,6 +2246,16 @@
   if(modalGanadoresEl){
     modalGanadoresEl.addEventListener('click', manejarClickModalGanadores);
   }
+  if(nuevosGanadoresAceptarBtn){
+    nuevosGanadoresAceptarBtn.addEventListener('click', cerrarModalNuevosGanadores);
+  }
+  if(nuevosGanadoresModalEl){
+    nuevosGanadoresModalEl.addEventListener('click', evento=>{
+      if(evento.target === nuevosGanadoresModalEl){
+        cerrarModalNuevosGanadores();
+      }
+    });
+  }
   document.addEventListener('keydown', manejarTeclaModalGanadores);
   if(modalComplementariosAceptarBtn){
     modalComplementariosAceptarBtn.addEventListener('click', cerrarModalComplementarios);
@@ -2179,6 +2279,9 @@
   }
   document.addEventListener('keydown', evento=>{
     if(evento.key === 'Escape'){
+      if(nuevosGanadoresModalActivo){
+        cerrarModalNuevosGanadores();
+      }
       if(modalComplementariosEl?.classList?.contains('activa')){
         cerrarModalComplementarios();
       }
@@ -2767,6 +2870,9 @@
   }
 
   function procesarCantos(datos){
+    const mapaGanadoresPrevio = capturarResumenGanadores(cartonesGanadoresPorForma);
+    const longitudAnterior = cantosOrdenados.length;
+    const esPrimerProcesamiento = !cantosInicializados;
     const payload = Array.isArray(datos)
       ? { numeros: datos }
       : (datos && typeof datos === 'object' ? datos : { numeros: [] });
@@ -2806,6 +2912,7 @@
         resultadoMapa.set(numero, estado);
       }
     });
+    evaluandoCantoActual = true;
     cantosOrdenados = normalizados;
     cantosIndiceMap = new Map();
     normalizados.forEach((numero, idx)=>{
@@ -2816,6 +2923,15 @@
     cantosResultadoMap = resultadoMapa;
     actualizarNumerosNoJugados();
     calcularGanadores();
+    revisarGanadoresNuevos({
+      mapaPrevio: mapaGanadoresPrevio,
+      longitudAnterior,
+      longitudActual: normalizados.length,
+      esPrimerProcesamiento
+    });
+    cantosInicializados = true;
+    evaluandoCantoActual = false;
+    gestionarComplementariosPendientes();
   }
 
   function obtenerIndiceLimiteGanador(totalCantos){
@@ -3040,14 +3156,14 @@
     if(!todasFormasConGanadores){
       cerrarModalComplementarios();
       notificacionComplementariosMostrada = false;
+      mostrarComplementariosPendiente = false;
     } else {
       const transicion = !estadoAnterior
         && Number.isInteger(indiceUltimoGanador)
         && cantosOrdenados.length > 0
         && indiceUltimoGanador === cantosOrdenados.length - 1;
       if(transicion && !notificacionComplementariosMostrada){
-        abrirModalComplementarios();
-        notificacionComplementariosMostrada = true;
+        mostrarComplementariosPendiente = true;
       }
     }
     actualizarEstilosCantos();
@@ -3145,6 +3261,7 @@
     });
     evaluarEstadoFormasGanadoras();
     actualizarBotonesFormas();
+    gestionarComplementariosPendientes();
   }
 
   function actualizarNumerosNoJugados(){
@@ -3594,8 +3711,106 @@
   }
 
   function manejarTeclaModalGanadores(event){
-    if(event.key === 'Escape' && modalGanadoresEl?.classList?.contains('activa')){
+    if(event.key !== 'Escape') return;
+    if(modalGanadoresEl?.classList?.contains('activa')){
       cerrarModalGanadores();
+      return;
+    }
+    if(nuevosGanadoresModalActivo){
+      cerrarModalNuevosGanadores();
+    }
+  }
+
+  function crearLineaNuevosGanadores(nombre, color, total){
+    const linea = document.createElement('div');
+    linea.className = 'nuevos-ganadores-linea';
+    if(color){
+      linea.style.setProperty('--forma-color', color);
+    }
+    const textoInicio = document.createTextNode('Ganadores con ');
+    const nombreSpan = document.createElement('span');
+    nombreSpan.className = 'nuevos-ganadores-forma';
+    nombreSpan.textContent = nombre;
+    const textoMedio = document.createTextNode(': ');
+    const cantidadSpan = document.createElement('span');
+    cantidadSpan.className = 'nuevos-ganadores-cantidad';
+    cantidadSpan.textContent = String(total);
+    linea.append(textoInicio, nombreSpan, textoMedio, cantidadSpan);
+    return linea;
+  }
+
+  function mostrarModalNuevosGanadores(detalles){
+    if(!nuevosGanadoresModalEl || !nuevosGanadoresListaEl) return;
+    nuevosGanadoresListaEl.innerHTML = '';
+    detalles.forEach(detalle=>{
+      const linea = crearLineaNuevosGanadores(detalle.nombre, detalle.color, detalle.total);
+      nuevosGanadoresListaEl.appendChild(linea);
+    });
+    nuevosGanadoresModalEl.classList.add('activa');
+    nuevosGanadoresModalEl.setAttribute('aria-hidden', 'false');
+    nuevosGanadoresModalActivo = true;
+    if(nuevosGanadoresAceptarBtn){
+      nuevosGanadoresAceptarBtn.focus({ preventScroll: true });
+    }
+  }
+
+  function cerrarModalNuevosGanadores(){
+    if(!nuevosGanadoresModalEl) return;
+    nuevosGanadoresModalEl.classList.remove('activa');
+    nuevosGanadoresModalEl.setAttribute('aria-hidden', 'true');
+    if(nuevosGanadoresListaEl){
+      nuevosGanadoresListaEl.innerHTML = '';
+    }
+    nuevosGanadoresModalActivo = false;
+    gestionarComplementariosPendientes();
+  }
+
+  function capturarResumenGanadores(map){
+    const resumen = new Map();
+    if(!(map instanceof Map)) return resumen;
+    map.forEach((info, indice)=>{
+      const idxNumero = Number(indice);
+      if(!Number.isFinite(idxNumero)) return;
+      const total = Array.isArray(info?.cartones) ? info.cartones.length : 0;
+      resumen.set(idxNumero, { total });
+    });
+    return resumen;
+  }
+
+  function revisarGanadoresNuevos({ mapaPrevio, longitudAnterior, longitudActual, esPrimerProcesamiento }){
+    const anterior = Number(longitudAnterior) || 0;
+    const actual = Number(longitudActual) || 0;
+    if(actual <= anterior) return;
+    if(esPrimerProcesamiento) return;
+    const nuevos = [];
+    cartonesGanadoresPorForma.forEach((registro, indice)=>{
+      const idxNumero = Number(indice);
+      if(!Number.isFinite(idxNumero)) return;
+      const totalActual = Array.isArray(registro?.cartones) ? registro.cartones.length : 0;
+      if(totalActual <= 0) return;
+      const previo = mapaPrevio instanceof Map ? Number(mapaPrevio.get(idxNumero)?.total || 0) : 0;
+      if(totalActual > previo){
+        const forma = registro?.forma || obtenerResumenForma(idxNumero) || { idx: idxNumero };
+        const nombreForma = (forma?.nombre && forma.nombre.trim()) ? forma.nombre.trim() : `Forma ${String(idxNumero).padStart(2,'0')}`;
+        const colorForma = obtenerColorParaForma(forma?.idx || idxNumero || 1);
+        nuevos.push({ nombre: nombreForma, color: colorForma, total: totalActual });
+      }
+    });
+    if(!nuevos.length) return;
+    mostrarModalNuevosGanadores(nuevos);
+  }
+
+  function gestionarComplementariosPendientes(){
+    if(!mostrarComplementariosPendiente) return;
+    if(nuevosGanadoresModalActivo || evaluandoCantoActual) return;
+    if(!todasFormasConGanadores){
+      mostrarComplementariosPendiente = false;
+      return;
+    }
+    mostrarComplementariosPendiente = false;
+    if(!notificacionComplementariosMostrada){
+      notificacionComplementariosMostrada = true;
+      abrirModalComplementarios();
     }
   }
 
@@ -3612,6 +3827,17 @@
     todasFormasConGanadores = false;
     indiceUltimoGanador = null;
     notificacionComplementariosMostrada = false;
+    cantosInicializados = false;
+    mostrarComplementariosPendiente = false;
+    evaluandoCantoActual = false;
+    nuevosGanadoresModalActivo = false;
+    if(nuevosGanadoresModalEl){
+      nuevosGanadoresModalEl.classList.remove('activa');
+      nuevosGanadoresModalEl.setAttribute('aria-hidden', 'true');
+    }
+    if(nuevosGanadoresListaEl){
+      nuevosGanadoresListaEl.innerHTML = '';
+    }
     cartonesResultadoRegistrado = new Map();
     sincronizacionMetadatosNecesaria = false;
     if(sincronizacionMetadatosTimeout){
