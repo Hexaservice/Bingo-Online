@@ -459,6 +459,21 @@ let unsubscribeConsecutivoCarton=null;
 let ultimoNumeroCartonAsignado=0;
 let siguienteNumeroCarton=1;
 
+function formatearNumeroCartonInformativo(numero){
+  if(!currentSorteo){
+    return {texto:'----', titulo:'Selecciona un sorteo válido para ver los cartones registrados'};
+  }
+  if(currentSorteoEstado!=='Activo'){
+    return {texto:'----', titulo:'El sorteo seleccionado no permite realizar jugadas'};
+  }
+  const valor=Number(numero);
+  if(!Number.isFinite(valor) || valor<1){
+    return {texto:'0000', titulo:'Aún no hay cartones registrados en este sorteo'};
+  }
+  const padded=String(valor).padStart(4,'0');
+  return {texto:padded, titulo:`Máximo cartón registrado: ${padded}`};
+}
+
 function toNumberSafe(value,fallback=0){
   if(typeof value==='number'){
     return Number.isFinite(value)?value:fallback;
@@ -500,12 +515,9 @@ function refrescarNumeroCartonVisual(forzar=false){
   const numEl=document.getElementById('carton-num');
   if(!numEl) return;
   if(!forzar && consultando) return;
-  const numeroMostrar=Number(siguienteNumeroCarton);
-  if(Number.isFinite(numeroMostrar) && numeroMostrar>0){
-    numEl.textContent=String(numeroMostrar).padStart(4,'0');
-  }else{
-    numEl.textContent='----';
-  }
+  const {texto,titulo}=formatearNumeroCartonInformativo(ultimoNumeroCartonAsignado);
+  numEl.textContent=texto;
+  numEl.title=titulo;
 }
 
 function escucharConsecutivoCarton(sorteoId){
