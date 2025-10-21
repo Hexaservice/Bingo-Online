@@ -164,7 +164,7 @@
     .datos-sorteo div{font-weight:bold;font-size:1.2rem;}
     #valor-carton span,#cartones-jugando span{font-size:1.5rem;}
     #valor-carton-valor,#premio-valor{animation:pulse 1s infinite;display:inline-block;}
-    #cartones-jugando-valor,#carton-num,#gratis-plus,#cartones-gratis-jugando{animation:wiggle 1s infinite;display:inline-block;}
+    #cartones-jugando-valor,#gratis-plus,#cartones-gratis-jugando{animation:wiggle 1s infinite;display:inline-block;}
     #cartones-gratis-jugando{color:#00008b;}
     #valor-carton{color:green;display:flex;align-items:center;gap:5px;}
     #cartones-jugando{color:purple;display:flex;align-items:center;gap:5px;}
@@ -208,12 +208,8 @@
     .forma-header{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;font-family:'Bangers',cursive;font-size:0.8rem;line-height:1;text-shadow:1px 1px 0 #000;}
     .carton td{cursor:pointer;font-size:1.8rem;text-shadow:0 0 3px green;}
     .carton td.free{background:radial-gradient(circle,#ffffff,#ffff00);display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:#4B0082;}
-    .carton-center-info{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1;text-transform:uppercase;font-weight:bold;}
-    .carton-center-max,.carton-center-next{display:flex;flex-direction:column;align-items:center;gap:1px;font-size:0.6rem;letter-spacing:0.5px;}
-    .carton-center-max-label,.carton-center-next-label{font-size:0.55rem;color:inherit;}
-    .carton-center-max{color:#4B0082;}
-    .carton-center-next{color:#006400;}
-    #carton-num-max{font-size:1.2rem;color:#d2691e;text-shadow:0 0 4px #fff,0 0 8px rgba(0,0,0,0.3);font-family:'Bangers',cursive;display:block;}
+    .carton-center-info{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1;font-weight:bold;text-transform:none;}
+    #carton-num-max{font-size:1.4rem;color:#006400;text-shadow:0 0 4px #fff,0 0 6px rgba(0,0,0,0.2);font-family:'Poppins',sans-serif;display:block;animation:wiggle 1s infinite;}
     .carton td.error{border:2px solid red;}
     .carton-back{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:10px;backface-visibility:hidden;transform:rotateY(180deg);background:linear-gradient(white,gray);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:5px;overflow:hidden;}
     .carton-back img{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;height:auto;opacity:0.15;object-fit:contain;pointer-events:none;z-index:0;}
@@ -258,7 +254,6 @@
     #mis-cartones-icon{width:24px;height:24px;cursor:pointer;}
     #mis-cartones-btn-container{position:relative;display:inline-block;margin-left:5px;}
     #guardados-count{position:absolute;top:-8px;right:-8px;background:#006400;color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-family:'Bangers',cursive;z-index:10;}
-    #carton-num{font-family:'Bangers',cursive;text-shadow:0 0 5px green;font-size:1rem;color:#006400;display:block;}
     #login-footer{margin-top:20px;}
     #fecha-hora,#derechos{font-size:0.7rem;text-align:center;color:#000;}
     #derechos{font-size:0.6rem;}
@@ -508,26 +503,14 @@ function actualizarNumeroCartonLocal(ultimo){
   refrescarNumeroCartonVisual();
 }
 
-function refrescarNumeroCartonVisual(forzar=false){
+function refrescarNumeroCartonVisual(){
   const maxEl=document.getElementById('carton-num-max');
-  if(maxEl){
-    if(currentSorteo && currentSorteoEstado==='Activo'){
-      maxEl.textContent=formatearNumeroCarton(ultimoNumeroCartonAsignado);
-    }else{
-      maxEl.textContent='----';
-    }
-  }
-  const numEl=document.getElementById('carton-num');
-  if(!numEl) return;
-  if(!forzar && consultando) return;
+  if(!maxEl) return;
   if(currentSorteo && currentSorteoEstado==='Activo'){
-    const numeroMostrar=Number(siguienteNumeroCarton);
-    if(Number.isFinite(numeroMostrar) && numeroMostrar>0){
-      numEl.textContent=formatearNumeroCarton(numeroMostrar);
-      return;
-    }
+    maxEl.textContent=formatearNumeroCarton(ultimoNumeroCartonAsignado);
+  }else{
+    maxEl.textContent='----';
   }
-  numEl.textContent='----';
 }
 
 function escucharConsecutivoCarton(sorteoId){
@@ -764,31 +747,10 @@ function toggleForma(idx){
           td.classList.add('free');
           const info=document.createElement('div');
           info.className='carton-center-info';
-
-          const maxBlock=document.createElement('div');
-          maxBlock.className='carton-center-max';
-          const maxLabel=document.createElement('span');
-          maxLabel.className='carton-center-max-label';
-          maxLabel.textContent='Máx.';
           const maxSpan=document.createElement('span');
           maxSpan.id='carton-num-max';
           maxSpan.textContent='----';
-          maxBlock.appendChild(maxLabel);
-          maxBlock.appendChild(maxSpan);
-
-          const nextBlock=document.createElement('div');
-          nextBlock.className='carton-center-next';
-          const nextLabel=document.createElement('span');
-          nextLabel.className='carton-center-next-label';
-          nextLabel.textContent='Sig.';
-          const nextSpan=document.createElement('span');
-          nextSpan.id='carton-num';
-          nextSpan.textContent='----';
-          nextBlock.appendChild(nextLabel);
-          nextBlock.appendChild(nextSpan);
-
-          info.appendChild(maxBlock);
-          info.appendChild(nextBlock);
+          info.appendChild(maxSpan);
           td.appendChild(info);
           td.addEventListener('click',flipCard);
         }else{
@@ -799,7 +761,7 @@ function toggleForma(idx){
       board.appendChild(tr);
     }
     document.querySelector('.carton-back').addEventListener('click',flipCard);
-    refrescarNumeroCartonVisual(true);
+    refrescarNumeroCartonVisual();
   }
 
   function openModal(cell){
@@ -856,13 +818,11 @@ function toggleForma(idx){
     const wrapper=document.getElementById('carton-wrapper');
     wrapper.classList.remove('flipped');
     wrapper.style.transform='';
-    const numEl=document.getElementById('carton-num');
-    numEl.style.animation='';
     consultando=false;
     seleccionadoJugado=null;
     resetForma();
     saveToCookie();
-    refrescarNumeroCartonVisual(true);
+    refrescarNumeroCartonVisual();
   }
 
   function setBoard(carton){
@@ -1046,7 +1006,7 @@ function toggleForma(idx){
     currentSorteoTipo=s.tipo;
     currentSorteoEstado=s.estado||'';
     escucharConsecutivoCarton(currentSorteo);
-    refrescarNumeroCartonVisual(true);
+    refrescarNumeroCartonVisual();
     ocultarMensajeSellado();
     const btn=document.getElementById('sorteo-btn');
     btn.textContent=s.nombre;
@@ -1766,11 +1726,6 @@ function toggleForma(idx){
       return;
     }
     setBoardFromPosiciones(seleccionadoJugado.posiciones);
-    const numEl=document.getElementById('carton-num');
-    if(seleccionadoJugado.cartonNum!==undefined){
-      numEl.textContent=seleccionadoJugado.cartonNum.toString().padStart(4,'0');
-    }
-    numEl.style.animation='none';
     consultando=true;
     document.getElementById('jugados-modal').style.display='none';
     editandoTipo='jugado';
@@ -1862,11 +1817,6 @@ function toggleForma(idx){
     if(await confirm('¿Desea cargar el cartón seleccionado? Se sobreescribirán los datos actuales.')){
       desactivarModoEdicion();
       setBoardFromPosiciones(seleccionadoJugado.posiciones);
-      const numEl=document.getElementById('carton-num');
-      if(seleccionadoJugado.cartonNum!==undefined){
-        numEl.textContent=seleccionadoJugado.cartonNum.toString().padStart(4,'0');
-      }
-      numEl.style.animation='none';
       consultando=true;
       document.getElementById('jugados-modal').style.display='none';
     }
