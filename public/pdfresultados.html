@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF Sorteo</title>
+  <title>Resultado del sorteo</title>
   <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -16,7 +16,7 @@
       font-family: 'Poppins', sans-serif;
       background: #ffffff;
       margin: 0;
-      padding: clamp(16px, 2.5vw, 28px) clamp(12px, 2vw, 20px);
+      padding: clamp(12px, 1.6vw, 18px) clamp(8px, 1.4vw, 16px);
       box-sizing: border-box;
       color: #1a1a1a;
     }
@@ -84,7 +84,7 @@
       transform: none;
       box-shadow: none;
     }
-    #generar-cartones-btn {
+    #generar-resultados-btn {
       background: linear-gradient(#005bb5, #33a0ff);
     }
     #generar-pdf-btn {
@@ -92,8 +92,14 @@
       display: none;
     }
     #pdf-listo-btn {
-      background: linear-gradient(#b85c00, #ffaf40);
+      position: relative;
       display: none;
+      background: linear-gradient(#b85c00, #ffaf40);
+      overflow: visible;
+    }
+    #pdf-listo-btn.pdf-disponible {
+      box-shadow: 0 0 18px rgba(255, 214, 102, 0.6);
+      transform: translateY(-2px);
     }
     .orientacion-modal {
       position: fixed;
@@ -184,20 +190,88 @@
       margin: 0 auto;
       text-align: center;
       width: min(1440px, 100%);
-      padding: 0 clamp(8px, 1.6vw, 18px);
+      padding: 0 clamp(6px, 1vw, 14px);
       display: grid;
-      gap: clamp(18px, 2.4vw, 26px);
+      gap: clamp(12px, 1.6vw, 18px);
     }
     #first-page-layout {
-      display: grid;
-      gap: clamp(18px, 2.6vw, 28px);
-      margin: 0 auto;
       width: 100%;
+    }
+    #first-page-grid {
+      display: grid;
+      gap: clamp(14px, 2vw, 24px);
+      align-items: stretch;
+    }
+    @media (min-width: 900px) {
+      #first-page-grid {
+        grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+      }
+    }
+    body.pdf-captura #first-page-grid {
+      grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+    }
+    .first-page-section {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(12px, 1.6vw, 18px);
+      background: rgba(255,255,255,0.96);
+      border-radius: 16px;
+      padding: clamp(14px, 1.6vw, 20px);
+      box-shadow: 0 6px 18px rgba(15,35,95,0.08);
+      min-width: 0;
+      min-height: 0;
+    }
+    body.pdf-captura .first-page-section {
+      padding: clamp(18px, 2.2vw, 26px);
+      box-shadow: none;
+      border: 1px solid rgba(11,83,148,0.12);
+      background: rgba(255,255,255,0.98);
+    }
+    .formas-header {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
       text-align: left;
+    }
+    .formas-header h2 {
+      font-family: 'Bangers', cursive;
+      font-size: clamp(1.4rem, 4vw, 1.9rem);
+      color: #0b5394;
+      margin: 0;
+      letter-spacing: 0.6px;
+    }
+    .formas-header p {
+      margin: 0;
+      font-weight: 600;
+      color: #415a77;
+      font-size: clamp(0.92rem, 2.2vw, 1.02rem);
+    }
+    #formas-resumen {
+      --formas-col-min: clamp(240px, 26vw, 300px);
+      flex: 1 1 auto;
+      display: grid;
+      gap: clamp(12px, 1.6vw, 18px);
+      grid-template-columns: repeat(auto-fit, minmax(var(--formas-min-width, var(--formas-col-min)), 1fr));
+      width: 100%;
+      align-content: start;
+    }
+    body.pdf-captura #formas-resumen {
+      --formas-col-min: 260px;
+      grid-template-columns: repeat(auto-fit, minmax(var(--formas-min-width, var(--formas-col-min)), 1fr));
+      gap: clamp(16px, 2vw, 20px);
+    }
+    .forma-slot {
+      display: flex;
+      flex-direction: column;
+    }
+    .forma-slot > .forma-item {
+      flex: 1 1 auto;
+      width: 100%;
+      height: 100%;
     }
     #resumen-layout {
       display: grid;
-      gap: clamp(12px, 2vw, 20px);
+      gap: clamp(8px, 1.4vw, 16px);
       margin: 0 auto;
       width: 100%;
       text-align: left;
@@ -210,14 +284,14 @@
       background: #ffffff;
       border: 1px solid rgba(11,83,148,0.16);
       border-radius: 14px;
-      padding: clamp(16px, 2.2vw, 22px);
+      padding: clamp(12px, 1.6vw, 18px);
       box-shadow: 0 4px 16px rgba(0,0,0,0.06);
     }
     #resumen-header {
       display: flex;
       flex-wrap: nowrap;
       align-items: center;
-      gap: clamp(10px, 1.8vw, 18px);
+      gap: clamp(8px, 1.4vw, 14px);
       text-align: left;
       min-width: 0;
       grid-column: 1 / -1;
@@ -262,11 +336,11 @@
       display: grid;
       grid-template-columns: 1fr auto;
       align-items: center;
-      gap: clamp(8px, 1.4vw, 14px);
+      gap: clamp(6px, 1.2vw, 12px);
       font-size: 0.95rem;
       color: #0b5394;
       text-align: left;
-      padding: clamp(16px, 2.2vw, 22px);
+      padding: clamp(12px, 1.6vw, 18px);
       border-radius: 14px;
       background: #ffffff;
       border: 1px solid rgba(11,83,148,0.16);
@@ -294,7 +368,7 @@
       display: flex;
       flex-wrap: wrap;
       align-items: baseline;
-      gap: clamp(8px, 1.6vw, 16px);
+      gap: clamp(6px, 1.2vw, 14px);
       margin: 0;
       justify-content: center;
       text-align: center;
@@ -312,14 +386,6 @@
       font-weight: 700;
       color: #0b6623;
       text-shadow: 0 0 6px rgba(255,255,255,0.9);
-    }
-    #formas-resumen {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: clamp(10px, 1.8vw, 18px);
-      width: 100%;
-      margin: clamp(18px, 3vw, 28px) auto 0;
-      align-items: stretch;
     }
     @media (min-width: 1024px) {
       #resumen-layout {
@@ -407,18 +473,21 @@
       flex: 0 0 auto;
     }
     .forma-mini-carton-wrapper {
+      position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: clamp(6px, 1.4vw, 10px);
-      background: #ffffff;
+      padding: clamp(8px, 1.6vw, 14px);
+      background: transparent;
       height: 100%;
       align-self: stretch;
       min-width: 0;
-      border-left: 1px solid rgba(0,0,0,0.08);
+      border-left: 1px solid rgba(0,0,0,0.06);
       width: 100%;
       max-width: clamp(150px, 30vw, 220px);
+      min-height: clamp(150px, 32vw, 220px);
       box-sizing: border-box;
+      overflow: visible;
     }
     .forma-mini-carton {
       border-collapse: separate;
@@ -426,16 +495,20 @@
       background: linear-gradient(160deg, rgba(255,255,255,0.95), var(--forma-color-super-suave, #f3f7ff));
       border-radius: 8px;
       overflow: hidden;
-      width: 100%;
+      width: min(100%, clamp(140px, 28vw, 220px));
       height: auto;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.12);
-      position: relative;
-      z-index: 1;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.18);
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 5;
       aspect-ratio: 5 / 6;
       display: grid;
       grid-template-columns: repeat(5, 1fr);
       grid-auto-rows: 1fr;
-      max-width: 100%;
+      max-width: none;
+      pointer-events: none;
     }
     .forma-mini-carton thead,
     .forma-mini-carton tbody,
@@ -484,7 +557,7 @@
       height: 100%;
     }
     #cartones-section {
-      margin-top: clamp(24px, 3.4vw, 32px);
+      margin-top: clamp(18px, 2.4vw, 26px);
       text-align: left;
     }
     #cartones-section h2 {
@@ -502,7 +575,7 @@
       align-items: flex-start;
       width: 100%;
     }
-    .pdf-carton {
+    .pdf-carton { 
       display: flex;
       flex-direction: column;
       gap: 4px;
@@ -516,6 +589,12 @@
       page-break-inside: avoid;
       width: 100%;
       max-width: clamp(170px, 26vw, 204px);
+    }
+    .carton-resultado[data-estado="perdedor"]{
+      opacity: 0.96;
+    }
+    .carton-resultado[data-estado="ganador"] .pdf-carton-datos .numero{
+      color: #145a32;
     }
     @media (orientation: landscape) and (min-width: 1024px) {
       #pdf-wrapper {
@@ -567,9 +646,6 @@
       }
     }
     @media (min-width: 700px) {
-      body.forzar-orientacion-landscape #formas-resumen {
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      }
       body.forzar-orientacion-landscape .forma-item {
         grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
       }
@@ -578,6 +654,7 @@
         align-items: stretch;
         margin-top: auto;
         margin-bottom: auto;
+        min-height: clamp(150px, 28vw, 220px);
       }
     }
     .pdf-carton.gratis .pdf-carton-table {
@@ -638,6 +715,50 @@
       font-size: inherit;
       color: inherit;
     }
+    .pdf-carton.ganador {
+      border: 2px solid rgba(34, 139, 34, 0.4);
+      box-shadow: 0 8px 20px rgba(34,139,34,0.18);
+      border-radius: 14px;
+      padding: 6px;
+      background: linear-gradient(135deg, rgba(230,255,230,0.85), rgba(255,255,255,0.9));
+    }
+    .pdf-carton-table td.celda-cantada {
+      background: linear-gradient(140deg, rgba(186, 241, 195, 0.92), rgba(139, 215, 154, 0.78));
+      color: #0a3d1a;
+      font-weight: 700;
+      box-shadow: inset 0 0 0 1px rgba(12, 61, 26, 0.15);
+    }
+    .pdf-carton-table td.celda-canto-penalizado {
+      background: #ffffff;
+      color: #1f1f1f;
+      font-weight: 700;
+      box-shadow: inset 0 0 0 2px rgba(0,0,0,0.08);
+    }
+    .pdf-carton-table td.celda-forma {
+      position: relative;
+      background: linear-gradient(160deg, rgba(255,255,255,0.95), rgba(255,255,255,0.35));
+      border: 2px solid rgba(0,0,0,0.25);
+    }
+    .pdf-carton-table td.celda-forma::after {
+      content: '';
+      position: absolute;
+      inset: 1px;
+      border-radius: 6px;
+      background: linear-gradient(140deg, rgba(255,255,255,0.85), rgba(255,255,255,0.35));
+      box-shadow: inset 0 0 0 2px rgba(0,0,0,0.1);
+      pointer-events: none;
+    }
+    .pdf-carton-table td.celda-forma {
+      border-color: rgba(0,0,0,0.25);
+    }
+    .pdf-carton-table td.celda-forma .cell-content {
+      position: relative;
+      z-index: 1;
+      color: #0d2c53;
+    }
+    .pdf-carton-table td.celda-forma {
+      background-image: linear-gradient(135deg, rgba(255,255,255,0.85), var(--forma-color-base, rgba(0,128,0,0.35)));
+    }
     .pdf-carton-datos {
       display: flex;
       flex-direction: column;
@@ -674,6 +795,42 @@
     .pdf-carton.gratis .pdf-carton-datos .tipo,
     .pdf-carton-datos .tipo.tipo-gratis {
       color: #005bbb;
+    }
+    .forma-extra-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 4px 8px;
+      margin-top: 6px;
+      font-size: 0.78rem;
+      color: #163768;
+    }
+    .forma-extra-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      background: rgba(255,255,255,0.82);
+      border: 1px solid rgba(11,83,148,0.18);
+      border-radius: 8px;
+      padding: 6px 8px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.45);
+    }
+    .forma-extra-item.forma-extra-cartones {
+      grid-column: 1 / -1;
+    }
+    .extra-label {
+      font-weight: 700;
+      color: #0b5394;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .extra-value {
+      font-size: 0.78rem;
+      color: #0d2345;
+      word-break: break-word;
+    }
+    .extra-value.sin-datos {
+      color: #a62828;
     }
     .cartones-placeholder {
       grid-column: 1 / -1;
@@ -820,9 +977,6 @@
       }
     }
     @media (orientation: landscape) and (min-width: 700px) {
-      #formas-resumen {
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      }
       .forma-item {
         grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
       }
@@ -850,9 +1004,6 @@
       }
     }
     @media (max-width: 520px) {
-      #formas-resumen {
-        grid-template-columns: 1fr;
-      }
       .forma-resumen {
         padding: 10px;
         gap: 6px;
@@ -896,18 +1047,16 @@
       box-sizing: border-box;
     }
     body.pdf-captura #first-page-layout {
-      display: grid;
-      gap: clamp(14px, 2vw, 22px);
       width: 100%;
     }
     body.pdf-captura #resumen-layout {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       column-gap: clamp(16px, 2.4vw, 24px);
       row-gap: clamp(12px, 2vw, 22px);
       width: 100%;
       max-width: none;
-      min-height: clamp(560px, 56vw, 700px);
+      min-height: clamp(520px, 48vw, 640px);
       margin: 0 auto;
       align-content: stretch;
       grid-auto-flow: dense;
@@ -959,12 +1108,6 @@
     body.pdf-captura .dato-inline .dato-valor {
       font-size: clamp(1.05rem, 1.6vw, 1.25rem);
     }
-    body.pdf-captura #formas-resumen {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(var(--formas-min-width), 1fr));
-      gap: clamp(10px, 1.8vw, 20px);
-      align-items: stretch;
-    }
     body.pdf-captura #formas-resumen .forma-item {
       width: 100%;
       min-height: 100%;
@@ -987,6 +1130,7 @@
     body.pdf-captura .forma-mini-carton-wrapper {
       padding: clamp(8px, 1.4vw, 14px);
       border-left-width: 0.6px;
+      min-height: clamp(160px, 34vw, 230px);
       max-width: var(--formas-mini-max);
     }
     body.pdf-captura #cartones-section {
@@ -1048,9 +1192,9 @@
   </div>
   <button id="salir-btn"><span class="tri">&#9664;</span><span class="label">Salir</span></button>
   <div id="acciones-fixed">
-    <button id="generar-cartones-btn">Generar cartones</button>
+    <button id="generar-resultados-btn">Resultados</button>
     <button id="generar-pdf-btn">Generar PDF</button>
-    <button id="pdf-listo-btn">PDF listo</button>
+    <button id="pdf-listo-btn">PDF LISTO</button>
   </div>
   <div id="orientacion-modal" class="orientacion-modal" role="dialog" aria-modal="true" aria-labelledby="orientacion-modal-titulo" aria-hidden="true">
     <div class="orientacion-modal-contenido">
@@ -1062,46 +1206,56 @@
   </div>
   <div id="pdf-wrapper">
     <div id="first-page-layout">
-      <div id="resumen-layout">
+      <div id="first-page-grid">
+        <section id="resumen-section" class="first-page-section">
+          <div id="resumen-layout">
         <div id="resumen-header" class="resumen-bloque">
           <div class="header-logo">
             <img id="logo" src="https://i.imgur.com/twjhNtZ.png" alt="Bingo Online">
           </div>
           <div class="header-info">
-          <h1 id="nombre-sorteo">Sorteo</h1>
-          <div id="tipo-sorteo-titulo"></div>
+            <h1 id="nombre-sorteo">Sorteo</h1>
+            <div id="tipo-sorteo-titulo"></div>
+          </div>
         </div>
-      </div>
-      <div class="dato-inline">
-        <span class="dato-label">Tipo de sorteo:</span>
-        <span id="dato-tipo" class="dato-valor">-</span>
-      </div>
-      <div class="dato-inline">
-        <span class="dato-label">Fecha del sorteo:</span>
-        <span id="dato-fecha" class="dato-valor">-</span>
-      </div>
-      <div class="dato-inline">
-        <span class="dato-label">Hora de cierre:</span>
-        <span id="dato-cierre" class="dato-valor">-</span>
-      </div>
-      <div class="dato-inline">
-        <span class="dato-label">Hora del sorteo:</span>
-        <span id="dato-hora" class="dato-valor">-</span>
-      </div>
-      <div class="dato-inline">
-        <span class="dato-label">Valor del cartón:</span>
-        <span id="dato-valor" class="dato-valor">-</span>
-      </div>
-      <div class="dato-inline">
-        <span class="dato-label">CARTONES GRATIS MÁXIMOS POR JUGADOR:</span>
-        <span id="dato-maxgratis" class="dato-valor">-</span>
-      </div>
+        <div class="dato-inline">
+          <span class="dato-label">Tipo de sorteo:</span>
+          <span id="dato-tipo" class="dato-valor">-</span>
+        </div>
+        <div class="dato-inline">
+          <span class="dato-label">Fecha del sorteo:</span>
+          <span id="dato-fecha" class="dato-valor">-</span>
+        </div>
+        <div class="dato-inline">
+          <span class="dato-label">Hora de cierre:</span>
+          <span id="dato-cierre" class="dato-valor">-</span>
+        </div>
+        <div class="dato-inline">
+          <span class="dato-label">Hora del sorteo:</span>
+          <span id="dato-hora" class="dato-valor">-</span>
+        </div>
+        <div class="dato-inline">
+          <span class="dato-label">Valor del cartón:</span>
+          <span id="dato-valor" class="dato-valor">-</span>
+        </div>
+        <div class="dato-inline">
+          <span class="dato-label">CARTONES GRATIS MÁXIMOS POR JUGADOR:</span>
+          <span id="dato-maxgratis" class="dato-valor">-</span>
+        </div>
         <div class="totales-header resumen-bloque">
           <h2>CRÉDITOS TOTALES A REPARTIR</h2>
           <div id="total-premios">0</div>
         </div>
+          </div>
+        </section>
+        <section id="formas-section" class="first-page-section">
+          <div class="formas-header">
+            <h2>Formas premiadas</h2>
+            <p>Cartones ganadores y distribución de premios del sorteo.</p>
+          </div>
+          <div id="formas-resumen" class="formas-grid"></div>
+        </section>
       </div>
-      <section id="formas-resumen"></section>
     </div>
     <section id="cartones-section">
       <h2>Cartones del sorteo</h2>
@@ -1125,7 +1279,7 @@
   }
 
   const salirBtn = document.getElementById('salir-btn');
-  const generarCartonesBtn = document.getElementById('generar-cartones-btn');
+  const generarResultadosBtn = document.getElementById('generar-resultados-btn');
   const pdfBtn = document.getElementById('generar-pdf-btn');
   const pdfListoBtn = document.getElementById('pdf-listo-btn');
   const loadingOverlay = document.getElementById('loading-overlay');
@@ -1140,17 +1294,30 @@
   const datoTipoEl = document.getElementById('dato-tipo');
   const totalPremiosEl = document.getElementById('total-premios');
   const formasCont = document.getElementById('formas-resumen');
-  const primeraPaginaEl = document.getElementById('first-page-layout');
   const cartonesGrid = document.getElementById('cartones-grid');
   const orientacionModal = document.getElementById('orientacion-modal');
   const orientacionAceptarBtn = document.getElementById('orientacion-modal-aceptar');
+  let generarPdfTrasOrientacion = false;
 
   let sorteoData = null;
   let formasData = [];
   let cartonesData = [];
-  let pdfNombreBase = 'pdf-sorteo';
+  let cartonesMapa = new Map();
+  let cantosOrdenados = [];
+  let cantosIndiceMap = new Map();
+  let cantosResultadoMap = new Map();
+  let cartonesGanadoresPorForma = new Map();
+  let formasPorCarton = new Map();
+  let indiceUltimoGanador = null;
+  let todasFormasConGanadores = false;
+  let pdfNombreBase = 'result_sorteo';
   let cartonesCargados = false;
   let firebaseReadyPromise = null;
+  const usuariosCache = {
+    porUserId: new Map(),
+    porAlias: new Map(),
+    porEmail: new Map()
+  };
 
   function ensureFirebaseReady(){
     if(firebaseReadyPromise) return firebaseReadyPromise;
@@ -1166,6 +1333,758 @@
   }
 
   const coloresFormas = ['#006400', '#b8860b', '#00008b', '#4b0082', '#8b4513', '#d2691e'];
+
+  function normalizarNumero(valor){
+    if(typeof valor === 'number' && Number.isFinite(valor)) return valor;
+    if(typeof valor === 'string'){
+      const texto = valor.trim();
+      if(!texto) return null;
+      const match = texto.toUpperCase().match(/^([BINGO])[-\s]?0*(\d{1,2})$/);
+      if(match){
+        const numero = parseInt(match[2],10);
+        return Number.isFinite(numero)?numero:null;
+      }
+      const numeroPlano = parseInt(texto,10);
+      if(Number.isFinite(numeroPlano)) return numeroPlano;
+    }
+    return null;
+  }
+
+  function normalizarPosicionesEntrada(posiciones){
+    const lista = Array.isArray(posiciones)?posiciones:[];
+    const resultado = [];
+    lista.forEach(pos=>{
+      if(!pos) return;
+      const fila = Number(pos?.r ?? pos?.row ?? pos?.fila);
+      const col = Number(pos?.c ?? pos?.col ?? pos?.columna);
+      const valor = normalizarNumero(pos?.valor ?? pos?.numero ?? pos?.value);
+      if(Number.isInteger(fila) && Number.isInteger(col)){
+        resultado.push({ r: fila, c: col, valor: valor ?? null });
+      }
+    });
+    return resultado;
+  }
+
+  function normalizarEmail(valor){
+    if(typeof valor !== 'string') return '';
+    return valor.trim().toLowerCase();
+  }
+
+  function sanitizarId(valor){
+    const texto = (valor || '').toString();
+    const limpio = texto.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+    const reemplazado = limpio.replace(/[^a-zA-Z0-9_-]+/g, '_');
+    return reemplazado.replace(/_{2,}/g, '_').replace(/^_+|_+$/g, '') || 'registro';
+  }
+
+  function normalizarInfoUsuario(id, data = {}){
+    const email = (data.email || id || '').toString();
+    let nombre = (data.nombre || data.name || '').toString().trim();
+    const apellido = (data.apellido || data.lastName || '').toString().trim();
+    if(!nombre && (data.name || data.apellido)){
+      nombre = [data.name, data.apellido].filter(Boolean).join(' ').trim();
+    } else if(nombre && apellido && !nombre.toLowerCase().includes(apellido.toLowerCase())){
+      nombre = `${nombre} ${apellido}`.trim();
+    }
+    const alias = (data.alias || data.aliasJugador || data.aliascarton || '').toString();
+    const uid = (data.uid || data.userId || data.id || '').toString();
+    return {
+      email,
+      alias,
+      nombre,
+      uid,
+      role: (data.role || '').toString()
+    };
+  }
+
+  function almacenarUsuarioEnCaches(info){
+    if(!info) return;
+    const emailNorm = normalizarEmail(info.email);
+    if(emailNorm && !usuariosCache.porEmail.has(emailNorm)){
+      usuariosCache.porEmail.set(emailNorm, info);
+    }
+    if(info.uid && !usuariosCache.porUserId.has(info.uid)){
+      usuariosCache.porUserId.set(info.uid, info);
+    }
+    if(info.alias){
+      const aliasClave = info.alias.toLowerCase();
+      if(!usuariosCache.porAlias.has(aliasClave)){
+        usuariosCache.porAlias.set(aliasClave, info);
+      }
+    }
+  }
+
+  async function obtenerUsuarioPorDocId(id){
+    const candidatos = [];
+    if(id){ candidatos.push(id); }
+    const normalizado = normalizarEmail(id);
+    if(normalizado && !candidatos.includes(normalizado)){ candidatos.push(normalizado); }
+    for(const docId of candidatos){
+      try {
+        await ensureFirebaseReady();
+        const snap = await db.collection('users').doc(docId).get();
+        if(snap.exists){
+          const info = normalizarInfoUsuario(snap.id, snap.data() || {});
+          almacenarUsuarioEnCaches(info);
+          return info;
+        }
+      } catch (err) {
+        console.warn('No se pudo obtener usuario por ID de documento', docId, err);
+      }
+    }
+    if(normalizado && !usuariosCache.porEmail.has(normalizado)){
+      usuariosCache.porEmail.set(normalizado, null);
+    }
+    return null;
+  }
+
+  async function obtenerUsuarioPorUserId(userId){
+    const clave = (userId || '').toString().trim();
+    if(!clave) return null;
+    if(usuariosCache.porUserId.has(clave)){
+      return usuariosCache.porUserId.get(clave);
+    }
+    let info = null;
+    try {
+      info = await obtenerUsuarioPorDocId(clave);
+    } catch (err) {
+      console.warn('No se pudo obtener usuario por coincidencia directa', err);
+    }
+    if(!info){
+      try {
+        await ensureFirebaseReady();
+        const snap = await db.collection('users').where('uid','==',clave).limit(1).get();
+        if(!snap.empty){
+          const doc = snap.docs[0];
+          info = normalizarInfoUsuario(doc.id, doc.data() || {});
+          almacenarUsuarioEnCaches(info);
+        }
+      } catch (err) {
+        console.warn('No se pudo obtener usuario por UID', err);
+      }
+    }
+    usuariosCache.porUserId.set(clave, info);
+    if(info){ almacenarUsuarioEnCaches(info); }
+    return info;
+  }
+
+  async function obtenerUsuarioPorAlias(alias){
+    const clave = (alias || '').toString().trim().toLowerCase();
+    if(!clave) return null;
+    if(usuariosCache.porAlias.has(clave)){
+      return usuariosCache.porAlias.get(clave);
+    }
+    let info = null;
+    let restaurarFormas = ()=>{};
+    let restaurarCartones = ()=>{};
+    try {
+      await ensureFirebaseReady();
+      const snap = await db.collection('users').where('alias','==',alias).limit(1).get();
+      if(!snap.empty){
+        const doc = snap.docs[0];
+        info = normalizarInfoUsuario(doc.id, doc.data() || {});
+        almacenarUsuarioEnCaches(info);
+      }
+    } catch (err) {
+      console.warn('No se pudo obtener usuario por alias', err);
+    }
+    usuariosCache.porAlias.set(clave, info);
+    if(info){ almacenarUsuarioEnCaches(info); }
+    return info;
+  }
+
+  async function resolverIdentidadPersona(datos = {}){
+    const aliasBase = (datos.alias || datos.aliasJugador || datos.aliascarton || '').toString().trim();
+    const emailBase = normalizarEmail(datos.email || datos.gmail || datos.IDbilletera || '');
+    const userIdBase = (datos.userId || datos.usuarioId || '').toString().trim();
+    if(emailBase && usuariosCache.porEmail.has(emailBase)){
+      const cacheado = usuariosCache.porEmail.get(emailBase);
+      if(cacheado){
+        return {
+          email: emailBase,
+          alias: aliasBase || cacheado.alias || '',
+          nombre: cacheado.nombre || '',
+          userId: cacheado.uid || userIdBase || ''
+        };
+      }
+      return { email: emailBase, alias: aliasBase, nombre: '', userId: userIdBase };
+    }
+    let info = null;
+    if(userIdBase){
+      info = await obtenerUsuarioPorUserId(userIdBase);
+    }
+    if(!info && emailBase){
+      info = await obtenerUsuarioPorDocId(emailBase);
+    }
+    if(!info && aliasBase){
+      info = await obtenerUsuarioPorAlias(aliasBase);
+    }
+    const resultado = {
+      email: normalizarEmail(info?.email || emailBase),
+      alias: aliasBase || (info?.alias || ''),
+      nombre: info?.nombre || info?.name || '',
+      userId: info?.uid || userIdBase || ''
+    };
+    if(!resultado.nombre && info){
+      const nombreInferido = [info.name, info.apellido].filter(Boolean).join(' ').trim();
+      if(nombreInferido) resultado.nombre = nombreInferido;
+    }
+    if(resultado.email){
+      almacenarUsuarioEnCaches({
+        ...(info || {}),
+        email: resultado.email,
+        alias: resultado.alias,
+        nombre: resultado.nombre,
+        uid: resultado.userId
+      });
+    }
+    return resultado;
+  }
+
+  function extraerColaboradoresDesdeValor(lista, valor){
+    if(!valor) return;
+    if(Array.isArray(valor)){
+      valor.forEach(item=>extraerColaboradoresDesdeValor(lista, item));
+      return;
+    }
+    if(typeof valor === 'string'){
+      const texto = valor.trim();
+      if(!texto) return;
+      if(texto.includes('@')){
+        lista.push({ email: texto });
+      }else{
+        lista.push({ alias: texto });
+      }
+      return;
+    }
+    if(typeof valor === 'object'){
+      const candidato = {
+        email: valor.email || valor.gmail || valor.correo || '',
+        alias: valor.alias || valor.aliasJugador || valor.apodo || '',
+        nombre: valor.nombre || valor.name || valor.displayName || '',
+        userId: valor.userId || valor.uid || ''
+      };
+      if(candidato.email || candidato.alias || candidato.nombre || candidato.userId){
+        lista.push(candidato);
+      }
+    }
+  }
+
+  function obtenerCandidatosColaboradores(data){
+    const lista = [];
+    if(!data || typeof data !== 'object') return lista;
+    const clavesDirectas = [
+      'colaboradores', 'colaboradoresDepositos', 'colaboradoresPagos',
+      'responsablesDepositos', 'responsablesPagos', 'responsableDepositos', 'responsablePagos',
+      'gestoresDepositos', 'gestoresPagos', 'gestoresTransacciones', 'colaboradoresTransacciones'
+    ];
+    clavesDirectas.forEach(clave=>extraerColaboradoresDesdeValor(lista, data[clave]));
+    Object.entries(data).forEach(([clave, valor])=>{
+      if(clavesDirectas.includes(clave)) return;
+      const lower = clave.toLowerCase();
+      if(lower.includes('colab') || lower.includes('gestor') || lower.includes('respons') || lower.includes('adminpagos')){
+        extraerColaboradoresDesdeValor(lista, valor);
+      }
+    });
+    return lista;
+  }
+
+  async function obtenerColaboradoresProcesados(){
+    const candidatos = obtenerCandidatosColaboradores(sorteoData || {});
+    const mapa = new Map();
+    for(const candidato of candidatos){
+      const identidad = await resolverIdentidadPersona(candidato);
+      const clave = identidad.email
+        ? `email::${identidad.email}`
+        : (identidad.alias ? `alias::${identidad.alias.toLowerCase()}` : '');
+      if(!clave) continue;
+      if(!mapa.has(clave)){
+        mapa.set(clave, {
+          gmail: identidad.email || '',
+          alias: identidad.alias || candidato.alias || '',
+          nombre: identidad.nombre || candidato.nombre || '',
+          userIds: new Set(),
+          creditos: 0
+        });
+      }
+      const registro = mapa.get(clave);
+      if(identidad.userId){ registro.userIds.add(identidad.userId); }
+      if(candidato.userId){ registro.userIds.add(candidato.userId); }
+      if(!registro.nombre && (candidato.nombre || identidad.nombre)){
+        registro.nombre = identidad.nombre || candidato.nombre || '';
+      }
+      if(!registro.alias && (candidato.alias || identidad.alias)){
+        registro.alias = identidad.alias || candidato.alias || '';
+      }
+    }
+    return Array.from(mapa.values()).map(item=>({
+      gmail: item.gmail,
+      alias: item.alias,
+      nombre: item.nombre,
+      userIds: Array.from(item.userIds),
+      creditos: item.creditos
+    }));
+  }
+
+  async function obtenerGanadoresAgrupados(){
+    if(!cartonesMapa || cartonesMapa.size === 0){
+      try {
+        await cargarCartones();
+      } catch (err) {
+        console.warn('No se pudieron cargar los cartones al generar las solicitudes de Centro de Pagos', err);
+      }
+    }
+    if(!formasData || !formasData.length){
+      try {
+        await cargarDatosBasicos();
+      } catch (err) {
+        console.warn('No se pudieron recargar las formas del sorteo al generar las solicitudes de Centro de Pagos', err);
+      }
+    }
+    if(!(cartonesGanadoresPorForma instanceof Map)){
+      cartonesGanadoresPorForma = new Map();
+    }
+    if(cartonesGanadoresPorForma.size === 0){
+      calcularResultados();
+    }
+    const jugadoresMapa = new Map();
+    cartonesGanadoresPorForma.forEach(registro=>{
+      const forma = registro?.forma;
+      const ganadores = Array.isArray(registro?.cartones) ? registro.cartones : [];
+      if(!forma || !ganadores.length) return;
+      const totalCreditos = obtenerCreditosForma(forma);
+      const totalGratis = obtenerCartonesGratisForma(forma);
+      const cantidad = ganadores.length || 1;
+      const creditosPorGanador = cantidad > 0 ? Math.floor(totalCreditos / cantidad) : 0;
+      const gratisPorGanador = cantidad > 0 ? Math.floor(totalGratis / cantidad) : 0;
+      ganadores.forEach(carton=>{
+        const claveUsuario = (carton?.userId || carton?.usuarioId || '').toString().trim();
+        const correoCarton = (carton?.gmail || carton?.email || carton?.IDbilletera || '').toString().trim();
+        const aliasCarton = (carton?.alias || carton?.aliasCarton || '').toString();
+        const clave = claveUsuario || (correoCarton ? `correo::${correoCarton.toLowerCase()}` : `alias::${aliasCarton.toLowerCase()}`);
+        if(!jugadoresMapa.has(clave)){
+          jugadoresMapa.set(clave, {
+            userId: carton?.userId || carton?.usuarioId || '',
+            email: correoCarton,
+            alias: aliasCarton,
+            creditos: 0,
+            cartonesGratis: 0,
+            formas: [],
+            cartonesIds: new Set()
+          });
+        }
+        const jugador = jugadoresMapa.get(clave);
+        if(carton?.id){ jugador.cartonesIds.add(carton.id); }
+        if(!jugador.userId && (carton?.userId || carton?.usuarioId)){ jugador.userId = carton?.userId || carton?.usuarioId; }
+        if(!jugador.email && correoCarton){ jugador.email = correoCarton; }
+        if(!jugador.alias && aliasCarton){ jugador.alias = aliasCarton; }
+        jugador.creditos += creditosPorGanador;
+        jugador.cartonesGratis += gratisPorGanador;
+        jugador.formas.push({
+          idx: Number(forma?.idx) || null,
+          nombre: forma?.nombre || '',
+          creditos: creditosPorGanador,
+          cartonesGratis: gratisPorGanador
+        });
+      });
+    });
+
+    const agregados = new Map();
+    for(const jugador of jugadoresMapa.values()){
+      const identidad = await resolverIdentidadPersona(jugador);
+      const claveResumen = identidad.email
+        ? `email::${identidad.email}`
+        : (identidad.alias ? `alias::${identidad.alias.toLowerCase()}` : '');
+      if(!claveResumen) continue;
+      if(!agregados.has(claveResumen)){
+        agregados.set(claveResumen, {
+          gmail: identidad.email || '',
+          alias: identidad.alias || jugador.alias || '',
+          nombre: identidad.nombre || '',
+          creditos: 0,
+          cartonesGratis: 0,
+          formas: [],
+          cartonesIds: new Set(),
+          userIds: new Set()
+        });
+      }
+      const resumen = agregados.get(claveResumen);
+      if(identidad.userId){ resumen.userIds.add(identidad.userId); }
+      if(jugador.userId){ resumen.userIds.add(jugador.userId); }
+      jugador.cartonesIds.forEach(id=>resumen.cartonesIds.add(id));
+      resumen.creditos += jugador.creditos;
+      resumen.cartonesGratis += jugador.cartonesGratis;
+      resumen.formas.push(...jugador.formas);
+      if(!resumen.alias && jugador.alias){ resumen.alias = jugador.alias; }
+      if(!resumen.nombre && identidad.nombre){ resumen.nombre = identidad.nombre; }
+      if(!resumen.gmail && identidad.email){ resumen.gmail = identidad.email; }
+    }
+
+    const lista = Array.from(agregados.values()).map(item=>({
+      gmail: item.gmail,
+      alias: item.alias,
+      nombre: item.nombre,
+      creditos: item.creditos,
+      cartonesGratis: item.cartonesGratis,
+      formas: item.formas,
+      cartonesGanadores: item.cartonesIds.size,
+      userIds: Array.from(item.userIds)
+    }));
+
+    const totalCreditos = lista.reduce((acc, item)=>acc + (Number(item.creditos) || 0), 0);
+    const totalCartonesGratis = lista.reduce((acc, item)=>acc + (Number(item.cartonesGratis) || 0), 0);
+
+    return { lista, totalCreditos, totalCartonesGratis };
+  }
+
+  function construirIdSolicitud(base, identificador){
+    const baseSeguro = sanitizarId(base || 'sorteo');
+    const idSeguro = sanitizarId(identificador || 'registro');
+    return `${baseSeguro}__${idSeguro}`;
+  }
+
+  async function actualizarDocumentoCentroPagos(ref, payload){
+    try {
+      await db.runTransaction(async tx => {
+        const snap = await tx.get(ref);
+        if(snap.exists){
+          const data = snap.data() || {};
+          const estadoActual = (data.estado || '').toString().trim().toUpperCase();
+          if(estadoActual === 'APROBADO'){
+            return;
+          }
+        }
+        tx.set(ref, payload, { merge: true });
+      });
+    } catch (err) {
+      console.error('Error registrando solicitud en Centro de Pagos', ref.path, err);
+      throw err;
+    }
+  }
+
+  async function generarSolicitudesCentroPagos(){
+    mostrarLoading('Generando solicitudes para Centro de Pagos, por favor espera');
+    const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+    const sorteoNombre = (sorteoData?.nombre || '').toString();
+    const { lista: ganadores, totalCreditos, totalCartonesGratis } = await obtenerGanadoresAgrupados();
+    mostrarLoading('Generando solicitudes para Centro de Pagos, por favor espera');
+    const colaboradores = await obtenerColaboradoresProcesados();
+    const operaciones = [];
+
+    ganadores.forEach(ganador => {
+      const email = normalizarEmail(ganador.gmail);
+      const alias = ganador.alias || '';
+      const docId = construirIdSolicitud(sorteoId, email || alias || 'ganador');
+      const payload = {
+        sorteoId,
+        sorteoNombre,
+        gmail: email || '',
+        email: email || '',
+        alias: alias,
+        aliasJugador: alias,
+        aliasGanador: alias,
+        creditos: Number(ganador.creditos) || 0,
+        creditosGanados: Number(ganador.creditos) || 0,
+        cartonesGratis: Number(ganador.cartonesGratis) || 0,
+        cartonesGanados: Number(ganador.cartonesGanadores) || 0,
+        formasGanadoras: ganador.formas || [],
+        estado: 'PENDIENTE',
+        fechaGanado: timestamp,
+        fechaRegistro: timestamp,
+        creadoEn: timestamp,
+        actualizadoEn: timestamp,
+        tipoRegistro: 'GANADOR_SORTEO',
+        userIds: ganador.userIds || [],
+        generadoDesde: 'pdfresultados'
+      };
+      if(email){ payload.idBilletera = email; }
+      operaciones.push(actualizarDocumentoCentroPagos(db.collection('PremiosSorteos').doc(docId), payload));
+    });
+
+    colaboradores.forEach(colaborador => {
+      const email = normalizarEmail(colaborador.gmail);
+      const docId = construirIdSolicitud(`${sorteoId}_colab`, email || colaborador.alias || 'colaborador');
+      const payload = {
+        sorteoId,
+        sorteoNombre,
+        gmail: email || '',
+        email: email || '',
+        nombre: colaborador.nombre || colaborador.alias || '',
+        alias: colaborador.alias || '',
+        creditos: Number(colaborador.creditos) || 0,
+        estado: 'PENDIENTE',
+        fechaAsignacion: timestamp,
+        fecha: timestamp,
+        creadoEn: timestamp,
+        actualizadoEn: timestamp,
+        tipoRegistro: 'COLABORADOR_SORTEO',
+        userIds: colaborador.userIds || [],
+        generadoDesde: 'pdfresultados'
+      };
+      operaciones.push(actualizarDocumentoCentroPagos(db.collection('PagosAdministracion').doc(docId), payload));
+    });
+
+    const resumenRef = db.collection('SorteosCentroPagos').doc(sorteoId);
+    const resumenPayload = {
+      sorteoId,
+      sorteoNombre,
+      totalGanadores: ganadores.length,
+      totalColaboradores: colaboradores.length,
+      totalCreditosPremios: totalCreditos,
+      totalCartonesGratis,
+      ganadores: ganadores.map(item => ({
+        gmail: normalizarEmail(item.gmail || ''),
+        alias: item.alias || '',
+        creditos: Number(item.creditos) || 0,
+        cartonesGratis: Number(item.cartonesGratis) || 0,
+        cartonesGanadores: Number(item.cartonesGanadores) || 0
+      })),
+      colaboradores: colaboradores.map(item => ({
+        gmail: normalizarEmail(item.gmail || ''),
+        alias: item.alias || '',
+        nombre: item.nombre || ''
+      })),
+      generadoEn: timestamp,
+      generadoDesde: 'pdfresultados'
+    };
+    operaciones.push(resumenRef.set(resumenPayload, { merge: true }));
+
+    await Promise.all(operaciones);
+  }
+
+  function obtenerPosicionesForma(forma){
+    if(!forma) return [];
+    const base = Array.isArray(forma.posicionesNormalizadas) && forma.posicionesNormalizadas.length
+      ? forma.posicionesNormalizadas
+      : forma.posiciones;
+    const lista = Array.isArray(base)?base:[];
+    return lista
+      .map(pos=>({
+        r: Number(pos?.r ?? pos?.row ?? pos?.fila),
+        c: Number(pos?.c ?? pos?.col ?? pos?.columna)
+      }))
+      .filter(pos=>Number.isInteger(pos.r) && Number.isInteger(pos.c));
+  }
+
+  function procesarCantos(datos){
+    const payload = Array.isArray(datos)
+      ? { numeros: datos }
+      : (datos && typeof datos === 'object' ? datos : { numeros: [] });
+    const listaNumeros = Array.isArray(payload.numeros) ? payload.numeros : [];
+    const detalles = Array.isArray(payload.detalles) ? payload.detalles : [];
+    const detallesMap = new Map();
+    detalles.forEach(item=>{
+      const numero = normalizarNumero(item?.numero ?? item?.valor ?? item?.canto ?? item?.etiqueta);
+      if(numero === null) return;
+      const orden = Number.isFinite(item?.orden) ? Number(item.orden) : undefined;
+      const estadoTexto = (item?.estatus ?? item?.resultado ?? item?.estado ?? item?.status ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
+      detallesMap.set(numero, { estado: estadoTexto, orden });
+    });
+    const normalizados = [];
+    const resultadoMapa = new Map();
+    listaNumeros.forEach((valor, idx)=>{
+      const numero = normalizarNumero(valor);
+      if(numero === null) return;
+      normalizados.push(numero);
+      const infoDetalle = detallesMap.get(numero);
+      let estado = infoDetalle?.estado;
+      if(estado !== 'g' && estado !== 'p'){
+        estado = 'g';
+      }
+      resultadoMapa.set(numero, estado);
+      if(!detallesMap.has(numero)){
+        detallesMap.set(numero, { estado, orden: idx });
+      }
+    });
+    detallesMap.forEach((info, numero)=>{
+      if(resultadoMapa.has(numero)) return;
+      const estado = typeof info?.estado === 'string' ? info.estado.trim().toLowerCase() : '';
+      if(estado === 'g' || estado === 'p'){
+        resultadoMapa.set(numero, estado);
+      }
+    });
+    cantosOrdenados = normalizados;
+    cantosIndiceMap = new Map();
+    normalizados.forEach((numero, idx)=>{
+      if(!cantosIndiceMap.has(numero)){
+        cantosIndiceMap.set(numero, idx);
+      }
+    });
+    cantosResultadoMap = resultadoMapa;
+  }
+
+  function obtenerIndiceLimiteGanador(){
+    if(todasFormasConGanadores && Number.isInteger(indiceUltimoGanador)){
+      return indiceUltimoGanador;
+    }
+    return cantosOrdenados.length ? cantosOrdenados.length - 1 : -1;
+  }
+
+  function obtenerCreditosForma(forma){
+    if(!forma) return 0;
+    const directo = Number(forma?.premioCreditos ?? forma?.premiocreditos ?? forma?.creditos);
+    if(Number.isFinite(directo) && directo>0) return Math.round(directo);
+    const porcentaje = Number(forma?.porcentaje ?? forma?.porcentajePremio ?? 0);
+    const totalPremios = Number(sorteoData?.totalPremios) || 0;
+    if(totalPremios>0 && porcentaje>0){
+      return Math.round(totalPremios*(porcentaje/100));
+    }
+    return 0;
+  }
+
+  function obtenerCartonesGratisForma(forma){
+    if(!forma) return 0;
+    const candidatos = [
+      forma?.cartonesGratis,
+      forma?.cartonesgratis,
+      forma?.cartones_gratis,
+      forma?.premioCartonesGratis,
+      forma?.premioCartonesgratis,
+      forma?.cartones
+    ];
+    for(const candidato of candidatos){
+      const numero = Number(candidato);
+      if(Number.isFinite(numero)){
+        return Math.max(0, Math.round(numero));
+      }
+    }
+    return 0;
+  }
+
+  function obtenerNumeroCarton(carton){
+    const bruto = carton?.cartonNum ?? carton?.Ncarton ?? carton?.carton;
+    if(bruto===undefined || bruto===null) return null;
+    const numero = Number(bruto);
+    if(Number.isFinite(numero)) return numero;
+    const texto = String(bruto).trim();
+    const extraido = parseInt(texto.replace(/[^0-9]/g,''),10);
+    return Number.isFinite(extraido)?extraido:null;
+  }
+
+  function formatearNumeroCarton(carton){
+    const numero = obtenerNumeroCarton(carton);
+    if(numero===null) return '--';
+    return `#${String(numero).padStart(4,'0')}`;
+  }
+
+  function obtenerNumeroOrdenCarton(carton){
+    const numero = obtenerNumeroCarton(carton);
+    return numero===null?Number.MAX_SAFE_INTEGER:numero;
+  }
+
+  function actualizarEstadoFormasGanadoras(){
+    let totalEvaluables = 0;
+    let totalGanadoras = 0;
+    let pasoMaximo = -1;
+    formasData.forEach(forma=>{
+      const idx = Number(forma?.idx);
+      if(!Number.isFinite(idx)) return;
+      const posiciones = obtenerPosicionesForma(forma);
+      if(!posiciones.length) return;
+      totalEvaluables++;
+      const registro = cartonesGanadoresPorForma.get(idx);
+      const paso = Number(registro?.paso);
+      if(Number.isFinite(paso)){
+        totalGanadoras++;
+        if(paso>pasoMaximo) pasoMaximo = paso;
+      }
+    });
+    if(totalEvaluables>0 && totalGanadoras===totalEvaluables){
+      todasFormasConGanadores = true;
+      indiceUltimoGanador = pasoMaximo>=0?pasoMaximo:null;
+    }else{
+      todasFormasConGanadores = false;
+      indiceUltimoGanador = null;
+    }
+  }
+
+  function calcularResultados(){
+    cartonesGanadoresPorForma = new Map();
+    formasPorCarton = new Map();
+    cartonesMapa.forEach(carton=>{ carton.formasGanadas = []; });
+    if(!formasData.length || !cartonesMapa.size || !cantosOrdenados.length){
+      actualizarEstadoFormasGanadoras();
+      return;
+    }
+    formasData.forEach(forma=>{
+      const idx = Number(forma?.idx);
+      if(!Number.isFinite(idx)) return;
+      const posiciones = obtenerPosicionesForma(forma);
+      if(!posiciones.length){
+        cartonesGanadoresPorForma.set(idx,{ forma, cartones: [], paso: null });
+        return;
+      }
+      let mejorPaso = Infinity;
+      const ganadores = [];
+      cartonesMapa.forEach(carton=>{
+        let valido = true;
+        let maxPaso = -1;
+        for(const pos of posiciones){
+          const clave = `${pos.r}-${pos.c}`;
+          const valor = carton.valorPorPos.get(clave);
+          if(valor===undefined){
+            valido = false;
+            break;
+          }
+          const paso = cantosIndiceMap.get(valor);
+          if(paso===undefined){
+            valido = false;
+            break;
+          }
+          if(paso>maxPaso) maxPaso = paso;
+        }
+        if(!valido) return;
+        if(maxPaso<mejorPaso){
+          mejorPaso = maxPaso;
+          ganadores.length = 0;
+          ganadores.push(carton);
+        }else if(maxPaso===mejorPaso){
+          ganadores.push(carton);
+        }
+      });
+      cartonesGanadoresPorForma.set(idx,{ forma, cartones: ganadores, paso: mejorPaso });
+      ganadores.forEach(carton=>{
+        if(!formasPorCarton.has(carton.id)) formasPorCarton.set(carton.id, []);
+        formasPorCarton.get(carton.id).push({ forma, paso: mejorPaso });
+      });
+    });
+    formasPorCarton.forEach(lista=>{
+      lista.sort((a,b)=>{
+        if(a.paso!==b.paso) return a.paso-b.paso;
+        return (Number(a.forma?.idx)||0)-(Number(b.forma?.idx)||0);
+      });
+    });
+    cartonesMapa.forEach(carton=>{
+      const lista = formasPorCarton.get(carton.id) || [];
+      carton.formasGanadas = lista.map(item=>item.forma);
+    });
+    actualizarEstadoFormasGanadoras();
+  }
+
+  function construirOrdenCartones(){
+    const orden = [];
+    const ganadoresSet = new Set();
+    const formasOrdenadas = [...formasData].sort((a,b)=>(Number(a?.idx)||0)-(Number(b?.idx)||0));
+    formasOrdenadas.forEach(forma=>{
+      const idx = Number(forma?.idx);
+      if(!Number.isFinite(idx)) return;
+      const registro = cartonesGanadoresPorForma.get(idx);
+      const ganadores = registro && Array.isArray(registro.cartones)?[...registro.cartones]:[];
+      ganadores.sort((a,b)=>obtenerNumeroOrdenCarton(a)-obtenerNumeroOrdenCarton(b));
+      ganadores.forEach(carton=>{
+        orden.push({ carton, forma, estado: 'ganador' });
+        ganadoresSet.add(carton.id);
+      });
+    });
+    const perdedores = Array.from(cartonesMapa.values())
+      .filter(carton=>!ganadoresSet.has(carton.id))
+      .sort((a,b)=>obtenerNumeroOrdenCarton(a)-obtenerNumeroOrdenCarton(b));
+    perdedores.forEach(carton=>orden.push({ carton, forma: null, estado: 'perdedor' }));
+    return orden;
+  }
 
   function normalizarHex(hex){
     if(typeof hex !== 'string') return hex;
@@ -1216,8 +2135,8 @@
   }
 
   salirBtn.addEventListener('click', ()=>{ window.location.href = 'cantarsorteos.html'; });
-  if(generarCartonesBtn){ generarCartonesBtn.disabled = true; }
-  if(generarCartonesBtn){ generarCartonesBtn.addEventListener('click', manejarGenerarCartones); }
+  if(generarResultadosBtn){ generarResultadosBtn.disabled = true; }
+  if(generarResultadosBtn){ generarResultadosBtn.addEventListener('click', manejarGenerarResultados); }
   if(pdfBtn){ pdfBtn.addEventListener('click', generarPDF); }
   if(pdfListoBtn){ pdfListoBtn.addEventListener('click', confirmarPdfListo); }
   if(orientacionAceptarBtn){ orientacionAceptarBtn.addEventListener('click', ocultarModalOrientacion); }
@@ -1277,11 +2196,25 @@
     orientacionModal.classList.remove('visible');
     orientacionModal.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('modal-activa');
+    intentarGenerarPdfTrasOrientacion();
+  }
+
+  function intentarGenerarPdfTrasOrientacion(){
+    if(!generarPdfTrasOrientacion) return;
+    if(esDispositivoMovil() && estaEnOrientacionRetrato()) return;
+    generarPdfTrasOrientacion = false;
+    generarPDF();
   }
 
   function mostrarLoading(mensaje){
     if(loadingText && mensaje){ loadingText.textContent = mensaje; }
     if(loadingOverlay){ loadingOverlay.classList.add('activo'); }
+  }
+
+  function actualizarMensajeLoading(mensaje){
+    if(loadingText && mensaje){
+      loadingText.textContent = mensaje;
+    }
   }
 
   function ocultarLoading(){
@@ -1290,7 +2223,29 @@
 
   function mostrarMensajeCartonesPendientes(){
     if(!cartonesGrid) return;
-    cartonesGrid.innerHTML = '<div class="cartones-placeholder">Haz clic en "Generar cartones" para cargar los cartones del sorteo.</div>';
+    cartonesGrid.innerHTML = '<div class="cartones-placeholder">Haz clic en "Resultados" para calcular y mostrar los cartones del sorteo.</div>';
+  }
+
+  function actualizarBotonPdfListoSegunEstado(opciones = {}){
+    if(!pdfListoBtn) return;
+    const estado = (sorteoData?.pdfresul || '').toString().toLowerCase();
+    const forzarMostrar = opciones.forzarMostrar === true;
+    const mostrar = forzarMostrar || estado === 'si';
+    pdfListoBtn.style.display = mostrar ? 'block' : 'none';
+    if(estado === 'si' && !forzarMostrar){
+      pdfListoBtn.textContent = 'PDF confirmado';
+      pdfListoBtn.disabled = true;
+      pdfListoBtn.classList.add('pdf-disponible');
+      return;
+    }
+    pdfListoBtn.textContent = 'PDF LISTO';
+    const disabled = typeof opciones.disabled === 'boolean' ? opciones.disabled : true;
+    pdfListoBtn.disabled = disabled;
+    const marcarDisponible = opciones.disponible === true;
+    pdfListoBtn.classList.toggle('pdf-disponible', marcarDisponible);
+    if(!marcarDisponible && estado !== 'si'){
+      pdfListoBtn.classList.remove('pdf-disponible');
+    }
   }
 
   function formatearFechaParaMostrar(fecha){
@@ -1341,10 +2296,15 @@
   }
 
   function construirNombreBaseArchivo(){
-    if(!sorteoData) return 'pdf-sorteo';
+    if(!sorteoData) return 'result_sorteo';
     const nombre = normalizarTextoArchivo(sorteoData.nombre);
     const fecha = formatearFechaArchivo(sorteoData.fecha || '');
-    return `${nombre}_${fecha}`;
+    const partes = ['result'];
+    partes.push(nombre || 'sorteo');
+    if(fecha){
+      partes.push(fecha);
+    }
+    return partes.filter(Boolean).join('_');
   }
 
   function obtenerHoraGeneracionArchivo(fecha = new Date()){
@@ -1449,13 +2409,17 @@
     return cont;
   }
 
-  function crearCartonVisual(data){
+  function crearCartonVisual(data, opciones = {}){
+    const { formaDestacada = null, esGanador = false, limiteCanto = -1 } = opciones;
     const carton = document.createElement('div');
     carton.className = 'pdf-carton';
     const tipoCartonRaw = typeof data.tipocarton === 'string' ? data.tipocarton.trim().toLowerCase() : '';
     const tipoCartonNormalizado = tipoCartonRaw === 'gratis' ? 'gratis' : 'pagado';
     carton.classList.add(tipoCartonNormalizado);
     carton.dataset.tipocarton = tipoCartonNormalizado;
+    if(esGanador){
+      carton.classList.add('ganador');
+    }
 
     const tabla = document.createElement('table');
     tabla.className = 'pdf-carton-table';
@@ -1469,35 +2433,51 @@
     thead.appendChild(trh);
     tabla.appendChild(thead);
 
-    const mapa = construirMapaPosiciones(data.posiciones);
-    const tbody = document.createElement('tbody');
+    const cuerpo = document.createElement('tbody');
+    const valorPorPos = data.valorPorPos instanceof Map ? data.valorPorPos : construirMapaPosiciones(data.posiciones);
+    const celdasMapa = new Map();
     for(let r=0; r<5; r++){
-      const tr = document.createElement('tr');
+      const fila = document.createElement('tr');
       for(let c=0; c<5; c++){
         const td = document.createElement('td');
         if(r===2 && c===2){
           td.classList.add('free');
           td.appendChild(crearContenidoCelda('★'));
         }else{
-          const key = `${r}-${c}`;
-          const valor = mapa.get(key) || '';
-          td.appendChild(crearContenidoCelda(valor));
+          const clave = `${r}-${c}`;
+          const valor = valorPorPos.get(clave) ?? '';
+          const contenido = crearContenidoCelda(valor);
+          td.appendChild(contenido);
+          celdasMapa.set(clave, td);
+          const numero = normalizarNumero(valor);
+          const estadoCanto = Number.isFinite(numero) && cantosResultadoMap instanceof Map
+            ? cantosResultadoMap.get(numero)
+            : undefined;
+          if(estadoCanto === 'p'){
+            td.classList.add('celda-canto-penalizado');
+          }else{
+            const paso = Number.isFinite(numero) ? cantosIndiceMap.get(numero) : undefined;
+            if(estadoCanto === 'g'){
+              td.classList.add('celda-cantada');
+            }else if(paso !== undefined && Number.isInteger(paso) && limiteCanto >= 0 && paso <= limiteCanto){
+              td.classList.add('celda-cantada');
+            }
+          }
         }
-        tr.appendChild(td);
+        fila.appendChild(td);
       }
-      tbody.appendChild(tr);
+      cuerpo.appendChild(fila);
     }
-    tabla.appendChild(tbody);
+    tabla.appendChild(cuerpo);
     carton.appendChild(tabla);
 
     const infoInferior = document.createElement('div');
     infoInferior.className = 'pdf-carton-datos';
     const numero = document.createElement('div');
-    const numeroValor = Number(data.cartonNum ?? data.Ncarton);
-    const numeroTexto = Number.isFinite(numeroValor) ? String(numeroValor).padStart(4,'0') : (data.Ncarton || data.cartonNum || '-');
-    carton.dataset.numero = Number.isFinite(numeroValor) ? numeroValor : 0;
+    const numeroOrden = obtenerNumeroCarton(data);
+    carton.dataset.numero = numeroOrden===null?0:numeroOrden;
     numero.className = 'numero';
-    numero.textContent = `Cartón ${numeroTexto}`;
+    numero.textContent = `Cartón ${numeroOrden===null ? '--' : String(numeroOrden).padStart(4,'0')}`;
     infoInferior.appendChild(numero);
 
     const alias = document.createElement('div');
@@ -1511,23 +2491,49 @@
     infoInferior.appendChild(tipo);
 
     carton.appendChild(infoInferior);
+
+    if(formaDestacada){
+      const posicionesForma = obtenerPosicionesForma(formaDestacada);
+      const color = obtenerColorForma(Number(formaDestacada.idx)||1);
+      posicionesForma.forEach(pos=>{
+        const clave = `${pos.r}-${pos.c}`;
+        const celda = celdasMapa.get(clave);
+        if(celda){
+          celda.classList.add('celda-forma');
+          celda.style.setProperty('--forma-color-base', color);
+          celda.style.borderColor = color;
+        }
+      });
+    }
+
     return carton;
   }
 
   function renderFormas(){
+    if(!formasCont){ return; }
     formasCont.innerHTML = '';
-    if(!formasData.length){
-      formasCont.innerHTML = '<div class="cartones-placeholder">No se registraron formas para este sorteo.</div>';
+
+    const sinFormas = !formasData.length;
+    if(sinFormas){
+      const placeholder = document.createElement('div');
+      placeholder.className = 'cartones-placeholder';
+      placeholder.textContent = 'No se registraron formas para este sorteo.';
+      formasCont.appendChild(placeholder);
       return;
     }
-    const total = Number(sorteoData.totalPremios || 0);
+
     formasData.sort((a,b)=>{
       const idxA = Number(a.idx) || 0;
       const idxB = Number(b.idx) || 0;
       return idxA - idxB;
     });
-    formasData.forEach(forma=>{
+
+    const fragmento = document.createDocumentFragment();
+
+    formasData.forEach((forma)=>{
       const color = obtenerColorForma(forma.idx || 1);
+      const slot = document.createElement('div');
+      slot.className = 'forma-slot';
       const item = document.createElement('div');
       item.className = 'forma-item';
 
@@ -1544,13 +2550,54 @@
       titulo.textContent = nombreForma;
       info.appendChild(titulo);
 
-      const porcentaje = parseFloat(forma.porcentaje || 0) || 0;
-      const premioForma = porcentaje > 0 ? Math.round(total * (porcentaje / 100)) : 0;
-      info.appendChild(crearDetalleForma('Premio', porcentaje > 0
-        ? `${formatearNumero(premioForma)}`
-        : '-'));
+      const idx = Number(forma.idx) || 0;
+      const registro = cartonesGanadoresPorForma.get(idx) || {};
+      const ganadores = Array.isArray(registro.cartones) ? registro.cartones : [];
+      const cantidadGanadores = ganadores.length;
+      const premioTotal = obtenerCreditosForma(forma);
+      const premioIndividual = cantidadGanadores > 0 ? Math.floor(premioTotal / cantidadGanadores) : 0;
+      const totalCartonesGratis = obtenerCartonesGratisForma(forma);
+      const cartonesGratisPorGanador = cantidadGanadores > 0
+        ? Math.floor(totalCartonesGratis / cantidadGanadores)
+        : totalCartonesGratis;
 
-      info.appendChild(crearDetalleForma('Cartones gratis', formatearNumero(forma.cartonesGratis || 0), { usarIconoCarton: true }));
+      const detallePremio = crearDetalleForma('Premio total', premioTotal > 0
+        ? `${formatearNumero(premioTotal)}`
+        : '-');
+      info.appendChild(detallePremio);
+
+      const detalleGratis = crearDetalleForma('Cartones gratis totales', formatearNumero(totalCartonesGratis), { usarIconoCarton: true });
+      info.appendChild(detalleGratis);
+
+      const extraInfo = document.createElement('div');
+      extraInfo.className = 'forma-extra-info';
+
+      const itemGanadores = document.createElement('div');
+      itemGanadores.className = 'forma-extra-item';
+      itemGanadores.innerHTML = `<span class="extra-label">Ganadores:</span><span class="extra-value">${cantidadGanadores}</span>`;
+      extraInfo.appendChild(itemGanadores);
+
+      const itemCartones = document.createElement('div');
+      itemCartones.className = 'forma-extra-item forma-extra-cartones';
+      if(cantidadGanadores){
+        const listado = ganadores.map(carton=>formatearNumeroCarton(carton)).join(', ');
+        itemCartones.innerHTML = `<span class="extra-label">Cartones:</span><span class="extra-value">${listado}</span>`;
+      }else{
+        itemCartones.innerHTML = `<span class="extra-label">Cartones:</span><span class="extra-value sin-datos">Sin ganadores</span>`;
+      }
+      extraInfo.appendChild(itemCartones);
+
+      const itemPremio = document.createElement('div');
+      itemPremio.className = 'forma-extra-item';
+      itemPremio.innerHTML = `<span class="extra-label">Premio por cartón:</span><span class="extra-value">${formatearNumero(premioIndividual)}</span>`;
+      extraInfo.appendChild(itemPremio);
+
+      const itemGratis = document.createElement('div');
+      itemGratis.className = 'forma-extra-item';
+      itemGratis.innerHTML = `<span class="extra-label">Cartones gratis por ganador:</span><span class="extra-value">${formatearNumero(cartonesGratisPorGanador)}</span>`;
+      extraInfo.appendChild(itemGratis);
+
+      info.appendChild(extraInfo);
 
       contenedor.appendChild(info);
 
@@ -1558,8 +2605,11 @@
 
       item.appendChild(contenedor);
       item.appendChild(miniCarton);
-      formasCont.appendChild(item);
+      slot.appendChild(item);
+      fragmento.appendChild(slot);
     });
+
+    formasCont.appendChild(fragmento);
   }
 
   function crearDetalleForma(etiqueta, valor, opciones = {}){
@@ -1593,19 +2643,30 @@
 
   function renderCartones(){
     cartonesGrid.innerHTML = '';
-    pdfListoBtn.style.display = 'none';
-    if(!cartonesData.length){
-      cartonesGrid.innerHTML = '<div class="cartones-placeholder">No se encontraron cartones generados para este sorteo.</div>';
+    actualizarBotonPdfListoSegunEstado();
+    if(!cartonesMapa.size){
+      cartonesGrid.innerHTML = '<div class="cartones-placeholder">No hay cartones generados para este sorteo.</div>';
       return;
     }
-    cartonesData.sort((a,b)=>{
-      const numA = Number(a.cartonNum ?? a.Ncarton) || 0;
-      const numB = Number(b.cartonNum ?? b.Ncarton) || 0;
-      return numA - numB;
-    });
+    const orden = construirOrdenCartones();
+    if(!orden.length){
+      cartonesGrid.innerHTML = '<div class="cartones-placeholder">No hay resultados para mostrar todavía.</div>';
+      return;
+    }
+    const limiteCanto = obtenerIndiceLimiteGanador();
     const fragment = document.createDocumentFragment();
-    cartonesData.forEach(data=>{
-      fragment.appendChild(crearCartonVisual(data));
+    orden.forEach(entry=>{
+      const elemento = crearCartonVisual(entry.carton, {
+        formaDestacada: entry.forma,
+        esGanador: entry.estado === 'ganador',
+        limiteCanto
+      });
+      elemento.classList.add('carton-resultado');
+      elemento.dataset.estado = entry.estado;
+      if(entry.forma && Number.isFinite(Number(entry.forma.idx))){
+        elemento.dataset.forma = String(entry.forma.idx);
+      }
+      fragment.appendChild(elemento);
     });
     cartonesGrid.appendChild(fragment);
   }
@@ -1725,7 +2786,10 @@
         return;
       }
       sorteoData = sorteoDoc.data();
-      nombreEl.textContent = sorteoData.nombre || 'Sorteo';
+      const nombreBase = sorteoData.nombre || 'Sorteo';
+      const tituloResultado = `RESULTADO ${nombreBase}`.trim();
+      nombreEl.textContent = tituloResultado;
+      document.title = tituloResultado;
       tipoTituloEl.textContent = sorteoData.tipo ? sorteoData.tipo : '';
       datoFechaEl.textContent = formatearFechaParaMostrar(sorteoData.fecha || '');
       datoHoraEl.textContent = formatearHoraParaMostrar(sorteoData.hora || '');
@@ -1734,14 +2798,56 @@
       datoMaxGratisEl.textContent = formatearNumero(sorteoData.maxcartongratis || 0);
       datoTipoEl.textContent = sorteoData.tipo || '-';
       totalPremiosEl.textContent = formatearNumero(sorteoData.totalPremios || 0);
+      if(typeof sorteoData.pdfresul !== 'string' || !sorteoData.pdfresul.trim()){
+        sorteoData.pdfresul = 'no';
+      } else {
+        sorteoData.pdfresul = sorteoData.pdfresul.toString().trim().toLowerCase();
+        if(sorteoData.pdfresul !== 'si'){
+          sorteoData.pdfresul = 'no';
+        }
+      }
       pdfNombreBase = construirNombreBaseArchivo();
 
       const formasSnap = await db.collection('formas').where('sorteoId','==',sorteoId).get();
       formasData = [];
-      formasSnap.forEach(doc=>formasData.push(doc.data()));
+      formasSnap.forEach(doc=>{
+        const data = doc.data()||{};
+        const idx = Number(data.idx ?? data.indice);
+        if(!Number.isFinite(idx)) return;
+        const posicionesNorm = normalizarPosicionesEntrada(data.posicionesNormalizadas || data.posiciones || []);
+        formasData.push({
+          ...data,
+          id: doc.id,
+          idx,
+          nombre: data.nombre || '',
+          porcentaje: Number(data.porcentaje ?? data.porcentajePremio ?? data.porcentaje_forma ?? data.porcentajeForma ?? 0) || 0,
+          premioCreditos: Number(data.premioCreditos ?? data.premiocreditos ?? data.creditos ?? 0) || 0,
+          cartonesGratis: Number(data.cartonesGratis ?? data.cartonesgratis ?? data.cartones ?? 0) || 0,
+          posicionesNormalizadas: posicionesNorm.map(pos=>({ r: pos.r, c: pos.c }))
+        });
+      });
+      formasData.sort((a,b)=>(a.idx||0)-(b.idx||0));
+
+      let cantosPayload = [];
+      try {
+        const cantosDoc = await db.collection('cantos').doc(sorteoId).get();
+        if(cantosDoc.exists){
+          const cantosData = cantosDoc.data()||{};
+          cantosPayload = cantosData;
+        }
+      } catch (errorCantos) {
+        console.warn('No se pudieron cargar los cantos desde la colección cantos', errorCantos);
+      }
+      if((!cantosPayload || (Array.isArray(cantosPayload.numeros) && !cantosPayload.numeros.length))
+        && Array.isArray(sorteoData.cantos)){
+        cantosPayload = sorteoData.cantos;
+      }
+      procesarCantos(cantosPayload);
+
       renderFormas();
       mostrarMensajeCartonesPendientes();
-      if(generarCartonesBtn){ generarCartonesBtn.disabled = false; }
+      if(generarResultadosBtn){ generarResultadosBtn.disabled = false; }
+      actualizarBotonPdfListoSegunEstado();
     } catch (err) {
       console.error('Error cargando datos', err);
       alert('Ocurrió un error cargando la información del sorteo.');
@@ -1752,61 +2858,92 @@
   }
 
   async function cargarCartones(){
-    mostrarLoading('Generando cartones del sorteo, por favor espera');
+    mostrarLoading('Calculando resultados del sorteo, por favor espera');
     try {
       await ensureFirebaseReady();
       const cartonesSnap = await db.collection('CartonJugado').where('sorteoId','==',sorteoId).get();
       cartonesData = [];
-    cartonesSnap.forEach(doc=>cartonesData.push(doc.data()));
-    renderCartones();
-    cartonesCargados = cartonesData.length > 0;
-    if(pdfBtn){
-      pdfBtn.style.display = cartonesCargados ? 'block' : 'none';
-      pdfBtn.disabled = !cartonesCargados;
-    }
-    if(generarCartonesBtn){ generarCartonesBtn.textContent = 'Regenerar cartones'; }
+      cartonesMapa = new Map();
+      cartonesSnap.forEach(doc=>{
+        const data = doc.data()||{};
+        const posiciones = normalizarPosicionesEntrada(data.posiciones || []);
+        const valorPorPos = new Map();
+        posiciones.forEach(pos=>{
+          if(Number.isFinite(pos.valor)){
+            valorPorPos.set(`${pos.r}-${pos.c}`, pos.valor);
+          }
+        });
+        const carton = {
+          ...data,
+          id: doc.id,
+          posiciones,
+          valorPorPos,
+          formasGanadas: []
+        };
+        cartonesData.push(carton);
+        cartonesMapa.set(doc.id, carton);
+      });
+      calcularResultados();
+      renderFormas();
+      renderCartones();
+      cartonesCargados = cartonesMapa.size > 0;
+      if(pdfBtn){
+        pdfBtn.style.display = cartonesCargados ? 'block' : 'none';
+        pdfBtn.disabled = !cartonesCargados;
+      }
+      if(pdfListoBtn){
+        pdfListoBtn.style.display = 'none';
+        pdfListoBtn.classList.remove('pdf-disponible');
+      }
+      if(generarResultadosBtn){ generarResultadosBtn.textContent = cartonesCargados ? 'Regenerar resultados' : 'Resultados'; }
     } catch (err) {
       cartonesCargados = false;
       console.error('Error cargando cartones', err);
       alert('Ocurrió un error al generar los cartones del sorteo.');
       mostrarMensajeCartonesPendientes();
       if(pdfBtn){ pdfBtn.style.display = 'none'; }
+      cartonesMapa = new Map();
+      cartonesData = [];
+      cartonesGanadoresPorForma = new Map();
+      formasPorCarton = new Map();
+      renderFormas();
+      renderCartones();
     } finally {
       ocultarLoading();
     }
   }
 
-  async function manejarGenerarCartones(){
+  async function manejarGenerarResultados(){
     if(!sorteoData){ alert('La información del sorteo aún no está disponible.'); return; }
-    if(!generarCartonesBtn || generarCartonesBtn.disabled) return;
-    generarCartonesBtn.disabled = true;
+    if(!generarResultadosBtn || generarResultadosBtn.disabled) return;
+    generarResultadosBtn.disabled = true;
     await cargarCartones();
-    generarCartonesBtn.disabled = false;
+    generarResultadosBtn.disabled = false;
   }
 
   async function generarPDF(){
     if(!sorteoData){ return; }
     if(!cartonesCargados){ alert('Primero debes generar los cartones del sorteo.'); return; }
     if(esDispositivoMovil() && estaEnOrientacionRetrato()){
+      generarPdfTrasOrientacion = true;
       mostrarModalOrientacion();
       return;
     }
+    generarPdfTrasOrientacion = false;
     const jsPDFLib = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
     if(!window.html2canvas || !jsPDFLib){
       alert('Dependencias para generar PDF no disponibles');
       return;
     }
-    if(pdfListoBtn){
-      pdfListoBtn.style.display = 'none';
-    }
     const nombreArchivo = `${construirNombreArchivo()}.pdf`;
-    if(!primeraPaginaEl){
+    const primeraPagina = document.getElementById('first-page-layout');
+    if(!primeraPagina){
       alert('No se encontró el contenido del sorteo para generar el PDF.');
       return;
     }
 
     const textoOriginalPdf = pdfBtn ? pdfBtn.textContent : '';
-    const textoOriginalCartones = generarCartonesBtn ? generarCartonesBtn.textContent : '';
+    const textoOriginalCartones = generarResultadosBtn ? generarResultadosBtn.textContent : '';
     const debeForzarPaisaje = (() => {
       try {
         return window.matchMedia ? window.matchMedia('(orientation: portrait)').matches : window.innerHeight > window.innerWidth;
@@ -1815,15 +2952,25 @@
       }
     })();
 
-    let restaurarFormas = ()=>{};
-    let restaurarCartones = ()=>{};
     try {
       await ensureFirebaseReady();
-      if(generarCartonesBtn){ generarCartonesBtn.disabled = true; }
+      try {
+        await Promise.all([
+          db.collection('sorteos').doc(sorteoId).set({ pdfresul: 'no' }, { merge: true }),
+          db.collection('cantarsorteos').doc(sorteoId).set({ pdfresul: 'no' }, { merge: true })
+        ]);
+        if(sorteoData){
+          sorteoData.pdfresul = 'no';
+        }
+      } catch (errActualizar) {
+        console.error('No se pudo reiniciar el estado pdfresul', errActualizar);
+      }
+      if(generarResultadosBtn){ generarResultadosBtn.disabled = true; }
       if(pdfBtn){
         pdfBtn.disabled = true;
         pdfBtn.textContent = 'Generando PDF...';
       }
+      actualizarBotonPdfListoSegunEstado({ forzarMostrar: true, disabled: true });
       mostrarLoading('Generando PDF para descargar, por favor espera');
 
       if(debeForzarPaisaje){
@@ -1854,7 +3001,7 @@
         backgroundColor: '#ffffff'
       };
 
-      const primeraPaginaCanvas = await window.html2canvas(primeraPaginaEl, canvasOptions);
+      const primeraPaginaCanvas = await window.html2canvas(primeraPagina, canvasOptions);
       const availableWidth = pageWidth - marginX * 2;
       const availableHeight = pageHeight - marginY * 2;
       const widthRatio = availableWidth / primeraPaginaCanvas.width;
@@ -1865,6 +3012,10 @@
       const resumenX = marginX + (availableWidth - resumenWidth) / 2;
       const resumenY = marginY + (availableHeight - resumenHeight) / 2;
       pdf.addImage(primeraPaginaCanvas.toDataURL('image/jpeg', 0.85), 'JPEG', resumenX, resumenY, resumenWidth, resumenHeight);
+      const tituloDocumento = document.title || `Resultado ${sorteoData?.nombre || ''}`.trim();
+      if(tituloDocumento && typeof pdf.setProperties === 'function'){
+        pdf.setProperties({ title: tituloDocumento });
+      }
 
       const cartonElements = Array.from(document.querySelectorAll('.pdf-carton'))
         .sort((a,b)=>{
@@ -1961,11 +3112,12 @@
       }
 
       pdf.save(nombreArchivo);
-      if(pdfListoBtn){ pdfListoBtn.style.display = 'block'; pdfListoBtn.disabled = false; }
-      alert('El PDF del sorteo ha sido generado. Descárgalo y luego confirma con "PDF listo".');
+      actualizarBotonPdfListoSegunEstado({ forzarMostrar: true, disponible: true, disabled: false });
+      alert('El PDF del sorteo ha sido generado. Descárgalo y luego confirma con "PDF LISTO".');
     } catch (err) {
       console.error('Error generando el PDF', err);
       alert('No se pudo generar el PDF del sorteo. Intenta nuevamente.');
+      actualizarBotonPdfListoSegunEstado();
     } finally {
       restaurarCartones();
       restaurarFormas();
@@ -1977,9 +3129,9 @@
         pdfBtn.disabled = false;
         pdfBtn.textContent = textoOriginalPdf || 'Generar PDF';
       }
-      if(generarCartonesBtn){
-        generarCartonesBtn.disabled = false;
-        generarCartonesBtn.textContent = textoOriginalCartones || generarCartonesBtn.textContent;
+      if(generarResultadosBtn){
+        generarResultadosBtn.disabled = false;
+        generarResultadosBtn.textContent = textoOriginalCartones || generarResultadosBtn.textContent;
       }
       ocultarLoading();
     }
@@ -1999,13 +3151,28 @@
         pdf: 'si',
         pdfActualizadoEn: timestamp,
         pdfUrl: eliminar,
-        pdfStoragePath: eliminar
+        pdfStoragePath: eliminar,
+        pdfresul: 'si'
       };
       await Promise.all([
         db.collection('sorteos').doc(sorteoId).set(payload, { merge: true }),
         db.collection('cantarsorteos').doc(sorteoId).set(payload, { merge: true })
       ]);
-      alert('El sorteo se marcó como PDF listo.');
+      if(sorteoData){
+        sorteoData.pdfresul = 'si';
+      }
+      let solicitudesExitosas = true;
+      try {
+        actualizarMensajeLoading('Generando solicitudes para Centro de Pagos, por favor espera');
+        await generarSolicitudesCentroPagos();
+      } catch (solicitudesErr) {
+        solicitudesExitosas = false;
+        console.error('Error generando solicitudes para Centro de Pagos', solicitudesErr);
+      }
+      const mensajeFinal = solicitudesExitosas
+        ? 'El sorteo se marcó como PDF listo y se generaron las solicitudes para Centro de Pagos.'
+        : 'El sorteo se marcó como PDF listo, pero ocurrió un problema al generar las solicitudes para Centro de Pagos. Revisa la consola para más detalles.';
+      alert(mensajeFinal);
       window.location.href = 'cantarsorteos.html';
     } catch (err) {
       console.error('Error actualizando el estado del PDF', err);

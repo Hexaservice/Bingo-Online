@@ -3,8 +3,34 @@ const serverTime = {
   Pais: '',
   locale: 'es-ES',
   zonaIana: '',
-  diferencia: 0
+  diferencia: 0,
+  offsetMinutos: null
 };
+
+const IANA_OVERRIDES = {
+  Venezuela: 'America/Caracas',
+  Colombia: 'America/Bogota',
+  Mexico: 'America/Mexico_City',
+  España: 'Europe/Madrid',
+  Argentina: 'America/Argentina/Buenos_Aires'
+};
+
+function obtenerOffsetMinutos(zona) {
+  if (typeof zona !== 'string') return null;
+  const match = zona.match(/UTC([+-])(\d{2}):(\d{2})/i);
+  if (!match) return null;
+  const horas = parseInt(match[2], 10);
+  const minutos = parseInt(match[3], 10);
+  if (Number.isNaN(horas) || Number.isNaN(minutos)) return null;
+  const signo = match[1] === '-' ? 1 : -1;
+  return signo * (horas * 60 + minutos);
+}
+
+function diferenciaPorOffset(offsetMinutos) {
+  if (typeof offsetMinutos !== 'number' || Number.isNaN(offsetMinutos)) return 0;
+  const localOffset = new Date().getTimezoneOffset();
+  return (localOffset - offsetMinutos) * 60000;
+}
 
 function parseZona(zona) {
   const match = zona.match(/^UTC([+-])(\d{2}):(\d{2})$/);
@@ -16,25 +42,41 @@ function parseZona(zona) {
   return zona;
 }
 
-async function sincronizarHora() {
-  if (!serverTime.zonaIana) {
-    serverTime.diferencia = 0;
-    return;
-  }
+function obtenerOffsetDesdeIana(zona) {
+  if (typeof zona !== 'string' || !zona) return null;
   try {
-    const resp = await fetch(`https://worldtimeapi.org/api/timezone/${encodeURIComponent(serverTime.zonaIana)}`);
-    if (!resp.ok) throw new Error('Respuesta no válida');
-    const data = await resp.json();
-    const serverDate = new Date(data.datetime);
-    if (!isNaN(serverDate)) {
-      serverTime.diferencia = serverDate.getTime() - Date.now();
-    } else {
-      serverTime.diferencia = 0;
-    }
+    const formato = new Intl.DateTimeFormat('en-US', {
+      timeZone: zona,
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZoneName: 'short'
+    });
+    const partes = formato.formatToParts(new Date());
+    const nombreZona = partes.find(p => p.type === 'timeZoneName')?.value || '';
+    const coincidencia = nombreZona.match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/i);
+    if (!coincidencia) return null;
+    const signo = coincidencia[1] === '-' ? 1 : -1;
+    const horas = parseInt(coincidencia[2], 10);
+    const minutos = coincidencia[3] ? parseInt(coincidencia[3], 10) : 0;
+    if (Number.isNaN(horas) || Number.isNaN(minutos)) return null;
+    return signo * (horas * 60 + minutos);
   } catch (err) {
-    console.error('Error obteniendo hora del servidor', err);
-    serverTime.diferencia = 0;
+    console.error('No se pudo calcular el offset de la zona IANA', err);
+    return null;
   }
+}
+
+async function sincronizarHora() {
+  let offsetUsado = serverTime.offsetMinutos;
+  if (serverTime.zonaIana) {
+    const offsetZona = obtenerOffsetDesdeIana(serverTime.zonaIana);
+    if (offsetZona !== null) {
+      offsetUsado = offsetZona;
+      serverTime.offsetMinutos = offsetZona;
+    }
+  }
+  const fallback = diferenciaPorOffset(offsetUsado);
+  serverTime.diferencia = fallback;
 }
 
 async function asegurarDb() {
@@ -71,7 +113,10 @@ async function initServerTime() {
       Argentina: 'es-AR'
     };
     serverTime.locale = locales[Pais] || 'es-ES';
-    serverTime.zonaIana = parseZona(ZonaHoraria);
+    serverTime.offsetMinutos = obtenerOffsetMinutos(ZonaHoraria);
+    const override = IANA_OVERRIDES[Pais];
+    const zonaNormalizada = override || parseZona(ZonaHoraria);
+    serverTime.zonaIana = typeof zonaNormalizada === 'string' ? zonaNormalizada : '';
     await sincronizarHora();
     setInterval(sincronizarHora, 3600000);
   } catch (e) {
@@ -80,11 +125,14 @@ async function initServerTime() {
 }
 
 function obtenerFecha() {
-  const d = new Date(Date.now() + serverTime.diferencia);
-  const dia = String(d.getDate()).padStart(2, '0');
-  const mes = String(d.getMonth() + 1).padStart(2, '0');
-  const anio = d.getFullYear();
-  return `${dia}/${mes}/${anio}`;
+  const opciones = {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  };
+  const fechaBase = new Date(Date.now() + serverTime.diferencia);
+  const formatter = new Intl.DateTimeFormat(serverTime.locale || 'es-ES', opciones);
+  return formatter.format(fechaBase);
 }
 
 function limpiarMeridiano(valor = '') {
@@ -92,13 +140,13 @@ function limpiarMeridiano(valor = '') {
 }
 
 function obtenerHora() {
-  const d = new Date(Date.now() + serverTime.diferencia);
-  const hora = d.toLocaleTimeString(serverTime.locale, {
+  const opciones = {
     hour: '2-digit',
     minute: '2-digit',
-    hour12: true,
-    timeZone: serverTime.zonaIana
-  });
+    hour12: true
+  };
+  const d = new Date(Date.now() + serverTime.diferencia);
+  const hora = d.toLocaleTimeString(serverTime.locale, opciones);
   return limpiarMeridiano(hora);
 }
 
@@ -136,6 +184,10 @@ async function initFechaHora(idElemento = "fecha-hora") {
 
   mostrar();
   setInterval(mostrar, 1000);
+}
+
+if (typeof window !== 'undefined') {
+  window.serverTime = serverTime;
 }
 
 window.initServerTime = initServerTime;

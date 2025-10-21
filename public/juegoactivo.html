@@ -6,51 +6,2473 @@
   <title>Juego Activo</title>
   <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
+      :root {
+          --panel-bg: rgba(255, 255, 255, 0.88);
+          --panel-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+          --texto-primario: #1f1f1f;
+          --texto-secundario: #4b4b4b;
+          --verde-canto: #00c853;
+          --naranja-penalizacion-suave: rgba(255, 232, 204, 0.95);
+          --naranja-penalizacion-medio: rgba(255, 190, 115, 0.98);
+          --naranja-penalizacion-intenso: rgba(255, 138, 26, 0.99);
+          --naranja-penalizacion-texto: #ffffff;
+          --color-bingo-pagado: #00c853;
+          --color-bingo-gratis: #1d4ed8;
+          --canto-size: clamp(26px, 7vw, 44px);
+          --mini-cell-size: clamp(20px, 4.4vw, 28px);
+          --canto-cell-size: clamp(28px, 4.8vw, 44px);
+      }
       body {
           font-family: 'Poppins', sans-serif;
-          background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)),
-                      url('https://img.freepik.com/vetores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg');
-          background-repeat: repeat;
-          background-size: auto;
+          background-color: #ffffff;
+          min-height: 100vh;
+          margin: 0;
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: center;
-          min-height: 100vh;
-          text-align: center;
+          position: relative;
+          overflow-x: hidden;
+      }
+      body::before {
+          content: '';
+          position: fixed;
+          inset: 0;
+          background: url('https://img.freepik.com/vetores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg') repeat;
+          opacity: 0.08;
+          pointer-events: none;
+          z-index: -1;
+      }
+      main {
+          width: 100%;
+          max-width: 1200px;
+          padding: 4px 14px 14px;
+          box-sizing: border-box;
+          display: grid;
+          gap: 12px;
+          grid-template-columns: minmax(0, 1fr);
+          grid-template-areas:
+              "header"
+              "panel"
+              "mis-cartones";
       }
       .back-btn {
           position: fixed;
-          top: 5px;
-          left: 5px;
-          width: 120px;
-          height: 40px;
+          top: 8px;
+          left: 8px;
+          width: 44px;
+          height: 44px;
           font-family: 'Bangers', cursive;
-          font-size: 1.2rem;
+          font-size: 1.4rem;
           background: orange;
           color: white;
           border: 4px solid #FFD700;
           border-radius: 10px;
           text-shadow: 2px 2px 4px #000;
-          text-transform: uppercase;
           display:flex;
           align-items:center;
           justify-content:center;
-          gap:5px;
+          z-index: 20;
+          cursor: pointer;
       }
-      #login-footer { margin-top:20px; }
-      #fecha-hora, #derechos { font-size:0.7rem; text-align:center; color:#000; }
-      #derechos { font-size:0.6rem; }
+      .panel {
+          background: var(--panel-bg);
+          box-shadow: var(--panel-shadow);
+          border-radius: 16px;
+          padding: 16px;
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+      }
+      #sorteo-header {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 2px;
+          margin-top: -12px;
+          grid-area: header;
+      }
+      #sorteo-resumen {
+          font-family: 'Bangers', cursive;
+          font-size: clamp(1.8rem, 6vw, 2.6rem);
+          letter-spacing: 1.6px;
+          color: #ffffff;
+          text-transform: uppercase;
+          text-align: center;
+          text-shadow: 0 0 16px rgba(0,0,0,0.55);
+          transition: color 0.3s ease, text-shadow 0.3s ease;
+      }
+      #sorteo-resumen.sorteo-titulo-especial {
+          color: #ffffff;
+          text-shadow: 0 0 18px rgba(255, 123, 0, 0.85), 0 0 32px rgba(255, 152, 0, 0.5), 2px 2px 6px rgba(0,0,0,0.65);
+      }
+      #sorteo-resumen.sorteo-titulo-diario {
+          color: #ffffff;
+          text-shadow: 0 0 18px rgba(10, 161, 40, 0.8), 0 0 32px rgba(46, 204, 64, 0.5), 2px 2px 6px rgba(0,0,0,0.65);
+      }
+      #sorteo-resumen::after {
+          content: '';
+          display: block;
+          margin-top: 2px;
+          width: 62px;
+          height: 4px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.35);
+      }
+      .sorteo-titulo-basico {
+          text-shadow: 0 0 12px rgba(255,255,255,0.55), 2px 2px 5px rgba(0,0,0,0.6);
+      }
+      #sorteo-detalles {
+          font-size: 0.82rem;
+          font-weight: 500;
+          color: var(--texto-primario);
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          justify-content: center;
+          flex-wrap: wrap;
+      }
+      .sin-sorteo-contenedor {
+          display: none;
+          width: 100%;
+          justify-content: center;
+          align-items: center;
+      }
+      .sin-sorteo-contenedor.visible {
+          display: flex;
+          margin-bottom: 6px;
+      }
+      .sin-sorteo-boton {
+          font-family: 'Bangers', cursive;
+          font-size: clamp(0.9rem, 2.8vw, 1.1rem);
+          padding: 6px 20px;
+          border-radius: 999px;
+          border: 3px solid #FFD700;
+          background: linear-gradient(145deg, rgba(0, 128, 255, 0.85), rgba(0, 68, 204, 0.92));
+          color: #ffffff;
+          letter-spacing: 0.8px;
+          cursor: pointer;
+          box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          text-align: center;
+      }
+      .sin-sorteo-boton--titulo {
+          font-size: clamp(1.15rem, 4.6vw, 1.7rem);
+          padding: 8px 22px;
+          border-radius: 14px;
+      }
+      .sin-sorteo-boton--titulo.con-seleccion {
+          background: linear-gradient(145deg, rgba(63, 81, 181, 0.92), rgba(33, 53, 163, 0.95));
+      }
+      .sin-sorteo-boton:hover {
+          transform: translateY(-1px) scale(1.02);
+          box-shadow: 0 10px 22px rgba(0,0,0,0.28);
+      }
+      .sin-sorteo-boton:active {
+          transform: translateY(1px) scale(0.98);
+      }
+      .sin-sorteo-mensaje {
+          font-family: 'Poppins', sans-serif;
+          font-size: clamp(0.58rem, 1.8vw, 0.68rem);
+          color: #111111;
+          text-align: center;
+          text-transform: uppercase;
+          letter-spacing: 0.6px;
+          margin-top: 4px;
+      }
+      .sin-sorteo-mensaje.parpadeo {
+          animation: sinSorteoParpadeo 2s ease-in-out infinite;
+      }
+      @keyframes sinSorteoParpadeo {
+          0% { opacity: 0; }
+          40% { opacity: 1; }
+          100% { opacity: 0; }
+      }
+      #sorteo-header.sin-sorteo-activo {
+          gap: 8px;
+      }
+      #sorteo-detalles .detalle-item {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+      }
+      #sorteo-detalles .detalle-tipo,
+      #sorteo-detalles .detalle-valor.tipo {
+          text-transform: uppercase;
+          font-weight: 700;
+      }
+      #sorteo-detalles .detalle-tipo-especial {
+          color: #ff7b00;
+          text-shadow: 0 0 10px rgba(255, 123, 0, 0.6);
+      }
+      #sorteo-detalles .detalle-tipo-diario {
+          color: #0aa128;
+          text-shadow: 0 0 10px rgba(10, 161, 40, 0.55);
+      }
+      #sorteo-detalles .detalle-label {
+          font-weight: 700;
+          color: #000000;
+      }
+      #sorteo-detalles .detalle-valor {
+          font-weight: 700;
+      }
+      #sorteo-detalles .detalle-valor.fecha {
+          color: #6a0dad;
+      }
+      #sorteo-detalles .detalle-valor.hora {
+          color: #0b4cc2;
+      }
+      #panel-superior {
+          grid-area: panel;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(0, clamp(240px, 44vw, 520px));
+          grid-template-areas:
+              "cantos carton"
+              "mensaje carton";
+          align-items: stretch;
+          row-gap: clamp(6px, 2vw, 12px);
+          column-gap: clamp(6px, 2vw, 14px);
+          width: 100%;
+          margin: 0;
+          padding: 0;
+          padding-bottom: calc(var(--panel-botones-altura, 0px) + var(--panel-botones-separacion, 0px));
+          position: relative;
+          --panel-botones-altura: 0px;
+          --panel-botones-separacion: 0px;
+          --panel-botones-top: 100%;
+      }
+      #cantos-panel {
+          grid-area: cantos;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          justify-content: flex-start;
+          gap: 10px;
+          padding: 0;
+          background: transparent;
+          width: 100%;
+          min-width: calc(var(--canto-cell-size) * 5 + clamp(6px, 2vw, 14px));
+          position: relative;
+      }
+      h2 {
+          margin: 0;
+          font-family: 'Bangers', cursive;
+          letter-spacing: 1px;
+          font-size: 1.4rem;
+          color: #4b0082;
+          text-align: left;
+      }
+      #cantos-grid {
+          display: grid;
+          grid-template-columns: repeat(5, var(--canto-cell-size));
+          justify-content: flex-start;
+          gap: 2px;
+          font-family: 'Poppins', sans-serif;
+          margin: 0;
+          width: min(100%, calc(var(--canto-cell-size) * 5));
+      }
+      .canto-cell {
+          width: var(--canto-cell-size);
+          height: var(--canto-cell-size);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 6px;
+          background: rgba(255,255,255,0.92);
+          color: #1f1f1f;
+          font-size: 0.9rem;
+          box-shadow: inset 0 0 2px rgba(0,0,0,0.2);
+          font-family: 'Poppins', sans-serif;
+          transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+      }
+      .canto-cell.encabezado {
+          font-size: 1.18rem;
+          color: #ff6600;
+          text-shadow: 2px 2px 0 #000000;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+          background: radial-gradient(circle, #ffffff 0%, #ffffff 58%, var(--verde-canto));
+          border-radius: 10px;
+          font-weight: 700;
+      }
+      .canto-cell.cantado {
+          background: radial-gradient(circle at center, rgba(255,255,255,0.75), rgba(0,200,83,0.95));
+          color: #ffffff;
+          font-weight: 700;
+          text-shadow: 0 0 6px rgba(0,0,0,0.85);
+          transform: scale(1.08);
+      }
+      .canto-cell.cantado.complementario {
+          background: radial-gradient(circle at center,
+              var(--naranja-penalizacion-suave) 10%,
+              var(--naranja-penalizacion-medio) 55%,
+              var(--naranja-penalizacion-intenso) 100%);
+          color: var(--naranja-penalizacion-texto);
+          text-shadow: 0 0 8px rgba(0, 0, 0, 0.85);
+      }
+      .canto-cell.invalido {
+          background: radial-gradient(circle at center,
+              var(--naranja-penalizacion-suave) 10%,
+              var(--naranja-penalizacion-medio) 55%,
+              var(--naranja-penalizacion-intenso) 100%);
+          color: var(--naranja-penalizacion-texto);
+          text-shadow: 0 0 8px rgba(0, 0, 0, 0.85);
+          box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+      }
+      .canto-cell.cantado.invalido {
+          transform: scale(1.08);
+      }
+      .canto-cell.ultimo {
+          box-shadow: 0 0 14px rgba(255,215,0,0.9);
+          animation: focoUltimo 1.6s ease-in-out infinite;
+      }
+      #ultimo-canto {
+          font-size: 0.78rem;
+          color: var(--verde-canto);
+          text-align: center;
+          font-weight: 600;
+          letter-spacing: 0.5px;
+          display: flex;
+          gap: 4px;
+          align-items: center;
+          justify-content: center;
+          flex-wrap: nowrap;
+          white-space: nowrap;
+      }
+      #ultimo-canto .ultimo-etiqueta {
+          text-transform: uppercase;
+          color: #1a1a1a;
+      }
+      #ultimo-canto .ultimo-total {
+          color: var(--verde-canto);
+      }
+      #ultimo-canto .ultimo-separador {
+          color: #1a1a1a;
+          font-weight: 700;
+      }
+      #ultimo-canto .ultimo-boton {
+          background: linear-gradient(135deg, rgba(244,255,246,0.96) 0%, rgba(0,200,83,0.95) 45%, rgba(0,164,68,0.95) 100%);
+          border: none;
+          border-radius: 999px;
+          padding: 4px 12px;
+          color: #0b4cc2;
+          font-size: clamp(0.7rem, 2.2vw, 0.9rem);
+          font-weight: 700;
+          font-family: 'Poppins', sans-serif;
+          letter-spacing: 0.4px;
+          cursor: pointer;
+          box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+          text-shadow: 0 0 8px rgba(255,255,255,0.9);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          animation: zoomPulse 1.8s ease-in-out infinite;
+          flex-shrink: 0;
+          line-height: 1;
+      }
+      #ultimo-canto .ultimo-boton:focus-visible {
+          outline: 3px solid rgba(11,76,194,0.4);
+          outline-offset: 2px;
+      }
+      #ultimo-canto .ultimo-boton:active {
+          transform: scale(0.95);
+          box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+      }
+      #ultimo-canto.complementarios-activos {
+          color: #ff8f00;
+      }
+      #ultimo-canto.complementarios-activos .ultimo-total {
+          color: #ff8f00;
+      }
+      #ultimo-canto .ultimo-boton.complementarios-activos {
+          background: linear-gradient(135deg, rgba(255, 236, 208, 0.96) 0%, rgba(255, 167, 38, 0.95) 52%, rgba(255, 111, 0, 0.95) 100%);
+          color: #ffffff;
+          text-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
+          box-shadow: 0 6px 16px rgba(255,145,0,0.32);
+      }
+      #ultimo-canto .ultimo-boton.complementarios-activos:focus-visible {
+          outline: 3px solid rgba(255,145,0,0.45);
+          outline-offset: 2px;
+      }
+      .ultimo-canto-popup {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%) scale(0.9);
+          background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(230,255,238,0.96));
+          border-radius: 18px;
+          padding: 10px 14px;
+          box-shadow: 0 14px 32px rgba(0,0,0,0.26);
+          border: 2px solid rgba(0,200,83,0.6);
+          display: none;
+          flex-direction: column;
+          gap: 10px;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          width: min(calc(var(--canto-cell-size) * 3.6), 80vw);
+          max-width: calc(var(--canto-cell-size) * 3.6);
+          min-width: clamp(160px, 30vw, calc(var(--canto-cell-size) * 3.6));
+          z-index: 10;
+      }
+      .ultimo-canto-popup.visible {
+          display: flex;
+          animation: popupEntrada 0.3s ease forwards;
+      }
+      .ultimo-canto-popup h3 {
+          margin: 0;
+          font-size: clamp(0.9rem, 2.4vw, 1.15rem);
+          color: #1a1a1a;
+          font-weight: 700;
+          font-family: 'Poppins', sans-serif;
+      }
+      .ultimo-canto-popup .popup-numero {
+          font-family: 'Poppins', sans-serif;
+          font-size: clamp(1.6rem, 4.8vw, 2.4rem);
+          color: #003a87;
+          text-shadow: 0 0 18px rgba(0,255,120,0.8);
+          animation: zoomPulse 1.6s ease-in-out infinite;
+          font-weight: 700;
+      }
+      .ultimo-canto-popup .popup-accion {
+          padding: 6px 18px;
+          border-radius: 999px;
+          border: none;
+          background: linear-gradient(135deg, rgba(0,200,83,0.92), rgba(0,150,60,0.96));
+          color: #ffffff;
+          font-weight: 600;
+          cursor: pointer;
+          box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .ultimo-canto-popup .popup-accion:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 10px 22px rgba(0,0,0,0.26);
+      }
+      .ultimo-canto-popup .popup-accion:active {
+          transform: scale(0.96);
+      }
+      .aviso-overlay {
+          position: fixed;
+          inset: 0;
+          display: none;
+          align-items: center;
+          justify-content: center;
+          background: rgba(0,0,0,0.7);
+          z-index: 1200;
+          padding: 16px;
+      }
+      .aviso-overlay.activa {
+          display: flex;
+      }
+      .aviso-overlay__box {
+          width: min(420px, 92vw);
+          background: linear-gradient(160deg, rgba(255,255,255,0.97), rgba(234,247,255,0.95));
+          border-radius: 18px;
+          padding: 22px 24px;
+          box-shadow: 0 18px 36px rgba(0,0,0,0.32);
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          align-items: center;
+          text-align: center;
+      }
+      .aviso-overlay__titulo {
+          font-family: 'Bangers', cursive;
+          font-size: clamp(1.6rem, 5vw, 2.2rem);
+          margin: 0;
+          color: #0b4cc2;
+          text-shadow: 0 0 10px rgba(255,255,255,0.85);
+          letter-spacing: 1px;
+      }
+      .aviso-overlay__mensaje {
+          margin: 0;
+          font-size: 1rem;
+          line-height: 1.6;
+          color: #1f1f1f;
+          font-weight: 500;
+      }
+      .aviso-overlay__acciones {
+          display: flex;
+          gap: 12px;
+      }
+      .aviso-overlay__acciones button {
+          font-family: 'Bangers', cursive;
+          font-size: 1.2rem;
+          padding: 10px 28px;
+          border-radius: 999px;
+          border: 3px solid rgba(0,120,255,0.75);
+          background: linear-gradient(150deg, rgba(0,150,255,0.9), rgba(179,229,255,0.95));
+          color: #032244;
+          cursor: pointer;
+          box-shadow: 0 10px 22px rgba(0,0,0,0.22);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .aviso-overlay__acciones button:hover {
+          transform: translateY(-1px) scale(1.02);
+          box-shadow: 0 12px 26px rgba(0,0,0,0.26);
+      }
+      .aviso-overlay__acciones button:active {
+          transform: translateY(1px) scale(0.97);
+      }
+      .aviso-overlay--complementarios .aviso-overlay__box {
+          background: linear-gradient(160deg, rgba(255,252,235,0.97), rgba(255,237,213,0.96));
+          border: 3px solid rgba(255,145,0,0.55);
+      }
+      .aviso-overlay--complementarios .aviso-overlay__titulo {
+          color: #c06200;
+          text-shadow: 0 0 12px rgba(255,210,120,0.85);
+      }
+      .aviso-overlay--complementarios .aviso-overlay__acciones button {
+          border-color: rgba(255,145,0,0.75);
+          background: linear-gradient(150deg, rgba(255,168,0,0.92), rgba(255,223,186,0.95));
+          color: #4a1f00;
+      }
+      .ultimo-canto-popup.complementarios-activos {
+          background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(255,228,196,0.95));
+          border-color: rgba(255,145,0,0.7);
+      }
+      .ultimo-canto-popup.complementarios-activos .popup-numero {
+          color: #ffffff;
+          text-shadow: 0 0 18px rgba(0,0,0,0.85);
+      }
+      .ultimo-canto-popup.complementarios-activos .popup-accion {
+          background: linear-gradient(135deg, rgba(255,145,0,0.95), rgba(255,109,0,0.96));
+          box-shadow: 0 8px 22px rgba(255,109,0,0.25);
+      }
+      @keyframes popupEntrada {
+          0% {
+              opacity: 0;
+              transform: translate(-50%, -50%) scale(0.8);
+          }
+          100% {
+              opacity: 1;
+              transform: translate(-50%, -50%) scale(1);
+          }
+      }
+      #panel-columna-derecha {
+          grid-area: carton;
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
+          justify-content: flex-start;
+          gap: 0;
+          margin: 0;
+          padding: 0;
+          width: 100%;
+          min-height: 0;
+      }
+      .panel-columna-derecha__rejilla {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          align-items: stretch;
+          justify-items: stretch;
+          width: 100%;
+          min-height: 0;
+          margin: 0;
+          padding: 0;
+      }
+      .panel-columna-derecha__destacado {
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
+          justify-content: flex-start;
+      }
+      .panel-columna-derecha__destacado > #carton-destacado {
+          flex: 1 1 auto;
+          width: 100%;
+      }
+      .panel-columna-derecha__modales {
+          position: relative;
+          width: 100%;
+          margin-top: 6px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: flex-start;
+          gap: clamp(4px, 1vw, 10px);
+      }
+      .panel-columna-derecha__modales > * {
+          width: 100%;
+          max-width: 100%;
+      }
+      #carton-destacado {
+          display: none;
+          flex-direction: column;
+          gap: 16px;
+          align-items: stretch;
+          justify-content: flex-start;
+          padding: 0;
+          width: 100%;
+          max-width: 100%;
+          justify-self: stretch;
+          align-self: start;
+          margin: 0;
+          height: auto;
+          overflow: visible;
+          min-height: 0;
+          --destacado-cell-size: clamp(42px, 8.8vw, 108px);
+          --carton-principal-padding: clamp(6px, 1.2vw, 12px);
+      }
+      #carton-destacado.activo {
+          display: flex;
+      }
+      #carton-destacado .carton-tabla thead th {
+          cursor: default;
+      }
+      #carton-destacado .carton-box {
+          width: 100%;
+          max-width: 100%;
+          margin: 0;
+          display: flex;
+          justify-content: center;
+          align-items: stretch;
+          perspective: 1200px;
+          perspective-origin: 50% 50%;
+      }
+      #carton-destacado .carton-wrapper {
+          position: relative;
+          transform-style: preserve-3d;
+          transform-origin: center center;
+          transition: transform 0.6s ease;
+          border-radius: 18px;
+          background: linear-gradient(160deg, #087f23 0%, #f7f55d 100%);
+          box-shadow: 0 16px 32px rgba(0,0,0,0.35);
+          cursor: pointer;
+          padding: 0;
+          width: 100%;
+          max-width: 100%;
+          min-height: 0;
+          display: flex;
+          flex-direction: column;
+          --carton-wrapper-altura: calc((var(--destacado-cell-size) * 6.2) + clamp(140px, 32vw, 240px));
+      }
+      #carton-destacado .carton-wrapper::before {
+          content: '';
+          display: block;
+          padding-bottom: var(--carton-wrapper-altura);
+          pointer-events: none;
+      }
+      #carton-destacado .carton-wrapper.flipped {
+          transform: rotateY(180deg);
+      }
+      #carton-destacado .carton-wrapper.flipped .carton-front {
+          pointer-events: none;
+      }
+      #carton-destacado .carton-wrapper.flipped .carton-back {
+          pointer-events: auto;
+      }
+      #carton-destacado .carton-front,
+      #carton-destacado .carton-back {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
+          justify-content: flex-start;
+          backface-visibility: hidden;
+          border-radius: 14px;
+          overflow: hidden;
+          padding: 0;
+          box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+      }
+      #carton-destacado .carton-front {
+          gap: clamp(0px, 0.6vw, 8px);
+          align-items: stretch;
+          justify-content: center;
+          min-height: 0;
+          padding: clamp(4px, 1vw, 10px);
+          box-sizing: border-box;
+          background: linear-gradient(#ffffff, #dcdcdc);
+      }
+      #carton-destacado .carton-front .carton-visual {
+          width: 100%;
+          display: grid;
+          grid-template-rows: auto 1fr;
+          align-items: stretch;
+          justify-items: center;
+          gap: clamp(0px, 0.4vw, 6px);
+          flex: 1 1 auto;
+          align-self: stretch;
+          min-height: 0;
+          padding: var(--carton-principal-padding, clamp(6px, 1.2vw, 12px));
+          box-sizing: border-box;
+          aspect-ratio: auto;
+          position: relative;
+          --principal-cell-size: min(
+              var(--destacado-cell-size),
+              max(
+                  clamp(28px, 8vw, 36px),
+                  calc((100% - (var(--carton-principal-padding) * 2)) / 5)
+              )
+          );
+      }
+      #carton-destacado .carton-front .carton-visual .carton-tabla {
+          display: grid;
+          grid-template-columns: repeat(5, minmax(0, var(--principal-cell-size, var(--cell-size))));
+          grid-auto-rows: var(--principal-cell-size, var(--cell-size));
+          width: min(100%, calc(var(--principal-cell-size, var(--cell-size)) * 5));
+          max-width: calc(var(--principal-cell-size, var(--cell-size)) * 5);
+          height: min(100%, calc(var(--principal-cell-size, var(--cell-size)) * 6.2));
+          max-height: calc(var(--principal-cell-size, var(--cell-size)) * 6.2);
+          margin: 0;
+          align-self: stretch;
+          justify-self: stretch;
+      }
+      #carton-destacado .carton-back {
+          transform: rotateY(180deg);
+          justify-content: flex-start;
+          align-items: stretch;
+          background: var(--carton-back-gradiente, linear-gradient(#ffffff, #dcdcdc));
+      }
+      #carton-destacado .carton-back.carton-back--diario {
+          --carton-back-gradiente: linear-gradient(160deg, #ffffff 0%, #0aa128 100%);
+      }
+      #carton-destacado .carton-back.carton-back--especial {
+          --carton-back-gradiente: linear-gradient(160deg, #ffffff 0%, #ff8800 100%);
+      }
+      #carton-destacado .carton-back img {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 82%;
+          max-width: 260px;
+          height: auto;
+          opacity: 0.14;
+          pointer-events: none;
+      }
+      #carton-destacado .carton-back-content {
+          position: relative;
+          z-index: 1;
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
+          justify-content: flex-start;
+          gap: 10px;
+          height: 100%;
+      }
+      #carton-destacado .carton-back-title {
+          margin: 0;
+          font-family: 'Bangers', cursive;
+          font-size: clamp(1.1rem, 4.5vw, 1.5rem);
+          color: #ffffff;
+          text-shadow: 0 0 10px rgba(0,0,0,0.85), 0 0 18px rgba(0,0,0,0.6);
+          letter-spacing: 1px;
+          grid-column: 1 / -1;
+          text-align: center;
+      }
+      #carton-destacado .carton-back-formas {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          width: 100%;
+          align-items: stretch;
+      }
+      #carton-destacado .back-forma-line {
+          font-family: 'Bangers', cursive;
+          font-size: clamp(0.88rem, 3vw, 1.08rem);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 6px;
+          line-height: 1.05;
+          width: 100%;
+          text-shadow: 0 0 12px rgba(255,255,255,0.85), 0 0 24px rgba(255,255,255,0.7);
+      }
+      #carton-destacado .back-forma-line .back-forma-valor {
+          font-family: 'Poppins', sans-serif;
+          font-size: clamp(1rem, 3.4vw, 1.25rem);
+          font-weight: 700;
+      }
+      #carton-destacado .back-forma-line .back-forma-etiqueta {
+          letter-spacing: 0.5px;
+      }
+      #carton-destacado .back-forma-line .back-forma-etiqueta,
+      #carton-destacado .back-forma-line .back-forma-valor {
+          text-shadow:
+              -3px 0 0 #ffffff,
+              3px 0 0 #ffffff,
+              0 -3px 0 #ffffff,
+              0 3px 0 #ffffff,
+              -2px -2px 0 #ffffff,
+              2px -2px 0 #ffffff,
+              -2px 2px 0 #ffffff,
+              2px 2px 0 #ffffff;
+      }
+      #carton-destacado .carton-back-total {
+          margin-top: 4px;
+          display: flex;
+          align-items: baseline;
+          justify-content: center;
+          gap: 10px;
+          font-family: 'Bangers', cursive;
+          color: #ffffff;
+          text-shadow: 0 0 14px rgba(255,255,255,0.85), 0 0 28px rgba(255,255,255,0.7);
+      }
+      #carton-destacado .carton-back-total-label {
+          font-size: clamp(1.1rem, 3.8vw, 1.4rem);
+          margin: 0;
+          text-shadow: 0 0 14px rgba(255,255,255,0.85), 0 0 28px rgba(255,255,255,0.7);
+      }
+      #carton-destacado .carton-back-total-valor {
+          font-family: 'Poppins', sans-serif;
+          font-size: clamp(1.6rem, 5vw, 2.2rem);
+          margin: 0;
+          font-weight: 700;
+          text-shadow: 0 0 14px rgba(255,255,255,0.85), 0 0 28px rgba(255,255,255,0.7);
+      }
+      #panel-botones-formas {
+          grid-area: botones;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-self: stretch;
+          align-self: stretch;
+          width: 100%;
+          max-width: 100%;
+          margin: 0;
+          padding: 0;
+          --panel-botones-ancho: auto;
+          --panel-botones-minimo: 0px;
+          --panel-botones-col-min: clamp(140px, 42vw, 220px);
+          --panel-botones-escala: 1;
+          --panel-botones-escala-limitada: clamp(0.5, var(--panel-botones-escala), 1);
+          gap: calc(clamp(4px, 1vw, 10px) * var(--panel-botones-escala-limitada));
+      }
+      #panel-botones-formas:empty {
+          display: none;
+      }
+      #panel-botones-formas.flotante {
+          position: absolute;
+          left: 50%;
+          transform: translateX(-50%);
+          top: calc(var(--panel-botones-top, 100%) + var(--panel-botones-separacion, 0px));
+          margin: 0;
+          padding: clamp(10px, 2.8vw, 16px);
+          width: min(
+              var(--panel-botones-ancho, clamp(210px, 80vw, 420px)),
+              calc(100% - clamp(16px, 5vw, 32px))
+          );
+          max-width: clamp(210px, 80vw, 420px);
+          border-radius: clamp(12px, 3.6vw, 18px);
+          box-shadow: 0 10px 26px rgba(0,0,0,0.22);
+          background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(245,245,245,0.92));
+          backdrop-filter: blur(6px);
+          border: 1px solid rgba(255,255,255,0.85);
+          grid-area: auto;
+          z-index: 30;
+          gap: clamp(6px, 2vw, 14px);
+      }
+      #panel-botones-formas.flotante:empty {
+          display: none;
+      }
+      #panel-botones-formas.flotante .panel-botones-formas__envoltorio,
+      #panel-botones-formas.flotante .panel-botones-formas__grid {
+          width: 100%;
+      }
+      #panel-botones-formas.flotante .carton-forma-accion {
+          width: 100%;
+      }
+      .panel-botones-formas__envoltorio {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          width: 100%;
+          max-width: 100%;
+          gap: calc(clamp(6px, 2vw, 14px) * var(--panel-botones-escala-limitada, 1));
+      }
+      .panel-botones-formas__grid {
+          display: grid;
+          width: 100%;
+          max-width: 100%;
+          gap: calc(clamp(6px, 2vw, 14px) * var(--panel-botones-escala-limitada, 1));
+          justify-items: center;
+      }
+      .panel-botones-formas__mensaje {
+          width: 100%;
+          min-height: clamp(28px, 3vw, 40px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: clamp(0.62rem, 1.6vw, 0.9rem);
+          font-weight: 700;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          color: #4b0082;
+          text-shadow: 0 0 10px rgba(255,255,255,0.95);
+      }
+      .panel-ganancias-totales {
+          display: none;
+          align-items: center;
+          justify-content: center;
+          gap: clamp(6px, 2vw, 12px);
+          padding: clamp(2px, 1vw, 6px) clamp(6px, 2vw, 14px);
+          border-radius: 14px;
+          background: rgba(255, 255, 255, 0.96);
+          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+          max-width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
+      }
+      .panel-ganancias-totales--visible {
+          display: inline-flex;
+      }
+      .panel-ganancias-totales__etiqueta {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          font-size: clamp(0.45rem, 1.3vw, 0.62rem);
+          font-weight: 600;
+          letter-spacing: 0.4px;
+          color: #000000;
+          line-height: 1.05;
+          text-transform: uppercase;
+          text-align: center;
+      }
+      .panel-ganancias-totales__etiqueta span {
+          display: block;
+      }
+      .panel-ganancias-totales__valor {
+          font-family: 'Poppins', sans-serif;
+          font-size: clamp(1rem, 4.8vw, 1.9rem);
+          color: #00c853;
+          text-shadow: 0 0 12px rgba(255,255,255,0.9), 0 0 24px rgba(0, 200, 83, 0.45);
+          line-height: 1;
+          white-space: nowrap;
+          max-width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+      }
+      .panel-botones-formas__mensaje .carton-forma-leyenda {
+          position: static;
+          transform: none;
+          background: transparent;
+          border-radius: 999px;
+          box-shadow: none;
+          padding: 0;
+          opacity: 0;
+          transition: opacity 0.25s ease;
+          font-size: clamp(0.58rem, 1.6vw, 0.82rem);
+          border: none;
+      }
+      .panel-botones-formas__mensaje .carton-forma-leyenda.visible {
+          opacity: 1;
+          background: rgba(255,255,255,0.96);
+          box-shadow: 0 6px 18px rgba(0,0,0,0.16);
+          padding: 6px 18px;
+          border: 1px solid rgba(0,0,0,0.08);
+      }
+      .panel-botones-formas__grid > .carton-forma-accion {
+          width: auto;
+      }
+      .carton-forma-accion {
+          font-family: 'Bangers', cursive;
+          font-size: clamp(0.62rem, calc(0.82rem * var(--panel-botones-escala-limitada, 1)), 1.05rem);
+          padding: calc(4px * var(--panel-botones-escala-limitada, 1)) calc(10px * var(--panel-botones-escala-limitada, 1));
+          border-radius: 999px;
+          border: calc(2px * var(--panel-botones-escala-limitada, 1)) solid var(--forma-color-borde, rgba(0,0,0,0.2));
+          color: #1f1f1f;
+          background: linear-gradient(to bottom, var(--forma-color, #ffe082), #ffffff);
+          box-shadow: 0 4px 10px rgba(0,0,0,0.18);
+          cursor: pointer;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          text-align: center;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: calc(6px * var(--panel-botones-escala-limitada, 1));
+          white-space: normal;
+          width: auto;
+          min-width: 0;
+      }
+      #panel-botones-formas .carton-forma-accion {
+          align-self: center;
+      }
+      .carton-forma-accion .carton-forma-texto {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          line-height: 1.1;
+      }
+      .carton-forma-accion .carton-forma-contador {
+          font-size: calc(0.9em * var(--panel-botones-escala-limitada, 1));
+          font-weight: 700;
+          color: var(--forma-color-contador, #1f1f1f);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding-left: calc(6px * var(--panel-botones-escala-limitada, 1));
+          min-width: calc(1.8em * var(--panel-botones-escala-limitada, 1));
+      }
+      .carton-forma-accion.con-ganadores {
+          animation: zoomPulse 1.8s ease-in-out infinite;
+      }
+      .carton-forma-accion:hover,
+      .carton-forma-accion:focus-visible {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 16px rgba(0,0,0,0.22);
+          outline: none;
+      }
+      #mis-cartones-section {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          margin-top: 6px;
+          width: 100%;
+          grid-area: mis-cartones;
+      }
+      #formas-mensaje {
+          grid-area: mensaje;
+          margin: 0;
+          padding: 0;
+          align-self: start;
+          justify-self: stretch;
+      }
+      #mis-cartones-section h2 {
+          text-align: center;
+          margin: 0;
+      }
+      #mis-cartones-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+          gap: 12px;
+          width: 100%;
+          justify-items: center;
+      }
+      #mis-cartones-grid:empty {
+          display: none;
+      }
+      .carton-visual {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          padding-top: 12px;
+      }
+      .carton-visual--mini {
+          width: auto;
+          background: transparent;
+          box-shadow: none;
+          border-radius: 0;
+          padding: 12px 0 10px;
+          box-sizing: border-box;
+          cursor: pointer;
+          transition: transform 0.18s ease, box-shadow 0.18s ease;
+          margin: 0 auto;
+      }
+      .carton-visual--mini:focus-visible {
+          outline: 3px solid rgba(255,215,0,0.45);
+          outline-offset: 3px;
+      }
+      .carton-visual--mini.seleccionado {
+          transform: translateY(-2px);
+          outline: 3px solid rgba(255,215,0,0.5);
+          outline-offset: 3px;
+      }
+      .carton-visual--mini.ganador .carton-tabla {
+          box-shadow: 0 0 14px rgba(255,215,0,0.7);
+      }
+      .carton-visual--mini:hover {
+          box-shadow: none;
+      }
+      .carton-visual--mini:hover .carton-tabla {
+          transform: none;
+      }
+      .carton-visual--mini {
+          gap: 2px;
+          padding-top: 10px;
+      }
+      .carton-visual--principal {
+          padding-top: 12px;
+      }
+      .carton-forma-leyenda {
+          position: absolute;
+          top: clamp(6px, 2vw, 16px);
+          left: 50%;
+          transform: translateX(-50%);
+          background: rgba(255, 255, 255, 0.92);
+          color: #333333;
+          font-size: 0.55rem;
+          font-weight: 600;
+          letter-spacing: 0.8px;
+          text-transform: uppercase;
+          border-radius: 999px;
+          padding: 2px 10px;
+          white-space: nowrap;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+          box-shadow: 0 0 10px rgba(255, 215, 0, 0.75);
+          border: 1px solid rgba(0,0,0,0.1);
+          z-index: 2;
+      }
+      .carton-visual--principal .carton-forma-leyenda {
+          font-size: 0.62rem;
+          padding: 3px 12px;
+      }
+      .carton-forma-leyenda--panel {
+          position: static;
+          top: auto;
+          left: auto;
+          transform: none;
+          margin: 0;
+      }
+      .carton-forma-leyenda.visible {
+          opacity: 1;
+      }
+      .carton-info {
+          font-size: 0.72rem;
+          color: var(--texto-primario);
+          text-align: center;
+          font-weight: 600;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 2px;
+          line-height: 1.1;
+      }
+      .carton-info-numero {
+          font-size: inherit;
+      }
+      .carton-info-tipo {
+          font-size: 0.58rem;
+          font-weight: 700;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          margin-top: -2px;
+      }
+      .carton-info-tipo--pagado {
+          color: #0aa128;
+      }
+      .carton-info-tipo--gratis {
+          color: #1d4ed8;
+      }
+      .carton-visual--mini .carton-info {
+          margin-top: 6px;
+      }
+      .carton-tabla {
+          --cell-size: clamp(34px, 9vw, 72px);
+          --bingo-encabezado-color: var(--color-bingo-pagado);
+          width: min(100%, calc(var(--cell-size) * 5));
+          max-width: calc(var(--cell-size) * 5);
+          border-collapse: separate;
+          border-spacing: 0;
+          table-layout: fixed;
+          background: linear-gradient(#ffffff, #dcdcdc);
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 6px 15px rgba(0,0,0,0.25);
+      }
+      .carton-tabla[data-tipocarton="pagado"] {
+          --bingo-encabezado-color: var(--color-bingo-pagado);
+      }
+      .carton-tabla[data-tipocarton="gratis"] {
+          --bingo-encabezado-color: var(--color-bingo-gratis);
+      }
+      .carton-tabla thead th,
+      .carton-tabla tbody td {
+          width: var(--cell-size);
+          height: var(--cell-size);
+          aspect-ratio: 1 / 1;
+          border: 2px solid rgba(90,90,90,0.45);
+          text-align: center;
+          font-weight: 700;
+          color: #1a1a1a;
+          padding: 0;
+          position: relative;
+          overflow: hidden;
+          background: rgba(255,255,255,0.95);
+          box-sizing: border-box;
+      }
+      .carton-tabla thead th > *,
+      .carton-tabla tbody td > * {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
+      }
+      .carton-tabla thead th {
+          font-size: calc(var(--cell-size) * 0.7);
+          background: radial-gradient(circle, #ffffff 0%, #ffffff 60%, var(--bingo-encabezado-color));
+          color: #ff6600;
+          text-shadow: 2px 2px 0 #000000;
+      }
+      .carton-tabla thead th[role="button"] {
+          cursor: pointer;
+      }
+      .carton-tabla thead th.forma-activa {
+          background: radial-gradient(circle, rgba(var(--forma-rgb-vivo, var(--forma-rgb, 0, 120, 255)), 0.45) 0%, rgba(var(--forma-rgb, 0, 120, 255), 0.55) 60%, rgba(var(--forma-rgb, 0, 120, 255), 0.9) 100%);
+          color: #ffffff;
+          text-shadow: 0 0 10px rgba(0,0,0,0.85);
+      }
+      .carton-tabla thead th .encabezado-letra {
+          display: inline-block;
+          transition: transform 0.25s ease, letter-spacing 0.25s ease;
+      }
+      .carton-tabla thead th.forma-activa .encabezado-letra {
+          transform: scale(1.05);
+          letter-spacing: 1.5px;
+      }
+      .carton-tabla.ganador thead th .encabezado-letra {
+          animation: zoomPulse 1.6s ease-in-out infinite;
+      }
+      .carton-tabla tbody td {
+          font-size: calc(var(--cell-size) * 0.55);
+          transition: background 0.4s ease, transform 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+      }
+      .carton-tabla td.free {
+          background: radial-gradient(circle, #ffbd4f, #ffe8b3);
+          color: #4B0082;
+          font-size: calc(var(--cell-size) * 0.62);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+      }
+      #carton-destacado .carton-tabla td.free.carton-flip-trigger {
+          cursor: pointer;
+          animation: zoomPulse 2s ease-in-out infinite;
+      }
+      #carton-destacado .carton-tabla td.free.carton-flip-trigger .cell-content {
+          text-shadow: 0 0 8px rgba(255,255,255,0.9), 0 0 12px rgba(75,0,130,0.75);
+      }
+      .carton-tabla--principal td.free .cell-content.numero-carton {
+          color: #1a1a1a;
+          font-weight: 700;
+          text-shadow: 0 0 6px rgba(255,255,255,0.9);
+          letter-spacing: 0.5px;
+          font-size: clamp(0.85rem, 2.4vw, 1.15rem);
+          line-height: 1.05;
+          word-break: keep-all;
+      }
+      .carton-tabla .estrella {
+          font-size: 1.2em;
+          line-height: 1;
+          text-shadow: 0 0 4px rgba(0,0,0,0.3);
+      }
+      .carton-tabla .cell-content {
+          line-height: 1;
+          font-weight: inherit;
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+      }
+      .carton-tabla td.celda-cantada {
+          background: radial-gradient(circle at center, rgba(0,200,83,0.32), rgba(0,200,83,0.96));
+          color: #ffffff;
+          box-shadow: inset 0 0 10px rgba(0,0,0,0.45);
+          border-radius: 4px;
+      }
+      .carton-tabla td.celda-cantada .cell-content {
+          text-shadow: 0 0 6px rgba(0,0,0,0.85);
+      }
+      .carton-tabla td.celda-complementario-flash {
+          background: radial-gradient(circle at center,
+              rgba(255, 240, 220, 0.94) 12%,
+              rgba(255, 183, 77, 0.96) 58%,
+              rgba(255, 111, 0, 0.96) 100%);
+          color: var(--naranja-penalizacion-texto);
+          box-shadow: inset 0 0 10px rgba(0,0,0,0.28);
+          border-radius: 4px;
+      }
+      .carton-tabla td.celda-complementario-flash .cell-content {
+          text-shadow: 0 0 6px rgba(0, 0, 0, 0.85);
+      }
+      .carton-tabla td.celda-canto-penalizado {
+          background: radial-gradient(circle at center,
+              var(--naranja-penalizacion-suave) 8%,
+              var(--naranja-penalizacion-medio) 52%,
+              var(--naranja-penalizacion-intenso) 100%);
+          color: var(--naranja-penalizacion-texto);
+          box-shadow: inset 0 0 10px rgba(0,0,0,0.28);
+          border-radius: 4px;
+          transition: background 0s, transform 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+      }
+      .carton-tabla td.celda-canto-penalizado .cell-content {
+          text-shadow: 0 0 6px rgba(0, 0, 0, 0.85);
+      }
+      .carton-tabla td.celda-forma-activa {
+          color: inherit;
+          border-color: rgba(var(--forma-rgb-vivo, var(--forma-rgb, 0, 120, 255)), 0.95);
+          box-shadow: inset 0 0 0 4px rgba(var(--forma-rgb, 0, 120, 255), 0.28), 0 0 10px rgba(var(--forma-rgb-vivo, var(--forma-rgb, 0, 120, 255)), 0.55);
+          border-radius: 4px;
+      }
+      .carton-tabla td.celda-forma-activa:not(.celda-forma-solo-borde) {
+          background: radial-gradient(circle at center,
+              rgba(var(--forma-rgb-vivo, var(--forma-rgb, 0, 120, 255)), 0.92) 0%,
+              rgba(var(--forma-rgb, 0, 120, 255), 0.98) 45%,
+              rgba(var(--forma-rgb, 0, 120, 255), 0.82) 100%);
+          color: #ffffff;
+      }
+      .carton-tabla td.celda-forma-activa::before {
+          content: '';
+          position: absolute;
+          inset: 2px;
+          border-radius: inherit;
+          pointer-events: none;
+          background: radial-gradient(circle, rgba(var(--forma-rgb-vivo, var(--forma-rgb, 0, 120, 255)), 0.35) 0%, rgba(var(--forma-rgb, 0, 120, 255), 0.12) 40%, transparent 72%);
+      }
+      .carton-tabla td.celda-forma-activa .cell-content {
+          position: relative;
+          z-index: 1;
+          animation: zoomPulse 1.4s ease-in-out infinite;
+          text-shadow: 0 0 10px rgba(0,0,0,0.9);
+      }
+      .carton-tabla td.celda-forma-activa:not(.celda-forma-solo-borde) .cell-content {
+          color: inherit;
+      }
+      .carton-tabla td.celda-forma-activa.celda-forma-solo-borde::before {
+          display: none;
+      }
+      .carton-tabla td.celda-forma-activa.celda-forma-solo-borde .cell-content {
+          animation: none;
+      }
+      .carton-visual--principal.forma-manual-activa .carton-tabla td.celda-forma-activa.celda-forma-solo-borde {
+          border-color: rgba(var(--forma-rgb-borde, var(--forma-rgb, 0, 120, 255)), 0.98);
+          box-shadow: inset 0 0 0 4px rgba(var(--forma-rgb-borde, var(--forma-rgb, 0, 120, 255)), 0.7), 0 0 12px rgba(var(--forma-rgb-borde, var(--forma-rgb, 0, 120, 255)), 0.6);
+      }
+      .carton-tabla td.celda-forma-temporal {
+          position: relative;
+      }
+      .carton-tabla td.celda-forma-temporal::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(circle, rgba(var(--forma-rgb-vivo, var(--forma-rgb, 0, 120, 255)), 0.55) 0%, rgba(var(--forma-rgb, 0, 120, 255), 0.35) 55%, transparent 90%);
+          animation: formaTemporalFade 3s ease forwards;
+          pointer-events: none;
+          border-radius: 4px;
+      }
+      .carton-tabla td.celda-forma-temporal .cell-content {
+          position: relative;
+          z-index: 1;
+          text-shadow: 0 0 6px rgba(0,0,0,0.75);
+      }
+      .carton-tabla--principal {
+          --cell-size: var(--principal-cell-size, clamp(40px, 16vw, 80px));
+      }
+      .carton-tabla--mini {
+          --cell-size: clamp(20px, 7.2vw, 28px);
+      }
+      #carton-destacado .carton-tabla {
+          width: min(100%, calc(var(--principal-cell-size, var(--cell-size)) * 5));
+          max-width: calc(var(--principal-cell-size, var(--cell-size)) * 5);
+          margin: 0 auto;
+      }
+      #carton-destacado .carton-tabla thead,
+      #carton-destacado .carton-tabla tbody,
+      #carton-destacado .carton-tabla tr {
+          display: contents;
+      }
+      #carton-destacado .carton-tabla thead th,
+      #carton-destacado .carton-tabla tbody td {
+          min-height: 0;
+          height: 100%;
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          aspect-ratio: 1 / 1;
+      }
+      #carton-destacado .carton-tabla--principal thead th {
+          font-size: calc(var(--principal-cell-size, var(--cell-size)) * 0.78);
+      }
+      #carton-destacado .carton-tabla--principal tbody td {
+          font-size: calc(var(--principal-cell-size, var(--cell-size)) * 0.6);
+      }
+      #carton-destacado .carton-tabla thead th > *,
+      #carton-destacado .carton-tabla tbody td > * {
+          width: 100%;
+          height: 100%;
+      }
+      #carton-destacado .carton-visor-info {
+          margin-top: 6px;
+      }
+      .carton-visual--mini .carton-tabla {
+          width: min(100%, calc(var(--cell-size) * 5));
+          max-width: calc(var(--cell-size) * 5);
+          margin: 0 auto;
+      }
+      .carton-visor-info {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 8px 14px;
+          font-size: 0.72rem;
+          font-weight: 600;
+          color: var(--texto-primario);
+          text-align: center;
+          align-items: center;
+          width: min(100%, 520px);
+          margin: 6px auto 0;
+          justify-items: center;
+      }
+      .carton-visor-forma {
+          grid-column: auto;
+          display: inline-flex;
+          align-items: baseline;
+          justify-content: center;
+          gap: 4px;
+          font-size: 0.74rem;
+          font-weight: 600;
+          letter-spacing: 0.4px;
+          text-shadow: 0 0 6px rgba(255,255,255,0.85);
+          width: 100%;
+      }
+      .carton-visor-forma-label {
+          font-weight: 600;
+          text-shadow: 0 0 6px rgba(255,255,255,0.9);
+      }
+      .carton-visor-forma-valor {
+          font-weight: 700;
+          text-shadow: 0 0 6px rgba(255,255,255,0.9);
+      }
+      .carton-visor-ganadores {
+          grid-column: auto;
+          font-size: 0.64rem;
+          font-weight: 600;
+          text-align: center;
+          background: transparent;
+          border: none;
+          padding: 0;
+          cursor: pointer;
+          font-family: inherit;
+          transition: transform 0.2s ease;
+          text-shadow: 0 0 5px rgba(255,255,255,0.75);
+          justify-self: center;
+      }
+      .carton-visor-ganadores:hover,
+      .carton-visor-ganadores:focus-visible {
+          transform: translateY(-1px);
+          outline: none;
+      }
+      .carton-visor-ganadores:disabled {
+          cursor: not-allowed;
+          opacity: 0.55;
+          transform: none;
+      }
+      .carton-visor-total-label {
+          grid-column: 1 / -1;
+          font-size: 0.78rem;
+          font-weight: 700;
+          color: #138a3d;
+          text-transform: uppercase;
+          text-shadow: 0 0 6px rgba(255,255,255,0.85);
+          justify-self: center;
+      }
+      .carton-visor-total-valor {
+          grid-column: 1 / -1;
+          font-size: 1.18rem;
+          font-weight: 700;
+          color: #0f8a35;
+          line-height: 1.2;
+          text-shadow: 0 0 8px rgba(255,255,255,0.85);
+          justify-self: center;
+      }
+      .mensaje {
+          font-size: 0.85rem;
+          color: var(--texto-secundario);
+      }
+      .mensaje:empty {
+          display: none;
+      }
+      #cartones-mensaje,
+      #formas-mensaje {
+          text-align: center;
+      }
+      #resultados-contenedor {
+          display: none;
+      }
+      #login-footer {
+          margin: 30px 0 10px;
+          text-align: center;
+      }
+      #fecha-hora, #derechos {
+          font-size: 0.7rem;
+          color: #000;
+      }
+      #derechos {
+          font-size: 0.6rem;
+      }
+      .modal {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.8);
+          display: none;
+          align-items: center;
+          justify-content: center;
+          z-index: 100;
+          padding: 20px;
+          box-sizing: border-box;
+      }
+      .modal.activa {
+          display: flex;
+      }
+      .modal-contenido {
+          background: #fff;
+          border-radius: 18px;
+          padding: 18px;
+          max-width: min(720px, calc(100vw - 32px));
+          width: min(720px, calc(100vw - 32px));
+          max-height: min(85vh, 640px);
+          overflow-y: auto;
+          box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          box-sizing: border-box;
+      }
+      .modal-cerrar {
+          align-self: flex-end;
+          background: none;
+          border: none;
+          font-size: 1.4rem;
+          cursor: pointer;
+          color: #333;
+      }
+      #modal-ganadores-lista {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+          gap: 12px;
+      }
+      .modal-sorteos .modal-contenido {
+          max-width: min(520px, calc(100vw - 32px));
+          width: min(520px, calc(100vw - 32px));
+          gap: 10px;
+      }
+      .modal-sorteos-titulo {
+          font-family: 'Bangers', cursive;
+          font-size: clamp(1.4rem, 4.2vw, 1.8rem);
+          text-align: center;
+          margin: 0;
+          letter-spacing: 1px;
+          color: #0b4dda;
+          text-transform: uppercase;
+      }
+      .modal-sorteos-lista {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+      }
+      .modal-sorteo-item {
+          border: 2px solid rgba(30, 58, 138, 0.18);
+          border-radius: 12px;
+          padding: 10px 12px;
+          background: linear-gradient(145deg, rgba(255,255,255,0.96), rgba(236,243,255,0.94));
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          cursor: pointer;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          text-align: left;
+          font-family: 'Poppins', sans-serif;
+      }
+      .modal-sorteo-item--especial {
+          border-color: rgba(255, 123, 0, 0.72);
+      }
+      .modal-sorteo-item--especial .modal-sorteo-detalles span {
+          color: #ff7b00;
+      }
+      .modal-sorteo-item--diario {
+          border-color: rgba(16, 158, 52, 0.65);
+      }
+      .modal-sorteo-item--diario .modal-sorteo-detalles span {
+          color: #0aa128;
+      }
+      .modal-sorteo-item:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 8px 18px rgba(15, 76, 194, 0.25);
+      }
+      .modal-sorteo-nombre {
+          font-family: 'Bangers', cursive;
+          font-size: 1.05rem;
+          color: #1a237e;
+          text-transform: uppercase;
+          letter-spacing: 0.6px;
+      }
+      .modal-sorteo-detalles {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px 12px;
+          font-size: 0.78rem;
+          color: #1f1f1f;
+      }
+      .modal-sorteo-detalles span {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+      }
+      .modal-sorteos .modal-mensaje {
+          margin-top: 6px;
+      }
+      .modal-formas-sin .modal-contenido {
+          max-width: min(420px, calc(100vw - 32px));
+          width: min(420px, calc(100vw - 32px));
+          align-items: stretch;
+      }
+      .modal-formas-sin-titulo {
+          font-family: 'Bangers', cursive;
+          font-size: clamp(1.3rem, 4vw, 1.6rem);
+          text-align: center;
+          margin: 0;
+          color: #8b0000;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+      }
+      .modal-formas-sin-lista {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+      }
+      .modal-formas-sin-item {
+          background: linear-gradient(145deg, rgba(255,255,255,0.96), rgba(245,245,245,0.94));
+          border-radius: 12px;
+          padding: 12px 14px;
+          font-family: 'Poppins', sans-serif;
+          font-weight: 600;
+          color: #b71c1c;
+          text-align: center;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      }
+      .modal-formas-sin-acciones {
+          display: flex;
+          justify-content: center;
+          margin-top: 4px;
+      }
+      .modal-formas-sin-aceptar {
+          font-family: 'Bangers', cursive;
+          font-size: clamp(0.9rem, 2.4vw, 1.1rem);
+          padding: 8px 24px;
+          border-radius: 999px;
+          border: 3px solid #FFD700;
+          background: linear-gradient(145deg, rgba(255, 138, 26, 0.92), rgba(230, 81, 0, 0.94));
+          color: #ffffff;
+          cursor: pointer;
+          box-shadow: 0 6px 16px rgba(230, 81, 0, 0.28);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .modal-formas-sin-aceptar:hover {
+          transform: translateY(-1px) scale(1.02);
+          box-shadow: 0 10px 22px rgba(191, 54, 12, 0.32);
+      }
+      .modal-formas-sin-aceptar:active {
+          transform: translateY(1px) scale(0.98);
+      }
+      .ganador-card {
+          background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(240,240,240,0.96));
+          border-radius: 14px;
+          padding: 14px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+          display: grid;
+          grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.75fr);
+          gap: 4px 14px;
+          align-items: stretch;
+      }
+      .ganador-card-info {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          align-items: center;
+          grid-column: 1 / 2;
+          grid-row: 1 / 3;
+      }
+      .ganador-info {
+          font-size: 0.8rem;
+          color: var(--texto-primario);
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+          text-align: center;
+      }
+      .ganador-info strong {
+          color: #4b0082;
+          font-family: 'Bangers', cursive;
+          letter-spacing: 0.5px;
+      }
+      .ganador-premios {
+          grid-column: 2 / 3;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+      }
+      .ganador-premio-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          gap: 4px;
+      }
+      .ganador-premio-label {
+          font-size: 0.78rem;
+          font-weight: 600;
+          color: #064d1f;
+          text-transform: uppercase;
+          letter-spacing: 0.6px;
+      }
+      .ganador-premio-monto {
+          font-size: clamp(1.15rem, 3vw, 1.65rem);
+          font-weight: 700;
+          color: #0aa128;
+          text-shadow: 0 0 10px rgba(0,0,0,0.25);
+          animation: zoomPulse 1.7s ease-in-out infinite;
+      }
+      .ganador-premio-monto--cartones {
+          color: #6a0dad;
+          text-shadow: none;
+      }
+      .ganador-premio-monto--cartones.sin-premio {
+          color: #5f5f5f;
+          opacity: 0.9;
+      }
+      .ganador-premio-item--sin-premio .ganador-premio-label {
+          color: #3a3a3a;
+      }
+      .modal-mensaje {
+          font-size: 0.85rem;
+          color: var(--texto-secundario);
+      }
+      @keyframes zoomPulse {
+          0% { transform: scale(1); }
+          48% { transform: scale(1.24); }
+          100% { transform: scale(1); }
+      }
+      @keyframes formaTemporalFade {
+          0% { opacity: 0.95; }
+          60% { opacity: 0.65; }
+          100% { opacity: 0; }
+      }
+      @keyframes focoUltimo {
+          0% { transform: scale(1); }
+          45% { transform: scale(1.18); }
+          100% { transform: scale(1); }
+      }
+      @media (min-width: 820px) {
+          #panel-superior {
+              grid-template-columns: minmax(0, 1fr) minmax(0, clamp(260px, 40vw, 560px));
+              grid-template-areas:
+                  "cantos carton"
+                  "mensaje carton";
+          }
+          #cantos-panel {
+              height: 100%;
+          }
+          #carton-destacado {
+              max-width: none;
+          }
+      }
+      @media (max-width: 819px) {
+          #panel-superior {
+              row-gap: clamp(6px, 2.4vw, 12px);
+              column-gap: clamp(4px, 1.6vw, 10px);
+              grid-template-columns: minmax(0, 1fr) minmax(0, clamp(210px, 52vw, 420px));
+              grid-template-areas:
+                  "cantos carton"
+                  "mensaje carton";
+              align-items: start;
+              justify-items: stretch;
+          }
+          #cantos-panel {
+              height: auto;
+              align-self: start;
+          }
+          #carton-destacado {
+              max-width: none;
+              justify-self: stretch;
+              align-items: stretch;
+              align-self: start;
+              height: auto;
+              margin: 0;
+          }
+          #carton-destacado .carton-wrapper {
+              padding: 0;
+          }
+          #carton-destacado .carton-front,
+          #carton-destacado .carton-back {
+              padding: 0;
+              align-items: stretch;
+          }
+          #carton-destacado {
+              --destacado-cell-size: clamp(30px, 11.6vw, 92px);
+          }
+      }
+
+      @media (max-width: 768px) {
+          :root {
+              --canto-size: clamp(24px, 10vw, 34px);
+              --mini-cell-size: clamp(18px, 6vw, 22px);
+          }
+          main {
+              padding: 16px 10px 14px;
+          }
+          .back-btn {
+              width: 38px;
+              height: 38px;
+              font-size: 1.15rem;
+          }
+          #carton-destacado .carton-tabla {
+              max-width: calc(var(--cell-size) * 5);
+          }
+          #mis-cartones-grid {
+              grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+              gap: 10px;
+          }
+          .carton-visual {
+              padding-top: 12px;
+          }
+          .carton-visor-info {
+              grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+              gap: 6px 10px;
+          }
+          .carton-visor-ganadores {
+              font-size: 0.6rem;
+          }
+          #modal-ganadores-lista {
+              grid-template-columns: 1fr;
+          }
+          .ganador-card {
+              grid-template-columns: 1fr;
+          }
+      }
+      @media (max-width: 480px) {
+          #panel-superior {
+              row-gap: clamp(8px, 3vw, 14px);
+          }
+      }
+      @media (orientation: portrait) {
+          #panel-superior {
+              grid-template-columns: minmax(calc(var(--canto-cell-size) * 5 + clamp(6px, 2vw, 16px)), 1fr) minmax(var(--panel-columna-derecha-min, clamp(180px, 48vw, 420px)), clamp(240px, 68vw, 520px));
+              grid-template-areas:
+                  "cantos carton"
+                  "mensaje carton";
+              align-items: stretch;
+              justify-items: stretch;
+              column-gap: clamp(6px, 2vw, 16px);
+              row-gap: clamp(6px, 2vw, 16px);
+              padding-bottom: 0;
+          }
+          #cantos-panel {
+              grid-area: cantos;
+          }
+          #carton-destacado {
+              grid-area: carton;
+              justify-self: stretch;
+          }
+          #formas-mensaje {
+              grid-area: mensaje;
+          }
+          #panel-botones-formas {
+              grid-area: botones;
+              justify-self: stretch;
+              align-self: stretch;
+              align-items: center;
+              width: 100%;
+              max-width: 100%;
+              margin: 0;
+          }
+          #panel-botones-formas.flotante-vertical {
+              position: absolute;
+              left: var(--panel-botones-left, 50%);
+              top: calc(var(--panel-botones-top, 100%) + var(--panel-botones-separacion, 6px));
+              transform: translateX(-50%);
+              margin: 0;
+              padding: 0;
+              border: none;
+              background: transparent;
+              box-shadow: none;
+              backdrop-filter: none;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: flex-start;
+              gap: var(--panel-botones-gap, 4px);
+              z-index: 40;
+              pointer-events: auto;
+              width: auto;
+              max-width: 100%;
+          }
+          #panel-botones-formas.flotante-vertical:empty {
+              display: none;
+          }
+          #panel-botones-formas.flotante-vertical .panel-botones-formas__envoltorio,
+          #panel-botones-formas.flotante-vertical .panel-botones-formas__grid {
+              width: auto;
+              max-width: 100%;
+              margin: 0;
+              padding: 0;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: flex-start;
+              gap: var(--panel-botones-gap, 4px);
+          }
+          #panel-botones-formas.flotante-vertical .panel-botones-formas__grid {
+              align-items: center;
+          }
+          #panel-botones-formas.flotante-vertical .carton-forma-accion {
+              flex: 0 0 auto;
+              width: auto;
+              min-width: 0;
+              max-width: 100%;
+              pointer-events: auto;
+              white-space: nowrap;
+              align-self: center;
+          }
+          #panel-botones-formas .carton-forma-accion {
+              align-self: center;
+          }
+          #cantos-panel {
+              width: 100%;
+              min-width: 0;
+          }
+          #carton-destacado {
+              justify-self: stretch;
+              align-self: start;
+              margin: 0;
+              width: 100%;
+              max-width: none;
+              height: auto;
+          }
+          #carton-destacado .carton-box {
+              margin: 0;
+              width: 100%;
+              max-width: 100%;
+              align-items: flex-start;
+          }
+          #carton-destacado .carton-wrapper {
+              width: 100%;
+              max-width: 100%;
+              padding: 0;
+              display: grid;
+              grid-template-columns: 1fr;
+              grid-template-rows: auto;
+              --carton-wrapper-altura: auto;
+          }
+          #carton-destacado .carton-wrapper::before {
+              content: none;
+          }
+          #carton-destacado .carton-front,
+          #carton-destacado .carton-back {
+              inset: auto;
+              padding: 0;
+              position: relative;
+              grid-area: 1 / 1 / 2 / 2;
+              height: auto;
+          }
+          #carton-destacado .carton-front {
+              gap: 0;
+              padding: clamp(2px, 0.6vw, 2px);
+              margin-bottom: 0;
+              justify-content: flex-start;
+          }
+          #carton-destacado .carton-visual {
+              gap: clamp(0px, 0.6vw, 3px);
+              padding-top: clamp(4px, 1.2vw, 8px);
+          }
+          #carton-destacado .carton-front .carton-visual {
+              --carton-principal-padding: clamp(2px, 0.6vw, 2px);
+              gap: 0;
+              padding: var(--carton-principal-padding);
+              margin-bottom: 0;
+              aspect-ratio: auto;
+              justify-items: stretch;
+              overflow: visible;
+              grid-template-rows: min-content minmax(0, 1fr);
+              align-content: stretch;
+          }
+          #carton-destacado .carton-front .carton-visual > * {
+              margin: 0;
+          }
+          #carton-destacado .carton-front .carton-visual .carton-tabla {
+              margin-bottom: 0;
+              width: 100%;
+              max-width: var(--carton-destacado-max-width);
+              height: auto;
+              max-height: none;
+              aspect-ratio: 5 / 6;
+              display: grid;
+              grid-template-columns: repeat(5, 1fr);
+              grid-template-rows: repeat(6, 1fr);
+              grid-auto-flow: row;
+              grid-auto-rows: 1fr;
+              align-self: stretch;
+              justify-self: center;
+              margin-left: auto;
+              margin-right: auto;
+          }
+          #carton-destacado .carton-front .carton-visual .carton-tabla > * {
+              min-width: 0;
+              min-height: 0;
+          }
+          #carton-destacado .carton-front .carton-visual .carton-tabla thead th,
+          #carton-destacado .carton-front .carton-visual .carton-tabla tbody td {
+              width: 100%;
+              height: 100%;
+          }
+          #carton-destacado {
+              --destacado-cell-size: clamp(40px, 14vw, 120px);
+          }
+        #carton-destacado .carton-back-content {
+            margin: clamp(10px, 3vw, 18px) clamp(14px, 4vw, 22px);
+            gap: clamp(8px, 2.6vw, 16px);
+            align-items: stretch;
+        }
+        #carton-destacado .carton-back-title {
+            margin: 0;
+            text-align: center;
+            align-self: stretch;
+        }
+        #carton-destacado .carton-back-formas {
+            gap: clamp(6px, 2vw, 12px);
+            align-items: stretch;
+            width: 100%;
+        }
+        #carton-destacado .back-forma-line {
+            justify-content: flex-start;
+            align-items: baseline;
+            gap: clamp(6px, 3vw, 14px);
+            font-size: clamp(1rem, 4.4vw, 1.35rem);
+            text-align: left;
+        }
+        #carton-destacado .carton-back-total {
+            flex-direction: column;
+            align-items: stretch;
+            gap: clamp(2px, 1.6vw, 6px);
+            text-align: center;
+        }
+        #carton-destacado .carton-back-total-label,
+        #carton-destacado .carton-back-total-valor {
+            display: block;
+            width: 100%;
+            text-align: center;
+        }
+        #carton-destacado .back-forma-line .back-forma-etiqueta,
+        #carton-destacado .back-forma-line .back-forma-valor {
+            text-align: left;
+        }
+            #carton-destacado .carton-front .carton-visual .carton-tabla {
+                height: auto;
+                max-height: none;
+                justify-self: center;
+                transform-origin: top center;
+                transform: none;
+                margin-left: auto;
+                margin-right: auto;
+            }
+          #carton-destacado .carton-front .carton-visual .carton-tabla tbody td {
+              aspect-ratio: 1 / 1;
+          }
+          #carton-destacado .carton-visor-info {
+              margin-top: clamp(1px, 0.8vw, 5px);
+              gap: clamp(2px, 1vw, 6px);
+          }
+          #cantos-panel,
+      #formas-mensaje {
+          width: 100%;
+      }
+      #panel-botones-formas .panel-botones-formas__mensaje {
+          margin-bottom: calc(clamp(6px, 2vw, 14px) * var(--panel-botones-escala-limitada, 1));
+      }
+      #panel-botones-formas .panel-botones-formas__mensaje:empty {
+          min-height: clamp(28px, 3vw, 40px);
+      }
+          .modal {
+              justify-content: flex-start;
+              align-items: flex-start;
+              padding: clamp(16px, 5vw, 28px);
+          }
+          .modal-contenido {
+              margin-left: 0;
+          }
+      }
+      @media (orientation: landscape) {
+          #panel-superior {
+              grid-template-columns: minmax(calc(var(--canto-cell-size) * 5 + clamp(6px, 1.6vw, 18px)), clamp(320px, 52vw, 580px)) minmax(var(--panel-columna-derecha-min, clamp(240px, 32vw, 520px)), clamp(340px, 48vw, 640px));
+              grid-template-areas:
+                  "cantos carton"
+                  "mensaje carton";
+              align-items: stretch;
+              justify-items: stretch;
+              column-gap: clamp(6px, 1.6vw, 18px);
+              row-gap: clamp(6px, 1.2vw, 14px);
+              padding-bottom: 0;
+          }
+          #panel-columna-derecha {
+              padding-inline: clamp(12px, 3vw, 32px);
+              box-sizing: border-box;
+          }
+          .panel-columna-derecha__destacado {
+              align-items: center;
+          }
+          #cantos-panel {
+              grid-area: cantos;
+              width: 100%;
+              min-width: 0;
+          }
+          #carton-destacado {
+              grid-area: carton;
+              justify-self: center;
+              align-self: stretch;
+              margin: 0 auto;
+              --carton-destacado-max-width: clamp(320px, 46vw, 560px);
+              width: min(100%, var(--carton-contenido-ancho, var(--carton-destacado-max-width)));
+              max-width: var(--carton-contenido-ancho, var(--carton-destacado-max-width));
+              align-items: center;
+              --destacado-cell-size: clamp(40px, 11vw, 108px);
+          }
+          #carton-destacado .carton-box,
+          #carton-destacado .carton-wrapper,
+          #carton-destacado .carton-front,
+          #carton-destacado .carton-back,
+          #carton-destacado .carton-front .carton-visual,
+          #carton-destacado .carton-visor-info {
+              margin-left: auto;
+              margin-right: auto;
+              width: min(100%, var(--carton-contenido-ancho, 100%));
+              max-width: var(--carton-contenido-ancho, 100%);
+          }
+          #carton-destacado .carton-box,
+          #carton-destacado .carton-wrapper {
+              min-width: 0;
+              align-items: stretch;
+          }
+          #carton-destacado .carton-front .carton-visual {
+              align-self: stretch;
+              width: 100%;
+              max-width: var(--carton-contenido-ancho, 100%);
+              gap: clamp(0px, 0.6vw, 4px);
+              padding: clamp(4px, 1vw, 8px);
+              grid-template-rows: min-content minmax(0, 1fr);
+              align-content: stretch;
+              justify-items: stretch;
+              overflow: visible;
+          }
+          #carton-destacado .carton-front,
+          #carton-destacado .carton-back {
+              min-height: var(--carton-contenido-alto, auto);
+              overflow: visible;
+              display: flex;
+              flex-direction: column;
+              align-items: stretch;
+              justify-content: flex-start;
+          }
+          #carton-destacado .carton-front {
+              gap: clamp(0px, 0.6vw, 4px);
+              justify-content: flex-start;
+          }
+          #carton-destacado .carton-front .carton-visual > * {
+              margin: 0;
+          }
+          #carton-destacado .carton-wrapper::before {
+              padding-bottom: var(--carton-contenido-alto, var(--carton-wrapper-altura));
+          }
+          #carton-destacado .carton-front .carton-visual .carton-tabla {
+              width: 100%;
+              max-width: 100%;
+              height: auto;
+              max-height: none;
+              display: grid;
+              grid-template-columns: repeat(5, 1fr);
+              grid-template-rows: repeat(6, 1fr);
+              grid-auto-flow: row;
+              grid-auto-rows: 1fr;
+              aspect-ratio: 5 / 6;
+              align-self: stretch;
+              justify-self: center;
+          }
+          #carton-destacado .carton-front .carton-visual .carton-tabla > * {
+              min-width: 0;
+              min-height: 0;
+          }
+          #carton-destacado .carton-front .carton-visual .carton-tabla thead th,
+          #carton-destacado .carton-front .carton-visual .carton-tabla tbody td {
+              width: 100%;
+              height: 100%;
+          }
+          #carton-destacado .carton-back-content {
+              padding: clamp(12px, 3vw, 24px) clamp(16px, 4vw, 28px);
+              gap: clamp(8px, 2vw, 16px);
+              align-items: stretch;
+          }
+          #carton-destacado .carton-back-formas {
+              gap: clamp(6px, 2vw, 12px);
+              align-items: stretch;
+              width: 100%;
+          }
+          #carton-destacado .back-forma-line {
+              justify-content: flex-start;
+              align-items: baseline;
+              gap: clamp(6px, 2.8vw, 14px);
+              text-align: left;
+          }
+          #carton-destacado .back-forma-line .back-forma-etiqueta,
+          #carton-destacado .back-forma-line .back-forma-valor {
+              text-align: left;
+          }
+          #carton-destacado .carton-back-title {
+              font-size: clamp(0.92rem, 3vw, 1.18rem);
+              line-height: 1.1;
+          }
+          #carton-destacado .carton-back-total-label {
+              font-size: clamp(0.88rem, 2.6vw, 1.12rem);
+              line-height: 1.1;
+          }
+          #carton-destacado .carton-back-total-valor {
+              font-size: clamp(1.2rem, 3.4vw, 1.68rem);
+              line-height: 1.05;
+          }
+          #carton-destacado .carton-tabla--principal td.free .cell-content.numero-carton {
+              font-size: clamp(0.72rem, calc(var(--destacado-cell-size) * 0.22), 0.98rem);
+              letter-spacing: 0.4px;
+          }
+          #carton-destacado .carton-back-total {
+              flex-direction: column;
+              align-items: stretch;
+              gap: clamp(2px, 1.2vw, 6px);
+              text-align: center;
+          }
+          #carton-destacado .carton-back-total-label,
+          #carton-destacado .carton-back-total-valor {
+              display: block;
+              width: 100%;
+              text-align: center;
+          }
+          #formas-mensaje {
+              grid-area: mensaje;
+              align-self: stretch;
+          }
+          #panel-botones-formas {
+              grid-area: botones;
+              justify-self: stretch;
+              align-self: start;
+              align-items: flex-start;
+              width: 100%;
+              max-width: 100%;
+              margin: 0;
+          }
+          #panel-botones-formas.flotante-vertical {
+              position: absolute;
+              left: var(--panel-botones-left, 50%);
+              top: calc(var(--panel-botones-top, 100%) + var(--panel-botones-separacion, 8px));
+              transform: translateX(-50%);
+              margin: 0;
+              padding: 0;
+              border: none;
+              background: transparent;
+              box-shadow: none;
+              backdrop-filter: none;
+              display: flex;
+              flex-direction: row;
+              flex-wrap: wrap;
+              align-items: center;
+              justify-content: center;
+              gap: var(--panel-botones-gap, 6px);
+              z-index: 40;
+              pointer-events: auto;
+              width: auto;
+              max-width: min(100%, clamp(280px, 62vw, 540px));
+          }
+          #panel-botones-formas.flotante-vertical:empty {
+              display: none;
+          }
+          #panel-botones-formas.flotante-vertical .panel-botones-formas__envoltorio,
+          #panel-botones-formas.flotante-vertical .panel-botones-formas__grid {
+              width: auto;
+              max-width: 100%;
+              margin: 0;
+              padding: 0;
+              display: flex;
+              flex-direction: row;
+              flex-wrap: wrap;
+              align-items: center;
+              justify-content: center;
+              gap: var(--panel-botones-gap, 6px);
+          }
+          #panel-botones-formas.flotante-vertical .carton-forma-accion {
+              flex: 0 0 auto;
+              min-width: clamp(120px, 22vw, 220px);
+              max-width: 100%;
+              pointer-events: auto;
+              white-space: nowrap;
+          }
+          #panel-botones-formas .carton-forma-accion {
+              align-self: center;
+          }
+          #formas-mensaje {
+              width: 100%;
+          }
+          #carton-destacado .carton-visor-info {
+              margin-top: clamp(2px, 0.8vw, 6px);
+              gap: clamp(3px, 1vw, 8px);
+          }
+          .modal {
+              justify-content: flex-start;
+              align-items: flex-start;
+              padding: clamp(16px, 4.2vw, 28px);
+          }
+          .modal-contenido {
+              margin-left: 0;
+          }
+      }
+        @media (orientation: landscape) and (max-width: 900px) {
+            :root {
+                --canto-size: clamp(24px, 7vw, 34px);
+                --mini-cell-size: clamp(18px, 4.8vw, 22px);
+            }
+            main {
+                padding-top: 46px;
+            }
+            #panel-superior {
+                column-gap: clamp(4px, 1.4vw, 12px);
+                row-gap: clamp(6px, 1.2vw, 12px);
+                grid-template-columns: minmax(calc(var(--canto-cell-size) * 5 + clamp(6px, 1.6vw, 16px)), 1fr) minmax(var(--panel-columna-derecha-min, clamp(220px, 44vw, 520px)), clamp(320px, 58vw, 560px));
+                grid-template-areas:
+                    "cantos carton"
+                    "mensaje carton";
+            }
+            #panel-columna-derecha {
+                margin-left: 0;
+            }
+            #carton-destacado {
+                --carton-contenido-ancho: clamp(320px, 90vw, 520px);
+                --carton-contenido-alto: clamp(320px, 78vh, 420px);
+                --carton-principal-padding: clamp(4px, 1vw, 8px);
+                margin-inline: auto;
+            }
+            #carton-destacado .carton-wrapper {
+                --carton-wrapper-altura: var(--carton-contenido-alto);
+            }
+            #carton-destacado .carton-front,
+            #carton-destacado .carton-back {
+                border-radius: clamp(10px, 3vw, 16px);
+            }
+            #carton-destacado .carton-front {
+                justify-content: center;
+                padding: clamp(4px, 1vw, 8px);
+            }
+            #carton-destacado .carton-front .carton-visual {
+                justify-content: center;
+                padding: clamp(4px, 1vw, 8px);
+                gap: clamp(0px, 0.6vw, 4px);
+            }
+            #carton-destacado .carton-tabla--principal thead th {
+                font-size: calc(var(--principal-cell-size, var(--cell-size)) * 0.78);
+            }
+            #carton-destacado .carton-tabla--principal tbody td {
+                font-size: calc(var(--principal-cell-size, var(--cell-size)) * 0.62);
+            }
+            #mis-cartones-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+            }
+            #carton-destacado {
+                --destacado-cell-size: clamp(40px, 10.4vw, 100px);
+            }
+        }
+        @media (min-width: 900px) and (orientation: landscape) {
+            #panel-superior {
+                column-gap: clamp(6px, 1.4vw, 18px);
+                row-gap: clamp(6px, 1.2vw, 14px);
+                grid-template-columns: minmax(calc(var(--canto-cell-size) * 5 + clamp(6px, 1.4vw, 18px)), clamp(360px, 48vw, 640px)) minmax(var(--panel-columna-derecha-min, clamp(280px, 32vw, 560px)), clamp(360px, 44vw, 640px));
+                grid-template-areas:
+                    "cantos carton"
+                    "mensaje carton";
+            }
+            #panel-columna-derecha {
+                margin-left: 0;
+            }
+            #carton-destacado {
+                --destacado-cell-size: clamp(46px, 7.4vw, 112px);
+            }
+            #carton-destacado .carton-tabla--principal thead th {
+                font-size: calc(var(--principal-cell-size, var(--cell-size)) * 0.8);
+            }
+            #carton-destacado .carton-tabla--principal tbody td {
+                font-size: calc(var(--principal-cell-size, var(--cell-size)) * 0.64);
+            }
+        }
   </style>
 </head>
 <body>
-  <button id="volver-btn" class="menu-btn back-btn">&#9664; Volver</button>
-  <h3 style="font-size:1rem;margin:10px 0;">Sorteo N° XXX fecha XX/XX/XXXX Nombre de sorteo</h3>
-  <div id="resultados-contenedor"></div>
+  <button id="volver-btn" class="menu-btn back-btn" aria-label="Volver">&#9664;</button>
+  <main>
+    <header id="sorteo-header">
+      <div id="sin-sorteo-contenedor" class="sin-sorteo-contenedor" hidden>
+        <button id="seleccionar-finalizado-btn" type="button" class="sin-sorteo-boton sin-sorteo-boton--titulo">CONSULTAR SORTEOS FINALIZADOS</button>
+      </div>
+      <div id="sorteo-resumen" class="sorteo-titulo-basico" hidden aria-hidden="true"></div>
+      <div id="sorteo-detalles" hidden aria-hidden="true"></div>
+      <div id="sin-sorteo-mensaje" class="sin-sorteo-mensaje" hidden aria-hidden="true">EN ESTE MOMENTO NO HAY SORTEOS JUGANDO</div>
+    </header>
+    <section id="panel-superior">
+      <div id="cantos-panel">
+        <div id="cantos-grid"></div>
+        <div id="ultimo-canto"></div>
+      </div>
+      <div id="formas-mensaje" class="mensaje"></div>
+      <div id="panel-columna-derecha">
+        <div class="panel-columna-derecha__rejilla panel-columna-derecha__destacado">
+          <aside id="carton-destacado" aria-live="polite"></aside>
+        </div>
+        <div class="panel-columna-derecha__rejilla panel-columna-derecha__modales">
+          <div id="panel-botones-formas" role="region" aria-label="Ganadores por forma"></div>
+        </div>
+      </div>
+    </section>
+    <section id="mis-cartones-section">
+      <h2>MIS CARTONES EN EL SORTEO</h2>
+      <div id="cartones-mensaje" class="mensaje"></div>
+      <div id="mis-cartones-grid" aria-live="polite"></div>
+    </section>
+  </main>
 
   <div id="login-footer">
     <div id="fecha-hora"></div>
     <div id="derechos">Todos los derechos reservados ® Hexaservice 2025</div>
+  </div>
+
+  <div id="modal-ganadores" class="modal">
+    <div class="modal-contenido">
+      <button class="modal-cerrar" id="modal-cerrar">✖</button>
+      <h2 id="modal-titulo">Ganadores</h2>
+      <div id="modal-subtitulo" class="mensaje"></div>
+      <div id="modal-ganadores-lista"></div>
+      <div id="modal-sin-ganadores" class="modal-mensaje"></div>
+    </div>
+  </div>
+
+  <div id="modal-sorteos-finalizados" class="modal modal-sorteos" role="dialog" aria-modal="true" aria-labelledby="modal-sorteos-finalizados-titulo" aria-hidden="true">
+    <div class="modal-contenido" role="document">
+      <button type="button" id="modal-sorteos-finalizados-cerrar" class="modal-cerrar" aria-label="Cerrar">✖</button>
+      <h2 id="modal-sorteos-finalizados-titulo" class="modal-sorteos-titulo">Sorteos finalizados</h2>
+      <div id="modal-sorteos-finalizados-mensaje" class="modal-mensaje"></div>
+      <div id="modal-sorteos-finalizados-lista" class="modal-sorteos-lista"></div>
+    </div>
+  </div>
+
+  <div id="modal-formas-sin-ganadores" class="modal modal-formas-sin" role="dialog" aria-modal="true" aria-labelledby="modal-formas-sin-ganadores-titulo" aria-hidden="true">
+    <div class="modal-contenido" role="document">
+      <button type="button" id="modal-formas-sin-ganadores-cerrar" class="modal-cerrar" aria-label="Cerrar">✖</button>
+      <h2 id="modal-formas-sin-ganadores-titulo" class="modal-formas-sin-titulo">Formas sin ganadores</h2>
+      <div id="modal-formas-sin-ganadores-lista" class="modal-formas-sin-lista"></div>
+      <div class="modal-formas-sin-acciones">
+        <button type="button" id="modal-formas-sin-ganadores-aceptar" class="modal-formas-sin-aceptar">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="complementarios-aviso" class="aviso-overlay aviso-overlay--complementarios" role="dialog" aria-modal="true" aria-labelledby="complementarios-aviso-titulo" aria-hidden="true">
+    <div class="aviso-overlay__box">
+      <h2 id="complementarios-aviso-titulo" class="aviso-overlay__titulo">Cantos de transparencia</h2>
+      <p id="complementarios-aviso-mensaje" class="aviso-overlay__mensaje">Ya hay GANADORES en todas las FORMAS, ahora se continua con los cantos de números faltantes para transparencia del SORTEO</p>
+      <div class="aviso-overlay__acciones">
+        <button type="button" id="complementarios-aviso-aceptar">Aceptar</button>
+      </div>
+    </div>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
@@ -62,7 +2484,2709 @@
   ensureAuth();
   initFechaHora('fecha-hora');
 
-  document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='player.html';});
+  const volverBtn = document.getElementById('volver-btn');
+  volverBtn.addEventListener('click',()=>{window.location.href='player.html';});
+
+  const cantosGridEl = document.getElementById('cantos-grid');
+  const ultimoCantoEl = document.getElementById('ultimo-canto');
+  const sorteoHeaderEl = document.getElementById('sorteo-header');
+  const sorteoResumenEl = document.getElementById('sorteo-resumen');
+  const sorteoDetallesEl = document.getElementById('sorteo-detalles');
+  const sinSorteoContenedorEl = document.getElementById('sin-sorteo-contenedor');
+  const seleccionarFinalizadoBtn = document.getElementById('seleccionar-finalizado-btn');
+  const sinSorteoMensajeEl = document.getElementById('sin-sorteo-mensaje');
+  const panelSuperiorEl = document.getElementById('panel-superior');
+  const cantosPanelEl = document.getElementById('cantos-panel');
+  const panelBotonesFormasEl = document.getElementById('panel-botones-formas');
+  const formasMensajeEl = document.getElementById('formas-mensaje');
+  const misCartonesSectionEl = document.getElementById('mis-cartones-section');
+  const complementariosAvisoEl = document.getElementById('complementarios-aviso');
+  const complementariosAvisoAceptarBtn = document.getElementById('complementarios-aviso-aceptar');
+  const complementariosAvisoMensajeEl = document.getElementById('complementarios-aviso-mensaje');
+  const misCartonesGridEl = document.getElementById('mis-cartones-grid');
+  const cartonesMensajeEl = document.getElementById('cartones-mensaje');
+  const cartonDestacadoEl = document.getElementById('carton-destacado');
+  const modalGanadores = document.getElementById('modal-ganadores');
+  const modalCerrarBtn = document.getElementById('modal-cerrar');
+  const modalTituloEl = document.getElementById('modal-titulo');
+  const modalSubtituloEl = document.getElementById('modal-subtitulo');
+  const modalListaEl = document.getElementById('modal-ganadores-lista');
+  const modalSinGanadoresEl = document.getElementById('modal-sin-ganadores');
+  const modalSorteosFinalizadosEl = document.getElementById('modal-sorteos-finalizados');
+  const modalSorteosFinalizadosListaEl = document.getElementById('modal-sorteos-finalizados-lista');
+  const modalSorteosFinalizadosMensajeEl = document.getElementById('modal-sorteos-finalizados-mensaje');
+  const modalSorteosFinalizadosCerrarBtn = document.getElementById('modal-sorteos-finalizados-cerrar');
+  const modalFormasSinGanadoresEl = document.getElementById('modal-formas-sin-ganadores');
+  const modalFormasSinGanadoresListaEl = document.getElementById('modal-formas-sin-ganadores-lista');
+  const modalFormasSinGanadoresCerrarBtn = document.getElementById('modal-formas-sin-ganadores-cerrar');
+  const modalFormasSinGanadoresAceptarBtn = document.getElementById('modal-formas-sin-ganadores-aceptar');
+
+  const FORM_COLORS = ['#90ee90', '#fffacd', '#add8e6', '#d8b0ff', '#ffcc99', '#f77fb3', '#9ad3bc', '#fecf6a'];
+  const BINGO_LETRAS = ['B','I','N','G','O'];
+
+  const TEXTO_BOTON_CONSULTAR_SELECCIONADOS = 'CONSULTAR SORTEOS FINALIZADOS';
+  const cantoCellsMap = new Map();
+  let cantosOrdenados = [];
+  let cantosEtiquetas = [];
+  let cantosIndiceMap = new Map();
+  let cantosResultadoMap = new Map();
+  let formasActivas = [];
+  let cartonesSorteo = new Map();
+  let cartonesGanadoresPorForma = new Map();
+  let formasPorCarton = new Map();
+  let activeSorteo = null;
+  let activeSorteoId = null;
+  let sorteoManualSeleccionadoId = null;
+  let haySorteoJugando = false;
+  let cargandoSorteosFinalizados = false;
+  let usuarioActual = null;
+
+  let cartonSeleccionadoId = null;
+  const animacionesCartones = new Map();
+  const celdasPenalizadasTimers = new Map();
+  const celdasComplementariasTimers = new Map();
+  let cartonPrincipalInfo = null;
+  let resaltadoTemporal = {timer:null, tablas:null, cartonId:null};
+  let formaDestacadaSeleccionada = null;
+  let desplazamientoArribaPendiente = false;
+  let evitarReaplicarFormaDestacada = false;
+  let panelFormasLeyendaEl = null;
+  let panelGananciasTotalesEl = null;
+  let panelGananciasTotalesValorEl = null;
+  let totalGananciasJugador = 0;
+  let ultimoCantoBoton = null;
+  let ultimoCantoValorActual = '';
+  let ultimoCantoPopupEl = null;
+  let ultimoCantoPopupNumeroEl = null;
+  let ultimoCantoTimer = null;
+  let formasSinGanadoresAlertaClave = '';
+
+  let recalculoAlturaCartonProgramado = false;
+  const actualizarAlturaBotonesRetrato = () => {
+    if(!panelSuperiorEl || !panelBotonesFormasEl) return;
+    requestAnimationFrame(() => {
+      panelBotonesFormasEl.classList.remove('flotante-vertical');
+      panelBotonesFormasEl.classList.remove('flotante');
+      panelBotonesFormasEl.style.removeProperty('--panel-botones-left');
+      panelBotonesFormasEl.style.removeProperty('--panel-botones-gap');
+      panelBotonesFormasEl.style.removeProperty('width');
+      panelBotonesFormasEl.style.removeProperty('max-width');
+      panelSuperiorEl.style.removeProperty('--panel-botones-top');
+      panelSuperiorEl.style.removeProperty('--panel-botones-separacion');
+      panelSuperiorEl.style.removeProperty('--panel-botones-altura');
+      panelSuperiorEl.style.removeProperty('--panel-columna-derecha-min');
+    });
+  };
+
+  function actualizarTituloFinalizadoBtn(){
+    if(!seleccionarFinalizadoBtn) return;
+    if(haySorteoJugando){
+      seleccionarFinalizadoBtn.textContent = TEXTO_BOTON_CONSULTAR_SELECCIONADOS;
+      seleccionarFinalizadoBtn.classList.remove('con-seleccion');
+    }else if(activeSorteo && sorteoManualSeleccionadoId){
+      const nombre = (activeSorteo.nombre || '').toString().trim();
+      seleccionarFinalizadoBtn.textContent = nombre || TEXTO_BOTON_CONSULTAR_SELECCIONADOS;
+      seleccionarFinalizadoBtn.classList.add('con-seleccion');
+    }else{
+      seleccionarFinalizadoBtn.textContent = TEXTO_BOTON_CONSULTAR_SELECCIONADOS;
+      seleccionarFinalizadoBtn.classList.remove('con-seleccion');
+    }
+  }
+
+  function cerrarModalFormasSinGanadores(){
+    if(!modalFormasSinGanadoresEl) return;
+    modalFormasSinGanadoresEl.classList.remove('activa');
+    modalFormasSinGanadoresEl.setAttribute('aria-hidden','true');
+  }
+
+  function reiniciarAlertaFormasSinGanadores(){
+    formasSinGanadoresAlertaClave = '';
+    cerrarModalFormasSinGanadores();
+  }
+
+  function obtenerEtiquetaFormaSinGanador(forma){
+    const nombre = (forma?.nombre || '').toString().trim();
+    if(nombre) return nombre;
+    const indiceNumerico = Number(forma?.idx);
+    if(Number.isFinite(indiceNumerico)){
+      return `F${String(indiceNumerico).padStart(2,'0')}`;
+    }
+    const indiceTexto = (forma?.idx ?? '').toString().trim();
+    if(indiceTexto){
+      return `F${indiceTexto.padStart(2,'0')}`;
+    }
+    return 'sin identificar';
+  }
+
+  function mostrarModalFormasSinGanadores(formas){
+    if(!Array.isArray(formas) || !formas.length) return;
+    const mensaje = formas
+      .map(forma=>`No hay ganadores para la Forma ${obtenerEtiquetaFormaSinGanador(forma)}`)
+      .join(' · ');
+    if(formasMensajeEl){
+      formasMensajeEl.textContent = mensaje;
+    } else {
+      console.info(mensaje);
+    }
+    cerrarModalFormasSinGanadores();
+  }
+
+  function evaluarFormasSinGanadores(totalCantos){
+    if(!haySorteoJugando){
+      formasSinGanadoresAlertaClave = '';
+      cerrarModalFormasSinGanadores();
+      return;
+    }
+    if(totalCantos < 75 || !Array.isArray(formasActivas) || !formasActivas.length){
+      formasSinGanadoresAlertaClave = '';
+      cerrarModalFormasSinGanadores();
+      return;
+    }
+    const sinGanadores = formasActivas.filter(forma=>{
+      const idxNumero = Number(forma?.idx);
+      if(!Number.isFinite(idxNumero)) return false;
+      const registro = cartonesGanadoresPorForma.get(idxNumero);
+      const total = Array.isArray(registro?.cartones) ? registro.cartones.length : 0;
+      return total === 0;
+    });
+    if(!sinGanadores.length){
+      formasSinGanadoresAlertaClave = '';
+      cerrarModalFormasSinGanadores();
+      return;
+    }
+    const clave = sinGanadores
+      .map(forma=>{
+        const idxNumero = Number(forma?.idx);
+        const idxTexto = Number.isFinite(idxNumero) ? `#${idxNumero}` : (forma?.idx ?? '').toString().trim();
+        const nombreBase = obtenerEtiquetaFormaSinGanador(forma).toLowerCase();
+        return `${idxTexto}|${nombreBase}`;
+      })
+      .sort()
+      .join('||');
+    if(clave && clave === formasSinGanadoresAlertaClave) return;
+    formasSinGanadoresAlertaClave = clave;
+    mostrarModalFormasSinGanadores(sinGanadores);
+  }
+
+  function actualizarAlturaCartonWrapper(wrapper){
+    if(!wrapper) return;
+    const enModoRetrato = window.matchMedia('(orientation: portrait)').matches;
+    requestAnimationFrame(()=>{
+      const valorPrevio=wrapper.style.getPropertyValue('--carton-wrapper-altura');
+      const valorAlturaPrevio=wrapper.style.getPropertyValue('--carton-contenido-alto');
+      const cartonBox=wrapper.parentElement;
+      const cartonDestacadoContenedor=cartonDestacadoEl||wrapper.closest('#carton-destacado');
+      const valorCeldaInline=cartonDestacadoContenedor?.style?.getPropertyValue('--destacado-cell-size')||'';
+      const valorCeldaInlineNumero=valorCeldaInline?parseFloat(valorCeldaInline):NaN;
+      if(enModoRetrato && cartonDestacadoContenedor && valorCeldaInline){
+        cartonDestacadoContenedor.style.removeProperty('--destacado-cell-size');
+      }
+      wrapper.style.removeProperty('--carton-wrapper-altura');
+      wrapper.style.removeProperty('--carton-contenido-alto');
+      const estilos=getComputedStyle(wrapper);
+      const alturaBase=parseFloat(estilos.getPropertyValue('--carton-wrapper-altura'))||0;
+      const frente=wrapper.querySelector('.carton-front');
+      const reverso=wrapper.querySelector('.carton-back');
+      const elementosAltura=[cartonBox, cartonDestacadoContenedor];
+      const valoresAlturaAnteriores=elementosAltura.map(el=>el?.style?.getPropertyValue('--carton-contenido-alto')||'');
+      elementosAltura.forEach(el=>el?.style?.removeProperty('--carton-contenido-alto'));
+      const estilosCartonDestacado=cartonDestacadoContenedor?getComputedStyle(cartonDestacadoContenedor):null;
+      const tamanoCeldaActual=estilosCartonDestacado?parseFloat(estilosCartonDestacado.getPropertyValue('--destacado-cell-size')):NaN;
+      const rectContenedor=cartonDestacadoContenedor?cartonDestacadoContenedor.getBoundingClientRect():null;
+      const anchoFrente=frente?frente.getBoundingClientRect().width:0;
+      if(anchoFrente>0){
+        const anchoFinal=Math.ceil(anchoFrente);
+        const anchoValor=`${anchoFinal}px`;
+        wrapper.style.setProperty('--carton-contenido-ancho', anchoValor);
+        if(cartonBox) cartonBox.style.setProperty('--carton-contenido-ancho', anchoValor);
+        if(cartonDestacadoContenedor) cartonDestacadoContenedor.style.setProperty('--carton-contenido-ancho', anchoValor);
+      }else{
+        wrapper.style.removeProperty('--carton-contenido-ancho');
+        if(cartonBox) cartonBox.style.removeProperty('--carton-contenido-ancho');
+        if(cartonDestacadoContenedor) cartonDestacadoContenedor.style.removeProperty('--carton-contenido-ancho');
+      }
+      const altoFrente=frente?frente.scrollHeight:0;
+      const altoReverso=reverso?reverso.scrollHeight:0;
+      const alturaCalculada=Math.max(altoFrente, altoReverso, 0);
+      let alturaDisponiblePaisaje=0;
+      if(!enModoRetrato){
+        const margenInferiorPaisaje=16;
+        if(rectContenedor){
+          alturaDisponiblePaisaje=Math.max(260, window.innerHeight - rectContenedor.top - margenInferiorPaisaje);
+        }else{
+          alturaDisponiblePaisaje=Math.max(260, Math.floor(window.innerHeight*0.85));
+        }
+      }
+      if(!enModoRetrato && cartonDestacadoContenedor && alturaDisponiblePaisaje>0 && alturaCalculada>0){
+        if(alturaCalculada>alturaDisponiblePaisaje+8 && tamanoCeldaActual && !Number.isNaN(tamanoCeldaActual)){
+          const escalaBruta=alturaDisponiblePaisaje/alturaCalculada;
+          const escalaLimitada=Math.max(0.6, Math.min(escalaBruta,1));
+          const nuevoTamanoCelda=Math.max(32, Math.round(tamanoCeldaActual*escalaLimitada));
+          if(!valorCeldaInline || Math.abs(nuevoTamanoCelda-(Number.isNaN(valorCeldaInlineNumero)?nuevoTamanoCelda:valorCeldaInlineNumero))>=1){
+            cartonDestacadoContenedor.style.setProperty('--destacado-cell-size', `${nuevoTamanoCelda}px`);
+            if(valorPrevio){
+              wrapper.style.setProperty('--carton-wrapper-altura', valorPrevio);
+            }
+            if(valorAlturaPrevio){
+              wrapper.style.setProperty('--carton-contenido-alto', valorAlturaPrevio);
+            }
+            elementosAltura.forEach((el,idx)=>{
+              const valorPrevioAltura=valoresAlturaAnteriores[idx];
+              if(!el) return;
+              if(valorPrevioAltura){
+                el.style.setProperty('--carton-contenido-alto', valorPrevioAltura);
+              }else{
+                el.style.removeProperty('--carton-contenido-alto');
+              }
+            });
+            actualizarAlturaBotonesRetrato();
+            requestAnimationFrame(()=>actualizarAlturaCartonWrapper(wrapper));
+            return;
+          }
+        }else if(valorCeldaInline && alturaDisponiblePaisaje-alturaCalculada>40){
+          cartonDestacadoContenedor.style.removeProperty('--destacado-cell-size');
+          if(valorPrevio){
+            wrapper.style.setProperty('--carton-wrapper-altura', valorPrevio);
+          }
+          if(valorAlturaPrevio){
+            wrapper.style.setProperty('--carton-contenido-alto', valorAlturaPrevio);
+          }
+          elementosAltura.forEach((el,idx)=>{
+            const valorPrevioAltura=valoresAlturaAnteriores[idx];
+            if(!el) return;
+            if(valorPrevioAltura){
+              el.style.setProperty('--carton-contenido-alto', valorPrevioAltura);
+            }else{
+              el.style.removeProperty('--carton-contenido-alto');
+            }
+          });
+          actualizarAlturaBotonesRetrato();
+          requestAnimationFrame(()=>actualizarAlturaCartonWrapper(wrapper));
+          return;
+        }
+      }
+      if(alturaCalculada>0){
+        const margenExtra=enModoRetrato?2:8;
+        const alturaObjetivo=Math.max(0, Math.ceil(alturaCalculada+margenExtra));
+        const alturaFinal=enModoRetrato?Math.max(alturaBase, alturaObjetivo):alturaObjetivo;
+        wrapper.style.setProperty('--carton-wrapper-altura', `${alturaFinal}px`);
+        const alturaValor=`${alturaFinal}px`;
+        wrapper.style.setProperty('--carton-contenido-alto', alturaValor);
+        elementosAltura.forEach(el=>el?.style?.setProperty('--carton-contenido-alto', alturaValor));
+      }else{
+        if(valorPrevio){
+          wrapper.style.setProperty('--carton-wrapper-altura', valorPrevio);
+        }else if(alturaBase){
+          wrapper.style.setProperty('--carton-wrapper-altura', `${alturaBase}px`);
+        }else{
+          wrapper.style.removeProperty('--carton-wrapper-altura');
+        }
+        if(valorAlturaPrevio){
+          wrapper.style.setProperty('--carton-contenido-alto', valorAlturaPrevio);
+        }else{
+          wrapper.style.removeProperty('--carton-contenido-alto');
+        }
+        elementosAltura.forEach((el,idx)=>{
+          const valorPrevioAltura=valoresAlturaAnteriores[idx];
+          if(!el) return;
+          if(valorPrevioAltura){
+            el.style.setProperty('--carton-contenido-alto', valorPrevioAltura);
+          }else{
+            el.style.removeProperty('--carton-contenido-alto');
+          }
+        });
+      }
+      actualizarAlturaBotonesRetrato();
+    });
+  }
+
+  function programarRecalculoAlturaCarton(){
+    if(recalculoAlturaCartonProgramado) return;
+    recalculoAlturaCartonProgramado=true;
+    requestAnimationFrame(()=>{
+      recalculoAlturaCartonProgramado=false;
+      const wrapperActual=cartonPrincipalInfo?.info?.wrapper;
+      if(wrapperActual){
+        actualizarAlturaCartonWrapper(wrapperActual);
+      }
+    });
+  }
+
+  window.addEventListener('resize', programarRecalculoAlturaCarton);
+  window.addEventListener('orientationchange', programarRecalculoAlturaCarton);
+  window.addEventListener('load', programarRecalculoAlturaCarton);
+  window.addEventListener('resize', actualizarAlturaBotonesRetrato);
+  window.addEventListener('orientationchange', actualizarAlturaBotonesRetrato);
+  window.addEventListener('load', actualizarAlturaBotonesRetrato);
+
+  function desplazarVentanaArribaSuavemente(){
+    const inicio = window.scrollY || document.documentElement.scrollTop || 0;
+    if(inicio <= 0) return;
+    const duracionBase = 600;
+    const duracion = Math.min(900, Math.max(400, inicio * 0.6, duracionBase));
+    const momentoInicio = performance.now();
+    const easeInOut = progreso => progreso < 0.5
+      ? 2 * progreso * progreso
+      : 1 - Math.pow(-2 * progreso + 2, 2) / 2;
+
+    function animarScroll(momentoActual){
+      const tiempoTranscurrido = momentoActual - momentoInicio;
+      const progreso = Math.min(tiempoTranscurrido / duracion, 1);
+      const factorSuavizado = easeInOut(progreso);
+      const posicionActual = inicio * (1 - factorSuavizado);
+      window.scrollTo({top: posicionActual, left: 0});
+      if(progreso < 1){
+        requestAnimationFrame(animarScroll);
+      }
+    }
+
+    requestAnimationFrame(animarScroll);
+  }
+
+  let unsubscribeSorteos = null;
+  let unsubscribeCantos = null;
+  let unsubscribeFormas = null;
+  let unsubscribeCartones = null;
+  let todasFormasConGanadores = false;
+  let indiceUltimoGanador = null;
+  let cantosComplementariosActivos = false;
+  let avisoComplementariosMostrado = false;
+
+  function limpiarBotonesFormas(){
+    if(panelBotonesFormasEl){
+      panelBotonesFormasEl.innerHTML='';
+      panelFormasLeyendaEl=null;
+      panelGananciasTotalesEl=null;
+      panelGananciasTotalesValorEl=null;
+      actualizarAlturaBotonesRetrato();
+      return;
+    }
+    if(!panelSuperiorEl) return;
+    panelSuperiorEl.querySelectorAll('.carton-forma-accion[data-forma-boton="dinamico"]').forEach(boton=>boton.remove());
+    panelFormasLeyendaEl=null;
+    panelGananciasTotalesEl=null;
+    panelGananciasTotalesValorEl=null;
+    actualizarAlturaBotonesRetrato();
+  }
+
+  function colocarLeyendaPrincipalEnPanel(info=cartonPrincipalInfo?.info){
+    if(!info || !info.leyenda) return;
+    const esPrincipal=info?.contenedor?.classList?.contains('carton-visual--principal');
+    if(!esPrincipal){
+      if(!info.leyenda.parentElement && info.contenedor){
+        info.contenedor.appendChild(info.leyenda);
+      }
+      info.leyenda.classList.remove('carton-forma-leyenda--panel');
+      return;
+    }
+    info.leyenda.classList.add('carton-forma-leyenda--panel');
+    if(panelFormasLeyendaEl){
+      panelFormasLeyendaEl.innerHTML='';
+      panelFormasLeyendaEl.appendChild(info.leyenda);
+      if(panelGananciasTotalesEl){
+        panelFormasLeyendaEl.appendChild(panelGananciasTotalesEl);
+      }
+      actualizarVisibilidadPanelGanancias();
+    }
+  }
+
+  function hayMensajeGanadorActivo(){
+    const info=cartonPrincipalInfo?.info;
+    if(!info || !info.leyenda) return false;
+    if(!info.leyenda.classList.contains('visible')) return false;
+    return info.leyenda.textContent && info.leyenda.textContent.trim().length>0;
+  }
+
+  function actualizarVisibilidadPanelGanancias(){
+    if(!panelGananciasTotalesEl) return;
+    const total=Number(totalGananciasJugador);
+    const mostrar=Number.isFinite(total) && total>0 && !hayMensajeGanadorActivo();
+    panelGananciasTotalesEl.classList.toggle('panel-ganancias-totales--visible', mostrar);
+    panelGananciasTotalesEl.setAttribute('aria-hidden', mostrar?'false':'true');
+  }
+
+  function actualizarGananciasTotales(){
+    const totalSeguro=Number(totalGananciasJugador);
+    const valorMostrar=Number.isFinite(totalSeguro)?totalSeguro:0;
+    if(!Number.isFinite(totalSeguro)){
+      totalGananciasJugador=0;
+    }else{
+      totalGananciasJugador=totalSeguro;
+    }
+    if(panelGananciasTotalesValorEl){
+      panelGananciasTotalesValorEl.textContent=formatearCreditos(valorMostrar);
+    }
+    actualizarVisibilidadPanelGanancias();
+  }
+
+  function asegurarPanelGananciasTotales(){
+    if(!panelFormasLeyendaEl) return;
+    if(!panelGananciasTotalesEl){
+      panelGananciasTotalesEl=document.createElement('div');
+      panelGananciasTotalesEl.className='panel-ganancias-totales';
+      panelGananciasTotalesEl.setAttribute('aria-hidden','true');
+      const etiqueta=document.createElement('div');
+      etiqueta.className='panel-ganancias-totales__etiqueta';
+      const textoSuperior=document.createElement('span');
+      textoSuperior.textContent='GANANCIAS';
+      const textoInferior=document.createElement('span');
+      textoInferior.textContent='TOTALES';
+      etiqueta.appendChild(textoSuperior);
+      etiqueta.appendChild(textoInferior);
+      const valor=document.createElement('div');
+      valor.className='panel-ganancias-totales__valor';
+      valor.textContent=formatearCreditos(0);
+      panelGananciasTotalesValorEl=valor;
+      panelGananciasTotalesEl.appendChild(etiqueta);
+      panelGananciasTotalesEl.appendChild(valor);
+    }
+    if(panelGananciasTotalesEl.parentElement!==panelFormasLeyendaEl){
+      if(panelGananciasTotalesEl.parentElement){
+        panelGananciasTotalesEl.parentElement.removeChild(panelGananciasTotalesEl);
+      }
+      panelFormasLeyendaEl.appendChild(panelGananciasTotalesEl);
+    }
+    actualizarGananciasTotales();
+  }
+
+  function insertarBotonesFormas(botones){
+    if(!cartonDestacadoEl || !Array.isArray(botones)) return;
+    const botonesValidos=botones.filter(boton=>boton instanceof HTMLElement);
+    if(panelBotonesFormasEl){
+      panelBotonesFormasEl.innerHTML='';
+      if(botonesValidos.length===0){
+        actualizarAlturaBotonesRetrato();
+        return;
+      }
+      const envoltorio=document.createElement('div');
+      envoltorio.className='panel-botones-formas__envoltorio';
+      const rejilla=document.createElement('div');
+      rejilla.className='panel-botones-formas__grid';
+      envoltorio.appendChild(rejilla);
+      const mensaje=document.createElement('div');
+      mensaje.className='panel-botones-formas__mensaje';
+      rejilla.appendChild(mensaje);
+      panelFormasLeyendaEl=mensaje;
+      asegurarPanelGananciasTotales();
+      botonesValidos.forEach(boton=>{
+        boton.dataset.formaBoton='dinamico';
+        rejilla.appendChild(boton);
+      });
+      panelBotonesFormasEl.appendChild(envoltorio);
+      colocarLeyendaPrincipalEnPanel();
+      actualizarAlturaBotonesRetrato();
+      return;
+    }
+    if(!panelSuperiorEl) return;
+    let referencia=cartonDestacadoEl;
+    if(botonesValidos.length===0){
+      actualizarAlturaBotonesRetrato();
+      return;
+    }
+    const envoltorio=document.createElement('div');
+    envoltorio.className='panel-botones-formas__envoltorio';
+    const rejilla=document.createElement('div');
+    rejilla.className='panel-botones-formas__grid';
+    envoltorio.appendChild(rejilla);
+    const mensaje=document.createElement('div');
+    mensaje.className='panel-botones-formas__mensaje';
+    rejilla.appendChild(mensaje);
+    panelFormasLeyendaEl=mensaje;
+    asegurarPanelGananciasTotales();
+    referencia.insertAdjacentElement('afterend', envoltorio);
+    referencia=envoltorio;
+    botonesValidos.forEach(boton=>{
+      boton.dataset.formaBoton='dinamico';
+      rejilla.appendChild(boton);
+    });
+    colocarLeyendaPrincipalEnPanel();
+    actualizarAlturaBotonesRetrato();
+  }
+
+  function obtenerUltimoCantoPopup(){
+    if(ultimoCantoPopupEl && cantosPanelEl && cantosPanelEl.contains(ultimoCantoPopupEl)){
+      return ultimoCantoPopupEl;
+    }
+    if(!cantosPanelEl) return null;
+    const popup=document.createElement('div');
+    popup.className='ultimo-canto-popup';
+    const titulo=document.createElement('h3');
+    titulo.textContent='ÚLTIMO CANTO:';
+    popup.appendChild(titulo);
+    ultimoCantoPopupNumeroEl=document.createElement('div');
+    ultimoCantoPopupNumeroEl.className='popup-numero';
+    popup.appendChild(ultimoCantoPopupNumeroEl);
+    const boton=document.createElement('button');
+    boton.type='button';
+    boton.className='popup-accion';
+    boton.textContent='Aceptar';
+    boton.addEventListener('click',()=>{
+      cerrarVentanaUltimoCanto();
+    });
+    popup.appendChild(boton);
+    cantosPanelEl.appendChild(popup);
+    ultimoCantoPopupEl=popup;
+    return popup;
+  }
+
+  function cerrarVentanaUltimoCanto(){
+    if(ultimoCantoTimer){
+      clearTimeout(ultimoCantoTimer);
+      ultimoCantoTimer=null;
+    }
+    if(ultimoCantoPopupEl){
+      ultimoCantoPopupEl.classList.remove('visible');
+    }
+  }
+
+  function mostrarVentanaUltimoCanto(){
+    if(!ultimoCantoValorActual) return;
+    const popup=obtenerUltimoCantoPopup();
+    if(!popup) return;
+    if(ultimoCantoPopupNumeroEl){
+      ultimoCantoPopupNumeroEl.textContent=ultimoCantoValorActual;
+    }
+    popup.classList.toggle('complementarios-activos', cantosComplementariosActivos && Number.isInteger(indiceUltimoGanador));
+    popup.classList.add('visible');
+    if(ultimoCantoTimer){
+      clearTimeout(ultimoCantoTimer);
+    }
+    ultimoCantoTimer=setTimeout(()=>{
+      cerrarVentanaUltimoCanto();
+    },4000);
+  }
+
+  function mostrarAvisoComplementarios(){
+    if(!haySorteoJugando){
+      avisoComplementariosMostrado = false;
+      return;
+    }
+    avisoComplementariosMostrado = true;
+    if(!complementariosAvisoEl){
+      alert('Ya hay GANADORES en todas las FORMAS, ahora se continua con los cantos de números faltantes para transparencia del SORTEO');
+      return;
+    }
+    complementariosAvisoEl.classList.add('activa');
+    complementariosAvisoEl.setAttribute('aria-hidden','false');
+    if(complementariosAvisoAceptarBtn){
+      complementariosAvisoAceptarBtn.focus({ preventScroll: true });
+    }
+  }
+
+  function cerrarAvisoComplementarios(){
+    if(!complementariosAvisoEl) return;
+    complementariosAvisoEl.classList.remove('activa');
+    complementariosAvisoEl.setAttribute('aria-hidden','true');
+  }
+
+  function crearGridCantos(){
+    cantosGridEl.innerHTML='';
+    cantoCellsMap.clear();
+    BINGO_LETRAS.forEach(letra=>{
+      const celda=document.createElement('div');
+      celda.textContent=letra;
+      celda.className='canto-cell encabezado';
+      cantosGridEl.appendChild(celda);
+    });
+    for(let fila=0;fila<15;fila++){
+      for(let col=0;col<5;col++){
+        const numero=fila+1+col*15;
+        const celda=document.createElement('div');
+        celda.textContent=String(numero).padStart(2,'0');
+        celda.dataset.numero=numero;
+        celda.title=generarEtiquetaDesdeNumero(numero);
+        celda.className='canto-cell';
+        cantosGridEl.appendChild(celda);
+        cantoCellsMap.set(numero,celda);
+      }
+    }
+  }
+
+  function obtenerColorParaForma(idx){
+    const numero=Number(idx);
+    if(Number.isFinite(numero) && numero>0){
+      const posicion=(numero-1)%FORM_COLORS.length;
+      return FORM_COLORS[posicion];
+    }
+    return FORM_COLORS[0];
+  }
+
+  function obtenerColorOscurecido(colorHex, factor=0.65){
+    if(typeof colorHex!=='string') return '#2f2f2f';
+    const limpio=colorHex.trim();
+    const match=limpio.match(/^#?([0-9a-fA-F]{6})$/);
+    if(!match) return limpio || '#2f2f2f';
+    const hex=match[1];
+    const ajustar=indice=>{
+      const valor=parseInt(hex.slice(indice, indice+2),16);
+      const reducido=Math.max(0, Math.min(255, Math.round(valor*factor)));
+      return reducido.toString(16).padStart(2,'0');
+    };
+    return `#${ajustar(0)}${ajustar(2)}${ajustar(4)}`;
+  }
+
+  function normalizarTipoCarton(carton){
+    const valorBruto = carton?.tipocarton ?? carton?.tipoCarton ?? carton?.tipo ?? carton?.categoria;
+    const texto=String(valorBruto ?? '').trim().toLowerCase();
+    if(['gratis','free','libre','sin costo','sin-costo','freebie'].includes(texto)){
+      return 'gratis';
+    }
+    return 'pagado';
+  }
+
+  function normalizarPosicionesEntrada(posiciones){
+    const lista=Array.isArray(posiciones)?posiciones:[];
+    const resultado=[];
+    lista.forEach(pos=>{
+      if(!pos) return;
+      const fila=Number(pos.r ?? pos.row ?? pos.fila);
+      const col=Number(pos.c ?? pos.col ?? pos.columna);
+      if(Number.isInteger(fila) && Number.isInteger(col)){
+        resultado.push({r:fila, c:col});
+      }
+    });
+    return resultado;
+  }
+
+  function obtenerPosicionesNormalizadas(forma){
+    if(!forma) return [];
+    if(Array.isArray(forma.posicionesNormalizadas) && forma.posicionesNormalizadas.length){
+      return normalizarPosicionesEntrada(forma.posicionesNormalizadas);
+    }
+    if(Array.isArray(forma.posiciones) && forma.posiciones.length){
+      return normalizarPosicionesEntrada(forma.posiciones);
+    }
+    return [];
+  }
+
+  function obtenerRgbTexto(hex, fallback='0,120,255'){
+    const rgb=hexToRgb(hex);
+    if(!rgb) return fallback;
+    return `${rgb.r},${rgb.g},${rgb.b}`;
+  }
+
+  function obtenerRgbVivoTexto(hex){
+    const rgb=hexToRgb(hex);
+    if(!rgb) return null;
+    const intensificar=valor=>Math.min(255, Math.round(valor*1.12 + 18));
+    return `${intensificar(rgb.r)},${intensificar(rgb.g)},${intensificar(rgb.b)}`;
+  }
+
+  function obtenerRgbOscuroTexto(hex, factor=0.45){
+    const rgb=hexToRgb(hex);
+    if(!rgb) return null;
+    const reducir=valor=>Math.max(0, Math.round(valor*(1-factor)));
+    return `${reducir(rgb.r)},${reducir(rgb.g)},${reducir(rgb.b)}`;
+  }
+
+  function actualizarEncabezadoForma(info, indice, colorHex){
+    if(!info || !Array.isArray(info.letras)) return;
+    const indiceNormalizado=Number(indice);
+    const idxActivo=Number.isInteger(indiceNormalizado)?indiceNormalizado:null;
+    const esPrincipal=info?.contenedor?.classList?.contains('carton-visual--principal');
+    info.letras.forEach((span, idx)=>{
+      if(!span) return;
+      const letraBase=BINGO_LETRAS[idx] || '';
+      const th=span.closest('th');
+      const activo=idxActivo===idx+1;
+      const textoLetra=activo && esPrincipal?`F${idx+1}`:letraBase;
+      span.textContent=textoLetra;
+      span.classList.toggle('encabezado-letra-activa', activo);
+      if(th){
+        th.classList.toggle('forma-activa', activo);
+        th.setAttribute('aria-pressed', activo?'true':'false');
+        if(activo && colorHex){
+          const rgbBasico=obtenerRgbTexto(colorHex);
+          const rgbVivo=obtenerRgbVivoTexto(colorHex) || rgbBasico;
+          if(rgbBasico) th.style.setProperty('--forma-rgb', rgbBasico);
+          if(rgbVivo) th.style.setProperty('--forma-rgb-vivo', rgbVivo);
+        }else{
+          th.style.removeProperty('--forma-rgb');
+          th.style.removeProperty('--forma-rgb-vivo');
+        }
+      }
+    });
+    if(esPrincipal && !Number.isInteger(idxActivo)){
+      info.contenedor.classList.remove('forma-manual-activa');
+    }
+  }
+
+  function crearTablaCartonVisual(carton, modo='mini'){
+    const contenedor=document.createElement('div');
+    contenedor.className=`carton-visual carton-visual--${modo}`;
+    const tipoCarton=normalizarTipoCarton(carton);
+    contenedor.dataset.tipocarton=tipoCarton;
+    const leyenda=document.createElement('div');
+    leyenda.className='carton-forma-leyenda';
+    if(modo!=='principal'){
+      contenedor.appendChild(leyenda);
+    }
+    const tabla=document.createElement('table');
+    tabla.className=`carton-tabla carton-tabla--${modo}`;
+    tabla.dataset.tipocarton=tipoCarton;
+    tabla.dataset.cartonId=carton.id||'';
+    const esGanador=Array.isArray(carton.formasGanadas)&&carton.formasGanadas.length>0;
+    if(esGanador){
+      tabla.classList.add('ganador');
+    }
+    const thead=document.createElement('thead');
+    const trHead=document.createElement('tr');
+    BINGO_LETRAS.forEach(letra=>{
+      const th=document.createElement('th');
+      const spanLetra=document.createElement('span');
+      spanLetra.className='encabezado-letra';
+      spanLetra.textContent=letra;
+      th.appendChild(spanLetra);
+      trHead.appendChild(th);
+    });
+    thead.appendChild(trHead);
+    tabla.appendChild(thead);
+    const tbody=document.createElement('tbody');
+    const mapaValor=new Map();
+    (carton.posiciones||[]).forEach(p=>{
+      const fila=Number(p.r);
+      const col=Number(p.c);
+      if(Number.isInteger(fila) && Number.isInteger(col)){
+        mapaValor.set(`${fila}-${col}`,p.valor);
+      }
+    });
+    const celdas=new Map();
+    const numeroCartonCentral=modo==='principal'?obtenerNumeroCarton(carton):null;
+    for(let r=0;r<5;r++){
+      const fila=document.createElement('tr');
+      for(let c=0;c<5;c++){
+        const td=document.createElement('td');
+        td.dataset.pos=`${r}-${c}`;
+        let cantada='0';
+        if(r===2 && c===2){
+          td.classList.add('free');
+          const icono=document.createElement('span');
+          icono.className='cell-content estrella';
+          if(modo==='principal'){
+            icono.classList.add('numero-carton');
+            icono.textContent=numeroCartonCentral && numeroCartonCentral!=='--'?numeroCartonCentral:'★';
+          }else{
+            icono.textContent='★';
+          }
+          td.appendChild(icono);
+        }else{
+          const valor=mapaValor.get(`${r}-${c}`);
+          const span=document.createElement('span');
+          span.className='cell-content';
+          if(valor!==undefined && valor!==null){
+            const numero=Number(valor);
+            const texto=Number.isFinite(numero)?String(numero).padStart(2,'0'):String(valor);
+            span.textContent=texto;
+            td.dataset.valor=numero;
+            if(cantosIndiceMap.has(numero) && esCantoGanador(numero)){
+              cantada='1';
+              td.classList.add('celda-cantada');
+            }
+          }else{
+            span.textContent='—';
+          }
+          td.appendChild(span);
+        }
+        td.dataset.cantada=cantada;
+        fila.appendChild(td);
+        celdas.set(`${r}-${c}`,td);
+      }
+      tbody.appendChild(fila);
+    }
+    tabla.appendChild(tbody);
+    contenedor.appendChild(tabla);
+    return {contenedor, tabla, celdas, letras:Array.from(trHead.querySelectorAll('.encabezado-letra')), leyenda};
+  }
+
+  function obtenerNumeroCarton(carton){
+    const bruto=carton.cartonNum ?? carton.Ncarton;
+    if(bruto===undefined || bruto===null) return '--';
+    const numero=Number(bruto);
+    if(Number.isFinite(numero)){
+      return String(numero).padStart(4,'0');
+    }
+    const texto=String(bruto).trim();
+    return texto||'--';
+  }
+
+  function formatearInfoCarton(carton){
+    const numero=obtenerNumeroCarton(carton);
+    return `Cartón ${numero==='--'?'--':`#${numero}`}`;
+  }
+
+  function obtenerResumenGananciasCarton(carton, limiteFormas=5){
+    const resultado={formas:[], total:0};
+    if(!carton) return resultado;
+    const gananciasPorForma=new Map();
+    const lista=formasPorCarton.get(carton.id)||[];
+    lista.forEach(item=>{
+      const idx=Number(item?.forma?.idx);
+      if(!Number.isFinite(idx)) return;
+      const valor=obtenerCreditosForma(item.forma);
+      if(!Number.isFinite(valor) || valor<=0) return;
+      gananciasPorForma.set(idx,(gananciasPorForma.get(idx)||0)+valor);
+    });
+    for(let i=1;i<=limiteFormas;i++){
+      const valor=gananciasPorForma.get(i)||0;
+      resultado.formas.push({idx:i, valor});
+      resultado.total+=valor;
+    }
+    return resultado;
+  }
+
+  function detenerAnimacionCarton(cartonId){
+    const registro=animacionesCartones.get(cartonId);
+    if(registro){
+      if(registro.timer){
+        clearTimeout(registro.timer);
+      }
+      if(Array.isArray(registro.tablas)){
+        registro.tablas.forEach(aplicarResumenCarton);
+      }
+    }
+    animacionesCartones.delete(cartonId);
+  }
+
+  function detenerTodasAnimaciones(){
+    Array.from(animacionesCartones.keys()).forEach(detenerAnimacionCarton);
+  }
+
+  function aplicarResumenCarton(info){
+    if(!info) return;
+    info.celdas.forEach(celda=>{
+      celda.classList.remove('forma-resaltada');
+      celda.classList.remove('celda-forma-activa');
+      celda.style.removeProperty('--forma-rgb');
+      celda.style.removeProperty('--forma-rgb-vivo');
+      celda.classList.remove('celda-complementario-flash');
+      if(celda.dataset.cantada==='1'){
+        celda.classList.add('celda-cantada');
+      }else{
+        celda.classList.remove('celda-cantada');
+      }
+    });
+    if(info.leyenda){
+      info.leyenda.textContent='';
+      info.leyenda.classList.remove('visible');
+      info.leyenda.style.removeProperty('color');
+      info.leyenda.style.removeProperty('border-color');
+      info.leyenda.style.removeProperty('text-shadow');
+    }
+    if(info.letras){
+      info.letras.forEach((span, idx)=>{
+        if(!span) return;
+        const th=span.closest('th');
+        if(th){
+          th.classList.remove('forma-activa');
+          th.style.removeProperty('--forma-rgb');
+          th.style.removeProperty('--forma-rgb-vivo');
+          th.setAttribute('aria-pressed','false');
+        }
+        span.textContent=BINGO_LETRAS[idx] || '';
+        span.classList.remove('encabezado-letra-activa');
+      });
+    }
+    if(cartonPrincipalInfo && cartonPrincipalInfo.info===info){
+      if(!evitarReaplicarFormaDestacada && Number.isInteger(cartonPrincipalInfo.formaActiva)){
+        const idx=cartonPrincipalInfo.formaActiva;
+        const forma=formasActivas.find(f=>Number(f.idx)===idx);
+        const posiciones=obtenerPosicionesNormalizadas(forma);
+        if(forma && posiciones.length){
+          const color=obtenerColorParaForma(idx);
+          actualizarEncabezadoForma(info, idx, color);
+          aplicarFormaCarton(info,{
+            posiciones,
+            color,
+            nombre:forma.nombre,
+            indice:idx,
+            mostrarLeyenda:false,
+            resaltarTodas:true,
+            soloBorde:true,
+            bordeOscuro:true
+          });
+        }else{
+          formaDestacadaSeleccionada=null;
+          cartonPrincipalInfo.formaActiva=null;
+          actualizarEncabezadoForma(info,null);
+        }
+      }else if(!Number.isInteger(cartonPrincipalInfo.formaActiva)){
+        actualizarEncabezadoForma(info,null);
+      }
+      actualizarVisibilidadPanelGanancias();
+    }
+  }
+
+  function aplicarFormaCarton(info, datosForma){
+    if(!info || !datosForma) return;
+    const rgbTexto=obtenerRgbTexto(datosForma.color);
+    const rgbVivoTexto=obtenerRgbVivoTexto(datosForma.color) || rgbTexto;
+    const posiciones=normalizarPosicionesEntrada(datosForma.posiciones || datosForma.posicionesNormalizadas || []);
+    const resaltarTodas=datosForma.resaltarTodas===true;
+    const soloBorde=datosForma.soloBorde===true;
+    const bordeOscuro=datosForma.bordeOscuro===true;
+    const rgbBordeTexto=bordeOscuro?obtenerRgbOscuroTexto(datosForma.color,0.55):null;
+    info.celdas.forEach(celda=>{
+      celda.classList.remove('forma-resaltada');
+      celda.classList.remove('celda-forma-activa');
+      celda.classList.remove('celda-forma-solo-borde');
+      celda.style.removeProperty('--forma-rgb');
+      celda.style.removeProperty('--forma-rgb-vivo');
+      celda.style.removeProperty('--forma-rgb-borde');
+      celda.classList.remove('celda-complementario-flash');
+      if(celda.dataset.cantada==='1'){
+        celda.classList.add('celda-cantada');
+      }
+    });
+    posiciones.forEach(pos=>{
+      const clave=`${pos.r}-${pos.c}`;
+      const celda=info.celdas.get(clave);
+      if(!celda || celda.classList.contains('free')) return;
+      if(celda.dataset.cantada!=='1' && !resaltarTodas) return;
+      celda.classList.add('celda-forma-activa');
+      celda.classList.toggle('celda-forma-solo-borde', soloBorde);
+      celda.style.setProperty('--forma-rgb',rgbTexto);
+      celda.style.setProperty('--forma-rgb-vivo',rgbVivoTexto);
+      if(rgbBordeTexto){
+        celda.style.setProperty('--forma-rgb-borde',rgbBordeTexto);
+      }
+    });
+    if(info.leyenda){
+      if(datosForma.mostrarLeyenda===false){
+        info.leyenda.textContent='';
+        info.leyenda.classList.remove('visible');
+        info.leyenda.style.removeProperty('color');
+        info.leyenda.style.removeProperty('border-color');
+        info.leyenda.style.removeProperty('text-shadow');
+      }else{
+        let etiqueta='Forma';
+        if(datosForma.nombre && datosForma.nombre.trim().length){
+          etiqueta=datosForma.nombre.trim();
+        }else if(datosForma.indice!==undefined && datosForma.indice!==null){
+          const indiceTexto=String(datosForma.indice).trim();
+          etiqueta=`Forma ${indiceTexto.padStart(2,'0')}`;
+        }
+        const esPrincipal=info?.contenedor?.classList?.contains('carton-visual--principal');
+        const leyendaTexto=esPrincipal && etiqueta?`Ganaste con ${etiqueta}`:etiqueta;
+        info.leyenda.textContent=leyendaTexto;
+        if(datosForma.color){
+          info.leyenda.style.color=ajustarLuminosidad(datosForma.color,-0.5);
+          info.leyenda.style.borderColor=ajustarLuminosidad(datosForma.color,-0.2);
+          info.leyenda.style.textShadow='0 0 14px rgba(255, 235, 59, 0.9)';
+        }
+        info.leyenda.classList.add('visible');
+      }
+    }
+    if(cartonPrincipalInfo && cartonPrincipalInfo.info===info){
+      actualizarVisibilidadPanelGanancias();
+    }
+  }
+
+  function limpiarCeldasTemporales(info){
+    if(!info) return;
+    info.celdas.forEach(celda=>{
+      celda.classList.remove('celda-forma-temporal');
+      if(!celda.classList.contains('celda-forma-activa')){
+        celda.style.removeProperty('--forma-rgb');
+        celda.style.removeProperty('--forma-rgb-vivo');
+        celda.style.removeProperty('--forma-rgb-borde');
+      }
+    });
+  }
+
+  function cancelarResaltadoTemporal(){
+    if(resaltadoTemporal.timer){
+      clearTimeout(resaltadoTemporal.timer);
+      resaltadoTemporal.timer=null;
+      if(resaltadoTemporal.tablas && cartonPrincipalInfo && cartonesSorteo.has(cartonPrincipalInfo.cartonId)){
+        configurarAnimacionCarton(cartonesSorteo.get(cartonPrincipalInfo.cartonId),resaltadoTemporal.tablas);
+      }
+    }
+    if(cartonPrincipalInfo && cartonPrincipalInfo.info){
+      limpiarCeldasTemporales(cartonPrincipalInfo.info);
+      aplicarResumenCarton(cartonPrincipalInfo.info);
+    }
+    resaltadoTemporal.tablas=null;
+    resaltadoTemporal.cartonId=null;
+  }
+
+  function resaltarFormaTemporal(indice){
+    if(!cartonPrincipalInfo || !cartonPrincipalInfo.info) return;
+    const idx=Number(indice);
+    if(!Number.isFinite(idx)) return;
+    const forma=formasActivas.find(f=>Number(f.idx)===idx);
+    const posiciones=obtenerPosicionesNormalizadas(forma);
+    if(!forma || !posiciones.length) return;
+    cancelarResaltadoTemporal();
+    const info=cartonPrincipalInfo.info;
+    aplicarResumenCarton(info);
+    const colorBase=obtenerColorParaForma(idx);
+    const rgbTexto=obtenerRgbTexto(colorBase);
+    const rgbVivoTexto=obtenerRgbVivoTexto(colorBase) || rgbTexto;
+    let tablasBackup=null;
+    const animacionActual=animacionesCartones.get(cartonPrincipalInfo.cartonId);
+    if(animacionActual){
+      tablasBackup=Array.isArray(animacionActual.tablas)?animacionActual.tablas.slice():null;
+      detenerAnimacionCarton(cartonPrincipalInfo.cartonId);
+    }
+    let hayCeldas=false;
+    posiciones.forEach(pos=>{
+      const celda=info.celdas.get(`${pos.r}-${pos.c}`);
+      if(celda){
+        celda.classList.add('celda-forma-temporal');
+        celda.style.setProperty('--forma-rgb',rgbTexto);
+        celda.style.setProperty('--forma-rgb-vivo',rgbVivoTexto);
+        hayCeldas=true;
+      }
+    });
+    if(!hayCeldas){
+      if(tablasBackup && cartonesSorteo.has(cartonPrincipalInfo.cartonId)){
+        configurarAnimacionCarton(cartonesSorteo.get(cartonPrincipalInfo.cartonId),tablasBackup);
+      }
+      return;
+    }
+    resaltadoTemporal.cartonId=cartonPrincipalInfo.cartonId;
+    resaltadoTemporal.tablas=tablasBackup;
+    resaltadoTemporal.timer=setTimeout(()=>{
+      limpiarCeldasTemporales(info);
+      aplicarResumenCarton(info);
+      if(resaltadoTemporal.tablas && cartonesSorteo.has(cartonPrincipalInfo.cartonId)){
+        configurarAnimacionCarton(cartonesSorteo.get(cartonPrincipalInfo.cartonId),resaltadoTemporal.tablas);
+      }
+      resaltadoTemporal.timer=null;
+      resaltadoTemporal.tablas=null;
+      resaltadoTemporal.cartonId=null;
+    },3000);
+  }
+
+  function configurarEventosCartonPrincipal(carton,info){
+    if(!carton || !info) return;
+    cartonPrincipalInfo={cartonId:carton.id, info, formaActiva:formaDestacadaSeleccionada};
+    colocarLeyendaPrincipalEnPanel();
+    const actualizarAccesibilidad=estado=>{
+      if(info.wrapper){
+        info.wrapper.setAttribute('aria-pressed', estado?'true':'false');
+      }
+    };
+    const toggleFlip=(forzar=null)=>{
+      if(!info.wrapper) return;
+      const yaFlipped=info.wrapper.classList.contains('flipped');
+      const proximo=typeof forzar==='boolean'?forzar:!yaFlipped;
+      info.wrapper.classList.toggle('flipped', proximo);
+      actualizarAccesibilidad(proximo);
+      if(info.wrapper){
+        info.wrapper.focus({preventScroll:true});
+      }
+    };
+    if(info.wrapper){
+      info.wrapper.tabIndex=0;
+      info.wrapper.setAttribute('role','button');
+      info.wrapper.setAttribute('aria-label','Ver resumen de ganancias del cartón');
+      actualizarAccesibilidad(info.wrapper.classList.contains('flipped'));
+      info.wrapper.addEventListener('click',evento=>{
+        if(evento.target.closest('.carton-forma-accion')) return;
+        toggleFlip();
+      });
+      info.wrapper.addEventListener('keydown',evento=>{
+        if(evento.key==='Enter' || evento.key===' '){
+          evento.preventDefault();
+          toggleFlip();
+        }
+      });
+    }
+  }
+
+  function configurarInteraccionFormasDestacadas(info){
+    if(!info || !Array.isArray(info.letras)) return;
+    info.letras.forEach((span, idx)=>{
+      if(!span) return;
+      const th=span.closest('th');
+      if(!th) return;
+      const formaIdx=idx+1;
+      th.dataset.formaIdx=String(formaIdx);
+      th.setAttribute('role','button');
+      th.tabIndex=0;
+      th.setAttribute('aria-pressed','false');
+      th.setAttribute('aria-label',`Resaltar forma ${formaIdx}`);
+      th.addEventListener('click',evento=>{
+        evento.preventDefault();
+        evento.stopPropagation();
+        toggleFormaDestacada(formaIdx);
+      });
+      th.addEventListener('keydown',evento=>{
+        if(evento.key==='Enter' || evento.key===' '){
+          evento.preventDefault();
+          evento.stopPropagation();
+          toggleFormaDestacada(formaIdx);
+        }
+      });
+    });
+    actualizarEncabezadoForma(info,null);
+  }
+
+  function establecerFormaDestacada(indice){
+    if(!cartonPrincipalInfo || !cartonPrincipalInfo.info) return;
+    const idx=Number(indice);
+    if(!Number.isInteger(idx)) return;
+    const forma=formasActivas.find(f=>Number(f.idx)===idx);
+    const posiciones=obtenerPosicionesNormalizadas(forma);
+    if(!forma || !posiciones.length){
+      limpiarFormaDestacada();
+      return;
+    }
+    const info=cartonPrincipalInfo.info;
+    const color=obtenerColorParaForma(idx);
+    formaDestacadaSeleccionada=idx;
+    cartonPrincipalInfo.formaActiva=idx;
+    if(info?.contenedor){
+      info.contenedor.classList.add('forma-manual-activa');
+    }
+    evitarReaplicarFormaDestacada=true;
+    aplicarResumenCarton(info);
+    evitarReaplicarFormaDestacada=false;
+    actualizarEncabezadoForma(info, idx, color);
+    aplicarFormaCarton(info,{
+      posiciones,
+      color,
+      nombre:forma.nombre,
+      indice:idx,
+      mostrarLeyenda:false,
+      resaltarTodas:true,
+      soloBorde:true,
+      bordeOscuro:true
+    });
+  }
+
+  function limpiarFormaDestacada(){
+    if(!cartonPrincipalInfo || !cartonPrincipalInfo.info) return;
+    formaDestacadaSeleccionada=null;
+    cartonPrincipalInfo.formaActiva=null;
+    if(cartonPrincipalInfo.info.contenedor){
+      cartonPrincipalInfo.info.contenedor.classList.remove('forma-manual-activa');
+    }
+    evitarReaplicarFormaDestacada=true;
+    aplicarResumenCarton(cartonPrincipalInfo.info);
+    evitarReaplicarFormaDestacada=false;
+    actualizarEncabezadoForma(cartonPrincipalInfo.info,null);
+  }
+
+  function toggleFormaDestacada(indice){
+    const idx=Number(indice);
+    if(!Number.isInteger(idx)) return;
+    if(formaDestacadaSeleccionada===idx){
+      limpiarFormaDestacada();
+    }else{
+      establecerFormaDestacada(idx);
+    }
+  }
+
+  function restaurarFormaDestacada(){
+    if(!cartonPrincipalInfo || !cartonPrincipalInfo.info) return;
+    if(!Number.isInteger(formaDestacadaSeleccionada)) return;
+    establecerFormaDestacada(formaDestacadaSeleccionada);
+  }
+
+  function configurarAnimacionCarton(carton, tablasInfo){
+    if(!carton || !Array.isArray(tablasInfo) || !tablasInfo.length) return;
+    detenerAnimacionCarton(carton.id);
+    tablasInfo.forEach(aplicarResumenCarton);
+    const formasGanadas=Array.isArray(carton.formasGanadas)?carton.formasGanadas:[];
+    const formasPreparadas=formasGanadas
+      .map(item=>{
+        const posiciones=obtenerPosicionesNormalizadas(item?.forma);
+        if(!posiciones.length) return null;
+        const idx=item?.forma?.idx ?? item?.idx;
+        const nombre=item?.forma?.nombre ?? item?.nombre ?? '';
+        return {
+          posiciones,
+          color:obtenerColorParaForma(idx),
+          nombre,
+          indice:idx,
+          resaltarTodas:true
+        };
+      })
+      .filter(Boolean);
+    if(!formasPreparadas.length){
+      return;
+    }
+    const secuencias=[];
+    formasPreparadas.forEach(data=>{
+      secuencias.push({tipo:'forma',data});
+      secuencias.push({tipo:'resumen'});
+    });
+    if(!secuencias.length){
+      return;
+    }
+    let indice=0;
+    const registro={timer:null, tablas:tablasInfo};
+    animacionesCartones.set(carton.id,registro);
+    const ejecutar=()=>{
+      if(!animacionesCartones.has(carton.id)) return;
+      const actual=secuencias[indice];
+      const duracion=actual.tipo==='forma'?3000:3000;
+      if(actual.tipo==='forma'){
+        tablasInfo.forEach(info=>aplicarFormaCarton(info,actual.data));
+      }else{
+        tablasInfo.forEach(aplicarResumenCarton);
+      }
+      registro.timer=setTimeout(()=>{
+        indice=(indice+1)%secuencias.length;
+        ejecutar();
+      },duracion);
+    };
+    ejecutar();
+  }
+
+  function aplicarPenalizacionTemporalEnCelda(celda){
+    if(!(celda instanceof HTMLElement)) return;
+    celda.classList.remove('celda-cantada');
+    celda.classList.remove('celda-forma-activa');
+    celda.classList.remove('celda-forma-solo-borde');
+    celda.classList.remove('forma-resaltada');
+    celda.classList.remove('celda-complementario-flash');
+    if(celda.dataset){
+      celda.dataset.cantada='0';
+    }
+    celda.classList.add('celda-canto-penalizado');
+    const previo=celdasPenalizadasTimers.get(celda);
+    if(previo){
+      clearTimeout(previo);
+    }
+    const timer=setTimeout(()=>{
+      celda.classList.remove('celda-canto-penalizado');
+      celdasPenalizadasTimers.delete(celda);
+    },1000);
+    celdasPenalizadasTimers.set(celda,timer);
+  }
+
+  function resaltarCeldasPenalizadasTemporalmente(numeros){
+    if(!Array.isArray(numeros) || !numeros.length) return;
+    const unicos=Array.from(new Set(numeros.map(num=>Number(num)).filter(Number.isFinite)));
+    if(!unicos.length) return;
+    requestAnimationFrame(()=>{
+      unicos.forEach(numero=>{
+        const selector=`.carton-tabla td[data-valor="${numero}"]`;
+        document.querySelectorAll(selector).forEach(celda=>{
+          if(!(celda instanceof HTMLElement)) return;
+          if(celda.classList.contains('free')) return;
+          aplicarPenalizacionTemporalEnCelda(celda);
+        });
+      });
+    });
+  }
+
+  function aplicarResaltadoComplementarioEnCelda(celda){
+    if(!(celda instanceof HTMLElement)) return;
+    celda.classList.remove('celda-cantada');
+    celda.classList.remove('celda-canto-penalizado');
+    celda.classList.remove('celda-forma-activa');
+    celda.classList.remove('celda-forma-solo-borde');
+    celda.classList.remove('forma-resaltada');
+    const previo=celdasComplementariasTimers.get(celda);
+    if(previo){
+      clearTimeout(previo);
+    }
+    celda.classList.add('celda-complementario-flash');
+    const timer=setTimeout(()=>{
+      celda.classList.remove('celda-complementario-flash');
+      celdasComplementariasTimers.delete(celda);
+    },1000);
+    celdasComplementariasTimers.set(celda,timer);
+  }
+
+  function resaltarCeldasComplementariasTemporalmente(numeros){
+    if(!Array.isArray(numeros) || !numeros.length) return;
+    const unicos=Array.from(new Set(numeros.map(num=>Number(num)).filter(Number.isFinite)));
+    if(!unicos.length) return;
+    requestAnimationFrame(()=>{
+      unicos.forEach(numero=>{
+        const selector=`.carton-tabla td[data-valor="${numero}"]`;
+        document.querySelectorAll(selector).forEach(celda=>{
+          if(!(celda instanceof HTMLElement)) return;
+          if(celda.classList.contains('free')) return;
+          aplicarResaltadoComplementarioEnCelda(celda);
+        });
+      });
+    });
+  }
+
+  crearGridCantos();
+
+  function formatearFecha(fechaStr){
+    if(!fechaStr) return '';
+    const partes=fechaStr.split('-');
+    if(partes.length===3){
+      return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    }
+    return fechaStr;
+  }
+
+  function normalizarNumero(valor){
+    if(typeof valor==='number' && Number.isFinite(valor)) return valor;
+    if(typeof valor==='string'){
+      const texto=valor.trim();
+      if(texto==='') return null;
+      const match=texto.toUpperCase().match(/^([BINGO])[-\s]?0*(\d{1,2})$/);
+      if(match){
+        const numero=parseInt(match[2],10);
+        if(Number.isFinite(numero)){
+          return numero;
+        }
+      }
+      const n=parseInt(texto,10);
+      if(Number.isFinite(n)) return n;
+    }
+    return null;
+  }
+
+  function esCantoComplementario(numero){
+    if(!Number.isFinite(numero)) return false;
+    if(!todasFormasConGanadores || !Number.isInteger(indiceUltimoGanador)) return false;
+    if(!(cantosIndiceMap instanceof Map)) return false;
+    if(!cantosIndiceMap.has(numero)) return false;
+    const idx=cantosIndiceMap.get(numero);
+    return Number.isInteger(idx) && idx>indiceUltimoGanador;
+  }
+
+  function esCantoGanador(numero){
+    if(!Number.isFinite(numero)) return false;
+    if(esCantoComplementario(numero)) return false;
+    if(!(cantosResultadoMap instanceof Map) || cantosResultadoMap.size===0){
+      return true;
+    }
+    if(!cantosResultadoMap.has(numero)){
+      return true;
+    }
+    const estado=cantosResultadoMap.get(numero);
+    if(typeof estado==='string' && estado.trim().length){
+      return estado.trim().toLowerCase()==='g';
+    }
+    return true;
+  }
+
+  function generarEtiquetaDesdeNumero(numero){
+    if(!Number.isFinite(numero)) return '';
+    const entero=Math.trunc(numero);
+    if(entero<=0) return numero.toString();
+    const indice=Math.min(BINGO_LETRAS.length-1, Math.max(0, Math.floor((entero-1)/15)));
+    const letra=BINGO_LETRAS[indice];
+    return `${letra}-${String(entero).padStart(2,'0')}`;
+  }
+
+  function obtenerEtiquetaCanto(valor){
+    if(typeof valor==='string'){
+      const texto=valor.trim();
+      if(texto){
+        const match=texto.toUpperCase().match(/^([BINGO])[-\s]?0*(\d{1,2})$/);
+        if(match){
+          const letra=match[1];
+          const numero=parseInt(match[2],10);
+          if(Number.isFinite(numero)){
+            return `${letra}-${String(numero).padStart(2,'0')}`;
+          }
+        }
+      }
+    }
+    const numero=normalizarNumero(valor);
+    if(numero===null) return '';
+    return generarEtiquetaDesdeNumero(numero);
+  }
+
+  function colorConTransparencia(hex,alpha){
+    if(!hex) return `rgba(255,255,255,${alpha})`;
+    let valor=hex.replace('#','');
+    if(valor.length===3){
+      valor=valor.split('').map(c=>c+c).join('');
+    }
+    const num=parseInt(valor,16);
+    if(Number.isNaN(num)) return `rgba(255,255,255,${alpha})`;
+    const r=(num>>16)&255;
+    const g=(num>>8)&255;
+    const b=num&255;
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  function hexToRgb(hex){
+    if(!hex) return null;
+    let valor=hex.replace('#','');
+    if(valor.length===3){
+      valor=valor.split('').map(c=>c+c).join('');
+    }
+    if(valor.length!==6) return null;
+    const num=parseInt(valor,16);
+    if(Number.isNaN(num)) return null;
+    return {
+      r:(num>>16)&255,
+      g:(num>>8)&255,
+      b:num&255
+    };
+  }
+
+  function ajustarLuminosidad(hex,porcentaje){
+    const rgb=hexToRgb(hex);
+    if(!rgb) return hex || '#ffffff';
+    const factor=Math.max(-1, Math.min(1, porcentaje));
+    const ajustar=valor=>{
+      if(factor>=0){
+        return Math.round(valor+(255-valor)*factor);
+      }
+      return Math.round(valor+(valor*factor));
+    };
+    const r=ajustar(rgb.r);
+    const g=ajustar(rgb.g);
+    const b=ajustar(rgb.b);
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+
+  function formatearCreditos(valor){
+    const numero=Number(valor);
+    if(!Number.isFinite(numero)) return '0';
+    return numero.toLocaleString('es-ES', {maximumFractionDigits: 0});
+  }
+
+  function formatearHoraAmPm(valor){
+    const texto=String(valor ?? '').trim();
+    if(!texto) return '';
+    const match=texto.match(/^(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?\s*(am|pm)?$/i);
+    if(match){
+      let horas=parseInt(match[1],10);
+      if(Number.isNaN(horas)) return texto;
+      const minutos=(match[2]??'00').padStart(2,'0');
+      const segundos=match[3]?match[3].padStart(2,'0'):null;
+      let sufijo=match[4]?match[4].toUpperCase():'';
+      if(!sufijo){
+        sufijo=horas>=12?'PM':'AM';
+        horas=horas%12 || 12;
+      }else{
+        horas=(horas%12)||12;
+      }
+      const base=String(horas).padStart(2,'0');
+      const segmentoSegundos=segundos?`:${segundos}`:'';
+      return `${base}:${minutos}${segmentoSegundos} ${sufijo}`;
+    }
+    const partes=texto.split(':');
+    if(partes.length>=2){
+      const horas=parseInt(partes[0],10);
+      if(!Number.isNaN(horas)){
+        const minutos=partes[1];
+        const segundos=partes.length>2?partes[2]:'';
+        const sufijo=horas>=12?'PM':'AM';
+        const hora12=(horas%12)||12;
+        const segSegmento=segundos?`:${segundos.padStart(2,'0')}`:'';
+        return `${String(hora12).padStart(2,'0')}:${minutos.padStart(2,'0')}${segSegmento} ${sufijo}`;
+      }
+    }
+    return texto;
+  }
+
+  function alternarVisibilidadEncabezadoSorteo(visible){
+    const mostrar = !!visible;
+    if(sorteoResumenEl){
+      if(mostrar){
+        sorteoResumenEl.removeAttribute('hidden');
+        sorteoResumenEl.setAttribute('aria-hidden','false');
+      }else{
+        sorteoResumenEl.setAttribute('hidden','');
+        sorteoResumenEl.setAttribute('aria-hidden','true');
+        sorteoResumenEl.textContent='';
+      }
+    }
+    if(sorteoDetallesEl){
+      if(mostrar){
+        sorteoDetallesEl.removeAttribute('hidden');
+        sorteoDetallesEl.setAttribute('aria-hidden','false');
+      }else{
+        sorteoDetallesEl.setAttribute('hidden','');
+        sorteoDetallesEl.setAttribute('aria-hidden','true');
+        sorteoDetallesEl.innerHTML='';
+      }
+    }
+  }
+
+  function actualizarSinSorteoUI(){
+    if(!sinSorteoContenedorEl) return;
+    if(haySorteoJugando){
+      sinSorteoContenedorEl.classList.remove('visible');
+      sinSorteoContenedorEl.setAttribute('hidden','');
+      if(sorteoHeaderEl){
+        sorteoHeaderEl.classList.remove('sin-sorteo-activo');
+      }
+      alternarVisibilidadEncabezadoSorteo(true);
+      if(sinSorteoMensajeEl){
+        sinSorteoMensajeEl.classList.remove('parpadeo');
+        sinSorteoMensajeEl.setAttribute('hidden','');
+        sinSorteoMensajeEl.setAttribute('aria-hidden','true');
+      }
+    }else{
+      sinSorteoContenedorEl.classList.add('visible');
+      sinSorteoContenedorEl.removeAttribute('hidden');
+      if(sorteoHeaderEl){
+        sorteoHeaderEl.classList.add('sin-sorteo-activo');
+      }
+      const mostrarDetalles = !!(activeSorteo && sorteoManualSeleccionadoId);
+      alternarVisibilidadEncabezadoSorteo(mostrarDetalles);
+      if(sinSorteoMensajeEl){
+        sinSorteoMensajeEl.textContent='EN ESTE MOMENTO NO HAY SORTEOS JUGANDO';
+        sinSorteoMensajeEl.classList.add('parpadeo');
+        sinSorteoMensajeEl.removeAttribute('hidden');
+        sinSorteoMensajeEl.setAttribute('aria-hidden','false');
+      }
+    }
+    actualizarTituloFinalizadoBtn();
+  }
+
+  function obtenerTotalCreditosSorteo(){
+    if(!activeSorteo) return 0;
+    const posiblesClaves=['totalPremios','totalpremios','premioTotal','premio','total_premios'];
+    for(const clave of posiblesClaves){
+      const valor=Number(activeSorteo[clave]);
+      if(Number.isFinite(valor) && valor>0){
+        return valor;
+      }
+    }
+    const valorCarton=Number(activeSorteo.valorCarton ?? activeSorteo.valor);
+    const jugados=Number(activeSorteo.cartonesjugando ?? activeSorteo.cartonesJugando ?? activeSorteo.cartones);
+    if(Number.isFinite(valorCarton) && valorCarton>0 && Number.isFinite(jugados) && jugados>0){
+      return valorCarton*jugados;
+    }
+    return 0;
+  }
+
+  function obtenerCreditosForma(forma){
+    if(!forma) return 0;
+    const posiblesClaves=['premioCreditos','premiocreditos','creditos','premio','premioValor'];
+    for(const clave of posiblesClaves){
+      const valor=Number(forma[clave]);
+      if(Number.isFinite(valor) && valor>0){
+        return valor;
+      }
+    }
+    const porcentaje=Number(forma.porcentaje ?? forma.porcentajePremio ?? forma.porcentajepremio);
+    if(Number.isFinite(porcentaje) && porcentaje>0){
+      const total=obtenerTotalCreditosSorteo();
+      if(total>0){
+        return Math.round(total*porcentaje/100);
+      }
+    }
+    return 0;
+  }
+
+  function obtenerCartonesGratisForma(forma){
+    if(!forma) return 0;
+    const candidatos=[
+      forma?.cartonesGratis,
+      forma?.cartonesgratis,
+      forma?.cartones_gratis,
+      forma?.premioCartonesGratis,
+      forma?.premioCartonesgratis,
+      forma?.cartones
+    ];
+    for(const candidato of candidatos){
+      const numero=Number(candidato);
+      if(Number.isFinite(numero)){
+        return Math.max(0, Math.round(numero));
+      }
+    }
+    return 0;
+  }
+
+  function actualizarHeader(){
+    const mostrarManual = !haySorteoJugando && !!(activeSorteo && sorteoManualSeleccionadoId);
+    if(!haySorteoJugando && !mostrarManual){
+      if(sorteoResumenEl){
+        sorteoResumenEl.className='sorteo-titulo-basico';
+        sorteoResumenEl.textContent='';
+      }
+      if(sorteoDetallesEl){
+        sorteoDetallesEl.innerHTML='';
+      }
+      alternarVisibilidadEncabezadoSorteo(false);
+      actualizarTituloFinalizadoBtn();
+      return;
+    }
+    if(!activeSorteo){
+      if(sorteoResumenEl){
+        sorteoResumenEl.className='sorteo-titulo-basico';
+        sorteoResumenEl.textContent='Sorteo en vivo';
+      }
+      if(sorteoDetallesEl){
+        sorteoDetallesEl.innerHTML='';
+      }
+      actualizarTituloFinalizadoBtn();
+      return;
+    }
+    alternarVisibilidadEncabezadoSorteo(true);
+    const {nombre='',fecha='',tipo='',hora=''}=activeSorteo;
+    const claseTitulo=['sorteo-titulo-basico'];
+    const tipoNormalizado=(tipo||'').toLowerCase();
+    if(tipoNormalizado.includes('especial')){
+      claseTitulo.push('sorteo-titulo-especial');
+    }else if(tipoNormalizado.includes('diario')){
+      claseTitulo.push('sorteo-titulo-diario');
+    }
+    if(sorteoResumenEl){
+      sorteoResumenEl.className=claseTitulo.join(' ');
+      if(haySorteoJugando){
+        sorteoResumenEl.textContent=nombre||'Sorteo en vivo';
+        sorteoResumenEl.removeAttribute('hidden');
+      }else{
+        sorteoResumenEl.textContent='';
+        sorteoResumenEl.setAttribute('hidden','');
+      }
+    }
+    const partes=[];
+    if(tipo){
+      let claseTipo='detalle-valor tipo';
+      if(tipoNormalizado.includes('especial')){
+        claseTipo+=' detalle-tipo-especial';
+      }else if(tipoNormalizado.includes('diario')){
+        claseTipo+=' detalle-tipo-diario';
+      }
+      const tipoMostrar=(tipo||'').toString().trim();
+      if(tipoMostrar){
+        const tipoTexto=tipoMostrar.toUpperCase();
+        if(haySorteoJugando){
+          partes.push(`<span class="detalle-item"><span class="${claseTipo}">${tipoTexto}</span></span>`);
+        }else{
+          partes.push(`<span class="${claseTipo}">${tipoTexto}</span>`);
+        }
+      }
+    }
+    if(fecha){
+      partes.push(`<span class="detalle-item"><span class="detalle-label">Fecha:</span><span class="detalle-valor fecha">${formatearFecha(fecha)}</span></span>`);
+    }
+    if(hora){
+      const horaFormateada=formatearHoraAmPm(hora);
+      const horaMostrar=horaFormateada || hora;
+      partes.push(`<span class="detalle-item"><span class="detalle-label">Hora:</span><span class="detalle-valor hora">${horaMostrar}</span></span>`);
+    }
+    if(sorteoDetallesEl){
+      sorteoDetallesEl.innerHTML=partes.join(' ');
+    }
+    actualizarTituloFinalizadoBtn();
+  }
+
+  function renderCantos(){
+    if(!cantoCellsMap.size) crearGridCantos();
+    cantoCellsMap.forEach(celda=>{
+      celda.classList.remove('cantado','ultimo','complementario','invalido');
+    });
+    ultimoCantoEl.innerHTML='';
+    const total=cantosOrdenados.length;
+    const complementariosActivos=cantosComplementariosActivos && Number.isInteger(indiceUltimoGanador);
+    let ultimoEstadoNormalizado='';
+    cantosOrdenados.forEach((num,idx)=>{
+      const celda=cantoCellsMap.get(num);
+      if(celda){
+        const estado=cantosResultadoMap instanceof Map?cantosResultadoMap.get(num):undefined;
+        const esPenalizado=typeof estado==='string' && estado.trim().toLowerCase()==='p';
+        celda.classList.add('cantado');
+        if(esPenalizado){
+          celda.classList.add('invalido');
+          celda.classList.remove('complementario');
+        }else if(complementariosActivos && idx>indiceUltimoGanador){
+          celda.classList.add('complementario');
+        }
+        if(idx===total-1){
+          celda.classList.add('ultimo');
+          ultimoEstadoNormalizado=typeof estado==='string'?estado.trim().toLowerCase():'';
+        }
+      }
+    });
+    if(cantosResultadoMap instanceof Map){
+      cantosResultadoMap.forEach((estado,numero)=>{
+        if(typeof estado!=='string') return;
+        if(estado.trim().toLowerCase()!=='p') return;
+        const celda=cantoCellsMap.get(numero);
+        if(!celda) return;
+        celda.classList.add('cantado','invalido');
+        celda.classList.remove('complementario');
+      });
+    }
+    const ultimoEstadoEsPenalizado=total>0 && (ultimoEstadoNormalizado==='p' || (!ultimoEstadoNormalizado && complementariosActivos));
+    ultimoCantoEl.classList.toggle('complementarios-activos', ultimoEstadoEsPenalizado);
+    if(total){
+      const etiqueta=cantosEtiquetas[total-1] || generarEtiquetaDesdeNumero(cantosOrdenados[total-1]);
+      ultimoCantoValorActual=etiqueta;
+      if(!ultimoCantoBoton){
+        ultimoCantoBoton=document.createElement('button');
+        ultimoCantoBoton.type='button';
+        ultimoCantoBoton.className='ultimo-boton';
+        ultimoCantoBoton.setAttribute('aria-label','Mostrar ventana del último canto');
+        ultimoCantoBoton.title='Ver detalle del último canto';
+        ultimoCantoBoton.addEventListener('click',evento=>{
+          evento.preventDefault();
+          mostrarVentanaUltimoCanto();
+        });
+      }
+      ultimoCantoBoton.textContent=etiqueta;
+      const etiquetaSpan=document.createElement('span');
+      etiquetaSpan.className='ultimo-etiqueta';
+      etiquetaSpan.textContent='Último';
+      const totalSpan=document.createElement('span');
+      totalSpan.className='ultimo-total';
+      totalSpan.textContent=`(${total})`;
+      const separador=document.createElement('span');
+      separador.className='ultimo-separador';
+      separador.textContent=':';
+      ultimoCantoEl.appendChild(etiquetaSpan);
+      ultimoCantoEl.appendChild(totalSpan);
+      ultimoCantoEl.appendChild(separador);
+      ultimoCantoEl.appendChild(ultimoCantoBoton);
+    }else{
+      ultimoCantoValorActual='';
+      ultimoCantoEl.textContent='Aún no se han registrado cantos.';
+      cerrarVentanaUltimoCanto();
+    }
+    if(ultimoCantoBoton){
+      ultimoCantoBoton.classList.toggle('complementarios-activos', ultimoEstadoEsPenalizado);
+    }
+    if(ultimoCantoPopupEl){
+      ultimoCantoPopupEl.classList.toggle('complementarios-activos', ultimoEstadoEsPenalizado);
+    }
+  }
+
+  function limpiarPanelFormas(){
+    if(formasMensajeEl){
+      formasMensajeEl.textContent='';
+    }
+    limpiarBotonesFormas();
+  }
+
+  function limpiarCartonesRenderizados(){
+    if(misCartonesGridEl){
+      misCartonesGridEl.innerHTML='';
+    }
+  }
+
+  function renderFormas(){
+    limpiarPanelFormas();
+    if(!formasActivas.length){
+      if(formasMensajeEl){
+        formasMensajeEl.textContent='No hay formas registradas para este sorteo.';
+      }
+      return;
+    }
+    if(formasMensajeEl){
+      formasMensajeEl.textContent='';
+    }
+  }
+
+  function renderCartonesJugador(){
+    detenerTodasAnimaciones();
+    limpiarCartonesRenderizados();
+    cartonDestacadoEl.innerHTML='';
+    cartonDestacadoEl.classList.remove('activo');
+    cartonDestacadoEl.style.removeProperty('--carton-contenido-ancho');
+    cartonDestacadoEl.style.removeProperty('--carton-contenido-alto');
+    limpiarBotonesFormas();
+    const lista=Array.from(cartonesSorteo.values()).filter(c=>c.userId===(usuarioActual?usuarioActual.uid:null));
+    if(!lista.length){
+      cartonesMensajeEl.textContent='No tienes cartones participando en este sorteo.';
+      cartonSeleccionadoId=null;
+      cartonPrincipalInfo=null;
+      formaDestacadaSeleccionada=null;
+      totalGananciasJugador=0;
+      actualizarGananciasTotales();
+      return;
+    }
+    cartonesMensajeEl.textContent='';
+    const decorados=lista.map(carton=>{
+      const formasGanadas=formasPorCarton.get(carton.id)||[];
+      const primerPaso=formasGanadas.length?Math.min(...formasGanadas.map(f=>f.paso)):Infinity;
+      const resumenGanancias=obtenerResumenGananciasCarton(carton,5);
+      return {...carton, formasGanadas, primerPaso, resumenGanancias};
+    });
+    totalGananciasJugador=decorados.reduce((acum,carton)=>{
+      const total=Number(carton?.resumenGanancias?.total)||0;
+      return acum+total;
+    },0);
+    actualizarGananciasTotales();
+    decorados.sort((a,b)=>{
+      const aGan=a.formasGanadas.length>0;
+      const bGan=b.formasGanadas.length>0;
+      if(aGan!==bGan) return aGan?-1:1;
+      if(aGan && bGan){
+        if(a.primerPaso!==b.primerPaso) return a.primerPaso-b.primerPaso;
+      }
+      const numA=a.cartonNum ?? a.Ncarton ?? Number.MAX_SAFE_INTEGER;
+      const numB=b.cartonNum ?? b.Ncarton ?? Number.MAX_SAFE_INTEGER;
+      return numA-numB;
+    });
+    if(!cartonSeleccionadoId || !decorados.some(c=>c.id===cartonSeleccionadoId)){
+      cartonSeleccionadoId=decorados[0].id;
+      formaDestacadaSeleccionada=null;
+    }
+    const tablasPorCarton=new Map();
+    const registrarTabla=(cartonId,info)=>{
+      if(!info) return;
+      if(!tablasPorCarton.has(cartonId)) tablasPorCarton.set(cartonId,[]);
+      tablasPorCarton.get(cartonId).push(info);
+    };
+    const fragment=document.createDocumentFragment();
+    decorados.forEach(carton=>{
+      const tablaInfo=crearTablaCartonVisual(carton,'mini');
+      aplicarResumenCarton(tablaInfo);
+      registrarTabla(carton.id,tablaInfo);
+      const contenedor=tablaInfo.contenedor;
+      contenedor.dataset.cartonId=carton.id||'';
+      contenedor.classList.remove('ganador','seleccionado');
+      if(carton.formasGanadas.length){
+        contenedor.classList.add('ganador');
+      }
+      if(carton.id===cartonSeleccionadoId){
+        contenedor.classList.add('seleccionado');
+      }
+      contenedor.setAttribute('role','button');
+      contenedor.setAttribute('tabindex','0');
+      const info=document.createElement('div');
+      info.className='carton-info';
+      const numeroDiv=document.createElement('div');
+      numeroDiv.className='carton-info-numero';
+      numeroDiv.textContent=formatearInfoCarton(carton);
+      info.appendChild(numeroDiv);
+      const tipoCarton=normalizarTipoCarton(carton);
+      const tipoDiv=document.createElement('div');
+      tipoDiv.className=`carton-info-tipo carton-info-tipo--${tipoCarton}`;
+      tipoDiv.textContent=tipoCarton==='gratis'?'GRATIS':'PAGADO';
+      info.appendChild(tipoDiv);
+      contenedor.appendChild(info);
+      contenedor.addEventListener('click',()=>{
+        if(cartonSeleccionadoId!==carton.id){
+          cartonSeleccionadoId=carton.id;
+          formaDestacadaSeleccionada=null;
+          desplazamientoArribaPendiente=true;
+          renderCartonesJugador();
+        }
+      });
+      contenedor.addEventListener('keydown',evento=>{
+        if((evento.key==='Enter'||evento.key===' ') && cartonSeleccionadoId!==carton.id){
+          evento.preventDefault();
+          cartonSeleccionadoId=carton.id;
+          formaDestacadaSeleccionada=null;
+          desplazamientoArribaPendiente=true;
+          renderCartonesJugador();
+        }
+      });
+      fragment.appendChild(contenedor);
+    });
+    if(misCartonesGridEl){
+      misCartonesGridEl.appendChild(fragment);
+    }
+    cancelarResaltadoTemporal();
+    cartonPrincipalInfo=null;
+    const seleccionado=decorados.find(c=>c.id===cartonSeleccionadoId);
+    if(seleccionado){
+      const tablaInfoPrincipal=crearTablaCartonVisual(seleccionado,'principal');
+      aplicarResumenCarton(tablaInfoPrincipal);
+      registrarTabla(seleccionado.id,tablaInfoPrincipal);
+      const resumenGanancias=seleccionado.resumenGanancias || obtenerResumenGananciasCarton(seleccionado,5);
+      const cartonBox=document.createElement('div');
+      cartonBox.className='carton-box';
+      const cartonWrapper=document.createElement('div');
+      cartonWrapper.className='carton-wrapper';
+      cartonBox.appendChild(cartonWrapper);
+      const cartonFront=document.createElement('div');
+      cartonFront.className='carton-front';
+      cartonWrapper.appendChild(cartonFront);
+      cartonFront.appendChild(tablaInfoPrincipal.contenedor);
+      const cartonBack=document.createElement('div');
+      cartonBack.className='carton-back';
+      const tipoSorteoActual=String(activeSorteo?.tipo ?? activeSorteo?.tipoSorteo ?? '').toLowerCase();
+      if(tipoSorteoActual.includes('especial')){
+        cartonBack.classList.add('carton-back--especial');
+      }else if(tipoSorteoActual.includes('diario')){
+        cartonBack.classList.add('carton-back--diario');
+      }
+      cartonWrapper.appendChild(cartonBack);
+      const backContent=document.createElement('div');
+      backContent.className='carton-back-content';
+      cartonBack.appendChild(backContent);
+      const backTitle=document.createElement('h3');
+      backTitle.className='carton-back-title';
+      backTitle.textContent='GANANCIAS DEL CARTÓN';
+      backContent.appendChild(backTitle);
+      const formasContenedor=document.createElement('div');
+      formasContenedor.className='carton-back-formas';
+      backContent.appendChild(formasContenedor);
+      const botonesFormas=[];
+      for(let idx=1; idx<=5; idx++){
+        const datosForma=resumenGanancias.formas.find(f=>Number(f.idx)===idx) || {idx, valor:0};
+        const forma=formasActivas.find(f=>Number(f.idx)===idx) || {idx};
+        const colorForma=obtenerColorParaForma(idx);
+        const colorTexto=obtenerColorOscurecido(colorForma,0.75);
+        const infoGanadores=cartonesGanadoresPorForma.get(idx) || {cartones:[]};
+        const totalGanadores=Array.isArray(infoGanadores.cartones)?infoGanadores.cartones.length:0;
+        const linea=document.createElement('div');
+        linea.className='back-forma-line';
+        linea.style.color=colorTexto;
+        linea.innerHTML=
+          `<span class="back-forma-etiqueta">FORMA ${String(idx).padStart(2,'0')}:</span>`+
+          `<span class="back-forma-valor">${formatearCreditos(datosForma.valor||0)}</span>`;
+        formasContenedor.appendChild(linea);
+        const boton=document.createElement('button');
+        boton.type='button';
+        boton.className='carton-forma-accion';
+        boton.dataset.formaIdx=String(idx).padStart(2,'0');
+        const textoBoton=document.createElement('span');
+        textoBoton.className='carton-forma-texto';
+        textoBoton.textContent=`GANADORES F${idx}`;
+        const contadorBoton=document.createElement('span');
+        contadorBoton.className='carton-forma-contador';
+        contadorBoton.textContent=String(totalGanadores);
+        boton.appendChild(textoBoton);
+        boton.appendChild(contadorBoton);
+        boton.style.setProperty('--forma-color', colorForma);
+        const colorOscurecido=obtenerColorOscurecido(colorForma,0.7);
+        boton.style.setProperty('--forma-color-borde', colorOscurecido);
+        boton.style.setProperty('--forma-color-contador', obtenerColorOscurecido(colorForma,0.55));
+        boton.dataset.totalGanadores=String(totalGanadores);
+        boton.classList.toggle('con-ganadores', totalGanadores>0);
+        const referenciaNombre=forma && forma.nombre?`, ${forma.nombre}`:'';
+        const descripcionGanadores=totalGanadores===1?'1 cartón ganador':`${totalGanadores} cartones ganadores`;
+        boton.setAttribute('aria-label',`Ver cartones ganadores de la forma ${String(idx).padStart(2,'0')}${referenciaNombre}, ${descripcionGanadores}`);
+        const tituloBase=forma && forma.nombre?`Ganadores ${forma.nombre}`:`Ganadores Forma ${String(idx).padStart(2,'0')}`;
+        boton.title=`${tituloBase} (${descripcionGanadores})`;
+        boton.addEventListener('click',evento=>{
+          evento.stopPropagation();
+          abrirModalGanadores(forma);
+        });
+        botonesFormas.push(boton);
+      }
+      const totalContenedor=document.createElement('div');
+      totalContenedor.className='carton-back-total';
+      const totalLabel=document.createElement('span');
+      totalLabel.className='carton-back-total-label';
+      totalLabel.textContent='TOTAL GANADO CARTÓN:';
+      const totalValor=document.createElement('span');
+      totalValor.className='carton-back-total-valor';
+      totalValor.textContent=formatearCreditos(resumenGanancias.total);
+      totalContenedor.appendChild(totalLabel);
+      totalContenedor.appendChild(totalValor);
+      backContent.appendChild(totalContenedor);
+      const backLogo=document.createElement('img');
+      backLogo.src='https://i.imgur.com/twjhNtZ.png';
+      backLogo.alt='Logo HexaBingo';
+      cartonBack.appendChild(backLogo);
+      insertarBotonesFormas(botonesFormas);
+      actualizarGananciasTotales();
+      colocarLeyendaPrincipalEnPanel(tablaInfoPrincipal);
+      cartonDestacadoEl.appendChild(cartonBox);
+      tablaInfoPrincipal.wrapper=cartonWrapper;
+      tablaInfoPrincipal.cartonBack=cartonBack;
+      tablaInfoPrincipal.celdaCentral=tablaInfoPrincipal.celdas.get('2-2');
+      cartonDestacadoEl.classList.add('activo');
+      configurarEventosCartonPrincipal(seleccionado,tablaInfoPrincipal);
+      configurarInteraccionFormasDestacadas(tablaInfoPrincipal);
+      restaurarFormaDestacada();
+      actualizarAlturaCartonWrapper(cartonWrapper);
+      programarRecalculoAlturaCarton();
+    }
+    decorados.forEach(carton=>{
+      const tablas=tablasPorCarton.get(carton.id)||[];
+      configurarAnimacionCarton(carton,tablas);
+    });
+    if(desplazamientoArribaPendiente){
+      desplazamientoArribaPendiente=false;
+      requestAnimationFrame(desplazarVentanaArribaSuavemente);
+    }
+  }
+
+  function abrirModalGanadores(forma){
+    if(!forma) return;
+    const info=cartonesGanadoresPorForma.get(forma.idx);
+    const ganadores=info&&Array.isArray(info.cartones)?info.cartones:[];
+    modalTituloEl.textContent=`Ganadores Forma ${String(forma.idx).padStart(2,'0')}`;
+    modalSubtituloEl.textContent=forma.nombre?forma.nombre:'';
+    modalListaEl.innerHTML='';
+    modalSinGanadoresEl.textContent='';
+    if(!ganadores.length){
+      modalSinGanadoresEl.textContent='Aún no hay cartones ganadores para esta forma.';
+    }else{
+      const ordenados=ganadores.slice().sort((a,b)=>{
+        const pasoA=(formasPorCarton.get(a.id)||[]).find(f=>f.forma.idx===forma.idx)?.paso??Infinity;
+        const pasoB=(formasPorCarton.get(b.id)||[]).find(f=>f.forma.idx===forma.idx)?.paso??Infinity;
+        if(pasoA!==pasoB) return pasoA-pasoB;
+        const numA=a.cartonNum ?? a.Ncarton ?? Number.MAX_SAFE_INTEGER;
+        const numB=b.cartonNum ?? b.Ncarton ?? Number.MAX_SAFE_INTEGER;
+        return numA-numB;
+      });
+      const premioFormaTotal=obtenerCreditosForma(forma);
+      const totalGanadores=ordenados.length;
+      const premioIndividual=totalGanadores>0?Math.floor(premioFormaTotal/totalGanadores):0;
+      const cartonesGratisForma=obtenerCartonesGratisForma(forma);
+      ordenados.forEach(carton=>{
+        const card=document.createElement('div');
+        card.className='ganador-card';
+        const infoCol=document.createElement('div');
+        infoCol.className='ganador-card-info';
+        const cartonExtendido={...carton, formasGanadas:[{forma}]};
+        const tablaInfo=crearTablaCartonVisual(cartonExtendido,'mini');
+        aplicarResumenCarton(tablaInfo);
+        aplicarFormaCarton(tablaInfo,{
+          posiciones:obtenerPosicionesNormalizadas(forma),
+          color:obtenerColorParaForma(forma.idx),
+          nombre:forma.nombre,
+          indice:forma.idx,
+          mostrarLeyenda:false,
+          resaltarTodas:true
+        });
+        infoCol.appendChild(tablaInfo.contenedor);
+        const infoBox=document.createElement('div');
+        infoBox.className='ganador-info';
+        const numero=(carton.cartonNum ?? carton.Ncarton ?? '').toString();
+        infoBox.innerHTML=`<strong>Cartón ${numero?`#${numero.padStart(4,'0')}`:'--'}</strong>`+
+          `<span>Alias: ${carton.alias || 'Sin alias'}</span>`+
+          `<span>Tipo: ${(carton.tipocarton||'Pagado').toUpperCase()}</span>`;
+        infoCol.appendChild(infoBox);
+        card.appendChild(infoCol);
+        const premiosCol=document.createElement('div');
+        premiosCol.className='ganador-premios';
+
+        const creditosItem=document.createElement('div');
+        creditosItem.className='ganador-premio-item';
+        const premioLabel=document.createElement('div');
+        premioLabel.className='ganador-premio-label';
+        premioLabel.textContent='CRÉDITOS GANADOS:';
+        const premioMonto=document.createElement('div');
+        premioMonto.className='ganador-premio-monto';
+        premioMonto.textContent=formatearCreditos(premioIndividual);
+        creditosItem.appendChild(premioLabel);
+        creditosItem.appendChild(premioMonto);
+        premiosCol.appendChild(creditosItem);
+
+        const cartonesItem=document.createElement('div');
+        cartonesItem.className='ganador-premio-item';
+        const cartonesLabel=document.createElement('div');
+        cartonesLabel.className='ganador-premio-label';
+        cartonesLabel.textContent='CARTONES GRATIS:';
+        const cartonesValor=document.createElement('div');
+        cartonesValor.className='ganador-premio-monto ganador-premio-monto--cartones';
+        cartonesValor.textContent=formatearCreditos(cartonesGratisForma);
+        if(cartonesGratisForma<=0){
+          cartonesItem.classList.add('ganador-premio-item--sin-premio');
+          cartonesValor.classList.add('sin-premio');
+        }
+        cartonesItem.appendChild(cartonesLabel);
+        cartonesItem.appendChild(cartonesValor);
+        premiosCol.appendChild(cartonesItem);
+
+        card.appendChild(premiosCol);
+        modalListaEl.appendChild(card);
+      });
+    }
+    modalGanadores.classList.add('activa');
+  }
+
+  function cerrarModal(){
+    modalGanadores.classList.remove('activa');
+  }
+
+  if(modalCerrarBtn){
+    modalCerrarBtn.addEventListener('click',cerrarModal);
+  }
+  if(modalGanadores){
+    modalGanadores.addEventListener('click',e=>{
+      if(e.target===modalGanadores) cerrarModal();
+    });
+  }
+  if(seleccionarFinalizadoBtn){
+    seleccionarFinalizadoBtn.addEventListener('click',abrirModalSorteosFinalizados);
+  }
+  if(modalSorteosFinalizadosCerrarBtn){
+    modalSorteosFinalizadosCerrarBtn.addEventListener('click',cerrarModalSorteosFinalizados);
+  }
+  if(modalSorteosFinalizadosEl){
+    modalSorteosFinalizadosEl.addEventListener('click',evento=>{
+      if(evento.target===modalSorteosFinalizadosEl){
+        cerrarModalSorteosFinalizados();
+      }
+    });
+  }
+  if(modalFormasSinGanadoresCerrarBtn){
+    modalFormasSinGanadoresCerrarBtn.addEventListener('click',cerrarModalFormasSinGanadores);
+  }
+  if(modalFormasSinGanadoresAceptarBtn){
+    modalFormasSinGanadoresAceptarBtn.addEventListener('click',cerrarModalFormasSinGanadores);
+  }
+  if(modalFormasSinGanadoresEl){
+    modalFormasSinGanadoresEl.addEventListener('click',evento=>{
+      if(evento.target===modalFormasSinGanadoresEl){
+        cerrarModalFormasSinGanadores();
+      }
+    });
+  }
+
+  if(complementariosAvisoAceptarBtn){
+    complementariosAvisoAceptarBtn.addEventListener('click',cerrarAvisoComplementarios);
+  }
+  if(complementariosAvisoEl){
+    complementariosAvisoEl.addEventListener('click',evento=>{
+      if(evento.target===complementariosAvisoEl){
+        cerrarAvisoComplementarios();
+      }
+    });
+  }
+  actualizarSinSorteoUI();
+  document.addEventListener('keydown',evento=>{
+    if(evento.key!=='Escape') return;
+    if(complementariosAvisoEl?.classList?.contains('activa')){
+      cerrarAvisoComplementarios();
+    }
+    if(modalSorteosFinalizadosEl?.classList?.contains('activa')){
+      cerrarModalSorteosFinalizados();
+    }
+    if(modalFormasSinGanadoresEl?.classList?.contains('activa')){
+      cerrarModalFormasSinGanadores();
+    }
+    if(modalGanadores?.classList?.contains('activa')){
+      cerrarModal();
+    }
+  });
+
+  function calcularGanadores(){
+    cartonesGanadoresPorForma=new Map();
+    formasPorCarton=new Map();
+    cantosIndiceMap=new Map();
+    cantosOrdenados.forEach((num,idx)=>{
+      if(!cantosIndiceMap.has(num)) cantosIndiceMap.set(num,idx);
+    });
+    if(!formasActivas.length || !cartonesSorteo.size || !cantosOrdenados.length){
+      evaluarEstadoFormasGanadoras();
+      renderFormas();
+      renderCartonesJugador();
+      return;
+    }
+    formasActivas.forEach(forma=>{
+      const posiciones=obtenerPosicionesNormalizadas(forma);
+      if(!posiciones.length) return;
+      let mejorPaso=Infinity;
+      const ganadores=[];
+      cartonesSorteo.forEach(carton=>{
+        let valido=true;
+        let maxPaso=-1;
+        for(const pos of posiciones){
+          const valor=carton.valorPorPos.get(`${pos.r}-${pos.c}`);
+          if(valor===undefined){
+            valido=false;
+            break;
+          }
+          const idx=cantosIndiceMap.get(valor);
+          if(idx===undefined){
+            valido=false;
+            break;
+          }
+          if(idx>maxPaso) maxPaso=idx;
+        }
+        if(!valido) return;
+        if(maxPaso<mejorPaso){
+          mejorPaso=maxPaso;
+          ganadores.length=0;
+          ganadores.push(carton);
+        }else if(maxPaso===mejorPaso){
+          ganadores.push(carton);
+        }
+      });
+      cartonesGanadoresPorForma.set(forma.idx,{forma,cartones:ganadores,paso:mejorPaso});
+      ganadores.forEach(carton=>{
+        if(!formasPorCarton.has(carton.id)) formasPorCarton.set(carton.id,[]);
+        formasPorCarton.get(carton.id).push({forma,paso:mejorPaso});
+      });
+    });
+    formasPorCarton.forEach(lista=>{
+      lista.sort((a,b)=>{
+        if(a.paso!==b.paso) return a.paso-b.paso;
+        return (a.forma.idx||0)-(b.forma.idx||0);
+      });
+    });
+    evaluarEstadoFormasGanadoras();
+    renderFormas();
+    renderCartonesJugador();
+  }
+
+  function procesarCantos(data){
+    const payload=Array.isArray(data)?{numeros:data}:data&&typeof data==='object'?data:{};
+    const cantosPrevios=Array.isArray(cantosOrdenados)?new Set(cantosOrdenados):new Set();
+    const listaNumeros=Array.isArray(payload?.numeros)?payload.numeros:[];
+    const detallesLista=Array.isArray(payload?.detalles)?payload.detalles:[];
+    const detallesNormalizados=new Map();
+    const estadoAnterior=cantosResultadoMap instanceof Map?new Map(cantosResultadoMap):new Map();
+    if(detallesLista.length){
+      detallesLista.forEach((item,indice)=>{
+        const textoNumero=(item?.numero ?? item?.valor ?? item?.canto ?? item?.etiqueta ?? '').toString();
+        const numeroNormalizado=normalizarNumero(textoNumero);
+        if(numeroNormalizado===null) return;
+        const ordenRaw=Number(item?.orden);
+        const orden=Number.isFinite(ordenRaw)?ordenRaw:indice;
+        const etiquetaDetalle=obtenerEtiquetaCanto(textoNumero) || generarEtiquetaDesdeNumero(numeroNormalizado);
+        const estadoTexto=(item?.estatus ?? item?.resultado ?? item?.estado ?? item?.status ?? '').toString().trim().toLowerCase();
+        detallesNormalizados.set(numeroNormalizado,{
+          estado:estadoTexto,
+          etiqueta:etiquetaDetalle,
+          orden
+        });
+      });
+    }
+    let valoresBase=[];
+    if(listaNumeros.length){
+      valoresBase=listaNumeros.slice();
+    }else if(Array.isArray(payload?.lista) && payload.lista.length){
+      valoresBase=payload.lista.slice();
+    }else if(detallesNormalizados.size){
+      valoresBase=Array.from(detallesNormalizados.entries())
+        .sort((a,b)=>{
+          const ordenA=a[1]?.orden;
+          const ordenB=b[1]?.orden;
+          if(Number.isFinite(ordenA) && Number.isFinite(ordenB)) return ordenA-ordenB;
+          if(Number.isFinite(ordenA)) return -1;
+          if(Number.isFinite(ordenB)) return 1;
+          return 0;
+        })
+        .map(([numero,info])=>info?.etiqueta || generarEtiquetaDesdeNumero(numero));
+    }
+    const normalizados=[];
+    const etiquetas=[];
+    const resultadoMapa=new Map();
+    const hayDetalles=detallesNormalizados.size>0;
+    valoresBase.forEach(valor=>{
+      const numero=normalizarNumero(valor);
+      if(numero===null) return;
+      normalizados.push(numero);
+      let etiqueta=obtenerEtiquetaCanto(valor);
+      if(!etiqueta){
+        const infoDetalle=detallesNormalizados.get(numero);
+        if(infoDetalle?.etiqueta){
+          etiqueta=infoDetalle.etiqueta;
+        }
+      }
+      if(!etiqueta){
+        etiqueta=generarEtiquetaDesdeNumero(numero);
+      }
+      etiquetas.push(etiqueta);
+      const infoDetalle=detallesNormalizados.get(numero);
+      const estadoNormalizado=typeof infoDetalle?.estado==='string'?infoDetalle.estado.trim().toLowerCase():'';
+      if(estadoNormalizado==='g' || estadoNormalizado==='p'){
+        resultadoMapa.set(numero,estadoNormalizado);
+      }else if(hayDetalles){
+        resultadoMapa.set(numero,'g');
+      }
+    });
+    detallesNormalizados.forEach((info,numero)=>{
+      if(resultadoMapa.has(numero)) return;
+      const estadoNormalizado=typeof info?.estado==='string'?info.estado.trim().toLowerCase():'';
+      if(estadoNormalizado==='g' || estadoNormalizado==='p'){
+        resultadoMapa.set(numero,estadoNormalizado);
+      }
+    });
+    const nuevosPenalizados=[];
+    resultadoMapa.forEach((estado,numero)=>{
+      if(typeof estado!=='string') return;
+      const actual=estado.trim().toLowerCase();
+      if(actual!=='p') return;
+      const previo=estadoAnterior.get(numero);
+      if(typeof previo==='string' && previo.trim().toLowerCase()==='p') return;
+      nuevosPenalizados.push(numero);
+    });
+    cantosResultadoMap=new Map(resultadoMapa);
+    cantosOrdenados=normalizados;
+    cantosEtiquetas=etiquetas;
+    const nuevosCantos=normalizados.filter(num=>!cantosPrevios.has(num));
+    calcularGanadores();
+    renderCantos();
+    if(nuevosPenalizados.length){
+      resaltarCeldasPenalizadasTemporalmente(nuevosPenalizados);
+    }
+    const nuevosComplementarios=nuevosCantos.filter(esCantoComplementario);
+    if(nuevosComplementarios.length){
+      resaltarCeldasComplementariasTemporalmente(nuevosComplementarios);
+    }
+  }
+
+  function procesarFormas(snapshot){
+    const arr=[];
+    snapshot.forEach(doc=>{
+      const data=doc.data()||{};
+      const idx=Number(data.idx||data.indice||arr.length+1);
+      const posiciones=Array.isArray(data.posiciones)?data.posiciones:[];
+      const normalizadas=posiciones
+        .map(p=>({r:Number(p.r),c:Number(p.c)}))
+        .filter(p=>Number.isInteger(p.r)&&Number.isInteger(p.c));
+      arr.push({
+        id:doc.id,
+        idx,
+        nombre:data.nombre||'',
+        premioImagen:data.premioImagen||data.imagen||'',
+        posicionesNormalizadas:normalizadas,
+        porcentaje:Number(data.porcentaje ?? data.porcentajePremio ?? data.porcentajepremio ?? 0) || 0,
+        premioCreditos:Number(data.premioCreditos ?? data.premiocreditos ?? data.creditos ?? data.premio ?? 0) || 0
+      });
+    });
+    arr.sort((a,b)=>(a.idx||0)-(b.idx||0));
+    formasActivas=arr;
+    calcularGanadores();
+  }
+
+  function procesarCartones(snapshot){
+    const mapa=new Map();
+    snapshot.forEach(doc=>{
+      const data=doc.data()||{};
+      const posicionesRaw=Array.isArray(data.posiciones)?data.posiciones:[];
+      const posiciones=posicionesRaw
+        .map(p=>({r:Number(p.r),c:Number(p.c),valor:normalizarNumero(p.valor ?? p.numero ?? p.value)}))
+        .filter(p=>Number.isInteger(p.r)&&Number.isInteger(p.c)&&p.valor!==null);
+      const valorPorPos=new Map();
+      posiciones.forEach(p=>{
+        valorPorPos.set(`${p.r}-${p.c}`,p.valor);
+      });
+      mapa.set(doc.id,{
+        id:doc.id,
+        sorteoId:data.sorteoId,
+        userId:data.userId||'',
+        alias:data.alias||'',
+        cartonNum:data.cartonNum,
+        Ncarton:data.Ncarton,
+        tipocarton:data.tipocarton||'pagado',
+        posiciones,
+        valorPorPos
+      });
+    });
+    cartonesSorteo=mapa;
+    calcularGanadores();
+  }
+
+  function evaluarEstadoFormasGanadoras(){
+    const estadoAnterior=todasFormasConGanadores;
+    let totalEvaluables=0;
+    let totalGanadoras=0;
+    let pasoMaximo=-1;
+    formasActivas.forEach(forma=>{
+      const idxNumero=Number(forma?.idx);
+      if(!Number.isFinite(idxNumero)) return;
+      const posiciones=obtenerPosicionesNormalizadas(forma);
+      if(!posiciones.length) return;
+      totalEvaluables++;
+      const registro=cartonesGanadoresPorForma.get(idxNumero);
+      const paso=Number(registro?.paso);
+      if(Number.isFinite(paso)){
+        totalGanadoras++;
+        if(paso>pasoMaximo) pasoMaximo=paso;
+      }
+    });
+    if(totalEvaluables>0 && totalGanadoras===totalEvaluables){
+      todasFormasConGanadores=true;
+      indiceUltimoGanador=pasoMaximo>=0?pasoMaximo:null;
+    }else{
+      todasFormasConGanadores=false;
+      indiceUltimoGanador=null;
+    }
+    const totalCantos=cantosOrdenados.length;
+    if(todasFormasConGanadores && Number.isInteger(indiceUltimoGanador)){
+      const limite=Number(indiceUltimoGanador)+1;
+      cantosComplementariosActivos=totalCantos>limite;
+    }else{
+      cantosComplementariosActivos=false;
+    }
+    if(!cantosComplementariosActivos || !haySorteoJugando){
+      avisoComplementariosMostrado=false;
+      cerrarAvisoComplementarios();
+    }else if(!avisoComplementariosMostrado){
+      mostrarAvisoComplementarios();
+    }
+    evaluarFormasSinGanadores(totalCantos);
+  }
+
+  function suscribirCantos(){
+    if(unsubscribeCantos){
+      unsubscribeCantos();
+      unsubscribeCantos=null;
+    }
+    if(!activeSorteoId) return;
+    unsubscribeCantos=db.collection('cantos').doc(activeSorteoId).onSnapshot(doc=>{
+      const datos=doc.exists?doc.data():null;
+      procesarCantos(datos);
+    },err=>console.error('Error escuchando cantos',err));
+  }
+
+  function suscribirFormas(){
+    if(unsubscribeFormas){
+      unsubscribeFormas();
+      unsubscribeFormas=null;
+    }
+    if(!activeSorteoId) return;
+    unsubscribeFormas=db.collection('formas').where('sorteoId','==',activeSorteoId).onSnapshot(procesarFormas,err=>{
+      console.error('Error escuchando formas',err);
+    });
+  }
+
+  function suscribirCartones(){
+    if(unsubscribeCartones){
+      unsubscribeCartones();
+      unsubscribeCartones=null;
+    }
+    if(!activeSorteoId) return;
+    unsubscribeCartones=db.collection('CartonJugado').where('sorteoId','==',activeSorteoId).onSnapshot(procesarCartones,err=>{
+      console.error('Error escuchando cartones',err);
+    });
+  }
+
+  function seleccionarSorteo(activos){
+    const lista=Array.isArray(activos)?activos:[];
+    haySorteoJugando=lista.length>0;
+    if(haySorteoJugando){
+      sorteoManualSeleccionadoId=null;
+      reiniciarAlertaFormasSinGanadores();
+    }
+    actualizarSinSorteoUI();
+    if(!lista.length){
+      if(sorteoManualSeleccionadoId && activeSorteoId===sorteoManualSeleccionadoId && activeSorteo){
+        actualizarHeader();
+        return;
+      }
+      sorteoManualSeleccionadoId=null;
+      activeSorteo=null;
+      activeSorteoId=null;
+      actualizarHeader();
+      reiniciarAlertaFormasSinGanadores();
+      if(unsubscribeCantos){unsubscribeCantos();unsubscribeCantos=null;}
+      if(unsubscribeFormas){unsubscribeFormas();unsubscribeFormas=null;}
+      if(unsubscribeCartones){unsubscribeCartones();unsubscribeCartones=null;}
+      procesarCantos([]);
+      formasActivas=[];
+      renderFormas();
+      cartonesSorteo=new Map();
+      renderCartonesJugador();
+      todasFormasConGanadores=false;
+      indiceUltimoGanador=null;
+      cantosComplementariosActivos=false;
+      avisoComplementariosMostrado=false;
+      cerrarAvisoComplementarios();
+      return;
+    }
+    const existente=activeSorteoId?lista.find(s=>s.id===activeSorteoId):null;
+    const elegido=existente||lista[0];
+    const cambio=activeSorteoId!==elegido.id;
+    activeSorteo=elegido;
+    activeSorteoId=elegido.id;
+    actualizarHeader();
+    if(cambio){
+      reiniciarAlertaFormasSinGanadores();
+      todasFormasConGanadores=false;
+      indiceUltimoGanador=null;
+      cantosComplementariosActivos=false;
+      avisoComplementariosMostrado=false;
+      cerrarAvisoComplementarios();
+      procesarCantos([]);
+      formasActivas=[];
+      renderFormas();
+      cartonesSorteo=new Map();
+      renderCartonesJugador();
+      suscribirCantos();
+      suscribirFormas();
+      suscribirCartones();
+    }
+  }
+
+  function cerrarModalSorteosFinalizados(){
+    if(!modalSorteosFinalizadosEl) return;
+    modalSorteosFinalizadosEl.classList.remove('activa');
+    modalSorteosFinalizadosEl.setAttribute('aria-hidden','true');
+  }
+
+  function renderListaSorteosFinalizados(lista){
+    if(!modalSorteosFinalizadosListaEl) return;
+    modalSorteosFinalizadosListaEl.innerHTML='';
+    if(!Array.isArray(lista) || !lista.length){
+      if(modalSorteosFinalizadosMensajeEl){
+        modalSorteosFinalizadosMensajeEl.textContent='No hay sorteos finalizados disponibles.';
+      }
+      return;
+    }
+    if(modalSorteosFinalizadosMensajeEl){
+      modalSorteosFinalizadosMensajeEl.textContent='Selecciona un sorteo para ver sus resultados.';
+    }
+    lista.forEach(info=>{
+      const boton=document.createElement('button');
+      boton.type='button';
+      boton.className='modal-sorteo-item';
+      const nombre=info.nombre||'Sorteo';
+      const fechaTexto=formatearFecha(info.fecha||'');
+      const horaTexto=formatearHoraAmPm(info.hora||'');
+      const tipoTexto=info.tipo?info.tipo.toString():'';
+      const detalles=[];
+      if(fechaTexto){
+        detalles.push(`<span>📅 ${fechaTexto}</span>`);
+      }
+      if(horaTexto){
+        detalles.push(`<span>⏰ ${horaTexto}</span>`);
+      }
+      if(tipoTexto){
+        detalles.push(`<span>🎯 ${tipoTexto}</span>`);
+      }
+      boton.innerHTML=`<span class="modal-sorteo-nombre">${nombre}</span>`+
+        `<div class="modal-sorteo-detalles">${detalles.join('')}</div>`;
+      const tipoNormalizado=tipoTexto.toLowerCase();
+      if(tipoNormalizado.includes('especial')){
+        boton.classList.add('modal-sorteo-item--especial');
+      }else if(tipoNormalizado.includes('diario')){
+        boton.classList.add('modal-sorteo-item--diario');
+      }
+      boton.addEventListener('click',()=>{
+        seleccionarSorteoFinalizado(info);
+      });
+      modalSorteosFinalizadosListaEl.appendChild(boton);
+    });
+  }
+
+  async function cargarSorteosFinalizados(){
+    if(!db){
+      throw new Error('Firebase no está disponible');
+    }
+    const lista=[];
+    try{
+      const snap=await db.collection('sorteos').where('estado','==','Finalizado').get();
+      snap.forEach(doc=>{
+        const data=doc.data()||{};
+        const condicionTexto=(data.condicion ?? data['condición'] ?? '').toString().trim().toUpperCase();
+        if(condicionTexto && condicionTexto!=='VISIBLE') return;
+        lista.push({
+          id:doc.id,
+          nombre:data.nombre || 'Sorteo',
+          fecha:data.fecha || '',
+          hora:data.hora || '',
+          tipo:data.tipo || '',
+          estado:(data.estado||'').toString()
+        });
+      });
+      lista.sort((a,b)=>{
+        const fechaA=(a.fecha||'').toString();
+        const fechaB=(b.fecha||'').toString();
+        if(fechaA && fechaB && fechaA!==fechaB){
+          return fechaB.localeCompare(fechaA);
+        }
+        const horaA=(a.hora||'').toString();
+        const horaB=(b.hora||'').toString();
+        if(horaA && horaB && horaA!==horaB){
+          return horaB.localeCompare(horaA);
+        }
+        return (b.nombre||'').localeCompare(a.nombre||'');
+      });
+    }catch(err){
+      console.error('Error cargando sorteos finalizados',err);
+      throw err;
+    }
+    return lista;
+  }
+
+  async function abrirModalSorteosFinalizados(){
+    if(!modalSorteosFinalizadosEl || cargandoSorteosFinalizados) return;
+    modalSorteosFinalizadosEl.classList.add('activa');
+    modalSorteosFinalizadosEl.setAttribute('aria-hidden','false');
+    if(modalSorteosFinalizadosMensajeEl){
+      modalSorteosFinalizadosMensajeEl.textContent='Cargando sorteos disponibles...';
+    }
+    if(modalSorteosFinalizadosListaEl){
+      modalSorteosFinalizadosListaEl.innerHTML='';
+    }
+    try{
+      cargandoSorteosFinalizados=true;
+      const lista=await cargarSorteosFinalizados();
+      renderListaSorteosFinalizados(lista);
+      if(!lista.length && modalSorteosFinalizadosMensajeEl){
+        modalSorteosFinalizadosMensajeEl.textContent='No hay sorteos finalizados disponibles.';
+      }
+    }catch(err){
+      if(modalSorteosFinalizadosMensajeEl){
+        modalSorteosFinalizadosMensajeEl.textContent='No se pudieron cargar los sorteos finalizados.';
+      }
+    }finally{
+      cargandoSorteosFinalizados=false;
+    }
+  }
+
+  async function seleccionarSorteoFinalizado(info){
+    cerrarModalSorteosFinalizados();
+    if(!info || !info.id){
+      return;
+    }
+    if(!db){
+      alert('La base de datos no está disponible en este momento.');
+      return;
+    }
+    try{
+      const doc=await db.collection('sorteos').doc(info.id).get();
+      if(!doc.exists){
+        alert('No se encontró el sorteo seleccionado.');
+        return;
+      }
+      const data=doc.data()||{};
+      const condicionTexto=(data.condicion ?? data['condición'] ?? '').toString().trim().toUpperCase();
+      if(condicionTexto && condicionTexto!=='VISIBLE'){
+        alert('El sorteo seleccionado no está disponible para su visualización.');
+        return;
+      }
+      sorteoManualSeleccionadoId=info.id;
+      haySorteoJugando=false;
+      actualizarSinSorteoUI();
+      reiniciarAlertaFormasSinGanadores();
+      activeSorteo={id:info.id,...data};
+      activeSorteoId=info.id;
+      actualizarHeader();
+      todasFormasConGanadores=false;
+      indiceUltimoGanador=null;
+      cantosComplementariosActivos=false;
+      avisoComplementariosMostrado=false;
+      cerrarAvisoComplementarios();
+      procesarCantos([]);
+      formasActivas=[];
+      renderFormas();
+      cartonesSorteo=new Map();
+      renderCartonesJugador();
+      suscribirCantos();
+      suscribirFormas();
+      suscribirCartones();
+    }catch(err){
+      console.error('Error cargando sorteo finalizado',err);
+      alert('No se pudo cargar el sorteo seleccionado. Intenta nuevamente.');
+    }
+  }
+
+  function iniciarSorteosListener(){
+    if(unsubscribeSorteos){
+      unsubscribeSorteos();
+      unsubscribeSorteos=null;
+    }
+    unsubscribeSorteos=db.collection('sorteos').where('estado','==','Jugando').onSnapshot(snapshot=>{
+      const lista=[];
+      snapshot.forEach(doc=>{
+        const data=doc.data()||{};
+        lista.push({id:doc.id,...data});
+      });
+      lista.sort((a,b)=>{
+        const fechaA=(a.fecha||'');
+        const fechaB=(b.fecha||'');
+        if(fechaA!==fechaB) return fechaA.localeCompare(fechaB);
+        return (a.hora||'').localeCompare(b.hora||'');
+      });
+      seleccionarSorteo(lista);
+    },err=>{
+      console.error('Error escuchando sorteos en juego',err);
+    });
+  }
+
+  initFirebase()
+    .then(()=>{
+      auth.onAuthStateChanged(user=>{
+        if(!user){
+          window.location.href='index.html';
+          return;
+        }
+        usuarioActual=user;
+        iniciarSorteosListener();
+      });
+    })
+    .catch(err=>{
+      console.error('No se pudo inicializar Firebase',err);
+      alert('Error inicializando la aplicación.');
+    });
   </script>
 </body>
 </html>

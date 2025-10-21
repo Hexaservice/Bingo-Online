@@ -19,6 +19,7 @@
       min-height: 100vh;
       text-align: center;
       padding-top: 5px;
+      margin: 0;
     }
     h1#titulo{
       font-family:'Bangers',cursive;
@@ -81,6 +82,78 @@
     @keyframes zoomInOut{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
     .sorteo-jugando span,.sorteo-jugando .sorteo-detalle{display:inline-block;animation:zoomInOut 1s infinite;transform-origin:left center;}
     .sorteo-info{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;}
+    .sellado-overlay{
+      position:fixed;
+      inset:0;
+      background:rgba(8,18,42,0.74);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+      z-index:1200;
+    }
+    .sellado-overlay.visible{display:flex;}
+    body.sellado-modal-activo{overflow:hidden;}
+    .sellado-modal-card{
+      width:min(420px,90%);
+      background:linear-gradient(165deg,#b71c1c 0%,#ff6f60 55%,#ff1744 100%);
+      border:4px solid #ffe082;
+      border-radius:18px;
+      box-shadow:0 22px 45px rgba(0,0,0,0.45);
+      padding:clamp(22px,4vw,32px);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:clamp(12px,2.6vw,20px);
+      text-align:center;
+      color:#ffffff;
+      position:relative;
+      overflow:hidden;
+    }
+    .sellado-modal-card::after{
+      content:'';
+      position:absolute;
+      inset:0;
+      background:radial-gradient(circle at 30% 25%,rgba(255,255,255,0.28),transparent 55%);
+      pointer-events:none;
+    }
+    .sellado-modal-icono{
+      font-family:'Bangers',cursive;
+      font-size:clamp(2.2rem,6vw,3rem);
+      letter-spacing:2px;
+      text-shadow:0 4px 10px rgba(0,0,0,0.35);
+      z-index:1;
+    }
+    .sellado-aviso{
+      margin:0;
+      font-family:'Poppins',sans-serif;
+      font-weight:600;
+      line-height:1.5;
+      z-index:1;
+    }
+    .sellado-aviso p{margin:0;font-size:clamp(1rem,3.4vw,1.1rem);}
+    .sellado-linea-principal{font-size:clamp(1.05rem,3.6vw,1.2rem);letter-spacing:0.4px;}
+    .sellado-linea-secundaria{font-size:clamp(1rem,3.2vw,1.1rem);}
+    .sellado-destino{display:block;font-size:clamp(1.35rem,4vw,1.6rem);font-weight:700;color:#ffde59;text-transform:uppercase;margin:4px 0;}
+    .sellado-destino strong{font-family:'Bangers',cursive;letter-spacing:1.2px;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,0.35);}
+    .sellado-enfasis{font-weight:700;color:#ffde59;}
+    .sellado-cerrar-btn{
+      border:3px solid #ffe082;
+      border-radius:12px;
+      background:#ffffff;
+      color:#b71c1c;
+      font-family:'Bangers',cursive;
+      font-size:clamp(1.1rem,3.4vw,1.4rem);
+      padding:10px 28px;
+      cursor:pointer;
+      text-transform:uppercase;
+      letter-spacing:1px;
+      box-shadow:0 6px 18px rgba(0,0,0,0.35);
+      transition:transform 0.25s ease,box-shadow 0.25s ease;
+      z-index:1;
+    }
+    .sellado-cerrar-btn:hover{transform:scale(1.05);box-shadow:0 10px 24px rgba(0,0,0,0.4);}
+    .sellado-cerrar-btn:active{transform:scale(0.95);}
     #fecha-hora-sorteo{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:center;gap:12px;font-family:'Poppins',sans-serif;text-transform:none;}
     #fecha-hora-sorteo .fecha-col{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:120px;}
     #fecha-hora-sorteo .sorteo-line{display:flex;align-items:center;gap:4px;font-weight:600;font-size:1rem;}
@@ -335,6 +408,13 @@
           <button id="premios-aceptar" class="action-btn">Aceptar</button>
       </div>
   </div>
+  <div id="sellado-overlay" class="sellado-overlay" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="sellado-modal-card">
+          <span class="sellado-modal-icono" aria-hidden="true">⛔</span>
+          <div id="sellado-aviso" class="sellado-aviso" role="alert" aria-live="assertive"></div>
+          <button id="sellado-cerrar-btn" type="button" class="sellado-cerrar-btn">Aceptar</button>
+      </div>
+  </div>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
@@ -353,6 +433,7 @@ let sorteoInterval=null;
 let currentSorteo=null;
 let currentSorteoNombre='';
 let currentSorteoTipo='';
+let currentSorteoEstado='';
 let cartonesGuardados={};
 let sorteosActivos=[];
 let seleccionadoJugado=null;
@@ -371,6 +452,95 @@ const formColors=['#90ee90','#fffacd','#add8e6','#d8b0ff','#ffcc99'];
 const formGlows=['#006400','#b8860b','#00008b','#4b0082','#8b4513'];
 let editandoTipo=null;
 let editandoId=null;
+const selladoOverlay=document.getElementById('sellado-overlay');
+const selladoCerrarBtn=document.getElementById('sellado-cerrar-btn');
+const CONSECUTIVOS_COLLECTION='ConsecutivosCarton';
+let unsubscribeConsecutivoCarton=null;
+let ultimoNumeroCartonAsignado=0;
+let siguienteNumeroCarton=1;
+
+function toNumberSafe(value,fallback=0){
+  if(typeof value==='number'){
+    return Number.isFinite(value)?value:fallback;
+  }
+  if(typeof value==='string'){
+    const trimmed=value.trim();
+    if(trimmed==='') return fallback;
+    const normalized=trimmed
+      .replace(/\s+/g,'')
+      .replace(/[^0-9,.-]/g,'');
+    if(normalized==='') return fallback;
+    const hasComma=normalized.includes(',');
+    const hasDot=normalized.includes('.');
+    let cleaned=normalized;
+    if(hasComma && !hasDot){
+      cleaned=normalized.replace(/,/g,'.');
+    }else if(hasComma && hasDot){
+      cleaned=normalized.replace(/,/g,'');
+    }
+    const num=Number(cleaned);
+    return Number.isFinite(num)?num:fallback;
+  }
+  return fallback;
+}
+
+function actualizarNumeroCartonLocal(ultimo){
+  const numero=Number(ultimo);
+  if(Number.isFinite(numero) && numero>=0){
+    ultimoNumeroCartonAsignado=numero;
+    siguienteNumeroCarton=numero+1;
+  }else{
+    ultimoNumeroCartonAsignado=0;
+    siguienteNumeroCarton=1;
+  }
+  refrescarNumeroCartonVisual();
+}
+
+function refrescarNumeroCartonVisual(forzar=false){
+  const numEl=document.getElementById('carton-num');
+  if(!numEl) return;
+  if(!forzar && consultando) return;
+  const numeroMostrar=Number(siguienteNumeroCarton);
+  if(Number.isFinite(numeroMostrar) && numeroMostrar>0){
+    numEl.textContent=String(numeroMostrar).padStart(4,'0');
+  }else{
+    numEl.textContent='----';
+  }
+}
+
+function escucharConsecutivoCarton(sorteoId){
+  if(unsubscribeConsecutivoCarton){
+    unsubscribeConsecutivoCarton();
+    unsubscribeConsecutivoCarton=null;
+  }
+  actualizarNumeroCartonLocal(0);
+  if(!sorteoId || typeof db==='undefined' || !db){
+    return;
+  }
+  try{
+    const docRef=db.collection(CONSECUTIVOS_COLLECTION).doc(sorteoId);
+    unsubscribeConsecutivoCarton=docRef.onSnapshot(snapshot=>{
+      const data=snapshot.exists?snapshot.data():{};
+      const ultimo=Number(data?.ultimoNumero ?? data?.ultimo ?? data?.valor ?? 0);
+      actualizarNumeroCartonLocal(Number.isFinite(ultimo)?ultimo:0);
+    },error=>{
+      console.error('Error escuchando consecutivo de cartones',error);
+    });
+  }catch(error){
+    console.error('No se pudo escuchar el consecutivo de cartones',error);
+  }
+}
+
+if(selladoCerrarBtn){
+  selladoCerrarBtn.addEventListener('click',ocultarMensajeSellado);
+}
+if(selladoOverlay){
+  selladoOverlay.addEventListener('click',event=>{
+    if(event.target===selladoOverlay){
+      ocultarMensajeSellado();
+    }
+  });
+}
 
 function setCookie(name,value){document.cookie=`${name}=${encodeURIComponent(value)};path=/;max-age=31536000`;}
 function deleteCookie(name){document.cookie=`${name}=;path=/;max-age=0`;}
@@ -391,6 +561,41 @@ function iniciarActualizacionFechaActual(){
   if(fechaActualInterval) clearInterval(fechaActualInterval);
   fechaActualInterval=setInterval(actualizarFechaHoraActual,1000);
 }
+function ocultarMensajeSellado(){
+  const aviso=document.getElementById('sellado-aviso');
+  if(aviso){
+    aviso.innerHTML='';
+    aviso.classList.remove('visible');
+    aviso.setAttribute('aria-hidden','true');
+  }
+  if(selladoOverlay){
+    selladoOverlay.classList.remove('visible');
+    selladoOverlay.setAttribute('aria-hidden','true');
+  }
+  document.body.classList.remove('sellado-modal-activo');
+}
+function mostrarMensajeSellado(nombre){
+  const aviso=document.getElementById('sellado-aviso');
+  const destino=nombre&&nombre.trim()?nombre.trim():'este sorteo';
+  const mensaje=`Ya NO se pueden jugar cartones en: ${destino} ya que está SELLADO, elije otro sorteo disponible.`;
+  if(aviso){
+    const destinoSeguro=destino
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;')
+      .replace(/'/g,'&#39;');
+    aviso.innerHTML=`<p class="sellado-linea-principal">Ya <span class="sellado-enfasis">NO</span> se pueden jugar cartones en:</p><p class="sellado-destino"><strong>${destinoSeguro}</strong></p><p class="sellado-linea-secundaria">ya que está <span class="sellado-enfasis">SELLADO</span>, elije otro sorteo disponible.</p>`;
+    aviso.classList.add('visible');
+    aviso.setAttribute('aria-hidden','false');
+  }
+  if(selladoOverlay){
+    selladoOverlay.classList.add('visible');
+    selladoOverlay.setAttribute('aria-hidden','false');
+  }
+  document.body.classList.add('sellado-modal-activo');
+  return mensaje;
+}
 function guardarSorteoSeleccionado(s){
   if(!sorteoCookieKey||!s) return;
   setCookie(sorteoCookieKey,JSON.stringify({id:s.id||'',tipo:s.tipo||''}));
@@ -402,13 +607,30 @@ async function restaurarSorteoSeleccionado(){
   try{
     const data=JSON.parse(raw);
     if(!data||!data.id) return false;
-    const encontrado=sorteosActivos.find(s=>s.id===data.id);
+    let encontrado=sorteosActivos.find(s=>s.id===data.id);
     if(encontrado){
+      await seleccionarSorteo(encontrado);
+      return true;
+    }
+    const doc=await db.collection('sorteos').doc(data.id).get();
+    if(doc.exists){
+      const d=doc.data();
+      encontrado={
+        id:doc.id,
+        nombre:d?.nombre||'Sorteo',
+        fecha:d?.fecha||'',
+        hora:d?.hora||'',
+        horacierre:obtenerHoraCierre(d||{}),
+        tipo:d?.tipo||'',
+        estado:d?.estado||''
+      };
+      sorteosActivos.push(encontrado);
       await seleccionarSorteo(encontrado);
       return true;
     }
     deleteCookie(sorteoCookieKey);
   }catch(e){
+    console.warn('No se pudo restaurar el sorteo seleccionado',e);
     deleteCookie(sorteoCookieKey);
   }
   return false;
@@ -531,6 +753,7 @@ function toggleForma(idx){
       board.appendChild(tr);
     }
     document.querySelector('.carton-back').addEventListener('click',flipCard);
+    refrescarNumeroCartonVisual(true);
   }
 
   function openModal(cell){
@@ -593,6 +816,7 @@ function toggleForma(idx){
     seleccionadoJugado=null;
     resetForma();
     saveToCookie();
+    refrescarNumeroCartonVisual(true);
   }
 
   function setBoard(carton){
@@ -632,11 +856,11 @@ function toggleForma(idx){
     const doc=await sorteoRef.get();
     if(!doc.exists) return;
     const data=doc.data();
-  const valor=data.valorCarton||0;
-  const jug=data.cartonesjugando||0;
-  const gratisJug=data.cartonesgratisjugando||0;
-  maxCartonesGratis=parseInt(data.maxcartongratis||0);
-  const premio=data.totalPremios||0;
+  const valor=toNumberSafe(data.valorCarton,0);
+  const jug=toNumberSafe(data.cartonesjugando,0);
+  const gratisJug=toNumberSafe(data.cartonesgratisjugando,0);
+  maxCartonesGratis=Math.max(0,Math.trunc(toNumberSafe(data.maxcartongratis,0)));
+  const premio=toNumberSafe(data.totalPremios,0);
   premioActual=premio;
   cartonesJugando=jug;
   cartonesGratisJugando=gratisJug;
@@ -659,10 +883,7 @@ function toggleForma(idx){
   }else{
     pv.textContent=Math.round(premioActual);
   }
-  const numEl=document.getElementById('carton-num');
-    if(numEl && !consultando){
-      numEl.textContent=(jug+gratisJug+1).toString().padStart(4,'0');
-    }
+  refrescarNumeroCartonVisual();
   renderPremios('back-premios');
   }
 
@@ -774,6 +995,9 @@ function toggleForma(idx){
     currentSorteo=s.id;
     currentSorteoNombre=s.nombre;
     currentSorteoTipo=s.tipo;
+    currentSorteoEstado=s.estado||'';
+    escucharConsecutivoCarton(currentSorteo);
+    ocultarMensajeSellado();
     const btn=document.getElementById('sorteo-btn');
     btn.textContent=s.nombre;
     btn.classList.remove('diario','especial');
@@ -786,6 +1010,10 @@ function toggleForma(idx){
     actualizarFechaHoraActual();
     const jugarBtn=document.getElementById('jugar-carton-btn');
     if(s.estado==='Sellado' || s.estado==='Jugando') jugarBtn.disabled=true; else jugarBtn.disabled=false;
+    if(s.estado==='Sellado'){
+      const mensaje=mostrarMensajeSellado(s.nombre||'este sorteo');
+      alert(mensaje);
+    }
     actualizarFondoCarton();
     guardarSorteoSeleccionado(s);
     await cargarFormasSorteo();
@@ -852,98 +1080,218 @@ function toggleForma(idx){
 
     const billeteraRef=db.collection('Billetera').doc(user.email);
     const billeteraDoc=await billeteraRef.get();
-    let creditos=billeteraDoc.data().creditos||0;
-    let gratis=billeteraDoc.data().CartonesGratis||0;
+    const creditos=toNumberSafe(billeteraDoc.data()?.creditos,0);
+    const gratis=toNumberSafe(billeteraDoc.data()?.CartonesGratis,0);
 
-  const sorteoRef=db.collection('sorteos').doc(currentSorteo);
-  const sorteoDoc=await sorteoRef.get();
-  const sorteoData=sorteoDoc.data();
-  const valor=Number(sorteoData.valorCarton||0);
-  const jugActual=sorteoData.cartonesjugando||0;
-  const gratisJugando=sorteoData.cartonesgratisjugando||0;
-  const maxGratis=sorteoData.maxcartongratis||0;
-  const cartonNum=jugActual+gratisJugando+1;
-  const vars=await db.collection('Variablesglobales').doc('Parametros').get();
-    const porcentaje=Number(vars.data().porcentaje||0);
-    const porcentajesu=Number(vars.data().porcentajesu||0);
-    let jugarGratis=false;
-    let nuevoCreditos=creditos;
-    let nuevoGratis=gratis;
-    let porcentajeVal=0, porcentajeSuVal=0, paraPremio=0;
-    if(gratis>0){
-      if(gratisJugando < maxGratis){
-        jugarGratis=true;
-        nuevoGratis=gratis-1;
-        const gl=document.getElementById('gratis-label');
-        gl.style.color='';
-        gl.style.animation='';
-      }else{
-        const gl=document.getElementById('gratis-label');
-        gl.style.color='red';
-        gl.style.animation='none';
-        if(creditos>=valor){
-          nuevoCreditos=creditos-valor;
-          porcentajeVal=valor*porcentaje/100;
-          porcentajeSuVal=valor*porcentajesu/100;
-          paraPremio=valor-porcentajeVal-porcentajeSuVal;
-        }else{
-          alert('No tienes créditos suficientes.');
-          return;
-        }
-      }
-    }else if(creditos>=valor){
-      nuevoCreditos=creditos-valor;
-      porcentajeVal=valor*porcentaje/100;
-      porcentajeSuVal=valor*porcentajesu/100;
-      paraPremio=valor-porcentajeVal-porcentajeSuVal;
-    }else{
-      alert('No tienes créditos suficientes.');
+    const sorteoRef=db.collection('sorteos').doc(currentSorteo);
+    const sorteoDoc=await sorteoRef.get();
+    if(!sorteoDoc.exists){
+      alert('No se encontró la información del sorteo seleccionado.');
       return;
     }
-    if(jugarGratis){
-      await billeteraRef.update({CartonesGratis:nuevoGratis});
-      document.getElementById('gratis-label').textContent=nuevoGratis;
-      await sorteoRef.update({
-        cartonesgratisjugando: firebase.firestore.FieldValue.increment(1)
-      });
-    }else{
-      await billeteraRef.update({creditos:nuevoCreditos});
-      document.getElementById('creditos-label').textContent=nuevoCreditos;
-      await sorteoRef.update({
-        cartonesjugando: firebase.firestore.FieldValue.increment(1),
-        totalPremios: firebase.firestore.FieldValue.increment(paraPremio),
-        totalporcentaje: firebase.firestore.FieldValue.increment(porcentajeVal),
-        totalporcentajesu: firebase.firestore.FieldValue.increment(porcentajeSuVal)
-      });
+    const sorteoData=sorteoDoc.data();
+    currentSorteoEstado=sorteoData?.estado||currentSorteoEstado;
+    if(currentSorteoEstado==='Sellado'){
+      const mensaje=mostrarMensajeSellado(currentSorteoNombre||sorteoData?.nombre||'este sorteo');
+      alert(mensaje);
+      return;
     }
+
     const posiciones=[];
     document.querySelectorAll('#bingo-board td').forEach(td=>{
       const r=parseInt(td.dataset.row);
       const c=parseInt(td.dataset.col);
       if(!(r===2&&c===2)) posiciones.push({r,c,valor:td.dataset.value||''});
     });
-    const ncarton=document.getElementById('carton-num').textContent.toString();
-    const dup=await db.collection('CartonJugado').where('sorteoId','==',currentSorteo).where('Ncarton','==',ncarton).get();
-    if(!dup.empty){
-      alert('Este número de cartón ya fue jugado en este sorteo.');
+    const firmaActual=generarFirmaPosiciones(posiciones);
+
+    const jugadosJugador=await db.collection('CartonJugado')
+      .where('sorteoId','==',currentSorteo)
+      .where('userId','==',user.uid)
+      .get();
+    let cartonDuplicado=false;
+    let gratisUsadosJugador=0;
+    jugadosJugador.forEach(doc=>{
+      const dataDoc=doc.data()||{};
+      const firmaDoc=generarFirmaPosiciones(dataDoc.posiciones||[]);
+      if((dataDoc.tipocarton||'').toString().toLowerCase()==='gratis') gratisUsadosJugador++;
+      if(firmaDoc===firmaActual) cartonDuplicado=true;
+    });
+    if(cartonDuplicado){
+      alert(`No se puede jugar este cartón, ya que en este sorteo ${currentSorteoNombre} estas jugando uno idéntico`);
       return;
     }
+
+    const valor=toNumberSafe(sorteoData.valorCarton,0);
+    const maxGratis=toNumberSafe(sorteoData.maxcartongratis,0);
+    const vars=await db.collection('Variablesglobales').doc('Parametros').get();
+    const porcentaje=toNumberSafe(vars.data()?.porcentaje,0);
+    const porcentajesu=toNumberSafe(vars.data()?.porcentajesu,0);
+    let jugarGratis=false;
+    const gratisJugandoJugador=gratisUsadosJugador;
+    if(gratis>0 && (maxGratis<=0 || gratisJugandoJugador<maxGratis)){
+      jugarGratis=true;
+    }else if(gratis>0 && maxGratis>0 && gratisJugandoJugador>=maxGratis){
+      if(creditos>=valor){
+        jugarGratis=false;
+      }else{
+        alert('No tienes créditos suficientes.');
+        return;
+      }
+    }else if(gratis<=0){
+      if(creditos>=valor){
+        jugarGratis=false;
+      }else{
+        alert('No tienes créditos suficientes.');
+        return;
+      }
+    }else{
+      alert('No tienes créditos ni cartones gratis disponibles.');
+      return;
+    }
+
     await initServerTime();
-    await db.collection('CartonJugado').add({
-      userId:user.uid,
-      alias:alias,
-      sorteoId:currentSorteo,
-      cartonNum:cartonNum,
-      Ncarton:ncarton,
-      tipocarton:jugarGratis?'gratis':'pagado',
-      posiciones:posiciones,
-      fecha:fechaServidor(),
-      hora:horaServidor()
-    });
-    await actualizarDatosSorteo();
-    await actualizarCartonesJugador();
-    alert('Jugada de Cartón enviada correctamente.');
-    limpiarcarton();
+    const fechaActual=fechaServidor();
+    const horaActual=horaServidor();
+    const consecutivoRef=db.collection(CONSECUTIVOS_COLLECTION).doc(currentSorteo);
+    const cartonRef=db.collection('CartonJugado').doc();
+
+    try{
+      const resultado=await db.runTransaction(async tx=>{
+        const billeteraSnap=await tx.get(billeteraRef);
+        const sorteoSnap=await tx.get(sorteoRef);
+        const consecutivoSnap=await tx.get(consecutivoRef);
+        if(!billeteraSnap.exists){
+          throw new Error('BILLETERA_NO_ENCONTRADA');
+        }
+        if(!sorteoSnap.exists){
+          throw new Error('SORTEO_NO_ENCONTRADO');
+        }
+        const sorteoDataTx=sorteoSnap.data()||{};
+        const estadoActual=(sorteoSnap.data()?.estado||'').toLowerCase();
+        if(estadoActual==='sellado'){
+          throw new Error('SORTEO_SELLADO');
+        }
+        const valorCartonActual=toNumberSafe(sorteoSnap.data()?.valorCarton,valor);
+        const maxGratisActual=Math.max(0,toNumberSafe(sorteoSnap.data()?.maxcartongratis,0));
+        if(!Number.isFinite(valorCartonActual) || valorCartonActual<0){
+          throw new Error('VALOR_CARTON_INVALIDO');
+        }
+        const porcentajeTx=toNumberSafe(porcentaje,0);
+        const porcentajeSuTx=toNumberSafe(porcentajesu,0);
+        const porcentajeValTx=valorCartonActual*porcentajeTx/100;
+        const porcentajeSuValTx=valorCartonActual*porcentajeSuTx/100;
+        const paraPremioTx=valorCartonActual-porcentajeValTx-porcentajeSuValTx;
+        const creditosActual=toNumberSafe(billeteraSnap.data()?.creditos,0);
+        const gratisActual=toNumberSafe(billeteraSnap.data()?.CartonesGratis,0);
+        if(!Number.isFinite(creditosActual) || !Number.isFinite(gratisActual)){
+          throw new Error('BILLETERA_DATOS_INVALIDOS');
+        }
+        let gratisUsadosTx=0;
+        let tipoCarton='pagado';
+        let creditosRestantes=creditosActual;
+        let gratisRestantes=gratisActual;
+        if(jugarGratis){
+          if(gratisActual<=0){
+            throw new Error('SIN_GRATIS');
+          }
+          if(maxGratisActual>0){
+            const jugadorGratisQuery=db.collection('CartonJugado')
+              .where('sorteoId','==',currentSorteo)
+              .where('userId','==',user.uid);
+            const jugadorGratisSnap=await tx.get(jugadorGratisQuery);
+            gratisUsadosTx=0;
+            jugadorGratisSnap.forEach(doc=>{
+              const dataDoc=doc.data()||{};
+              if((dataDoc.tipocarton||'').toString().toLowerCase()==='gratis'){
+                gratisUsadosTx++;
+              }
+            });
+            if(gratisUsadosTx>=maxGratisActual){
+              throw new Error('LIMITE_GRATIS');
+            }
+          }
+          const nuevosGratis=Math.max(0,gratisActual-1);
+          const cartonesGratisActual=toNumberSafe(sorteoDataTx.cartonesgratisjugando,0);
+          const nuevosCartonesGratisJugando=cartonesGratisActual+1;
+          tx.update(billeteraRef,{CartonesGratis:nuevosGratis});
+          tx.update(sorteoRef,{cartonesgratisjugando:nuevosCartonesGratisJugando});
+          tipoCarton='gratis';
+          gratisRestantes=nuevosGratis;
+        }else{
+          if(creditosActual<valorCartonActual){
+            throw new Error('SIN_CREDITOS');
+          }
+          const nuevosCreditos=creditosActual-valorCartonActual;
+          const cartonesPagadosActual=toNumberSafe(sorteoDataTx.cartonesjugando,0);
+          const totalPremiosActual=toNumberSafe(sorteoDataTx.totalPremios,0);
+          const totalPorcentajeActual=toNumberSafe(sorteoDataTx.totalporcentaje,0);
+          const totalPorcentajeSuActual=toNumberSafe(sorteoDataTx.totalporcentajesu,0);
+          tx.update(billeteraRef,{creditos:nuevosCreditos});
+          tx.update(sorteoRef,{
+            cartonesjugando:cartonesPagadosActual+1,
+            totalPremios:totalPremiosActual+paraPremioTx,
+            totalporcentaje:totalPorcentajeActual+porcentajeValTx,
+            totalporcentajesu:totalPorcentajeSuActual+porcentajeSuValTx
+          });
+          creditosRestantes=nuevosCreditos;
+        }
+        const ultimoNumero=Number(consecutivoSnap.exists?(consecutivoSnap.data()?.ultimoNumero ?? consecutivoSnap.data()?.ultimo ?? consecutivoSnap.data()?.valor ?? 0):0);
+        const siguienteNumero=Number.isFinite(ultimoNumero) && ultimoNumero>=0?ultimoNumero+1:1;
+        tx.set(consecutivoRef,{
+          ultimoNumero:siguienteNumero,
+          actualizado:firebase.firestore.FieldValue.serverTimestamp()
+        },{merge:true});
+        tx.set(cartonRef,{
+          userId:user.uid,
+          alias,
+          sorteoId:currentSorteo,
+          cartonNum:siguienteNumero,
+          Ncarton:String(siguienteNumero).padStart(4,'0'),
+          tipocarton:tipoCarton,
+          posiciones,
+          fecha:fechaActual,
+          hora:horaActual
+        });
+        return {numero:siguienteNumero, tipoCarton, creditosRestantes, gratisRestantes};
+      });
+      actualizarNumeroCartonLocal(resultado.numero);
+      const creditosLabel=document.getElementById('creditos-label');
+      if(creditosLabel && Number.isFinite(resultado.creditosRestantes)){
+        creditosLabel.textContent=resultado.creditosRestantes;
+      }
+      const gratisLabel=document.getElementById('gratis-label');
+      if(gratisLabel && Number.isFinite(resultado.gratisRestantes)){
+        gratisLabel.textContent=resultado.gratisRestantes;
+      }
+      await actualizarDatosSorteo();
+      await actualizarCartonesJugador();
+      alert('Jugada de Cartón enviada correctamente.');
+      limpiarcarton();
+    }catch(error){
+      let mensaje='No se pudo registrar tu cartón. Inténtalo nuevamente.';
+      if(error?.message==='SIN_CREDITOS'){
+        mensaje='No tienes créditos suficientes.';
+      }else if(error?.message==='SIN_GRATIS'){
+        mensaje='Ya no tienes cartones gratis disponibles.';
+      }else if(error?.message==='LIMITE_GRATIS'){
+        mensaje='Se alcanzó el límite de cartones gratis para este sorteo.';
+      }else if(error?.message==='SORTEO_SELLADO'){
+        mensaje=mostrarMensajeSellado(currentSorteoNombre||sorteoData?.nombre||'este sorteo');
+      }else if(error?.message==='SORTEO_NO_ENCONTRADO'){
+        mensaje='No se encontró la información actual del sorteo seleccionado.';
+      }else if(error?.message==='BILLETERA_NO_ENCONTRADA'){
+        mensaje='No se encontró tu billetera. Actualiza la página e inténtalo nuevamente.';
+      }else if(error?.message==='VALOR_CARTON_INVALIDO'){
+        mensaje='El valor configurado para el cartón no es válido. Contacta a soporte para corregirlo.';
+      }else if(error?.message==='BILLETERA_DATOS_INVALIDOS'){
+        mensaje='Los datos de tu billetera están corruptos. Actualiza la página o contacta a soporte.';
+      }else{
+        console.error('Error registrando cartón',error);
+      }
+      alert(mensaje);
+      return;
+    }
   }
 
   async function confirmarCompra(){
@@ -962,19 +1310,34 @@ function toggleForma(idx){
       return;
     }
     const billeteraDoc=await db.collection('Billetera').doc(user.email).get();
-    const creditos=billeteraDoc.data().creditos||0;
-    const gratis=billeteraDoc.data().CartonesGratis||0;
+    const creditos=toNumberSafe(billeteraDoc.data()?.creditos,0);
+    const gratis=toNumberSafe(billeteraDoc.data()?.CartonesGratis,0);
     const sorteoDoc=await db.collection('sorteos').doc(currentSorteo).get();
     const sorteoData=sorteoDoc.data();
-    const valor=Number(sorteoData.valorCarton||0);
-    const gratisJugando=sorteoData.cartonesgratisjugando||0;
-    const maxGratis=sorteoData.maxcartongratis||0;
+    currentSorteoEstado=sorteoData?.estado||currentSorteoEstado;
+    if(currentSorteoEstado==='Sellado'){
+      const mensaje=mostrarMensajeSellado(currentSorteoNombre||sorteoData?.nombre||'este sorteo');
+      alert(mensaje);
+      return;
+    }
+    const valor=toNumberSafe(sorteoData.valorCarton,0);
+    const jugadosJugador=await db.collection('CartonJugado')
+      .where('sorteoId','==',currentSorteo)
+      .where('userId','==',user.uid)
+      .get();
+    let gratisUsadosJugador=0;
+    jugadosJugador.forEach(doc=>{
+      const dataDoc=doc.data()||{};
+      if((dataDoc.tipocarton||'').toString().toLowerCase()==='gratis') gratisUsadosJugador++;
+    });
+    const gratisJugando=toNumberSafe(sorteoData.cartonesgratisjugando,0);
+    const maxGratis=toNumberSafe(sorteoData.maxcartongratis,0);
     let mensaje='';
     let continuar=false;
-    if(gratis>0 && gratisJugando<maxGratis){
+    if(gratis>0 && (maxGratis<=0 || gratisUsadosJugador<maxGratis)){
       mensaje=`¿Estas seguro de jugar el cartón?\nEstarás usando uno de tus cartones gratis disponible`;
       continuar=true;
-    }else if(gratis>0 && gratisJugando>=maxGratis){
+    }else if(gratis>0 && maxGratis>0 && gratisUsadosJugador>=maxGratis){
       if(creditos>=valor){
         mensaje=`¿Estas seguro de jugar el cartón?\nTienes cartones gratis, pero ya se llego al máximo permitido para este sorteo. se descontaran de tus creditos: ${valor} por el valor del cartón`;
         continuar=true;
@@ -1017,6 +1380,10 @@ function toggleForma(idx){
     await db.collection('CartonGuardado').add({userId:user.uid,alias,nombre,posiciones});
     await cargarCartonesGuardados();
     alert('Cartón guardado');
+    const checkEl=document.getElementById('guardar-check');
+    checkEl.checked=false;
+    document.getElementById('nombre-carton').value='';
+    checkEl.dispatchEvent(new Event('change'));
   }
 
   async function cargarCartonesGuardados(){
@@ -1461,6 +1828,15 @@ function toggleForma(idx){
     setBoard(carton);
   }
 
+  function generarFirmaPosiciones(posiciones){
+    if(!Array.isArray(posiciones)) return '';
+    return posiciones
+      .map(p=>({r:Number(p?.r),c:Number(p?.c),valor:p?.valor??''}))
+      .sort((a,b)=>a.r-b.r||a.c-b.c)
+      .map(p=>`${p.r}-${p.c}-${p.valor}`)
+      .join('|');
+  }
+
   document.getElementById('sorteo-btn').addEventListener('click',abrirSorteosModal);
 document.getElementById('jugar-carton-btn').addEventListener('click',()=>{
   if(editandoTipo){
@@ -1506,38 +1882,45 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
   initFechaHora('fecha-hora');
   iniciarActualizacionFechaActual();
 
-  auth.onAuthStateChanged(async user=>{
-    if(user){
-      const doc=await db.collection('users').doc(user.email).get();
-      if(doc.exists){
-        document.getElementById('alias-jugador').value=doc.data().alias||user.displayName||user.email;
-      }
-      const billeteraRef=db.collection('Billetera').doc(user.email);
-      const billeteraDoc=await billeteraRef.get();
-      if(billeteraDoc.exists){
-        document.getElementById('creditos-label').textContent=billeteraDoc.data().creditos||0;
-        document.getElementById('gratis-label').textContent=billeteraDoc.data().CartonesGratis||0;
-      }else{
-        await billeteraRef.set({creditos:0,CartonesGratis:0});
-        document.getElementById('creditos-label').textContent='0';
-        document.getElementById('gratis-label').textContent='0';
-      }
-      cookieKey='jugarcarton_'+user.email.replace(/[^\w]/g,'_');
-      sorteoCookieKey=`${cookieKey}_sorteo`;
-      loadFromCookie();
-    }else{
-      cookieKey='';
-      sorteoCookieKey='';
-      window.location.href='index.html';
-      return;
-    }
-    await cargarSorteosActivos();
-    const restaurado=await restaurarSorteoSeleccionado();
-    if(!restaurado){
-      actualizarFondoCarton();
-    }
-    await cargarCartonesGuardados();
-  });
+  initFirebase()
+    .then(()=>{
+      auth.onAuthStateChanged(async user=>{
+        if(user){
+          const doc=await db.collection('users').doc(user.email).get();
+          if(doc.exists){
+            document.getElementById('alias-jugador').value=doc.data().alias||user.displayName||user.email;
+          }
+          const billeteraRef=db.collection('Billetera').doc(user.email);
+          const billeteraDoc=await billeteraRef.get();
+          if(billeteraDoc.exists){
+            document.getElementById('creditos-label').textContent=toNumberSafe(billeteraDoc.data().creditos,0);
+            document.getElementById('gratis-label').textContent=toNumberSafe(billeteraDoc.data().CartonesGratis,0);
+          }else{
+            await billeteraRef.set({creditos:0,CartonesGratis:0});
+            document.getElementById('creditos-label').textContent='0';
+            document.getElementById('gratis-label').textContent='0';
+          }
+          cookieKey='jugarcarton_'+user.email.replace(/[^\w]/g,'_');
+          sorteoCookieKey=`${cookieKey}_sorteo`;
+          loadFromCookie();
+        }else{
+          cookieKey='';
+          sorteoCookieKey='';
+          window.location.href='index.html';
+          return;
+        }
+        await cargarSorteosActivos();
+        const restaurado=await restaurarSorteoSeleccionado();
+        if(!restaurado){
+          actualizarFondoCarton();
+        }
+        await cargarCartonesGuardados();
+      });
+    })
+    .catch(err=>{
+      console.error('No se pudo inicializar Firebase antes de registrar el observador de sesión',err);
+      alert('Error inicializando la sesión. Por favor recarga la página.');
+    });
 
   createBoard();
   document.querySelectorAll('.carton th').forEach((th,i)=>{
