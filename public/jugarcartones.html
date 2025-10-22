@@ -188,7 +188,6 @@
       text-shadow:2px 2px 4px #000;
       cursor:pointer;
     }
-    #info-cartones-ver{background:linear-gradient(purple,#00008b);}
     #jugados-btn-container{position:absolute;bottom:5px;right:50px;}
     #ver-jugados-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:linear-gradient(purple,#ffffff);border:3px solid #FFD700;border-radius:8px;cursor:pointer;position:relative;}
     #jugados-count{position:absolute;top:-8px;left:-8px;background:purple;color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-family:'Bangers',cursive;z-index:10;}
@@ -268,9 +267,9 @@
     .text-premio-total{font-family:'Bangers',cursive;color:white;font-size:clamp(1.2rem,2.8vw,1.6rem);text-align:center;}
     .text-premio-total div{ text-shadow:0 0 4px darkgreen; }
     .valor-total{font-size:clamp(2.3rem,5.5vw,3.4rem);text-shadow:0 0 4px darkgreen;animation:pulse 1s infinite;}
-    #premios-formas{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:clamp(14px,2.4vw,26px);width:100%;box-sizing:border-box;justify-items:center;align-items:start;align-content:start;margin:0 auto;}
+    #premios-formas{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:clamp(12px,2vw,22px);width:100%;box-sizing:border-box;justify-items:center;align-items:start;align-content:start;margin:0 auto;}
     #back-premios-formas{display:flex;flex-direction:column;gap:4px;width:100%;box-sizing:border-box;align-items:flex-start;}
-    .premio-forma{display:flex;flex-direction:column;align-items:center;gap:clamp(8px,1.6vw,14px);justify-content:flex-start;font-family:'Bangers',cursive;font-weight:bold;margin:0;padding:clamp(12px,2.4vw,20px);border-radius:16px;background:rgba(255,255,255,0.92);box-shadow:0 4px 14px rgba(0,0,0,0.2);width:100%;max-width:360px;box-sizing:border-box;text-align:center;}
+    .premio-forma{display:flex;flex-direction:column;align-items:center;gap:clamp(8px,1.6vw,14px);justify-content:flex-start;font-family:'Bangers',cursive;font-weight:bold;margin:0;padding:clamp(10px,2vw,16px);border-radius:16px;background:rgba(255,255,255,0.92);box-shadow:0 4px 14px rgba(0,0,0,0.2);width:100%;max-width:280px;box-sizing:border-box;text-align:center;}
     .premio-forma .forma-mini-etiqueta{font-size:clamp(0.8rem,1.9vw,0.98rem);background:linear-gradient(90deg,#4B0082,#00008b);color:#fff;padding:clamp(3px,0.8vw,5px) clamp(12px,2.4vw,16px);border-radius:999px;text-shadow:0 0 5px #000;}
     .premio-forma .mini-carton-wrapper{--forma-color:#0a8800;--forma-color-suave:#6fdc8a;display:inline-flex;align-items:center;justify-content:center;padding:clamp(6px,1.6vw,10px);border-radius:14px;box-shadow:0 8px 18px rgba(0,0,0,0.25);background:linear-gradient(160deg,var(--forma-color),var(--forma-color-suave));width:fit-content;}
     .premio-forma .mini-carton{border-radius:10px;}
@@ -300,7 +299,7 @@
   </style>
 </head>
 <body>
-  <button id="volver-btn" class="menu-btn back-btn"><span class="tri">&#9664;</span><span class="label">Volver</span></button>
+  <button id="volver-btn" class="menu-btn back-btn" data-compact-back="true"><span class="tri">&#9664;</span><span class="label">Volver</span></button>
   <h1 id="titulo">JUGAR CARTÓN</h1>
   <section id="sorteo-section">
     <div class="sorteo-info">
@@ -405,7 +404,6 @@
           <div id="info-cartones-jugando" class="info-line"></div>
           <div id="info-cartones-gratis" class="info-line"></div>
           <div class="modal-buttons">
-            <button id="info-cartones-ver" class="action-btn">Ver Cartones</button>
             <button id="info-cartones-aceptar" class="action-btn">Aceptar</button>
           </div>
       </div>
@@ -1646,9 +1644,6 @@ function toggleForma(idx){
     cj.innerHTML=`Cartones jugando: <strong style="color:purple;">${cartonesJugando}</strong>`;
     const cg=document.getElementById('info-cartones-gratis');
     cg.innerHTML=`Cartones Gratis jugando: <strong style="color:#00008b;">${cartonesGratisJugando}</strong>`;
-    const verBtn=document.getElementById('info-cartones-ver');
-    const s=sorteosActivos.find(x=>x.id===currentSorteo);
-    if(s && (s.estado==='Sellado' || s.estado==='Jugando')) verBtn.style.display='inline-block'; else verBtn.style.display='none';
     document.getElementById('info-cartones-modal').style.display='flex';
   }
 
@@ -1661,14 +1656,6 @@ function toggleForma(idx){
     renderPremios('premios');
     renderPremios('back-premios');
     document.getElementById('premios-modal').style.display='flex';
-  }
-
-  async function verCartonesJugadas(){
-    const s=sorteosActivos.find(x=>x.id===currentSorteo);
-    if(!s) return;
-    const url=`sorteosellado.html?s=${currentSorteo}&n=${encodeURIComponent(s.nombre)}&t=${encodeURIComponent(s.tipo)}&f=${encodeURIComponent(s.fecha)}&h=${encodeURIComponent(s.hora)}`;
-    window.open(url,'_blank');
-    document.getElementById('info-cartones-modal').style.display='none';
   }
 
   async function abrirJugadosModal(){
@@ -1977,7 +1964,6 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
   document.getElementById('cartones-gratis-jugando').addEventListener('click',mostrarCartonesJugandoModal);
   document.getElementById('premio-valor').addEventListener('click',mostrarPremiosModal);
   document.getElementById('info-cartones-aceptar').addEventListener('click',()=>{document.getElementById('info-cartones-modal').style.display='none';});
-  document.getElementById('info-cartones-ver').addEventListener('click',verCartonesJugadas);
   document.getElementById('premios-aceptar').addEventListener('click',()=>{document.getElementById('premios-modal').style.display='none';});
   document.getElementById('limpiar-btn').addEventListener('click',async()=>{if(await confirm('¿Deseas limpiar todas las jugadas del carton?')) limpiarcarton();});
   document.getElementById('azar-btn').addEventListener('click',async()=>{if(await confirm('¿Quieres cargar jugadas al azar?')) cargarAzar();});
@@ -2038,6 +2024,7 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
     th.addEventListener('click',()=>toggleForma(i+1));
   });
   </script>
+  <script src="js/backNavigation.js"></script>
 </body>
 </html>
 
