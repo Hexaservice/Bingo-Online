@@ -1248,7 +1248,7 @@ function toggleForma(idx){
         if(!Number.isFinite(creditosActual) || !Number.isFinite(gratisActual)){
           throw new Error('BILLETERA_DATOS_INVALIDOS');
         }
-        let gratisUsadosTx=0;
+        let gratisUsadosTx=gratisUsadosJugador;
         let tipoCarton='pagado';
         let creditosRestantes=creditosActual;
         let gratisRestantes=gratisActual;
@@ -1257,17 +1257,6 @@ function toggleForma(idx){
             throw new Error('SIN_GRATIS');
           }
           if(maxGratisActual>0){
-            const jugadorGratisQuery=db.collection('CartonJugado')
-              .where('sorteoId','==',currentSorteo)
-              .where('userId','==',user.uid);
-            const jugadorGratisSnap=await tx.get(jugadorGratisQuery);
-            gratisUsadosTx=0;
-            jugadorGratisSnap.forEach(doc=>{
-              const dataDoc=doc.data()||{};
-              if((dataDoc.tipocarton||'').toString().toLowerCase()==='gratis'){
-                gratisUsadosTx++;
-              }
-            });
             if(gratisUsadosTx>=maxGratisActual){
               throw new Error('LIMITE_GRATIS');
             }
