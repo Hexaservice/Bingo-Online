@@ -262,7 +262,8 @@
       document.getElementById('fecha-sorteo').value=data.fecha||'';
       document.getElementById('hora-sorteo').value=data.hora||'';
       document.getElementById('hora-cierre').value=data.cierre||'';
-      document.getElementById('max-carton-gratis').value=data.maxcg||'';
+      const maxcgValue=(data.maxcg===undefined||data.maxcg===null||data.maxcg==='')?'':data.maxcg;
+      document.getElementById('max-carton-gratis').value=maxcgValue;
       document.getElementById('valor-carton').value=data.valor||'';
       if(data.tipo){
         document.querySelectorAll('#tipo-sorteo-group button').forEach(b=>b.classList.remove('active'));
@@ -337,7 +338,7 @@
     const d=doc.data();
     let est=d.estado||'';
     if(d.condicion==='ARCHIVADO') est='Archivado';
-    const data={nombre:d.nombre||'',tipo:d.tipo||'',fecha:d.fecha||'',hora:d.hora||'',cierre:d.horacierre||d.cierre||'',maxcg:d.maxcartongratis||'',valor:d.valorCarton||'',estado:est,formas:[]};
+    const data={nombre:d.nombre||'',tipo:d.tipo||'',fecha:d.fecha||'',hora:d.hora||'',cierre:d.horacierre||d.cierre||'',maxcg:(d.maxcartongratis??''),valor:d.valorCarton||'',estado:est,formas:[]};
     const snap=await db.collection('formas').where('sorteoId','==',sorteoId).get();
     const arr=[];snap.forEach(s=>arr.push(s.data()));
     arr.sort((a,b)=>(a.idx||0)-(b.idx||0));
@@ -622,7 +623,7 @@ firebase.auth().onAuthStateChanged(u=>{
     const fecha=fechaInput.value;
     const hora=horaInput.value;
     const cierreVal=cierreInput.value;
-    const maxcgVal=maxcgInput.value;
+    const maxcgVal=maxcgInput.value.trim();
     const valorVal=valorInput.value;
     if(!nombre){alert('Asigna un nombre al Sorteo');nombreInput.focus();return;}
     if(!tipo){alert('Elije un tipo de sorteo');return;}
@@ -636,7 +637,15 @@ firebase.auth().onAuthStateChanged(u=>{
       return;
     }
     const cierre=cierreVal;
-    const maxcartongratis=parseInt(maxcgVal)||0;
+    let maxcartongratis=null;
+    if(maxcgVal!==''){
+      if(!/^\d+$/.test(maxcgVal)){
+        alert('El máximo de cartones gratis debe ser un número entero igual o mayor a 0.');
+        maxcgInput.focus();
+        return;
+      }
+      maxcartongratis=parseInt(maxcgVal,10);
+    }
     const valor=parseFloat(valorVal);
     const condicion = estado==='Archivado'?'ARCHIVADO':'VISIBLE';
     if(estado==='Archivado') estado='Inactivo';
@@ -678,7 +687,13 @@ firebase.auth().onAuthStateChanged(u=>{
     }
     if(conPorcentaje>0 && total!==100){alert('La suma de porcentajes debe ser exactamente 100%');return;}
     try{
-      await db.collection('sorteos').doc(sorteoId).update({nombre,tipo,fecha,hora,horacierre:cierre,maxcartongratis:maxcartongratis,valorCarton:valor,estado,condicion});
+      const updateData={nombre,tipo,fecha,hora,horacierre:cierre,valorCarton:valor,estado,condicion};
+      if(maxcartongratis!==null){
+        updateData.maxcartongratis=maxcartongratis;
+      }else{
+        updateData.maxcartongratis=firebase.firestore.FieldValue.delete();
+      }
+      await db.collection('sorteos').doc(sorteoId).update(updateData);
       const snap=await db.collection('formas').where('sorteoId','==',sorteoId).get();
       const batch=db.batch();
       snap.forEach(d=>batch.delete(db.collection('formas').doc(d.id)));

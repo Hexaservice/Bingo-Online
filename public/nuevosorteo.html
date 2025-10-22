@@ -603,7 +603,7 @@
     const fecha=fechaInput.value;
     const hora=horaInput.value;
     const cierreVal=cierreInput.value;
-    const maxcgVal=maxcgInput.value;
+    const maxcgVal=maxcgInput.value.trim();
     const valorVal=valorInput.value;
     if(!nombre){alert('Asigna un nombre al Sorteo');nombreInput.focus();return;}
     if(!tipo){alert('Elije un tipo de sorteo');return;}
@@ -617,7 +617,15 @@
       return;
     }
     const cierre=cierreVal;
-    const maxcartongratis=parseInt(maxcgVal)||0;
+    let maxcartongratis=null;
+    if(maxcgVal!==''){
+      if(!/^\d+$/.test(maxcgVal)){
+        alert('El máximo de cartones gratis debe ser un número entero igual o mayor a 0.');
+        maxcgInput.focus();
+        return;
+      }
+      maxcartongratis=parseInt(maxcgVal,10);
+    }
     const valor=parseFloat(valorVal);
     const condicion = estado==='Archivado'?'ARCHIVADO':'VISIBLE';
     if(estado==='Archivado') estado='Inactivo';
@@ -659,7 +667,11 @@
     }
     if(conPorcentaje>0 && total!==100){alert('La suma de porcentajes debe ser exactamente 100%');return;}
     try{
-      const sorteoRef=await db.collection('sorteos').add({nombre,tipo,fecha,hora,horacierre:cierre,maxcartongratis:maxcartongratis,cartonesgratisjugando:0,valorCarton:valor,estado,condicion});
+      const sorteoData={nombre,tipo,fecha,hora,horacierre:cierre,cartonesgratisjugando:0,valorCarton:valor,estado,condicion};
+      if(maxcartongratis!==null){
+        sorteoData.maxcartongratis=maxcartongratis;
+      }
+      const sorteoRef=await db.collection('sorteos').add(sorteoData);
       const batch=db.batch();
       formas.forEach(f=>{const ref=db.collection('formas').doc();batch.set(ref,{sorteoId:sorteoRef.id,...f});});
       await batch.commit();
