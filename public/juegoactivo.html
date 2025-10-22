@@ -185,32 +185,42 @@
           animation: sinSorteoParpadeo 2s ease-in-out infinite;
       }
       .sin-cartones-activos {
+          --sin-cartones-factor: 1;
           display: none;
           flex-direction: column;
           align-items: center;
           justify-content: center;
           width: 100%;
+          max-width: 100%;
+          max-height: 100%;
+          min-height: 0;
           text-align: center;
-          gap: clamp(10px, 2.8vw, 18px);
-          padding: clamp(12px, 3vw, 24px);
+          gap: 1.1em;
+          padding: 1.4em;
           border-radius: 16px;
           background: rgba(255, 255, 255, 0.92);
           box-shadow: 0 8px 22px rgba(0,0,0,0.18);
+          box-sizing: border-box;
+          font-size: calc(1rem * var(--sin-cartones-factor));
+          transition: font-size 0.2s ease;
+          overflow: hidden;
       }
       .sin-cartones-activos.visible {
           display: flex;
       }
       .sin-cartones-activos__mensaje {
-          font-size: clamp(0.95rem, 2.6vw, 1.25rem);
+          font-size: 1em;
           font-weight: 600;
           color: var(--texto-primario);
           text-shadow: 0 1px 4px rgba(0,0,0,0.12);
           line-height: 1.4;
+          max-width: 32ch;
+          text-wrap: balance;
       }
       .sin-cartones-activos__boton {
           font-family: 'Bangers', cursive;
-          font-size: clamp(1rem, 3vw, 1.35rem);
-          padding: clamp(8px, 2.2vw, 14px) clamp(22px, 5vw, 36px);
+          font-size: 1.1em;
+          padding: 0.8em 2.4em;
           border-radius: 999px;
           border: 3px solid #FFD700;
           background: linear-gradient(145deg, rgba(0, 190, 120, 0.95), rgba(0, 150, 255, 0.95));
@@ -619,10 +629,14 @@
           flex-direction: column;
           align-items: stretch;
           justify-content: flex-start;
+          position: relative;
+          min-height: 0;
       }
-      .panel-columna-derecha__destacado > #carton-destacado {
+      .panel-columna-derecha__destacado > #carton-destacado,
+      .panel-columna-derecha__destacado > .sin-cartones-activos {
           flex: 1 1 auto;
           width: 100%;
+          max-width: 100%;
       }
       .panel-columna-derecha__modales {
           position: relative;
@@ -2556,6 +2570,7 @@
   const misCartonesGridEl = document.getElementById('mis-cartones-grid');
   const cartonesMensajeEl = document.getElementById('cartones-mensaje');
   const cartonDestacadoEl = document.getElementById('carton-destacado');
+  const panelDestacadoWrapperEl = document.querySelector('.panel-columna-derecha__destacado');
   const modalGanadores = document.getElementById('modal-ganadores');
   const modalCerrarBtn = document.getElementById('modal-cerrar');
   const modalTituloEl = document.getElementById('modal-titulo');
@@ -2589,6 +2604,7 @@
   let sorteoManualSeleccionadoId = null;
   let haySorteoJugando = false;
   let jugadorSinCartonesEnSorteo = false;
+  let sinCartonesResizeObserver = null;
   let cargandoSorteosFinalizados = false;
   let usuarioActual = null;
 
@@ -4328,18 +4344,53 @@
     }
   }
 
+  function actualizarDimensionSinCartones(){
+    if(!sinCartonesActivosEl) return;
+    const contenedorReferencia = panelDestacadoWrapperEl || sinCartonesActivosEl.parentElement;
+    if(!contenedorReferencia) return;
+    const rect = contenedorReferencia.getBoundingClientRect();
+    const referencia = rect.width || rect.height || 0;
+    if(!referencia){
+      sinCartonesActivosEl.style.removeProperty('--sin-cartones-factor');
+      return;
+    }
+    const factor = Math.min(Math.max(referencia / 360, 0.75), 1.35);
+    sinCartonesActivosEl.style.setProperty('--sin-cartones-factor', factor.toFixed(3));
+  }
+
+  function limpiarDimensionSinCartones(){
+    if(!sinCartonesActivosEl) return;
+    sinCartonesActivosEl.style.removeProperty('--sin-cartones-factor');
+  }
+
+  function iniciarObservadorSinCartones(){
+    if(typeof ResizeObserver !== 'function') return;
+    if(sinCartonesResizeObserver || !panelDestacadoWrapperEl) return;
+    sinCartonesResizeObserver = new ResizeObserver(()=>{
+      if(sinCartonesActivosEl?.classList?.contains('visible')){
+        actualizarDimensionSinCartones();
+      }
+    });
+    sinCartonesResizeObserver.observe(panelDestacadoWrapperEl);
+  }
+
   function mostrarMensajeSinCartonesJugador(mostrar){
     if(!sinCartonesActivosEl || !cartonDestacadoEl) return;
     const visible = !!mostrar;
     if(visible){
+      iniciarObservadorSinCartones();
       sinCartonesActivosEl.classList.add('visible');
       sinCartonesActivosEl.removeAttribute('hidden');
       sinCartonesActivosEl.setAttribute('aria-hidden','false');
       cartonDestacadoEl.setAttribute('hidden','');
+      requestAnimationFrame(()=>{
+        actualizarDimensionSinCartones();
+      });
     }else{
       sinCartonesActivosEl.classList.remove('visible');
       sinCartonesActivosEl.setAttribute('hidden','');
       sinCartonesActivosEl.setAttribute('aria-hidden','true');
+      limpiarDimensionSinCartones();
       cartonDestacadoEl.removeAttribute('hidden');
     }
   }
@@ -4372,9 +4423,9 @@
       const estadoSorteoActual = (activeSorteo?.estado || activeSorteo?.estadoSorteo || '').toString().toLowerCase();
       const mostrarRecomendacion = haySorteoJugando && !!activeSorteo && estadoSorteoActual === 'jugando';
       jugadorSinCartonesEnSorteo = mostrarRecomendacion;
+      mostrarMensajeSinCartonesJugador(mostrarRecomendacion);
       if(mostrarRecomendacion){
         cartonesMensajeEl.textContent='';
-        mostrarMensajeSinCartonesJugador(true);
       }else{
         cartonesMensajeEl.textContent='No tienes cartones participando en este sorteo.';
       }
@@ -4735,6 +4786,13 @@
       }
     });
   }
+
+  window.addEventListener('resize',()=>{
+    if(sinCartonesActivosEl?.classList?.contains('visible')){
+      actualizarDimensionSinCartones();
+    }
+  });
+
   actualizarSinSorteoUI();
   document.addEventListener('keydown',evento=>{
     if(evento.key!=='Escape') return;
@@ -5043,6 +5101,7 @@
     if(haySorteoJugando){
       sorteoManualSeleccionadoId=null;
       reiniciarAlertaFormasSinGanadores();
+      jugadorSinCartonesEnSorteo = false;
     }
     actualizarSinSorteoUI();
     if(!lista.length){
