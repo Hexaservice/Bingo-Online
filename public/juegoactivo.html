@@ -184,6 +184,50 @@
       .sin-sorteo-mensaje.parpadeo {
           animation: sinSorteoParpadeo 2s ease-in-out infinite;
       }
+      .sin-cartones-activos {
+          display: none;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          text-align: center;
+          gap: clamp(10px, 2.8vw, 18px);
+          padding: clamp(12px, 3vw, 24px);
+          border-radius: 16px;
+          background: rgba(255, 255, 255, 0.92);
+          box-shadow: 0 8px 22px rgba(0,0,0,0.18);
+      }
+      .sin-cartones-activos.visible {
+          display: flex;
+      }
+      .sin-cartones-activos__mensaje {
+          font-size: clamp(0.95rem, 2.6vw, 1.25rem);
+          font-weight: 600;
+          color: var(--texto-primario);
+          text-shadow: 0 1px 4px rgba(0,0,0,0.12);
+          line-height: 1.4;
+      }
+      .sin-cartones-activos__boton {
+          font-family: 'Bangers', cursive;
+          font-size: clamp(1rem, 3vw, 1.35rem);
+          padding: clamp(8px, 2.2vw, 14px) clamp(22px, 5vw, 36px);
+          border-radius: 999px;
+          border: 3px solid #FFD700;
+          background: linear-gradient(145deg, rgba(0, 190, 120, 0.95), rgba(0, 150, 255, 0.95));
+          color: #ffffff;
+          letter-spacing: 1px;
+          cursor: pointer;
+          box-shadow: 0 8px 22px rgba(0,0,0,0.28);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          text-transform: uppercase;
+      }
+      .sin-cartones-activos__boton:hover {
+          transform: translateY(-2px) scale(1.02);
+          box-shadow: 0 12px 26px rgba(0,0,0,0.32);
+      }
+      .sin-cartones-activos__boton:active {
+          transform: translateY(1px) scale(0.98);
+      }
       @keyframes sinSorteoParpadeo {
           0% { opacity: 0; }
           40% { opacity: 1; }
@@ -2417,6 +2461,10 @@
       <div id="panel-columna-derecha">
         <div class="panel-columna-derecha__rejilla panel-columna-derecha__destacado">
           <aside id="carton-destacado" aria-live="polite"></aside>
+          <div id="sin-cartones-activos" class="sin-cartones-activos" hidden aria-hidden="true">
+            <p class="sin-cartones-activos__mensaje">No jugaste cartones en este sorteo, puedes jugar en otro sorteo que esté activo.</p>
+            <button id="jugar-otro-sorteo-btn" type="button" class="sin-cartones-activos__boton">JUGAR CARTÓN EN OTRO SORTEO</button>
+          </div>
         </div>
         <div class="panel-columna-derecha__rejilla panel-columna-derecha__modales">
           <div id="panel-botones-formas" role="region" aria-label="Ganadores por forma"></div>
@@ -2495,6 +2543,8 @@
   const sinSorteoContenedorEl = document.getElementById('sin-sorteo-contenedor');
   const seleccionarFinalizadoBtn = document.getElementById('seleccionar-finalizado-btn');
   const sinSorteoMensajeEl = document.getElementById('sin-sorteo-mensaje');
+  const sinCartonesActivosEl = document.getElementById('sin-cartones-activos');
+  const jugarOtroSorteoBtn = document.getElementById('jugar-otro-sorteo-btn');
   const panelSuperiorEl = document.getElementById('panel-superior');
   const cantosPanelEl = document.getElementById('cantos-panel');
   const panelBotonesFormasEl = document.getElementById('panel-botones-formas');
@@ -2538,6 +2588,7 @@
   let activeSorteoId = null;
   let sorteoManualSeleccionadoId = null;
   let haySorteoJugando = false;
+  let jugadorSinCartonesEnSorteo = false;
   let cargandoSorteosFinalizados = false;
   let usuarioActual = null;
 
@@ -3978,8 +4029,9 @@
     return texto;
   }
 
-  function alternarVisibilidadEncabezadoSorteo(visible){
+  function alternarVisibilidadEncabezadoSorteo(visible, opciones = {}){
     const mostrar = !!visible;
+    const limpiar = opciones?.limpiar !== false;
     if(sorteoResumenEl){
       if(mostrar){
         sorteoResumenEl.removeAttribute('hidden');
@@ -3987,7 +4039,9 @@
       }else{
         sorteoResumenEl.setAttribute('hidden','');
         sorteoResumenEl.setAttribute('aria-hidden','true');
-        sorteoResumenEl.textContent='';
+        if(limpiar){
+          sorteoResumenEl.textContent='';
+        }
       }
     }
     if(sorteoDetallesEl){
@@ -3997,7 +4051,9 @@
       }else{
         sorteoDetallesEl.setAttribute('hidden','');
         sorteoDetallesEl.setAttribute('aria-hidden','true');
-        sorteoDetallesEl.innerHTML='';
+        if(limpiar){
+          sorteoDetallesEl.innerHTML='';
+        }
       }
     }
   }
@@ -4005,16 +4061,29 @@
   function actualizarSinSorteoUI(){
     if(!sinSorteoContenedorEl) return;
     if(haySorteoJugando){
-      sinSorteoContenedorEl.classList.remove('visible');
-      sinSorteoContenedorEl.setAttribute('hidden','');
-      if(sorteoHeaderEl){
-        sorteoHeaderEl.classList.remove('sin-sorteo-activo');
+      if(jugadorSinCartonesEnSorteo){
+        sinSorteoContenedorEl.classList.add('visible');
+        sinSorteoContenedorEl.classList.add('sin-sorteo-contenedor--jugador');
+        sinSorteoContenedorEl.removeAttribute('hidden');
+        if(sorteoHeaderEl){
+          sorteoHeaderEl.classList.add('sin-sorteo-activo');
+        }
+        alternarVisibilidadEncabezadoSorteo(false,{limpiar:false});
+      }else{
+        sinSorteoContenedorEl.classList.remove('visible');
+        sinSorteoContenedorEl.classList.remove('sin-sorteo-contenedor--jugador');
+        sinSorteoContenedorEl.setAttribute('hidden','');
+        if(sorteoHeaderEl){
+          sorteoHeaderEl.classList.remove('sin-sorteo-activo');
+        }
+        alternarVisibilidadEncabezadoSorteo(true);
+        jugadorSinCartonesEnSorteo = false;
       }
-      alternarVisibilidadEncabezadoSorteo(true);
       if(sinSorteoMensajeEl){
         sinSorteoMensajeEl.classList.remove('parpadeo');
         sinSorteoMensajeEl.setAttribute('hidden','');
         sinSorteoMensajeEl.setAttribute('aria-hidden','true');
+        sinSorteoMensajeEl.textContent='EN ESTE MOMENTO NO HAY SORTEOS JUGANDO';
       }
     }else{
       sinSorteoContenedorEl.classList.add('visible');
@@ -4030,6 +4099,7 @@
         sinSorteoMensajeEl.removeAttribute('hidden');
         sinSorteoMensajeEl.setAttribute('aria-hidden','false');
       }
+      jugadorSinCartonesEnSorteo = false;
     }
     actualizarTituloFinalizadoBtn();
   }
@@ -4258,6 +4328,22 @@
     }
   }
 
+  function mostrarMensajeSinCartonesJugador(mostrar){
+    if(!sinCartonesActivosEl || !cartonDestacadoEl) return;
+    const visible = !!mostrar;
+    if(visible){
+      sinCartonesActivosEl.classList.add('visible');
+      sinCartonesActivosEl.removeAttribute('hidden');
+      sinCartonesActivosEl.setAttribute('aria-hidden','false');
+      cartonDestacadoEl.setAttribute('hidden','');
+    }else{
+      sinCartonesActivosEl.classList.remove('visible');
+      sinCartonesActivosEl.setAttribute('hidden','');
+      sinCartonesActivosEl.setAttribute('aria-hidden','true');
+      cartonDestacadoEl.removeAttribute('hidden');
+    }
+  }
+
   function renderFormas(){
     limpiarPanelFormas();
     if(!formasActivas.length){
@@ -4279,14 +4365,25 @@
     cartonDestacadoEl.style.removeProperty('--carton-contenido-ancho');
     cartonDestacadoEl.style.removeProperty('--carton-contenido-alto');
     limpiarBotonesFormas();
+    mostrarMensajeSinCartonesJugador(false);
+    jugadorSinCartonesEnSorteo = false;
     const lista=Array.from(cartonesSorteo.values()).filter(c=>c.userId===(usuarioActual?usuarioActual.uid:null));
     if(!lista.length){
-      cartonesMensajeEl.textContent='No tienes cartones participando en este sorteo.';
+      const estadoSorteoActual = (activeSorteo?.estado || activeSorteo?.estadoSorteo || '').toString().toLowerCase();
+      const mostrarRecomendacion = haySorteoJugando && !!activeSorteo && estadoSorteoActual === 'jugando';
+      jugadorSinCartonesEnSorteo = mostrarRecomendacion;
+      if(mostrarRecomendacion){
+        cartonesMensajeEl.textContent='';
+        mostrarMensajeSinCartonesJugador(true);
+      }else{
+        cartonesMensajeEl.textContent='No tienes cartones participando en este sorteo.';
+      }
       cartonSeleccionadoId=null;
       cartonPrincipalInfo=null;
       formaDestacadaSeleccionada=null;
       totalGananciasJugador=0;
       actualizarGananciasTotales();
+      actualizarSinSorteoUI();
       return;
     }
     cartonesMensajeEl.textContent='';
@@ -4374,6 +4471,8 @@
     }
     cancelarResaltadoTemporal();
     cartonPrincipalInfo=null;
+    jugadorSinCartonesEnSorteo = false;
+    actualizarSinSorteoUI();
     const seleccionado=decorados.find(c=>c.id===cartonSeleccionadoId);
     if(seleccionado){
       const tablaInfoPrincipal=crearTablaCartonVisual(seleccionado,'principal');
@@ -4591,6 +4690,16 @@
   }
   if(seleccionarFinalizadoBtn){
     seleccionarFinalizadoBtn.addEventListener('click',abrirModalSorteosFinalizados);
+  }
+  if(jugarOtroSorteoBtn){
+    jugarOtroSorteoBtn.addEventListener('click',()=>{
+      try{
+        sessionStorage.setItem('abrirModalSorteos','1');
+      }catch(error){
+        console.warn('No se pudo preparar la apertura automática del modal de sorteos',error);
+      }
+      window.location.href='jugarcartones.html';
+    });
   }
   if(modalSorteosFinalizadosCerrarBtn){
     modalSorteosFinalizadosCerrarBtn.addEventListener('click',cerrarModalSorteosFinalizados);

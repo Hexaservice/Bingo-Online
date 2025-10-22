@@ -2012,6 +2012,20 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
           actualizarFondoCarton();
         }
         await cargarCartonesGuardados();
+        let abrirModalPendiente=false;
+        try{
+          abrirModalPendiente=sessionStorage.getItem('abrirModalSorteos')==='1';
+          if(abrirModalPendiente){
+            sessionStorage.removeItem('abrirModalSorteos');
+          }
+        }catch(error){
+          console.warn('No se pudo verificar la apertura automática del modal de sorteos',error);
+        }
+        if(abrirModalPendiente){
+          setTimeout(()=>{
+            abrirSorteosModal();
+          },0);
+        }
       });
     })
     .catch(err=>{
