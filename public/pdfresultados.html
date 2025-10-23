@@ -3152,7 +3152,9 @@
         pdfActualizadoEn: timestamp,
         pdfUrl: eliminar,
         pdfStoragePath: eliminar,
-        pdfresul: 'si'
+        pdfresul: 'si',
+        solicitudesPagosGeneradas: false,
+        solicitudesPagosActualizadasEn: timestamp
       };
       await Promise.all([
         db.collection('sorteos').doc(sorteoId).set(payload, { merge: true }),
@@ -3161,18 +3163,7 @@
       if(sorteoData){
         sorteoData.pdfresul = 'si';
       }
-      let solicitudesExitosas = true;
-      try {
-        actualizarMensajeLoading('Generando solicitudes para Centro de Pagos, por favor espera');
-        await generarSolicitudesCentroPagos();
-      } catch (solicitudesErr) {
-        solicitudesExitosas = false;
-        console.error('Error generando solicitudes para Centro de Pagos', solicitudesErr);
-      }
-      const mensajeFinal = solicitudesExitosas
-        ? 'El sorteo se marcó como PDF listo y se generaron las solicitudes para Centro de Pagos.'
-        : 'El sorteo se marcó como PDF listo, pero ocurrió un problema al generar las solicitudes para Centro de Pagos. Revisa la consola para más detalles.';
-      alert(mensajeFinal);
+      alert('El sorteo se marcó como PDF listo. Ahora podrás gestionar las solicitudes desde el Centro de Pagos.');
       window.location.href = 'cantarsorteos.html';
     } catch (err) {
       console.error('Error actualizando el estado del PDF', err);
