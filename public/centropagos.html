@@ -785,14 +785,30 @@
       togglePagos.addEventListener('change', ()=>{ contenidoPagos.style.display = togglePagos.checked ? 'block' : 'none'; });
       contenidoPagos.style.display = 'none';
 
-      document.getElementById('volver-btn').addEventListener('click', volverConFallback);
+      document.getElementById('volver-btn').addEventListener('click', e=>volverConFallback(e));
     }
 
-    function volverConFallback(){
+    let intentoRetornoActivo = false;
+
+    function volverConFallback(event){
+      if(event){ event.preventDefault(); }
+      if(intentoRetornoActivo){
+        intentoRetornoActivo = false;
+        window.location.href = 'cantarsorteos.html';
+        return;
+      }
       if(window.history.length > 1){
+        intentoRetornoActivo = true;
+        setTimeout(()=>{
+          if(intentoRetornoActivo){
+            intentoRetornoActivo = false;
+            window.location.href = 'cantarsorteos.html';
+          }
+        }, 600);
         window.history.back();
         return;
       }
+      intentoRetornoActivo = false;
       const role = (window.currentRole)||'';
       if(role === 'Administrador'){ window.location.href = 'admin.html'; }
       else if(role === 'Superadmin'){ window.location.href = 'super.html'; }
