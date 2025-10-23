@@ -365,6 +365,7 @@
                 <option value="">TIPO</option>
                 <option value="deposito">DEPOSITO</option>
                 <option value="retiro">RETIRO</option>
+                <option value="premio">PREMIO</option>
               </select>
             </th>
             <th><input id="filtro-monto" type="number" placeholder="MONTO"></th>
@@ -581,7 +582,14 @@
         const estadoColor=t.estado==='PENDIENTE'?'orange':t.estado==='ANULADO'?'red':t.estado==='APROBADO'?'green':'black';
         const tr=document.createElement('tr');
         const montoFmt=parseFloat(t.Monto).toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
-        tr.innerHTML=`<td>${n}</td><td style="color:${t.tipotrans==='deposito'?'green':'red'}">${t.tipotrans.toUpperCase()}</td><td class="celda-monto" style="color:${t.tipotrans==='deposito'?'green':'red'}">${montoFmt}</td><td class="celda-fecha">${f}</td><td style="color:${estadoColor}">${t.estado}</td>`;
+        const tipoTrans=(t.tipotrans||'').toLowerCase();
+        const esDeposito=tipoTrans==='deposito';
+        const esRetiro=tipoTrans==='retiro';
+        const esPremio=tipoTrans==='premio';
+        const colorTipo=esDeposito?'green':esRetiro?'red':'#1b5e20';
+        const montoStyle=esPremio?`background:#1b5e20;color:#fff;`:`color:${colorTipo};`;
+        const fechaStyle=esPremio?`color:#1b5e20;`:'';
+        tr.innerHTML=`<td>${n}</td><td style="color:${colorTipo}">${tipoTrans.toUpperCase()}</td><td class="celda-monto" style="${montoStyle}">${montoFmt}</td><td class="celda-fecha" style="${fechaStyle}">${f}</td><td style="color:${estadoColor}">${t.estado}</td>`;
         const fechaTd=tr.querySelector('.celda-fecha');
         fechaTd.style.cursor='pointer';
         fechaTd.addEventListener('click',()=>mostrarDetalle(t));
@@ -603,12 +611,19 @@
         const fg=formatearFecha(t.fechagestion||'');
         const hg=formatearHora(t.horagestion||'');
         const cont=document.querySelector('#modal-detalle .contenido');
-        cont.innerHTML=`<div style="color:#00008B;">Referencia: ${ref}</div>`+
-        `<div style="color:orange;">Fecha de solicitud: ${fs}</div>`+
-        `<div style="color:orange;">Hora de solicitud: ${hs}</div>`+
-        `<div style="color:green;">Fecha de gestión: ${fg}</div>`+
-        `<div style="color:green;">Hora de gestión: ${hg}</div>`+
-        `<button id="modal-ok">Aceptar</button>`;
+        if(t.tipotrans==='premio'){
+          cont.innerHTML=`<div style="color:#1b5e20;font-weight:bold;">Referencia: PREMIO</div>`+
+          `<div style="color:green;">Fecha de gestión: ${fg}</div>`+
+          `<div style="color:green;">Hora de gestión: ${hg}</div>`+
+          `<button id="modal-ok">Aceptar</button>`;
+        }else{
+          cont.innerHTML=`<div style="color:#00008B;">Referencia: ${ref}</div>`+
+          `<div style="color:orange;">Fecha de solicitud: ${fs}</div>`+
+          `<div style="color:orange;">Hora de solicitud: ${hs}</div>`+
+          `<div style="color:green;">Fecha de gestión: ${fg}</div>`+
+          `<div style="color:green;">Hora de gestión: ${hg}</div>`+
+          `<button id="modal-ok">Aceptar</button>`;
+        }
         const modal=document.getElementById('modal-detalle');
         modal.style.display='flex';
         document.getElementById('modal-ok').addEventListener('click',()=>{modal.style.display='none';},{once:true});
@@ -620,12 +635,18 @@
         const comG=t.tipotrans==='retiro'?solicitado*porcentajeAdministra/100:0;
         const total=parseFloat(t.Monto);
         const cont=document.querySelector('#modal-detalle .contenido');
-        cont.innerHTML=
-          `<div style="font-weight:bold;color:purple;">Monto solicitado: ${solicitado.toFixed(2)}</div>`+
-          `<div style="color:orange;">Comisión Bancaria: ${comB.toFixed(2)}</div>`+
-          `<div style="color:orange;">Comisión Gestión: ${comG.toFixed(2)}</div>`+
-          `<div style="font-weight:bold;color:darkgreen;">Total recibido: ${total.toFixed(2)}</div>`+
-          `<button id='modal-ok'>Aceptar</button>`;
+        if(t.tipotrans==='premio'){
+          cont.innerHTML=
+            `<div style="font-weight:bold;color:#1b5e20;">Total recibido: ${total.toFixed(2)}</div>`+
+            `<button id='modal-ok'>Aceptar</button>`;
+        }else{
+          cont.innerHTML=
+            `<div style="font-weight:bold;color:purple;">Monto solicitado: ${solicitado.toFixed(2)}</div>`+
+            `<div style="color:orange;">Comisión Bancaria: ${comB.toFixed(2)}</div>`+
+            `<div style="color:orange;">Comisión Gestión: ${comG.toFixed(2)}</div>`+
+            `<div style="font-weight:bold;color:darkgreen;">Total recibido: ${total.toFixed(2)}</div>`+
+            `<button id='modal-ok'>Aceptar</button>`;
+        }
         const modal=document.getElementById('modal-detalle');
         modal.style.display='flex';
         document.getElementById('modal-ok').addEventListener('click',()=>{modal.style.display='none';},{once:true});

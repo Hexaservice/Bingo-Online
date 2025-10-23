@@ -70,38 +70,38 @@
       color: #000;
     }
     #premios-section {
-      color: #00d35a;
+      color: #0ca750;
     }
     #premios-section h3 {
       margin: 0;
-      color: #00ff6e;
+      color: #1fa74a;
       text-shadow: 0 0 4px rgba(0,0,0,0.6);
       font-size: 1.4rem;
     }
     #premios-section .icon-btn,
     #premios-section .switch-label {
-      color: #027a32;
+      color: #1c7b43;
     }
     #premios-section table th,
     #premios-section table td {
-      color: #036c2c;
+      color: #176437;
     }
     #pagos-section {
-      color: #ff9f40;
+      color: #d97814;
     }
     #pagos-section h3 {
       margin: 0;
-      color: #ff9d3f;
+      color: #b85c00;
       text-shadow: 0 0 4px rgba(0,0,0,0.6);
       font-size: 1.4rem;
     }
     #pagos-section .icon-btn,
     #pagos-section .switch-label {
-      color: #d77800;
+      color: #8d4800;
     }
     #pagos-section table th,
     #pagos-section table td {
-      color: #c56600;
+      color: #7a3f00;
     }
     .switch { position: relative; display: inline-block; width: 42px; height: 24px; }
     .switch input { display: none; }
@@ -204,6 +204,29 @@
       font-family: Calibri, Arial, sans-serif;
       font-size: 0.8rem;
     }
+    .acciones-top {
+      max-width: 1280px;
+      margin: 0 auto 4px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+    .btn-pagos-pendientes {
+      font-size: 0.65rem;
+      padding: 3px 8px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      background: #1a5e20;
+      color: #fff;
+      border: 1px solid #0f3c13;
+      border-radius: 4px;
+      font-family: Calibri, Arial, sans-serif;
+      cursor: pointer;
+    }
+    .btn-pagos-pendientes:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
     .filtros th:first-child { text-align: center; }
     .check-header {
       display: inline-flex;
@@ -246,14 +269,16 @@
 </head>
 <body>
   <button id="volver-btn" class="menu-btn back-btn" data-compact-back="true"><span class="icon">&#9664;</span><span class="label">Volver</span></button>
-  <h2 class="titulo-principal">APROBACIÓN DE PREMIOS</h2>
+  <h2 class="titulo-principal">APROBACIÓN DE PAGOS</h2>
+  <div class="acciones-top">
+    <button id="pagos-pendientes-btn" class="btn-pagos-pendientes">Pagos pendientes</button>
+  </div>
 
   <section class="section" id="premios-section">
     <div class="section-header">
-      <h3>APROBACION PREMIOS</h3>
+      <h3>PREMIOS JUGADORES</h3>
       <div class="header-controls">
         <span id="badge-premios" class="badge oculto">0</span>
-        <span class="switch-label">Mostrar</span>
         <label class="switch"><input type="checkbox" id="toggle-premios"><span class="slider"></span></label>
       </div>
     </div>
@@ -269,7 +294,7 @@
           <col style="width:18%">
           <col style="width:18%">
           <col style="width:15%">
-          <col style="width:13%">
+          <col style="width:10%">
           <col style="width:15%">
           <col style="width:11%">
           <col style="width:4%">
@@ -280,7 +305,7 @@
             <th><input type="text" id="filtro-premios-gmail" placeholder="Gmail"></th>
             <th><input type="text" id="filtro-premios-alias" placeholder="Alias"></th>
             <th><input type="text" id="filtro-premios-creditos" placeholder="Créditos"></th>
-            <th><input type="text" id="filtro-premios-cartones" placeholder="C. Gratis"></th>
+            <th><input type="text" id="filtro-premios-cartones" placeholder="Cart"></th>
             <th><input type="date" id="filtro-premios-fecha"></th>
             <th>
               <select id="filtro-premios-estado">
@@ -299,10 +324,9 @@
 
   <section class="section" id="pagos-section">
     <div class="section-header">
-      <h3>APROBACION PAGOS ADMINSTRACION</h3>
+      <h3>PAGOS ADMINISTRACIÓN</h3>
       <div class="header-controls">
         <span id="badge-pagos" class="badge oculto">0</span>
-        <span class="switch-label">Mostrar</span>
         <label class="switch"><input type="checkbox" id="toggle-pagos"><span class="slider"></span></label>
       </div>
     </div>
@@ -378,6 +402,832 @@
     let unsubscribePagosArchivo = null;
 
     const formatNumber = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2, minimumFractionDigits: 0 });
+    let firebaseReadyPromiseCentro = null;
+
+    function ensureFirebaseListo(){
+      if(firebaseReadyPromiseCentro) return firebaseReadyPromiseCentro;
+      if(typeof initFirebase !== 'function'){
+        firebaseReadyPromiseCentro = Promise.resolve();
+        return firebaseReadyPromiseCentro;
+      }
+      firebaseReadyPromiseCentro = initFirebase().catch(err=>{
+        console.error('No se pudo inicializar Firebase', err);
+        throw err;
+      });
+      return firebaseReadyPromiseCentro;
+    }
+
+    function cpNormalizarNumero(valor){
+      if(typeof valor === 'number' && Number.isFinite(valor)) return valor;
+      if(typeof valor === 'string'){
+        const texto = valor.trim();
+        if(!texto) return null;
+        const match = texto.toUpperCase().match(/^([BINGO])[-\s]?0*(\d{1,2})$/);
+        if(match){
+          const numero = parseInt(match[2],10);
+          return Number.isFinite(numero) ? numero : null;
+        }
+        const numeroPlano = parseInt(texto,10);
+        if(Number.isFinite(numeroPlano)) return numeroPlano;
+      }
+      return null;
+    }
+
+    function cpNormalizarPosicionesEntrada(posiciones){
+      const lista = Array.isArray(posiciones) ? posiciones : [];
+      const resultado = [];
+      lista.forEach(pos=>{
+        if(!pos) return;
+        const fila = Number(pos?.r ?? pos?.row ?? pos?.fila);
+        const col = Number(pos?.c ?? pos?.col ?? pos?.columna);
+        const valor = cpNormalizarNumero(pos?.valor ?? pos?.numero ?? pos?.value);
+        if(Number.isInteger(fila) && Number.isInteger(col)){
+          resultado.push({ r: fila, c: col, valor: valor ?? null });
+        }
+      });
+      return resultado;
+    }
+
+    function cpNormalizarEmail(valor){
+      if(typeof valor !== 'string') return '';
+      return valor.trim().toLowerCase();
+    }
+
+    function cpSanitizarId(valor){
+      const texto = (valor || '').toString();
+      const limpio = texto.normalize('NFKD').replace(/[\u0300-\u036f]/g,'');
+      const reemplazado = limpio.replace(/[^a-zA-Z0-9_-]+/g,'_');
+      return reemplazado.replace(/_{2,}/g,'_').replace(/^_+|_+$/g,'') || 'registro';
+    }
+
+    function cpCrearContextoSorteo(sorteoId, sorteoData){
+      return {
+        sorteoId,
+        sorteoData: sorteoData || {},
+        db: dbRef(),
+        formasData: [],
+        cartonesMapa: new Map(),
+        cartonesGanadoresPorForma: new Map(),
+        formasPorCarton: new Map(),
+        cantosOrdenados: [],
+        cantosIndiceMap: new Map(),
+        cantosResultadoMap: new Map(),
+        usuariosCache: {
+          porUserId: new Map(),
+          porAlias: new Map(),
+          porEmail: new Map()
+        }
+      };
+    }
+
+    function cpAlmacenarUsuarioEnCaches(ctx, info){
+      if(!ctx || !info) return;
+      const emailNorm = cpNormalizarEmail(info.email);
+      if(emailNorm && !ctx.usuariosCache.porEmail.has(emailNorm)){
+        ctx.usuariosCache.porEmail.set(emailNorm, info);
+      }
+      if(info.uid && !ctx.usuariosCache.porUserId.has(info.uid)){
+        ctx.usuariosCache.porUserId.set(info.uid, info);
+      }
+      if(info.alias){
+        const aliasClave = info.alias.toLowerCase();
+        if(!ctx.usuariosCache.porAlias.has(aliasClave)){
+          ctx.usuariosCache.porAlias.set(aliasClave, info);
+        }
+      }
+    }
+
+    function cpNormalizarInfoUsuario(id, data = {}){
+      const email = (data.email || id || '').toString();
+      let nombre = (data.nombre || data.name || '').toString().trim();
+      const apellido = (data.apellido || data.lastName || '').toString().trim();
+      if(!nombre && (data.name || data.apellido)){
+        nombre = [data.name, data.apellido].filter(Boolean).join(' ').trim();
+      } else if(nombre && apellido && !nombre.toLowerCase().includes(apellido.toLowerCase())){
+        nombre = `${nombre} ${apellido}`.trim();
+      }
+      const alias = (data.alias || data.aliasJugador || data.aliascarton || '').toString();
+      const uid = (data.uid || data.userId || data.id || '').toString();
+      return {
+        email,
+        alias,
+        nombre,
+        uid,
+        role: (data.role || '').toString()
+      };
+    }
+
+    async function cpObtenerUsuarioPorDocId(ctx, id){
+      const candidatos = [];
+      if(id){ candidatos.push(id); }
+      const normalizado = cpNormalizarEmail(id);
+      if(normalizado && !candidatos.includes(normalizado)){ candidatos.push(normalizado); }
+      for(const docId of candidatos){
+        try {
+          await ensureFirebaseListo();
+          const snap = await ctx.db.collection('users').doc(docId).get();
+          if(snap.exists){
+            const info = cpNormalizarInfoUsuario(snap.id, snap.data() || {});
+            cpAlmacenarUsuarioEnCaches(ctx, info);
+            return info;
+          }
+        } catch (err) {
+          console.warn('No se pudo obtener usuario por ID de documento', docId, err);
+        }
+      }
+      if(normalizado && !ctx.usuariosCache.porEmail.has(normalizado)){
+        ctx.usuariosCache.porEmail.set(normalizado, null);
+      }
+      return null;
+    }
+
+    async function cpObtenerUsuarioPorUserId(ctx, userId){
+      const clave = (userId || '').toString().trim();
+      if(!clave) return null;
+      if(ctx.usuariosCache.porUserId.has(clave)){
+        return ctx.usuariosCache.porUserId.get(clave);
+      }
+      let info = null;
+      try {
+        info = await cpObtenerUsuarioPorDocId(ctx, clave);
+      } catch (err) {
+        console.warn('No se pudo obtener usuario por coincidencia directa', err);
+      }
+      if(!info){
+        try {
+          await ensureFirebaseListo();
+          const snap = await ctx.db.collection('users').where('uid','==',clave).limit(1).get();
+          if(!snap.empty){
+            const doc = snap.docs[0];
+            info = cpNormalizarInfoUsuario(doc.id, doc.data() || {});
+            cpAlmacenarUsuarioEnCaches(ctx, info);
+          }
+        } catch (err) {
+          console.warn('No se pudo obtener usuario por UID', err);
+        }
+      }
+      ctx.usuariosCache.porUserId.set(clave, info);
+      if(info){ cpAlmacenarUsuarioEnCaches(ctx, info); }
+      return info;
+    }
+
+    async function cpObtenerUsuarioPorAlias(ctx, alias){
+      const clave = (alias || '').toString().trim().toLowerCase();
+      if(!clave) return null;
+      if(ctx.usuariosCache.porAlias.has(clave)){
+        return ctx.usuariosCache.porAlias.get(clave);
+      }
+      let info = null;
+      try {
+        await ensureFirebaseListo();
+        const snap = await ctx.db.collection('users').where('alias','==',alias).limit(1).get();
+        if(!snap.empty){
+          const doc = snap.docs[0];
+          info = cpNormalizarInfoUsuario(doc.id, doc.data() || {});
+          cpAlmacenarUsuarioEnCaches(ctx, info);
+        }
+      } catch (err) {
+        console.warn('No se pudo obtener usuario por alias', err);
+      }
+      ctx.usuariosCache.porAlias.set(clave, info);
+      if(info){ cpAlmacenarUsuarioEnCaches(ctx, info); }
+      return info;
+    }
+
+    async function cpResolverIdentidadPersona(ctx, datos = {}){
+      const aliasBase = (datos.alias || datos.aliasJugador || datos.aliascarton || '').toString().trim();
+      const emailBase = cpNormalizarEmail(datos.email || datos.gmail || datos.IDbilletera || '');
+      const userIdBase = (datos.userId || datos.usuarioId || '').toString().trim();
+      if(emailBase && ctx.usuariosCache.porEmail.has(emailBase)){
+        const cacheado = ctx.usuariosCache.porEmail.get(emailBase);
+        if(cacheado){
+          return {
+            email: emailBase,
+            alias: aliasBase || cacheado.alias || '',
+            nombre: cacheado.nombre || '',
+            userId: cacheado.uid || userIdBase || ''
+          };
+        }
+        return { email: emailBase, alias: aliasBase, nombre: '', userId: userIdBase };
+      }
+      let info = null;
+      if(userIdBase){ info = await cpObtenerUsuarioPorUserId(ctx, userIdBase); }
+      if(!info && emailBase){ info = await cpObtenerUsuarioPorDocId(ctx, emailBase); }
+      if(!info && aliasBase){ info = await cpObtenerUsuarioPorAlias(ctx, aliasBase); }
+      const resultado = {
+        email: cpNormalizarEmail(info?.email || emailBase),
+        alias: aliasBase || (info?.alias || ''),
+        nombre: info?.nombre || info?.name || '',
+        userId: info?.uid || userIdBase || ''
+      };
+      if(!resultado.nombre && info){
+        const nombreInferido = [info.name, info.apellido].filter(Boolean).join(' ').trim();
+        if(nombreInferido) resultado.nombre = nombreInferido;
+      }
+      if(resultado.email){
+        cpAlmacenarUsuarioEnCaches(ctx, {
+          ...(info || {}),
+          email: resultado.email,
+          alias: resultado.alias,
+          nombre: resultado.nombre,
+          uid: resultado.userId
+        });
+      }
+      return resultado;
+    }
+
+    function cpExtraerColaboradoresDesdeValor(lista, valor){
+      if(!valor) return;
+      if(Array.isArray(valor)){
+        valor.forEach(item=>cpExtraerColaboradoresDesdeValor(lista, item));
+        return;
+      }
+      if(typeof valor === 'string'){
+        const texto = valor.trim();
+        if(!texto) return;
+        if(texto.includes('@')){
+          lista.push({ email: texto });
+        } else {
+          lista.push({ alias: texto });
+        }
+        return;
+      }
+      if(typeof valor === 'object'){
+        const candidato = {
+          email: valor.email || valor.gmail || valor.correo || '',
+          alias: valor.alias || valor.aliasJugador || valor.apodo || '',
+          nombre: valor.nombre || valor.name || valor.displayName || '',
+          userId: valor.userId || valor.uid || ''
+        };
+        if(candidato.email || candidato.alias || candidato.nombre || candidato.userId){
+          lista.push(candidato);
+        }
+      }
+    }
+
+    function cpObtenerCandidatosColaboradores(ctx){
+      const lista = [];
+      const data = ctx.sorteoData || {};
+      const clavesDirectas = [
+        'colaboradores','colaboradoresDepositos','colaboradoresPagos',
+        'responsablesDepositos','responsablesPagos','responsableDepositos','responsablePagos',
+        'gestoresDepositos','gestoresPagos','gestoresTransacciones','colaboradoresTransacciones'
+      ];
+      clavesDirectas.forEach(clave=>cpExtraerColaboradoresDesdeValor(lista, data[clave]));
+      Object.entries(data).forEach(([clave, valor])=>{
+        if(clavesDirectas.includes(clave)) return;
+        const lower = clave.toLowerCase();
+        if(lower.includes('colab') || lower.includes('gestor') || lower.includes('respons') || lower.includes('adminpagos')){
+          cpExtraerColaboradoresDesdeValor(lista, valor);
+        }
+      });
+      return lista;
+    }
+
+    async function cpObtenerColaboradoresProcesados(ctx){
+      const candidatos = cpObtenerCandidatosColaboradores(ctx);
+      const mapa = new Map();
+      for(const candidato of candidatos){
+        const identidad = await cpResolverIdentidadPersona(ctx, candidato);
+        const clave = identidad.email
+          ? `email::${identidad.email}`
+          : (identidad.alias ? `alias::${identidad.alias.toLowerCase()}` : '');
+        if(!clave) continue;
+        if(!mapa.has(clave)){
+          mapa.set(clave, {
+            gmail: identidad.email || '',
+            alias: identidad.alias || candidato.alias || '',
+            nombre: identidad.nombre || candidato.nombre || '',
+            userIds: new Set(),
+            creditos: 0
+          });
+        }
+        const registro = mapa.get(clave);
+        if(identidad.userId){ registro.userIds.add(identidad.userId); }
+        if(candidato.userId){ registro.userIds.add(candidato.userId); }
+        if(!registro.nombre && (candidato.nombre || identidad.nombre)){
+          registro.nombre = identidad.nombre || candidato.nombre || '';
+        }
+        if(!registro.alias && (candidato.alias || identidad.alias)){
+          registro.alias = identidad.alias || candidato.alias || '';
+        }
+      }
+      return Array.from(mapa.values()).map(item=>({
+        gmail: item.gmail,
+        alias: item.alias,
+        nombre: item.nombre,
+        userIds: Array.from(item.userIds),
+        creditos: item.creditos
+      }));
+    }
+
+    function cpObtenerPosicionesForma(forma){
+      if(!forma) return [];
+      const base = Array.isArray(forma.posicionesNormalizadas) && forma.posicionesNormalizadas.length
+        ? forma.posicionesNormalizadas
+        : forma.posiciones;
+      const lista = Array.isArray(base) ? base : [];
+      return lista
+        .map(pos=>({
+          r: Number(pos?.r ?? pos?.row ?? pos?.fila),
+          c: Number(pos?.c ?? pos?.col ?? pos?.columna)
+        }))
+        .filter(pos=>Number.isInteger(pos.r) && Number.isInteger(pos.c));
+    }
+
+    function cpProcesarCantos(ctx, datos){
+      const payload = Array.isArray(datos) ? { numeros: datos } : (datos && typeof datos === 'object' ? datos : { numeros: [] });
+      const listaNumeros = Array.isArray(payload.numeros) ? payload.numeros : [];
+      const normalizados = [];
+      const detalles = Array.isArray(payload.detalles) ? payload.detalles : [];
+      const detallesMap = new Map();
+      detalles.forEach(item=>{
+        const numero = cpNormalizarNumero(item?.numero ?? item?.valor ?? item?.canto ?? item?.etiqueta);
+        if(numero === null) return;
+        const orden = Number.isFinite(item?.orden) ? Number(item.orden) : undefined;
+        const estadoTexto = (item?.estatus ?? item?.resultado ?? item?.estado ?? item?.status ?? '').toString().trim().toLowerCase();
+        detallesMap.set(numero, { orden, estado: estadoTexto });
+      });
+      listaNumeros.forEach((valor, idx)=>{
+        const numero = cpNormalizarNumero(valor);
+        if(numero === null) return;
+        normalizados.push(numero);
+        if(!detallesMap.has(numero)){
+          detallesMap.set(numero, { orden: idx, estado: '' });
+        }
+      });
+      normalizados.sort((a,b)=>{
+        const infoA = detallesMap.get(a) || {};
+        const infoB = detallesMap.get(b) || {};
+        const ordenA = Number.isFinite(infoA.orden) ? infoA.orden : normalizados.indexOf(a);
+        const ordenB = Number.isFinite(infoB.orden) ? infoB.orden : normalizados.indexOf(b);
+        return ordenA - ordenB;
+      });
+      const resultadoMapa = new Map();
+      detallesMap.forEach((info, numero)=>{
+        const estado = typeof info?.estado === 'string' ? info.estado.trim().toLowerCase() : '';
+        if(estado === 'g' || estado === 'p'){
+          resultadoMapa.set(numero, estado);
+        }
+      });
+      ctx.cantosOrdenados = normalizados;
+      ctx.cantosIndiceMap = new Map();
+      normalizados.forEach((numero, idx)=>{
+        if(!ctx.cantosIndiceMap.has(numero)){
+          ctx.cantosIndiceMap.set(numero, idx);
+        }
+      });
+      ctx.cantosResultadoMap = resultadoMapa;
+    }
+
+    async function cpCargarFormas(ctx){
+      const snap = await ctx.db.collection('formas').where('sorteoId','==',ctx.sorteoId).get();
+      ctx.formasData = [];
+      snap.forEach(doc=>{
+        const data = doc.data() || {};
+        const idx = Number(data.idx ?? data.indice);
+        if(!Number.isFinite(idx)) return;
+        const posicionesNorm = cpNormalizarPosicionesEntrada(data.posicionesNormalizadas || data.posiciones || []);
+        ctx.formasData.push({
+          ...data,
+          id: doc.id,
+          idx,
+          nombre: data.nombre || '',
+          porcentaje: Number(data.porcentaje ?? data.porcentajePremio ?? data.porcentaje_forma ?? data.porcentajeForma ?? 0) || 0,
+          premioCreditos: Number(data.premioCreditos ?? data.premiocreditos ?? data.creditos ?? 0) || 0,
+          cartonesGratis: Number(data.cartonesGratis ?? data.cartonesgratis ?? data.cartones ?? 0) || 0,
+          posicionesNormalizadas: posicionesNorm.map(pos=>({ r: pos.r, c: pos.c }))
+        });
+      });
+      ctx.formasData.sort((a,b)=>(a.idx||0)-(b.idx||0));
+    }
+
+    async function cpCargarCartones(ctx){
+      const snap = await ctx.db.collection('CartonJugado').where('sorteoId','==',ctx.sorteoId).get();
+      ctx.cartonesMapa = new Map();
+      snap.forEach(doc=>{
+        const data = doc.data() || {};
+        const posiciones = cpNormalizarPosicionesEntrada(data.posiciones || []);
+        const valorPorPos = new Map();
+        posiciones.forEach(pos=>{
+          if(Number.isFinite(pos.valor)){
+            valorPorPos.set(`${pos.r}-${pos.c}`, pos.valor);
+          }
+        });
+        const carton = {
+          ...data,
+          id: doc.id,
+          posiciones,
+          valorPorPos,
+          formasGanadas: []
+        };
+        ctx.cartonesMapa.set(doc.id, carton);
+      });
+    }
+
+    async function cpCargarCantos(ctx){
+      let cantosPayload = [];
+      try {
+        const doc = await ctx.db.collection('cantos').doc(ctx.sorteoId).get();
+        if(doc.exists){
+          cantosPayload = doc.data() || {};
+        }
+      } catch (err) {
+        console.warn('No se pudieron cargar los cantos desde la colección cantos', err);
+      }
+      if((!cantosPayload || (Array.isArray(cantosPayload.numeros) && !cantosPayload.numeros.length))
+        && Array.isArray(ctx.sorteoData?.cantos)){
+        cantosPayload = ctx.sorteoData.cantos;
+      }
+      cpProcesarCantos(ctx, cantosPayload);
+    }
+
+    function cpObtenerCreditosForma(ctx, forma){
+      if(!forma) return 0;
+      const directo = Number(forma?.premioCreditos ?? forma?.premiocreditos ?? forma?.creditos);
+      if(Number.isFinite(directo) && directo>0) return Math.round(directo);
+      const porcentaje = Number(forma?.porcentaje ?? forma?.porcentajePremio ?? 0);
+      const totalPremios = Number(ctx.sorteoData?.totalPremios) || 0;
+      if(totalPremios>0 && porcentaje>0){
+        return Math.round(totalPremios * (porcentaje/100));
+      }
+      return 0;
+    }
+
+    function cpObtenerCartonesGratisForma(forma){
+      if(!forma) return 0;
+      const candidatos = [
+        forma?.cartonesGratis,
+        forma?.cartonesgratis,
+        forma?.cartones_gratis,
+        forma?.premioCartonesGratis,
+        forma?.premioCartonesgratis,
+        forma?.cartones
+      ];
+      for(const candidato of candidatos){
+        const numero = Number(candidato);
+        if(Number.isFinite(numero)){
+          return Math.max(0, Math.round(numero));
+        }
+      }
+      return 0;
+    }
+
+    function cpCalcularResultados(ctx){
+      ctx.cartonesGanadoresPorForma = new Map();
+      ctx.formasPorCarton = new Map();
+      ctx.cartonesMapa.forEach(carton=>{ carton.formasGanadas = []; });
+      if(!ctx.formasData.length || !ctx.cartonesMapa.size || !ctx.cantosOrdenados.length){
+        return;
+      }
+      ctx.formasData.forEach(forma=>{
+        const idx = Number(forma?.idx);
+        if(!Number.isFinite(idx)) return;
+        const posiciones = cpObtenerPosicionesForma(forma);
+        if(!posiciones.length){
+          ctx.cartonesGanadoresPorForma.set(idx,{ forma, cartones: [], paso: null });
+          return;
+        }
+        let mejorPaso = Infinity;
+        const ganadores = [];
+        ctx.cartonesMapa.forEach(carton=>{
+          let valido = true;
+          let maxPaso = -1;
+          for(const pos of posiciones){
+            const clave = `${pos.r}-${pos.c}`;
+            const valor = carton.valorPorPos.get(clave);
+            if(valor === undefined){
+              valido = false;
+              break;
+            }
+            const paso = ctx.cantosIndiceMap.get(valor);
+            if(paso === undefined){
+              valido = false;
+              break;
+            }
+            if(paso > maxPaso) maxPaso = paso;
+          }
+          if(!valido) return;
+          if(maxPaso < mejorPaso){
+            mejorPaso = maxPaso;
+            ganadores.length = 0;
+            ganadores.push(carton);
+          } else if(maxPaso === mejorPaso){
+            ganadores.push(carton);
+          }
+        });
+        ctx.cartonesGanadoresPorForma.set(idx,{ forma, cartones: ganadores, paso: mejorPaso });
+        ganadores.forEach(carton=>{
+          if(!ctx.formasPorCarton.has(carton.id)) ctx.formasPorCarton.set(carton.id, []);
+          ctx.formasPorCarton.get(carton.id).push({ forma, paso: mejorPaso });
+        });
+      });
+      ctx.formasPorCarton.forEach(lista=>{
+        lista.sort((a,b)=>{
+          if(a.paso !== b.paso) return a.paso - b.paso;
+          return (Number(a.forma?.idx)||0) - (Number(b.forma?.idx)||0);
+        });
+      });
+      ctx.cartonesMapa.forEach(carton=>{
+        const lista = ctx.formasPorCarton.get(carton.id) || [];
+        carton.formasGanadas = lista.map(item=>item.forma);
+      });
+    }
+
+    async function cpObtenerGanadoresAgrupados(ctx){
+      if(!ctx.cartonesMapa || ctx.cartonesMapa.size === 0){
+        await cpCargarCartones(ctx);
+      }
+      if(!ctx.formasData || !ctx.formasData.length){
+        await cpCargarFormas(ctx);
+      }
+      if(!(ctx.cartonesGanadoresPorForma instanceof Map)){
+        ctx.cartonesGanadoresPorForma = new Map();
+      }
+      if(ctx.cartonesGanadoresPorForma.size === 0){
+        cpCalcularResultados(ctx);
+      }
+      const jugadoresMapa = new Map();
+      ctx.cartonesGanadoresPorForma.forEach(registro=>{
+        const forma = registro?.forma;
+        const ganadores = Array.isArray(registro?.cartones) ? registro.cartones : [];
+        if(!forma || !ganadores.length) return;
+        const totalCreditos = cpObtenerCreditosForma(ctx, forma);
+        const totalGratis = cpObtenerCartonesGratisForma(forma);
+        const cantidad = ganadores.length || 1;
+        const creditosPorGanador = cantidad > 0 ? Math.floor(totalCreditos / cantidad) : 0;
+        const gratisPorGanador = cantidad > 0 ? Math.floor(totalGratis / cantidad) : 0;
+        ganadores.forEach(carton=>{
+          const claveUsuario = (carton?.userId || carton?.usuarioId || '').toString().trim();
+          const correoCarton = (carton?.gmail || carton?.email || carton?.IDbilletera || '').toString().trim();
+          const aliasCarton = (carton?.alias || carton?.aliasCarton || '').toString();
+          const clave = claveUsuario || (correoCarton ? `correo::${correoCarton.toLowerCase()}` : `alias::${aliasCarton.toLowerCase()}`);
+          if(!jugadoresMapa.has(clave)){
+            jugadoresMapa.set(clave, {
+              userId: carton?.userId || carton?.usuarioId || '',
+              email: correoCarton,
+              alias: aliasCarton,
+              creditos: 0,
+              cartonesGratis: 0,
+              formas: [],
+              cartonesIds: new Set()
+            });
+          }
+          const jugador = jugadoresMapa.get(clave);
+          if(carton?.id){ jugador.cartonesIds.add(carton.id); }
+          if(!jugador.userId && (carton?.userId || carton?.usuarioId)){ jugador.userId = carton?.userId || carton?.usuarioId; }
+          if(!jugador.email && correoCarton){ jugador.email = correoCarton; }
+          if(!jugador.alias && aliasCarton){ jugador.alias = aliasCarton; }
+          jugador.creditos += creditosPorGanador;
+          jugador.cartonesGratis += gratisPorGanador;
+          jugador.formas.push({
+            idx: Number(forma?.idx) || null,
+            nombre: forma?.nombre || '',
+            creditos: creditosPorGanador,
+            cartonesGratis: gratisPorGanador
+          });
+        });
+      });
+
+      const agregados = new Map();
+      for(const jugador of jugadoresMapa.values()){
+        const identidad = await cpResolverIdentidadPersona(ctx, jugador);
+        const claveResumen = identidad.email
+          ? `email::${identidad.email}`
+          : (identidad.alias ? `alias::${identidad.alias.toLowerCase()}` : '');
+        if(!claveResumen) continue;
+        if(!agregados.has(claveResumen)){
+          agregados.set(claveResumen, {
+            gmail: identidad.email || '',
+            alias: identidad.alias || jugador.alias || '',
+            nombre: identidad.nombre || '',
+            creditos: 0,
+            cartonesGratis: 0,
+            formas: [],
+            cartonesIds: new Set(),
+            userIds: new Set()
+          });
+        }
+        const resumen = agregados.get(claveResumen);
+        if(identidad.userId){ resumen.userIds.add(identidad.userId); }
+        if(jugador.userId){ resumen.userIds.add(jugador.userId); }
+        jugador.cartonesIds.forEach(id=>resumen.cartonesIds.add(id));
+        resumen.creditos += jugador.creditos;
+        resumen.cartonesGratis += jugador.cartonesGratis;
+        resumen.formas.push(...jugador.formas);
+        if(!resumen.alias && jugador.alias){ resumen.alias = jugador.alias; }
+        if(!resumen.nombre && identidad.nombre){ resumen.nombre = identidad.nombre; }
+        if(!resumen.gmail && identidad.email){ resumen.gmail = identidad.email; }
+      }
+
+      const lista = Array.from(agregados.values()).map(item=>({
+        gmail: item.gmail,
+        alias: item.alias,
+        nombre: item.nombre,
+        creditos: item.creditos,
+        cartonesGratis: item.cartonesGratis,
+        formas: item.formas,
+        cartonesGanadores: item.cartonesIds.size,
+        userIds: Array.from(item.userIds)
+      }));
+
+      const totalCreditos = lista.reduce((acc,item)=>acc + (Number(item.creditos) || 0), 0);
+      const totalCartonesGratis = lista.reduce((acc,item)=>acc + (Number(item.cartonesGratis) || 0), 0);
+
+      return { lista, totalCreditos, totalCartonesGratis };
+    }
+
+    function cpConstruirIdSolicitud(base, identificador){
+      const baseSeguro = cpSanitizarId(base || 'sorteo');
+      const idSeguro = cpSanitizarId(identificador || 'registro');
+      return `${baseSeguro}__${idSeguro}`;
+    }
+
+    async function cpActualizarDocumentoCentroPagos(ctx, ref, payload){
+      try {
+        await ctx.db.runTransaction(async tx => {
+          const snap = await tx.get(ref);
+          if(snap.exists){
+            const data = snap.data() || {};
+            const estadoActual = (data.estado || '').toString().trim().toUpperCase();
+            if(estadoActual === 'APROBADO'){ return; }
+          }
+          tx.set(ref, payload, { merge: true });
+        });
+      } catch (err) {
+        console.error('Error registrando solicitud en Centro de Pagos', ref.path, err);
+        throw err;
+      }
+    }
+
+    async function cpRegistrarSolicitudes(ctx, ganadores, colaboradores, totalCreditos, totalCartonesGratis){
+      const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+      const sorteoNombre = (ctx.sorteoData?.nombre || '').toString();
+      const operaciones = [];
+
+      ganadores.forEach(ganador=>{
+        const email = cpNormalizarEmail(ganador.gmail);
+        const alias = ganador.alias || '';
+        const docId = cpConstruirIdSolicitud(ctx.sorteoId, email || alias || 'ganador');
+        const payload = {
+          sorteoId: ctx.sorteoId,
+          sorteoNombre,
+          gmail: email || '',
+          email: email || '',
+          alias: alias,
+          aliasJugador: alias,
+          aliasGanador: alias,
+          creditos: Number(ganador.creditos) || 0,
+          creditosGanados: Number(ganador.creditos) || 0,
+          cartonesGratis: Number(ganador.cartonesGratis) || 0,
+          cartonesGanados: Number(ganador.cartonesGanadores) || 0,
+          formasGanadoras: ganador.formas || [],
+          estado: 'PENDIENTE',
+          fechaGanado: timestamp,
+          fechaRegistro: timestamp,
+          creadoEn: timestamp,
+          actualizadoEn: timestamp,
+          tipoRegistro: 'GANADOR_SORTEO',
+          userIds: ganador.userIds || [],
+          generadoDesde: 'centropagos'
+        };
+        if(email){ payload.idBilletera = email; }
+        operaciones.push(cpActualizarDocumentoCentroPagos(ctx, ctx.db.collection('PremiosSorteos').doc(docId), payload));
+      });
+
+      colaboradores.forEach(colaborador=>{
+        const email = cpNormalizarEmail(colaborador.gmail);
+        const docId = cpConstruirIdSolicitud(`${ctx.sorteoId}_colab`, email || colaborador.alias || 'colaborador');
+        const payload = {
+          sorteoId: ctx.sorteoId,
+          sorteoNombre,
+          gmail: email || '',
+          email: email || '',
+          nombre: colaborador.nombre || colaborador.alias || '',
+          alias: colaborador.alias || '',
+          creditos: Number(colaborador.creditos) || 0,
+          estado: 'PENDIENTE',
+          fechaAsignacion: timestamp,
+          fecha: timestamp,
+          creadoEn: timestamp,
+          actualizadoEn: timestamp,
+          tipoRegistro: 'COLABORADOR_SORTEO',
+          userIds: colaborador.userIds || [],
+          generadoDesde: 'centropagos'
+        };
+        operaciones.push(cpActualizarDocumentoCentroPagos(ctx, ctx.db.collection('PagosAdministracion').doc(docId), payload));
+      });
+
+      const resumenRef = ctx.db.collection('SorteosCentroPagos').doc(ctx.sorteoId);
+      const resumenPayload = {
+        sorteoId: ctx.sorteoId,
+        sorteoNombre,
+        totalGanadores: ganadores.length,
+        totalColaboradores: colaboradores.length,
+        totalCreditosPremios: totalCreditos,
+        totalCartonesGratis,
+        ganadores: ganadores.map(item=>({
+          gmail: cpNormalizarEmail(item.gmail || ''),
+          alias: item.alias || '',
+          creditos: Number(item.creditos) || 0,
+          cartonesGratis: Number(item.cartonesGratis) || 0,
+          cartonesGanadores: Number(item.cartonesGanadores) || 0
+        })),
+        colaboradores: colaboradores.map(item=>({
+          gmail: cpNormalizarEmail(item.gmail || ''),
+          alias: item.alias || '',
+          nombre: item.nombre || ''
+        })),
+        generadoEn: timestamp,
+        generadoDesde: 'centropagos'
+      };
+      operaciones.push(resumenRef.set(resumenPayload, { merge: true }));
+
+      await Promise.all(operaciones);
+    }
+
+    async function cpMarcarSolicitudesGeneradas(ctx){
+      const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+      const payload = {
+        solicitudesPagosGeneradas: true,
+        solicitudesPagosActualizadasEn: timestamp
+      };
+      await Promise.all([
+        ctx.db.collection('sorteos').doc(ctx.sorteoId).set(payload, { merge: true }),
+        ctx.db.collection('cantarsorteos').doc(ctx.sorteoId).set(payload, { merge: true })
+      ]);
+    }
+
+    async function cpGenerarSolicitudesParaSorteo(ctx){
+      await ensureFirebaseListo();
+      await cpCargarFormas(ctx);
+      await cpCargarCartones(ctx);
+      await cpCargarCantos(ctx);
+      cpCalcularResultados(ctx);
+      const { lista: ganadores, totalCreditos, totalCartonesGratis } = await cpObtenerGanadoresAgrupados(ctx);
+      const colaboradores = await cpObtenerColaboradoresProcesados(ctx);
+      await cpRegistrarSolicitudes(ctx, ganadores, colaboradores, totalCreditos, totalCartonesGratis);
+      await cpMarcarSolicitudesGeneradas(ctx);
+      return { ganadores: ganadores.length, colaboradores: colaboradores.length };
+    }
+
+    function esSorteoFinalizado(data = {}){
+      const candidatos = [data.estado, data.estadoactual, data.estadoSorteo, data.estado_sorteo];
+      return candidatos.some(valor=>typeof valor === 'string' && valor.toLowerCase().trim() === 'finalizado');
+    }
+
+    async function procesarPagosPendientes(){
+      const btn = document.getElementById('pagos-pendientes-btn');
+      if(btn){
+        btn.disabled = true;
+        btn.textContent = 'Procesando...';
+      }
+      try {
+        await ensureFirebaseListo();
+        const db = dbRef();
+        const finalizadosSnap = await db.collection('sorteos').get();
+        const pendientes = [];
+        finalizadosSnap.forEach(doc=>{
+          const data = doc.data() || {};
+          const finalizado = esSorteoFinalizado(data);
+          const solicitudesGeneradas = data.solicitudesPagosGeneradas === true;
+          if(finalizado && !solicitudesGeneradas){
+            pendientes.push({ id: doc.id, data });
+          }
+        });
+        if(!pendientes.length){
+          alert('En este momento NO hay pagos pendientes de ningún sorteo FINALIZADO.');
+          return;
+        }
+        let procesados = 0;
+        let errores = 0;
+        for(const sorteo of pendientes){
+          try {
+            const ctx = cpCrearContextoSorteo(sorteo.id, sorteo.data);
+            await cpGenerarSolicitudesParaSorteo(ctx);
+            procesados++;
+          } catch (err) {
+            errores++;
+            console.error('Error generando solicitudes para el sorteo', sorteo.id, err);
+          }
+        }
+        if(procesados === 0 && errores > 0){
+          alert('No fue posible generar las solicitudes pendientes. Revisa la consola para más detalles.');
+        } else if(errores > 0){
+          alert(`Se generaron solicitudes para ${procesados} sorteo(s), pero ${errores} presentaron errores. Revisa la consola para más detalles.`);
+        } else {
+          alert(`Se generaron solicitudes para ${procesados} sorteo(s) finalizados. Las tablas se actualizarán en breve.`);
+        }
+      } catch (err) {
+        console.error('Error verificando pagos pendientes', err);
+        alert('No fue posible verificar los pagos pendientes. Inténtalo nuevamente.');
+      } finally {
+        if(btn){
+          btn.disabled = false;
+          btn.textContent = 'Pagos pendientes';
+        }
+      }
+    }
 
     function escapeHtml(texto = ''){
       const fuente = texto == null ? '' : String(texto);
@@ -439,7 +1289,9 @@
         fechaFiltro: fechaInfo.filtro,
         fechaOrden: fechaInfo.orden,
         estado,
-        billetera
+        billetera,
+        sorteoId: (data.sorteoId || '').toString(),
+        sorteoNombre: (data.sorteoNombre || '').toString()
       };
     }
 
@@ -575,6 +1427,33 @@
       document.getElementById('pagos-ver-archivo').classList.toggle('archivo-activo', mostrarPagosArchivo);
     }
 
+    async function registrarTransaccionPremio(enRegistro){
+      const monto = Number(enRegistro.creditos) || 0;
+      if(!enRegistro.billetera || monto <= 0) return;
+      try {
+        if(typeof fechaServidor !== 'function' || typeof horaServidor !== 'function'){
+          await initServerTime();
+        }
+        await dbRef().collection('transacciones').add({
+          tipotrans: 'premio',
+          Monto: monto,
+          estado: 'APROBADO',
+          IDbilletera: enRegistro.billetera,
+          fechasolicitud: '',
+          horasolicitud: '',
+          fechagestion: typeof fechaServidor === 'function' ? fechaServidor() : '',
+          horagestion: typeof horaServidor === 'function' ? horaServidor() : '',
+          usuariogestor: authInstance().currentUser?.email || '',
+          rolusuario: window.currentRole || '',
+          referencia: 'PREMIO',
+          sorteoId: enRegistro.sorteoId || '',
+          sorteoNombre: enRegistro.sorteoNombre || ''
+        });
+      } catch (err) {
+        console.error('No se pudo registrar la transacción de premio', err);
+      }
+    }
+
     async function acreditarPremio(enRegistro){
       const db = dbRef();
       if(!enRegistro.billetera) return;
@@ -586,6 +1465,7 @@
         const nuevosCartones = (Number(datos.CartonesGratis) || 0) + enRegistro.cartones;
         tx.set(billeteraRef, { creditos: nuevosCreditos, CartonesGratis: nuevosCartones }, { merge: true });
       });
+      await registrarTransaccionPremio(enRegistro);
     }
 
     async function acreditarPago(enRegistro){
@@ -738,6 +1618,11 @@
     function configurarBotones(){
       document.getElementById('premios-marcar').addEventListener('click', ()=>seleccionarTodos('tabla-premios'));
       document.getElementById('pagos-marcar').addEventListener('click', ()=>seleccionarTodos('tabla-pagos'));
+
+      const pagosPendientesBtn = document.getElementById('pagos-pendientes-btn');
+      if(pagosPendientesBtn){
+        pagosPendientesBtn.addEventListener('click', procesarPagosPendientes);
+      }
 
       document.getElementById('premios-aprobar').addEventListener('click', async()=>{
         const seleccion = obtenerSeleccion('tabla-premios');
