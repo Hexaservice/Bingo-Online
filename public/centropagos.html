@@ -103,6 +103,36 @@
     #pagos-section table td {
       color: #7a3f00;
     }
+    #colaboradores-section {
+      color: #6a1b9a;
+    }
+    #colaboradores-section h3 {
+      margin: 0;
+      color: #4a148c;
+      text-shadow: 0 0 4px rgba(0,0,0,0.6);
+      font-size: 1.4rem;
+    }
+    #colaboradores-section .icon-btn,
+    #colaboradores-section .switch-label {
+      color: #4a148c;
+    }
+    #colaboradores-section table th,
+    #colaboradores-section table td {
+      color: #4a148c;
+    }
+    #tabla-colaboradores .colab-input {
+      width: 100%;
+      box-sizing: border-box;
+      border: none;
+      background: transparent;
+      font-family: inherit;
+      font-weight: bold;
+      color: #4a148c;
+      text-align: right;
+    }
+    #tabla-colaboradores .colab-input:disabled {
+      color: inherit;
+    }
     .switch { position: relative; display: inline-block; width: 42px; height: 24px; }
     .switch input { display: none; }
     .slider {
@@ -333,7 +363,6 @@
     <div id="pagos-content">
       <div class="acciones">
         <button class="icon-btn" id="pagos-aprobar"><span class="icon check">&#10004;</span><span>Aprobar</span></button>
-        <button class="icon-btn" id="pagos-editar"><span class="icon edit">&#9998;</span><span>Editar</span></button>
         <button class="icon-btn" id="pagos-archivar"><span class="icon">&#128194;</span><span>Archivar</span></button>
         <button class="icon-btn" id="pagos-ver-archivo"><span class="icon">&#128230;</span><span>Archivo</span></button>
       </div>
@@ -369,6 +398,52 @@
     </div>
   </section>
 
+  <section class="section" id="colaboradores-section">
+    <div class="section-header">
+      <h3>PAGOS COLABORADORES</h3>
+      <div class="header-controls">
+        <span id="badge-colaboradores" class="badge oculto">0</span>
+        <label class="switch"><input type="checkbox" id="toggle-colaboradores"><span class="slider"></span></label>
+      </div>
+    </div>
+    <div id="colaboradores-content">
+      <div class="acciones">
+        <button class="icon-btn" id="colaboradores-aprobar"><span class="icon check">&#10004;</span><span>Aprobar</span></button>
+        <button class="icon-btn" id="colaboradores-archivar"><span class="icon">&#128194;</span><span>Archivar</span></button>
+        <button class="icon-btn" id="colaboradores-ver-archivo"><span class="icon">&#128230;</span><span>Archivo</span></button>
+      </div>
+      <table id="tabla-colaboradores">
+        <colgroup>
+          <col style="width:6%">
+          <col style="width:22%">
+          <col style="width:22%">
+          <col style="width:18%">
+          <col style="width:16%">
+          <col style="width:12%">
+          <col style="width:4%">
+        </colgroup>
+        <thead>
+          <tr class="filtros">
+            <th>N°</th>
+            <th><input type="text" id="filtro-colab-gmail" placeholder="Gmail"></th>
+            <th><input type="text" id="filtro-colab-nombre" placeholder="Nombre"></th>
+            <th><input type="text" id="filtro-colab-creditos" placeholder="Créditos"></th>
+            <th><input type="date" id="filtro-colab-fecha"></th>
+            <th>
+              <select id="filtro-colab-estado">
+                <option value="">Estado</option>
+                <option value="PENDIENTE">Pendiente</option>
+                <option value="APROBADO">Aprobado</option>
+              </select>
+            </th>
+            <th><span id="colaboradores-marcar" class="check-header">✔</span></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
@@ -383,23 +458,32 @@
 
     const filtrosPremios = { gmail:'', alias:'', creditos:'', cartones:'', fecha:'', estado:'' };
     const filtrosPagos = { gmail:'', nombre:'', creditos:'', fecha:'', estado:'' };
+    const filtrosColaboradores = { gmail:'', nombre:'', creditos:'', fecha:'', estado:'' };
 
     let mostrarPremiosArchivo = false;
     let mostrarPagosArchivo = false;
+    let mostrarColaboradoresArchivo = false;
 
     const premiosActivos = [];
     const premiosArchivados = [];
-    const pagosActivos = [];
-    const pagosArchivados = [];
+    const pagosAdminActivos = [];
+    const pagosAdminArchivados = [];
+    const pagosColaboradoresActivos = [];
+    const pagosColaboradoresArchivados = [];
     const premiosMapa = new Map();
     const premiosArchivoMapa = new Map();
-    const pagosMapa = new Map();
-    const pagosArchivoMapa = new Map();
+    const pagosAdminMapa = new Map();
+    const pagosAdminArchivoMapa = new Map();
+    const pagosColaboradoresMapa = new Map();
+    const pagosColaboradoresArchivoMapa = new Map();
+    const pagosColaboradoresEdicion = new Map();
 
     let unsubscribePremios = null;
     let unsubscribePremiosArchivo = null;
     let unsubscribePagos = null;
     let unsubscribePagosArchivo = null;
+    let unsubscribeColaboradores = null;
+    let unsubscribeColaboradoresArchivo = null;
 
     const formatNumber = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2, minimumFractionDigits: 0 });
     let firebaseReadyPromiseCentro = null;
@@ -719,6 +803,115 @@
         userIds: Array.from(item.userIds),
         creditos: item.creditos
       }));
+    }
+
+    function cpObtenerCampoNumeroFlexible(data, clave){
+      if(!data) return 0;
+      const claves = Array.isArray(clave) ? clave : [clave];
+      const entradas = Object.entries(data);
+      for(const claveBusqueda of claves){
+        if(claveBusqueda == null) continue;
+        const directa = data[claveBusqueda];
+        const numeroDirecto = Number(directa);
+        if(Number.isFinite(numeroDirecto)) return numeroDirecto;
+        const coincidencia = entradas.find(([k])=>k.toLowerCase() === claveBusqueda.toLowerCase());
+        if(coincidencia){
+          const numeroCoincidencia = Number(coincidencia[1]);
+          if(Number.isFinite(numeroCoincidencia)) return numeroCoincidencia;
+        }
+      }
+      return 0;
+    }
+
+    async function cpObtenerUsuariosPorRolInterno(ctx, rolInterno){
+      const resultados = [];
+      const texto = (rolInterno || '').toString().trim();
+      if(!texto) return resultados;
+      const variantes = Array.from(new Set([
+        texto,
+        texto.toLowerCase(),
+        texto.toUpperCase(),
+        texto.charAt(0).toUpperCase() + texto.slice(1).toLowerCase()
+      ].filter(Boolean)));
+      const lotes = [];
+      for(let i=0;i<variantes.length;i+=10){
+        lotes.push(variantes.slice(i,i+10));
+      }
+      for(const lote of lotes){
+        try {
+          const snap = await ctx.db.collection('users').where('rolinterno','in',lote).get();
+          snap.forEach(doc=>{
+            const info = cpNormalizarInfoUsuario(doc.id, doc.data() || {});
+            resultados.push({ ...info, rolinterno: doc.data()?.rolinterno || texto });
+            cpAlmacenarUsuarioEnCaches(ctx, info);
+          });
+        } catch (err) {
+          console.warn('No se pudieron obtener usuarios por rol interno', lote, err);
+        }
+      }
+      if(!resultados.length){
+        try {
+          const snap = await ctx.db.collection('users').get();
+          snap.forEach(doc=>{
+            const data = doc.data() || {};
+            const valor = (data.rolinterno || '').toString();
+            if(valor && valor.toLowerCase() === texto.toLowerCase()){
+              const info = cpNormalizarInfoUsuario(doc.id, data);
+              resultados.push({ ...info, rolinterno: valor });
+              cpAlmacenarUsuarioEnCaches(ctx, info);
+            }
+          });
+        } catch (err) {
+          console.warn('No se pudo obtener listado completo de usuarios para rol interno', texto, err);
+        }
+      }
+      return resultados;
+    }
+
+    async function cpObtenerAdministrativosProcesados(ctx){
+      const definiciones = [
+        { rolInterno: 'agencia', clavesMonto: ['totalporcentaje','totalPorcentaje','total_porcentaje'] },
+        { rolInterno: 'desarrollador', clavesMonto: ['totalporcentajesu','totalPorcentajeSu','total_porcentajesu'] }
+      ];
+      const lista = [];
+      for(const definicion of definiciones){
+        const monto = cpObtenerCampoNumeroFlexible(ctx.sorteoData || {}, definicion.clavesMonto);
+        const usuarios = await cpObtenerUsuariosPorRolInterno(ctx, definicion.rolInterno);
+        usuarios.forEach(usuario=>{
+          const email = cpNormalizarEmail(usuario.email || usuario.uid || '');
+          if(!email) return;
+          lista.push({
+            gmail: email,
+            alias: usuario.alias || '',
+            nombre: usuario.nombre || '',
+            creditos: Number.isFinite(monto) ? Number(monto) || 0 : 0,
+            rolInterno: definicion.rolInterno,
+            userIds: usuario.uid ? [usuario.uid] : []
+          });
+        });
+      }
+      return lista;
+    }
+
+    async function cpObtenerColaboradoresSistema(ctx){
+      const lista = [];
+      try {
+        const snap = await ctx.db.collection('users').where('role','==','Colaborador').get();
+        snap.forEach(doc=>{
+          const info = cpNormalizarInfoUsuario(doc.id, doc.data() || {});
+          const email = cpNormalizarEmail(info.email || doc.id);
+          lista.push({
+            gmail: email,
+            alias: info.alias || '',
+            nombre: info.nombre || '',
+            creditos: Number(doc.data()?.creditos || 0) || 0,
+            userIds: info.uid ? [info.uid] : []
+          });
+        });
+      } catch (err) {
+        console.warn('No se pudieron obtener los colaboradores del sistema', err);
+      }
+      return lista;
     }
 
     function cpObtenerPosicionesForma(forma){
@@ -1060,7 +1253,7 @@
       }
     }
 
-    async function cpRegistrarSolicitudes(ctx, ganadores, colaboradores, totalCreditos, totalCartonesGratis){
+    async function cpRegistrarSolicitudes(ctx, ganadores, administrativos, colaboradores, totalCreditos, totalCartonesGratis){
       const timestamp = firebase.firestore.FieldValue.serverTimestamp();
       const sorteoNombre = (ctx.sorteoData?.nombre || '').toString();
       const operaciones = [];
@@ -1095,9 +1288,34 @@
         operaciones.push(cpActualizarDocumentoCentroPagos(ctx, ctx.db.collection('PremiosSorteos').doc(docId), payload));
       });
 
+      administrativos.forEach(administrativo=>{
+        const email = cpNormalizarEmail(administrativo.gmail);
+        const docId = cpConstruirIdSolicitud(`${ctx.sorteoId}_admin_${administrativo.rolInterno || 'admin'}`, email || administrativo.alias || 'admin');
+        const payload = {
+          sorteoId: ctx.sorteoId,
+          sorteoNombre,
+          gmail: email || '',
+          email: email || '',
+          nombre: administrativo.nombre || administrativo.alias || '',
+          alias: administrativo.alias || '',
+          creditos: Number(administrativo.creditos) || 0,
+          estado: 'PENDIENTE',
+          fechaAsignacion: timestamp,
+          fecha: timestamp,
+          creadoEn: timestamp,
+          actualizadoEn: timestamp,
+          tipoRegistro: 'ADMINISTRATIVO_SORTEO',
+          rolInterno: administrativo.rolInterno || '',
+          userIds: administrativo.userIds || [],
+          generadoDesde: 'centropagos'
+        };
+        if(email){ payload.idBilletera = email; }
+        operaciones.push(cpActualizarDocumentoCentroPagos(ctx, ctx.db.collection('PagosAdministracion').doc(docId), payload));
+      });
+
       colaboradores.forEach(colaborador=>{
         const email = cpNormalizarEmail(colaborador.gmail);
-        const docId = cpConstruirIdSolicitud(`${ctx.sorteoId}_colab`, email || colaborador.alias || 'colaborador');
+        const docId = cpConstruirIdSolicitud(`${ctx.sorteoId}_colaborador`, email || colaborador.alias || 'colaborador');
         const payload = {
           sorteoId: ctx.sorteoId,
           sorteoNombre,
@@ -1115,7 +1333,8 @@
           userIds: colaborador.userIds || [],
           generadoDesde: 'centropagos'
         };
-        operaciones.push(cpActualizarDocumentoCentroPagos(ctx, ctx.db.collection('PagosAdministracion').doc(docId), payload));
+        if(email){ payload.idBilletera = email; }
+        operaciones.push(cpActualizarDocumentoCentroPagos(ctx, ctx.db.collection('PagosColaboradores').doc(docId), payload));
       });
 
       const resumenRef = ctx.db.collection('SorteosCentroPagos').doc(ctx.sorteoId);
@@ -1123,6 +1342,7 @@
         sorteoId: ctx.sorteoId,
         sorteoNombre,
         totalGanadores: ganadores.length,
+        totalAdministrativos: administrativos.length,
         totalColaboradores: colaboradores.length,
         totalCreditosPremios: totalCreditos,
         totalCartonesGratis,
@@ -1133,10 +1353,18 @@
           cartonesGratis: Number(item.cartonesGratis) || 0,
           cartonesGanadores: Number(item.cartonesGanadores) || 0
         })),
+        administrativos: administrativos.map(item=>({
+          gmail: cpNormalizarEmail(item.gmail || ''),
+          alias: item.alias || '',
+          nombre: item.nombre || '',
+          rolInterno: item.rolInterno || '',
+          creditos: Number(item.creditos) || 0
+        })),
         colaboradores: colaboradores.map(item=>({
           gmail: cpNormalizarEmail(item.gmail || ''),
           alias: item.alias || '',
-          nombre: item.nombre || ''
+          nombre: item.nombre || '',
+          creditos: Number(item.creditos) || 0
         })),
         generadoEn: timestamp,
         generadoDesde: 'centropagos'
@@ -1165,10 +1393,11 @@
       await cpCargarCantos(ctx);
       cpCalcularResultados(ctx);
       const { lista: ganadores, totalCreditos, totalCartonesGratis } = await cpObtenerGanadoresAgrupados(ctx);
-      const colaboradores = await cpObtenerColaboradoresProcesados(ctx);
-      await cpRegistrarSolicitudes(ctx, ganadores, colaboradores, totalCreditos, totalCartonesGratis);
+      const administrativos = await cpObtenerAdministrativosProcesados(ctx);
+      const colaboradores = await cpObtenerColaboradoresSistema(ctx);
+      await cpRegistrarSolicitudes(ctx, ganadores, administrativos, colaboradores, totalCreditos, totalCartonesGratis);
       await cpMarcarSolicitudesGeneradas(ctx);
-      return { ganadores: ganadores.length, colaboradores: colaboradores.length };
+      return { ganadores: ganadores.length, administrativos: administrativos.length, colaboradores: colaboradores.length };
     }
 
     function esSorteoFinalizado(data = {}){
@@ -1302,6 +1531,8 @@
       const fechaInfo = normalizarFecha(data.fecha ?? data.fechaAsignacion ?? data.createdAt);
       const estado = normalizarEstado(data.estado);
       const billetera = (data.idBilletera || gmail).toString();
+      const sorteoId = (data.sorteoId || '').toString();
+      const sorteoNombre = (data.sorteoNombre || '').toString();
       return {
         id,
         gmail,
@@ -1311,7 +1542,11 @@
         fechaFiltro: fechaInfo.filtro,
         fechaOrden: fechaInfo.orden,
         estado,
-        billetera
+        billetera,
+        tipoRegistro: (data.tipoRegistro || '').toString(),
+        rolInterno: (data.rolInterno || '').toString(),
+        sorteoId,
+        sorteoNombre
       };
     }
 
@@ -1335,6 +1570,23 @@
             <td class="alias">${escapeHtml(item.alias)}</td>
             <td>${formatNumber.format(item.creditos)}</td>
             <td>${formatNumber.format(item.cartones)}</td>
+            <td>${escapeHtml(item.fechaMostrar)}</td>
+            <td class="estado">${estadoHtml}</td>
+            <td><input type="checkbox" data-id="${item.id}" ${disabled}></td>
+          </tr>`;
+        }
+        if(tipo === 'colaboradores'){
+          const valorReferencia = pagosColaboradoresEdicion.has(item.id)
+            ? pagosColaboradoresEdicion.get(item.id)
+            : item.creditos;
+          const numeroValor = Number(valorReferencia);
+          const valorInput = Number.isFinite(numeroValor) ? numeroValor.toFixed(2) : '';
+          const archivoAttr = mostrarArchivo ? ' data-archivo="1"' : '';
+          return `<tr data-id="${item.id}">
+            <td>${numero}</td>
+            <td class="gmail">${escapeHtml(item.gmail)}</td>
+            <td class="alias">${escapeHtml(item.nombre)}</td>
+            <td><input type="number" class="colab-input" step="0.01" min="0" data-id="${item.id}" value="${valorInput}" disabled${archivoAttr}></td>
             <td>${escapeHtml(item.fechaMostrar)}</td>
             <td class="estado">${estadoHtml}</td>
             <td><input type="checkbox" data-id="${item.id}" ${disabled}></td>
@@ -1376,6 +1628,17 @@
       }).sort((a,b)=>b.fechaOrden - a.fechaOrden || b.creditos - a.creditos);
     }
 
+    function aplicarFiltrosColaboradores(origen){
+      return origen.filter(item=>{
+        if(filtrosColaboradores.gmail && !item.gmail.toLowerCase().includes(filtrosColaboradores.gmail)) return false;
+        if(filtrosColaboradores.nombre && !item.nombre.toLowerCase().includes(filtrosColaboradores.nombre)) return false;
+        if(filtrosColaboradores.creditos && !item.creditos.toString().includes(filtrosColaboradores.creditos)) return false;
+        if(filtrosColaboradores.fecha && item.fechaFiltro !== filtrosColaboradores.fecha) return false;
+        if(filtrosColaboradores.estado && item.estado !== filtrosColaboradores.estado) return false;
+        return true;
+      }).sort((a,b)=>b.fechaOrden - a.fechaOrden || b.creditos - a.creditos);
+    }
+
     function renderPremios(){
       const lista = mostrarPremiosArchivo ? aplicarFiltrosPremios(premiosArchivados) : aplicarFiltrosPremios(premiosActivos);
       renderTabla(lista, 'tabla-premios', { mostrarArchivo: mostrarPremiosArchivo, tipo: 'premios' });
@@ -1384,9 +1647,18 @@
     }
 
     function renderPagos(){
-      const lista = mostrarPagosArchivo ? aplicarFiltrosPagos(pagosArchivados) : aplicarFiltrosPagos(pagosActivos);
+      const lista = mostrarPagosArchivo ? aplicarFiltrosPagos(pagosAdminArchivados) : aplicarFiltrosPagos(pagosAdminActivos);
       renderTabla(lista, 'tabla-pagos', { mostrarArchivo: mostrarPagosArchivo, tipo: 'pagos' });
-      actualizarBadge('pagos', pagosActivos.filter(item=>item.estado === 'PENDIENTE').length);
+      actualizarBadge('pagos', pagosAdminActivos.filter(item=>item.estado === 'PENDIENTE').length);
+      actualizarEstadoBotones();
+    }
+
+    function renderColaboradores(){
+      const lista = mostrarColaboradoresArchivo
+        ? aplicarFiltrosColaboradores(pagosColaboradoresArchivados)
+        : aplicarFiltrosColaboradores(pagosColaboradoresActivos);
+      renderTabla(lista, 'tabla-colaboradores', { mostrarArchivo: mostrarColaboradoresArchivo, tipo: 'colaboradores' });
+      actualizarBadge('colaboradores', pagosColaboradoresActivos.filter(item=>item.estado === 'PENDIENTE').length);
       actualizarEstadoBotones();
     }
 
@@ -1418,13 +1690,16 @@
       if(premiosAprobar) premiosAprobar.disabled = mostrarPremiosArchivo;
       if(premiosArchivar) premiosArchivar.disabled = mostrarPremiosArchivo;
       const pagosAprobar = document.getElementById('pagos-aprobar');
-      const pagosEditar = document.getElementById('pagos-editar');
       const pagosArchivar = document.getElementById('pagos-archivar');
       if(pagosAprobar) pagosAprobar.disabled = mostrarPagosArchivo;
-      if(pagosEditar) pagosEditar.disabled = mostrarPagosArchivo;
       if(pagosArchivar) pagosArchivar.disabled = mostrarPagosArchivo;
       document.getElementById('premios-ver-archivo').classList.toggle('archivo-activo', mostrarPremiosArchivo);
       document.getElementById('pagos-ver-archivo').classList.toggle('archivo-activo', mostrarPagosArchivo);
+      const colabAprobar = document.getElementById('colaboradores-aprobar');
+      const colabArchivar = document.getElementById('colaboradores-archivar');
+      if(colabAprobar) colabAprobar.disabled = mostrarColaboradoresArchivo;
+      if(colabArchivar) colabArchivar.disabled = mostrarColaboradoresArchivo;
+      document.getElementById('colaboradores-ver-archivo').classList.toggle('archivo-activo', mostrarColaboradoresArchivo);
     }
 
     async function registrarTransaccionPremio(enRegistro){
@@ -1471,13 +1746,16 @@
     async function acreditarPago(enRegistro){
       const db = dbRef();
       if(!enRegistro.billetera) return;
+      const creditos = Number(enRegistro.creditos) || 0;
+      if(creditos <= 0) return;
       await db.runTransaction(async tx => {
         const billeteraRef = db.collection('Billetera').doc(enRegistro.billetera);
         const billeteraDoc = await tx.get(billeteraRef);
         const datos = billeteraDoc.exists ? billeteraDoc.data() : {};
-        const nuevosCreditos = (Number(datos.creditos) || 0) + enRegistro.creditos;
+        const nuevosCreditos = (Number(datos.creditos) || 0) + creditos;
         tx.set(billeteraRef, { creditos: nuevosCreditos }, { merge: true });
       });
+      await registrarTransaccionPremio({ ...enRegistro, creditos, cartones: 0 });
     }
 
     async function aprobarPremios(ids){
@@ -1518,7 +1796,7 @@
       const db = dbRef();
       await initServerTime();
       for(const id of ids){
-        const registro = pagosMapa.get(id);
+        const registro = pagosAdminMapa.get(id);
         if(!registro){ console.warn('Pago no encontrado', id); continue; }
         if(registro.estado === 'APROBADO'){ continue; }
         try {
@@ -1546,12 +1824,62 @@
       }
     }
 
+    async function aprobarPagosColaboradores(ids){
+      if(!ids.length) return;
+      const db = dbRef();
+      await initServerTime();
+      for(const id of ids){
+        const registro = pagosColaboradoresMapa.get(id);
+        if(!registro){ console.warn('Pago de colaborador no encontrado', id); continue; }
+        if(registro.estado === 'APROBADO'){ continue; }
+        const valorEdicion = pagosColaboradoresEdicion.has(id)
+          ? pagosColaboradoresEdicion.get(id)
+          : registro.creditos;
+        const monto = Number(valorEdicion);
+        if(!Number.isFinite(monto) || monto <= 0){
+          alert(' para poder APROBAR el pago, debes ingresar una cantidad de CREDITOS mayor a 0');
+          return;
+        }
+        try {
+          await db.runTransaction(async tx => {
+            const ref = db.collection('PagosColaboradores').doc(id);
+            const snap = await tx.get(ref);
+            if(!snap.exists) return;
+            const data = snap.data();
+            const estadoActual = normalizarEstado(data.estado);
+            if(estadoActual === 'APROBADO') return;
+            tx.update(ref, {
+              estado: 'APROBADO',
+              creditos: monto,
+              fechaGestion: fechaServidor(),
+              horaGestion: horaServidor(),
+              gestionadoPor: authInstance().currentUser?.email || '',
+              rolGestor: window.currentRole || ''
+            });
+          });
+          pagosColaboradoresEdicion.delete(id);
+          await acreditarPago({ ...registro, creditos: monto });
+        } catch (err) {
+          console.error('Error aprobando pago de colaborador', err);
+          alert('Ocurrió un error al aprobar un pago de colaborador. Revisa la consola para más detalles.');
+          break;
+        }
+      }
+    }
+
     async function archivarRegistros(ids, tipo){
       if(!ids.length) return;
       const db = dbRef();
       await initServerTime();
-      const coleccionBase = tipo === 'premios' ? db.collection('PremiosSorteos') : db.collection('PagosAdministracion');
-      const coleccionArchivo = tipo === 'premios' ? db.collection('PremiosSorteosArchivo') : db.collection('PagosAdministracionArchivo');
+      let coleccionBase = db.collection('PagosAdministracion');
+      let coleccionArchivo = db.collection('PagosAdministracionArchivo');
+      if(tipo === 'premios'){
+        coleccionBase = db.collection('PremiosSorteos');
+        coleccionArchivo = db.collection('PremiosSorteosArchivo');
+      } else if(tipo === 'colaboradores'){
+        coleccionBase = db.collection('PagosColaboradores');
+        coleccionArchivo = db.collection('PagosColaboradoresArchivo');
+      }
       for(const id of ids){
         try {
           await db.runTransaction(async tx => {
@@ -1577,29 +1905,6 @@
       }
     }
 
-    async function editarPago(ids){
-      if(ids.length !== 1){
-        alert('Selecciona un único registro para editar.');
-        return;
-      }
-      const id = ids[0];
-      const registro = pagosMapa.get(id);
-      if(!registro){ alert('No se encontró el registro seleccionado.'); return; }
-      const nuevoValor = await prompt('Nuevo monto de créditos para este pago:', registro.creditos);
-      if(nuevoValor === null) return;
-      const valor = Number(nuevoValor);
-      if(!Number.isFinite(valor) || valor < 0){
-        alert('Ingresa un valor numérico válido.');
-        return;
-      }
-      try {
-        await dbRef().collection('PagosAdministracion').doc(id).update({ creditos: valor });
-      } catch (err) {
-        console.error('Error editando pago', err);
-        alert('No se pudo editar el pago seleccionado.');
-      }
-    }
-
     function configurarFiltros(){
       document.getElementById('filtro-premios-gmail').addEventListener('input', e=>{ filtrosPremios.gmail = e.target.value.toLowerCase().trim(); renderPremios(); });
       document.getElementById('filtro-premios-alias').addEventListener('input', e=>{ filtrosPremios.alias = e.target.value.toLowerCase().trim(); renderPremios(); });
@@ -1613,6 +1918,12 @@
       document.getElementById('filtro-pagos-creditos').addEventListener('input', e=>{ filtrosPagos.creditos = e.target.value.replace(/[^0-9.]/g,''); renderPagos(); });
       document.getElementById('filtro-pagos-fecha').addEventListener('change', e=>{ filtrosPagos.fecha = e.target.value; renderPagos(); });
       document.getElementById('filtro-pagos-estado').addEventListener('change', e=>{ filtrosPagos.estado = e.target.value; renderPagos(); });
+
+      document.getElementById('filtro-colab-gmail').addEventListener('input', e=>{ filtrosColaboradores.gmail = e.target.value.toLowerCase().trim(); renderColaboradores(); });
+      document.getElementById('filtro-colab-nombre').addEventListener('input', e=>{ filtrosColaboradores.nombre = e.target.value.toLowerCase().trim(); renderColaboradores(); });
+      document.getElementById('filtro-colab-creditos').addEventListener('input', e=>{ filtrosColaboradores.creditos = e.target.value.replace(/[^0-9.]/g,''); renderColaboradores(); });
+      document.getElementById('filtro-colab-fecha').addEventListener('change', e=>{ filtrosColaboradores.fecha = e.target.value; renderColaboradores(); });
+      document.getElementById('filtro-colab-estado').addEventListener('change', e=>{ filtrosColaboradores.estado = e.target.value; renderColaboradores(); });
     }
 
     function configurarBotones(){
@@ -1645,10 +1956,6 @@
         if(!seleccion.length){ alert('Selecciona al menos un registro.'); return; }
         await aprobarPagos(seleccion);
       });
-      document.getElementById('pagos-editar').addEventListener('click', ()=>{
-        const seleccion = obtenerSeleccion('tabla-pagos');
-        editarPago(seleccion);
-      });
       document.getElementById('pagos-archivar').addEventListener('click', async()=>{
         const seleccion = obtenerSeleccion('tabla-pagos');
         if(!seleccion.length){ alert('Selecciona registros para archivar.'); return; }
@@ -1660,6 +1967,55 @@
         renderPagos();
       });
 
+      document.getElementById('colaboradores-marcar').addEventListener('click', ()=>seleccionarTodos('tabla-colaboradores'));
+      document.getElementById('colaboradores-aprobar').addEventListener('click', async()=>{
+        const seleccion = obtenerSeleccion('tabla-colaboradores');
+        if(!seleccion.length){ alert('Selecciona al menos un registro.'); return; }
+        await aprobarPagosColaboradores(seleccion);
+      });
+      document.getElementById('colaboradores-archivar').addEventListener('click', async()=>{
+        const seleccion = obtenerSeleccion('tabla-colaboradores');
+        if(!seleccion.length){ alert('Selecciona registros para archivar.'); return; }
+        if(!(await confirm('¿Deseas archivar los registros seleccionados?'))) return;
+        await archivarRegistros(seleccion, 'colaboradores');
+      });
+      document.getElementById('colaboradores-ver-archivo').addEventListener('click', ()=>{
+        mostrarColaboradoresArchivo = !mostrarColaboradoresArchivo;
+        renderColaboradores();
+      });
+
+      const tablaColaboradores = document.getElementById('tabla-colaboradores');
+      tablaColaboradores.addEventListener('change', e=>{
+        if(e.target.matches('tbody input[type="checkbox"]')){
+          const id = e.target.dataset.id;
+          const fila = e.target.closest('tr');
+          const input = fila ? fila.querySelector('.colab-input') : null;
+          if(!input) return;
+          const registroActual = pagosColaboradoresMapa.get(id);
+          if(registroActual && registroActual.estado === 'APROBADO'){
+            e.target.checked = false;
+            input.disabled = true;
+            return;
+          }
+          if(e.target.checked && !mostrarColaboradoresArchivo){
+            input.disabled = false;
+            input.focus();
+            input.select();
+          } else {
+            input.disabled = true;
+            const registro = pagosColaboradoresMapa.get(id) || pagosColaboradoresArchivoMapa.get(id) || null;
+            const valor = registro ? Number(registro.creditos) || 0 : 0;
+            pagosColaboradoresEdicion.delete(id);
+            input.value = valor.toFixed(2);
+          }
+        }
+      });
+      tablaColaboradores.addEventListener('input', e=>{
+        if(e.target.matches('.colab-input')){
+          pagosColaboradoresEdicion.set(e.target.dataset.id, e.target.value);
+        }
+      });
+
       const togglePremios = document.getElementById('toggle-premios');
       const contenidoPremios = document.getElementById('premios-content');
       togglePremios.addEventListener('change', ()=>{ contenidoPremios.style.display = togglePremios.checked ? 'block' : 'none'; });
@@ -1669,6 +2025,11 @@
       const contenidoPagos = document.getElementById('pagos-content');
       togglePagos.addEventListener('change', ()=>{ contenidoPagos.style.display = togglePagos.checked ? 'block' : 'none'; });
       contenidoPagos.style.display = 'none';
+
+      const toggleColaboradores = document.getElementById('toggle-colaboradores');
+      const contenidoColaboradores = document.getElementById('colaboradores-content');
+      toggleColaboradores.addEventListener('change', ()=>{ contenidoColaboradores.style.display = toggleColaboradores.checked ? 'block' : 'none'; });
+      contenidoColaboradores.style.display = 'none';
 
       document.getElementById('volver-btn').addEventListener('click', e=>volverConFallback(e));
     }
@@ -1724,30 +2085,59 @@
         if(mostrarPremiosArchivo) renderPremios();
       });
       unsubscribePagos = db.collection('PagosAdministracion').onSnapshot(snapshot => {
-        pagosActivos.length = 0;
-        pagosMapa.clear();
+        pagosAdminActivos.length = 0;
+        pagosAdminMapa.clear();
         snapshot.forEach(doc => {
           const registro = prepararPago(doc.id, doc.data());
-          pagosActivos.push(registro);
-          pagosMapa.set(doc.id, registro);
+          pagosAdminActivos.push(registro);
+          pagosAdminMapa.set(doc.id, registro);
         });
         renderPagos();
       });
       unsubscribePagosArchivo = db.collection('PagosAdministracionArchivo').onSnapshot(snapshot => {
-        pagosArchivados.length = 0;
-        pagosArchivoMapa.clear();
+        pagosAdminArchivados.length = 0;
+        pagosAdminArchivoMapa.clear();
         snapshot.forEach(doc => {
           const registro = prepararPago(doc.id, doc.data());
           registro.estado = normalizarEstado(doc.data().estado || 'ARCHIVADO');
-          pagosArchivados.push(registro);
-          pagosArchivoMapa.set(doc.id, registro);
+          pagosAdminArchivados.push(registro);
+          pagosAdminArchivoMapa.set(doc.id, registro);
         });
         if(mostrarPagosArchivo) renderPagos();
+      });
+      unsubscribeColaboradores = db.collection('PagosColaboradores').onSnapshot(snapshot => {
+        pagosColaboradoresActivos.length = 0;
+        pagosColaboradoresMapa.clear();
+        snapshot.forEach(doc => {
+          const registro = prepararPago(doc.id, doc.data());
+          pagosColaboradoresActivos.push(registro);
+          pagosColaboradoresMapa.set(doc.id, registro);
+          pagosColaboradoresEdicion.delete(doc.id);
+        });
+        renderColaboradores();
+      });
+      unsubscribeColaboradoresArchivo = db.collection('PagosColaboradoresArchivo').onSnapshot(snapshot => {
+        pagosColaboradoresArchivados.length = 0;
+        pagosColaboradoresArchivoMapa.clear();
+        snapshot.forEach(doc => {
+          const registro = prepararPago(doc.id, doc.data());
+          registro.estado = normalizarEstado(doc.data().estado || 'ARCHIVADO');
+          pagosColaboradoresArchivados.push(registro);
+          pagosColaboradoresArchivoMapa.set(doc.id, registro);
+        });
+        if(mostrarColaboradoresArchivo) renderColaboradores();
       });
     }
 
     window.addEventListener('beforeunload', ()=>{
-      [unsubscribePremios, unsubscribePremiosArchivo, unsubscribePagos, unsubscribePagosArchivo].forEach(unsub=>{
+      [
+        unsubscribePremios,
+        unsubscribePremiosArchivo,
+        unsubscribePagos,
+        unsubscribePagosArchivo,
+        unsubscribeColaboradores,
+        unsubscribeColaboradoresArchivo
+      ].forEach(unsub=>{
         if(typeof unsub === 'function') unsub();
       });
     });
