@@ -1753,6 +1753,12 @@
     hora: null,
     horaCierre: null
   };
+
+  function obtenerEstadoActualNormalizado(){
+    return (currentSorteoData && currentSorteoData.estado)
+      ? currentSorteoData.estado.toString().trim().toLowerCase()
+      : '';
+  }
   const clasesEstadoTiempo = [
     'estado-tiempo-futuro',
     'estado-tiempo-proximo',
@@ -4307,7 +4313,7 @@
 
   function actualizarAnimacionFilaProgramada(){
     if(!filaProgramada) return;
-    const estadoActual = (currentSorteoData && currentSorteoData.estado) ? currentSorteoData.estado.toString().toLowerCase() : '';
+    const estadoActual = obtenerEstadoActualNormalizado();
     const estaJugando = estadoActual === 'jugando';
     const fechaEnAzul = fechaProgramadaEl && fechaProgramadaEl.classList.contains('estado-tiempo-actual');
     const horaEnAzul = horaProgramadaEl && horaProgramadaEl.classList.contains('estado-tiempo-actual');
@@ -4324,7 +4330,7 @@
 
   function actualizarColoresFechas(ahoraParam){
     const ahora = (ahoraParam instanceof Date && !isNaN(ahoraParam.getTime())) ? ahoraParam : (getServerNow() || new Date());
-    const esFinalizado = currentSorteoData && (currentSorteoData.estado || '').toString().toLowerCase() === 'finalizado';
+    const esFinalizado = obtenerEstadoActualNormalizado() === 'finalizado';
     [fechaProgramadaEl, horaProgramadaEl, fechaCierreEl, horaCierreEl].forEach(elemento=>{
       if(elemento){
         elemento.classList.toggle('estado-tiempo-finalizado', Boolean(esFinalizado));
@@ -4412,7 +4418,7 @@
     [sellarBtn, pdfBtn, jugarBtn, finalizarBtn].forEach(btn=>btn.classList.remove('attention'));
     actualizarBotones();
     if(!currentSorteoData) return;
-    const estadoLower = (currentSorteoData.estado || '').toString().toLowerCase();
+    const estadoLower = obtenerEstadoActualNormalizado();
     const pdfEstado = (currentSorteoData.pdf || '').toString().toLowerCase();
     if(estadoLower === 'activo'){
       sellarBtn.classList.add('attention');
@@ -4447,7 +4453,7 @@
       finalizarBtn.classList.remove('pdf-disponible');
       return;
     }
-    const estado = (currentSorteoData.estado || '').toLowerCase();
+    const estado = obtenerEstadoActualNormalizado();
     const pdfEstado = (currentSorteoData.pdf || '').toString().toLowerCase();
     const pdfResultadoEstado = (currentSorteoData.pdfresul || '').toString().toLowerCase();
 
@@ -5003,7 +5009,7 @@
       return;
     }
 
-    const estadoActual = (currentSorteoData.estado || '').toString().toLowerCase();
+    const estadoActual = obtenerEstadoActualNormalizado();
     if(estadoActual === 'sellado'){ alert('El sorteo ya está sellado.'); return; }
     if(estadoActual === 'jugando' || estadoActual === 'finalizado'){
       alert('El sorteo ya se encuentra en una fase posterior.');
@@ -5177,7 +5183,7 @@
   async function abrirPDF(){
     if(!currentSorteoId || !currentSorteoData){ alert('Selecciona un sorteo primero.'); return; }
 
-    const estadoActual = (currentSorteoData.estado || '').toString().toLowerCase();
+    const estadoActual = obtenerEstadoActualNormalizado();
     if(estadoActual === 'finalizado'){
       let estadoPdfResultado = (currentSorteoData.pdfresul || '').toString().trim().toLowerCase();
       if(estadoPdfResultado !== 'si'){
@@ -5325,7 +5331,7 @@
       return;
     }
 
-    const estadoActual = (currentSorteoData.estado || '').toString().toLowerCase();
+    const estadoActual = obtenerEstadoActualNormalizado();
     if(estadoActual === 'jugando'){ alert('El sorteo ya está en estado Jugando.'); return; }
     if(estadoActual === 'finalizado'){ alert('El sorteo ya finalizó.'); return; }
     if(estadoActual !== 'sellado'){
@@ -5414,7 +5420,7 @@
       return;
     }
 
-    const estadoActual = (currentSorteoData.estado || '').toString().toLowerCase();
+    const estadoActual = obtenerEstadoActualNormalizado();
     if(estadoActual === 'finalizado'){
       let estadoPdfResultado = (currentSorteoData.pdfresul || '').toString().trim().toLowerCase();
       if(estadoPdfResultado !== 'si'){

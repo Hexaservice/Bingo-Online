@@ -129,6 +129,67 @@
       margin-left: 4px;
       font-weight: bold;
     }
+    #password-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.55);
+      z-index: 1000;
+      padding: 20px;
+    }
+    #password-modal.visible {
+      display: flex;
+    }
+    #password-modal .modal-box {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      max-width: 320px;
+      width: 100%;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      font-family: Calibri, Arial, sans-serif;
+      text-align: left;
+    }
+    #password-modal h3 {
+      margin-top: 0;
+      text-align: center;
+      font-family: 'Bangers', cursive;
+      letter-spacing: 1px;
+    }
+    #password-modal input[type="password"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box;
+      margin-top: 10px;
+    }
+    #password-modal .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    #password-modal button {
+      font-family: Calibri, Arial, sans-serif;
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      background: rgba(0, 170, 255, 0.8);
+      color: #fff;
+    }
+    #password-modal button#password-cancel {
+      background: #888;
+    }
+    #password-error {
+      display: none;
+      color: #c62828;
+      margin-top: 10px;
+      font-size: 0.85rem;
+    }
   </style>
 </head>
 <body>
@@ -136,6 +197,18 @@
   <div id="session-info" style="display:none;">
     <img id="user-pic" referrerpolicy="no-referrer" crossorigin="anonymous" src="" alt="Usuario" />
     <a href="#" id="logout-link">Cerrar sesión</a>
+  </div>
+  <div id="password-modal" aria-hidden="true">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="password-modal-title">
+      <h3 id="password-modal-title">Confirmar acceso</h3>
+      <p>Ingresa la contraseña de Superadmin para continuar.</p>
+      <input type="password" id="password-input" autocomplete="current-password" placeholder="Contraseña" />
+      <div id="password-error" role="alert"></div>
+      <div class="modal-actions">
+        <button type="button" id="password-cancel">Cancelar</button>
+        <button type="button" id="password-submit">Ingresar</button>
+      </div>
+    </div>
   </div>
   <h2 style="margin-top:20px;">Parámetros Globales</h2>
   <div id="parametros-form">
@@ -226,24 +299,90 @@
       }
     }
 
-    async function solicitarPassword(){
-      const pwd = await prompt('Ingresa tu contraseña');
-      if(!pwd){ window.location.href='super.html'; return; }
-      try{
-        const doc = await db.collection('Variablesglobales').doc('Parametros').get();
-        if(doc.exists && doc.data().contrasenasu === pwd){
-          cargarFormulario(doc.data());
-          document.getElementById('parametros-form').style.display = 'flex';
-          document.getElementById('session-info').style.display = 'flex';
-        }else{
-          alert('Contraseña incorrecta');
-          window.location.href='super.html';
-        }
-      }catch(e){
-        console.error(e);
-        alert('Error al verificar contraseña');
-        window.location.href='super.html';
+    function solicitarPassword(expectedPassword){
+      const modal = document.getElementById('password-modal');
+      const input = document.getElementById('password-input');
+      const cancelarBtn = document.getElementById('password-cancel');
+      const ingresarBtn = document.getElementById('password-submit');
+      const errorEl = document.getElementById('password-error');
+      const esperado = (expectedPassword || '').toString();
+      if(!modal || !input || !cancelarBtn || !ingresarBtn){
+        return Promise.resolve(false);
       }
+
+      return new Promise(resolve=>{
+        const mostrarError = mensaje => {
+          if(errorEl){
+            errorEl.textContent = mensaje;
+            errorEl.style.display = 'block';
+          }else{
+            alert(mensaje);
+          }
+        };
+
+        const limpiar = ()=>{
+          modal.classList.remove('visible');
+          modal.setAttribute('aria-hidden', 'true');
+          input.value = '';
+          if(errorEl){
+            errorEl.textContent = '';
+            errorEl.style.display = 'none';
+          }
+          ingresarBtn.removeEventListener('click', manejarSubmit);
+          cancelarBtn.removeEventListener('click', manejarCancelar);
+          input.removeEventListener('keydown', manejarKeydown);
+          modal.removeEventListener('click', manejarBackdrop);
+        };
+
+        const manejarSubmit = evento => {
+          evento.preventDefault();
+          const valor = input.value.trim();
+          if(!valor){
+            mostrarError('Ingresa la contraseña.');
+            input.focus();
+            return;
+          }
+          if(valor !== esperado){
+            mostrarError('Contraseña incorrecta.');
+            input.select();
+            return;
+          }
+          limpiar();
+          resolve(true);
+        };
+
+        const manejarCancelar = evento => {
+          evento.preventDefault();
+          limpiar();
+          resolve(false);
+        };
+
+        const manejarKeydown = evento => {
+          if(evento.key === 'Enter'){
+            manejarSubmit(evento);
+          }else if(evento.key === 'Escape'){
+            manejarCancelar(evento);
+          }
+        };
+
+        const manejarBackdrop = evento => {
+          if(evento.target === modal){
+            manejarCancelar(evento);
+          }
+        };
+
+        modal.classList.add('visible');
+        modal.setAttribute('aria-hidden', 'false');
+        if(errorEl){
+          errorEl.textContent = '';
+          errorEl.style.display = 'none';
+        }
+        ingresarBtn.addEventListener('click', manejarSubmit);
+        cancelarBtn.addEventListener('click', manejarCancelar);
+        input.addEventListener('keydown', manejarKeydown);
+        modal.addEventListener('click', manejarBackdrop);
+        setTimeout(()=>input.focus({ preventScroll: true }), 50);
+      });
     }
     function cargarFormulario(data){
       document.getElementById('aplicacion').value = data.Aplicacion || '';
@@ -296,7 +435,39 @@
         if(logout){logout.addEventListener('click',e=>{e.preventDefault();logout();});}
       }
     });
-    (async()=>{ await cargarPaises(); await solicitarPassword(); })();
+    async function iniciarParametros(){
+      await cargarPaises();
+      let datosParametros = null;
+      try{
+        const doc = await db.collection('Variablesglobales').doc('Parametros').get();
+        if(!doc.exists){
+          alert('No se encontraron parámetros configurados.');
+          window.location.href='super.html';
+          return;
+        }
+        datosParametros = doc.data() || {};
+      }catch(error){
+        console.error('Error al obtener parámetros', error);
+        alert('No fue posible obtener los parámetros.');
+        window.location.href='super.html';
+        return;
+      }
+
+      const contrasenaEsperada = (datosParametros.contrasenasu || '').toString().trim();
+      if(contrasenaEsperada){
+        const accesoPermitido = await solicitarPassword(contrasenaEsperada);
+        if(!accesoPermitido){
+          window.location.href='super.html';
+          return;
+        }
+      }
+
+      cargarFormulario(datosParametros);
+      document.getElementById('parametros-form').style.display = 'flex';
+      document.getElementById('session-info').style.display = 'flex';
+    }
+
+    iniciarParametros();
   </script>
   <script src="js/backNavigation.js"></script>
 </body>
