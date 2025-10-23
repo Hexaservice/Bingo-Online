@@ -2142,9 +2142,20 @@
       });
     });
 
-    configurarFiltros();
-    configurarBotones();
-    suscribirColecciones();
+    async function iniciarCentroPagos(){
+      configurarFiltros();
+      configurarBotones();
+      try {
+        await ensureFirebaseListo();
+      } catch (err) {
+        console.error('No se pudo inicializar Firebase para Centro de Pagos', err);
+        alert('No fue posible inicializar la conexión con la base de datos. Intenta recargar la página.');
+        return;
+      }
+      suscribirColecciones();
+    }
+
+    iniciarCentroPagos();
   </script>
   <script src="js/backNavigation.js"></script>
 </body>
