@@ -428,6 +428,12 @@
       border-color: #ffe082;
       box-shadow: 0 6px 14px rgba(183, 28, 28, 0.35);
     }
+    #resultado-btn {
+      background: linear-gradient(165deg, #0f6f1f 0%, #43a047 55%, #7cfcba 100%);
+      border-color: #c5e1a5;
+      box-shadow: 0 6px 14px rgba(56, 142, 60, 0.32);
+      display: none;
+    }
     #jugar-btn { background: linear-gradient(#4b0082,#ffffff); }
     #finalizar-btn { background: linear-gradient(#8b0000,#ffffff); }
     #centro-pagos-btn {
@@ -475,17 +481,17 @@
       display: flex;
       animation: pdfFloat 3.4s ease-in-out infinite, pdfGlowRojo 2.8s ease-in-out infinite;
     }
-    #finalizar-btn .pdf-floating-icon {
+    #resultado-btn .pdf-floating-icon {
       background: radial-gradient(circle at 35% 30%, #ffffff 0%, #e8f5e9 58%, #a5d6a7 100%);
       border: 2px solid rgba(56, 142, 60, 0.35);
       box-shadow: 0 8px 16px rgba(46, 125, 50, 0.28);
     }
-    #finalizar-btn .pdf-floating-icon svg {
+    #resultado-btn .pdf-floating-icon svg {
       width: 20px;
       height: 24px;
       filter: drop-shadow(0 1px 2px rgba(0,0,0,0.18));
     }
-    #finalizar-btn.pdf-disponible .pdf-floating-icon {
+    #resultado-btn.pdf-disponible .pdf-floating-icon {
       display: flex;
       animation: pdfFloat 3.4s ease-in-out infinite, pdfGlowVerde 2.8s ease-in-out infinite;
     }
@@ -1571,6 +1577,20 @@
       </button>
       <button id="finalizar-btn" class="estado-btn" title="Finalizar sorteo">
         <img src="https://api.iconify.design/mdi/flag-checkered.svg?color=white" alt="Finalizar">
+      </button>
+      <button id="resultado-btn" class="estado-btn" title="Resultado en PDF" aria-label="Descargar resultado en PDF">
+        <svg class="pdf-btn-icon" viewBox="0 0 48 48" role="img" aria-label="Documento PDF de resultados">
+          <defs>
+            <linearGradient id="pdfResultadoIconGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#ffffff" />
+              <stop offset="100%" stop-color="#e8f5e9" />
+            </linearGradient>
+          </defs>
+          <path d="M14 4h18l8 8v28a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4z" fill="url(#pdfResultadoIconGradient)" stroke="#2e7d32" stroke-width="2" stroke-linejoin="round"></path>
+          <path d="M32 4v8h8" fill="#ffffff" stroke="#2e7d32" stroke-width="2" stroke-linejoin="round"></path>
+          <rect x="14" y="22" width="20" height="16" rx="3" fill="#2e7d32"></rect>
+          <text x="24" y="33" text-anchor="middle" font-family="'Poppins', sans-serif" font-weight="700" font-size="11" fill="#ffffff" letter-spacing="1">PDF</text>
+        </svg>
         <span class="pdf-floating-icon" aria-hidden="true">
           <svg viewBox="0 0 36 40" role="img" aria-hidden="true">
             <defs>
@@ -1711,8 +1731,9 @@
   const pdfBtn = document.getElementById('pdf-btn');
   const jugarBtn = document.getElementById('jugar-btn');
   const finalizarBtn = document.getElementById('finalizar-btn');
+  const resultadoBtn = document.getElementById('resultado-btn');
   const pdfGeneradoFloatingIcon = pdfBtn ? pdfBtn.querySelector('.pdf-floating-icon') : null;
-  const pdfResultadosFloatingIcon = finalizarBtn ? finalizarBtn.querySelector('.pdf-floating-icon') : null;
+  const pdfResultadosFloatingIcon = resultadoBtn ? resultadoBtn.querySelector('.pdf-floating-icon') : null;
   const centroPagosBtn = document.getElementById('centro-pagos-btn');
   const modoManualSwitch = document.getElementById('modo-manual-switch');
   const modoManualEstadoEl = document.getElementById('modo-manual-estado');
@@ -2306,6 +2327,9 @@
   }
   if(pdfResultadosFloatingIcon){
     pdfResultadosFloatingIcon.addEventListener('click', manejarClickPdfResultadosAlmacenado);
+  }
+  if(resultadoBtn){
+    resultadoBtn.addEventListener('click', manejarClickResultadoBtn);
   }
   jugarBtn.addEventListener('click', cambiarAJugando);
   finalizarBtn.addEventListener('click', finalizarSorteo);
@@ -4415,7 +4439,7 @@
   }
 
   function actualizarAnimaciones(){
-    [sellarBtn, pdfBtn, jugarBtn, finalizarBtn].forEach(btn=>btn.classList.remove('attention'));
+    [sellarBtn, pdfBtn, jugarBtn, finalizarBtn, resultadoBtn].forEach(btn=>{ if(btn) btn.classList.remove('attention'); });
     actualizarBotones();
     if(!currentSorteoData) return;
     const estadoLower = obtenerEstadoActualNormalizado();
@@ -4448,21 +4472,46 @@
 
   function actualizarBotones(){
     if(!currentSorteoData){
-      [sellarBtn, pdfBtn, jugarBtn, finalizarBtn].forEach(btn=>btn.disabled=true);
+      [sellarBtn, pdfBtn, jugarBtn, finalizarBtn, resultadoBtn].forEach(btn=>{ if(btn) btn.disabled = true; });
       pdfBtn.classList.remove('pdf-disponible');
-      finalizarBtn.classList.remove('pdf-disponible');
+      if(resultadoBtn){
+        resultadoBtn.classList.remove('pdf-disponible');
+      }
+      forzarVisibilidadResultado(false);
       return;
     }
     const estado = obtenerEstadoActualNormalizado();
     const pdfEstado = (currentSorteoData.pdf || '').toString().toLowerCase();
     const pdfResultadoEstado = (currentSorteoData.pdfresul || '').toString().toLowerCase();
 
+    const esFinalizado = estado === 'finalizado';
+
     sellarBtn.disabled = estado !== 'activo';
     pdfBtn.disabled = estado !== 'sellado';
     jugarBtn.disabled = estado !== 'sellado' || pdfEstado !== 'si';
     finalizarBtn.disabled = estado !== 'jugando';
+    if(resultadoBtn){
+      resultadoBtn.disabled = !esFinalizado;
+    }
+
     pdfBtn.classList.toggle('pdf-disponible', pdfEstado === 'si');
-    finalizarBtn.classList.toggle('pdf-disponible', pdfResultadoEstado === 'si');
+    if(resultadoBtn){
+      resultadoBtn.classList.toggle('pdf-disponible', pdfResultadoEstado === 'si');
+    }
+    forzarVisibilidadResultado(esFinalizado);
+  }
+
+  function forzarVisibilidadResultado(visible){
+    const mostrar = visible === true;
+    if(resultadoBtn){
+      resultadoBtn.style.display = mostrar ? 'flex' : 'none';
+      if(mostrar){
+        resultadoBtn.disabled = false;
+      }
+    }
+    if(finalizarBtn){
+      finalizarBtn.style.display = mostrar ? 'none' : 'flex';
+    }
   }
 
   function mostrarDatos(){
@@ -4486,8 +4535,12 @@
       tipoEl.innerHTML = '';
       if(detalleContainer) detalleContainer.classList.remove('estado-sellado','estado-pdf','estado-jugando','estado-finalizado');
       mensajeEl.textContent = 'Selecciona un sorteo para administrar su estado.';
-      [sellarBtn, pdfBtn, jugarBtn, finalizarBtn].forEach(btn=>btn.disabled=true);
+      [sellarBtn, pdfBtn, jugarBtn, finalizarBtn, resultadoBtn].forEach(btn=>{ if(btn) btn.disabled = true; });
       pdfBtn.classList.remove('pdf-disponible');
+      if(resultadoBtn){
+        resultadoBtn.classList.remove('pdf-disponible');
+      }
+      forzarVisibilidadResultado(false);
       actualizarAnimaciones();
       aplicarDatosCantos([]);
       actualizarTablaEstado();
@@ -5415,6 +5468,7 @@
         mensajeError: 'No fue posible cambiar el estado a Finalizado.'
       });
       if(finalizado){
+        forzarVisibilidadResultado(true);
         abrirPdfResultados();
       }
       return;
@@ -5422,6 +5476,7 @@
 
     const estadoActual = obtenerEstadoActualNormalizado();
     if(estadoActual === 'finalizado'){
+      forzarVisibilidadResultado(true);
       let estadoPdfResultado = (currentSorteoData.pdfresul || '').toString().trim().toLowerCase();
       if(estadoPdfResultado !== 'si'){
         try {
@@ -5464,6 +5519,7 @@
       await db.collection('sorteos').doc(currentSorteoId).update({ estado: 'Finalizado' });
       mensajeEl.textContent = 'El sorteo fue finalizado correctamente.';
       finalizarBtn.classList.remove('attention');
+      forzarVisibilidadResultado(true);
       abrirPdfResultados();
     } catch (err) {
       console.error('Error finalizando sorteo', err);
@@ -5488,6 +5544,25 @@
         window.location.href = fallback;
       }
     }
+  }
+
+  function manejarClickResultadoBtn(evento){
+    evento.preventDefault();
+    evento.stopPropagation();
+    if(!currentSorteoId || !currentSorteoData){
+      alert('Selecciona un sorteo primero.');
+      return;
+    }
+    const estadoActual = obtenerEstadoActualNormalizado();
+    if(estadoActual !== 'finalizado'){
+      alert('El sorteo debe estar finalizado para ver los resultados.');
+      return;
+    }
+    const estadoPdfResultado = (currentSorteoData.pdfresul || '').toString().trim().toLowerCase();
+    if(estadoPdfResultado !== 'si'){
+      mostrarAvisoSimple('Se abrirá el PDF de resultados para confirmar su descarga.', 'PDF pendiente');
+    }
+    abrirPdfResultados();
   }
 
   function manejarClickPdfResultadosAlmacenado(evento){

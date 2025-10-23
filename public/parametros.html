@@ -233,6 +233,10 @@
       <input type="text" id="emailA" placeholder="Email" />
     </div>
     <div class="form-row">
+      <label for="contrasenasu">Contraseña Superadmin:</label>
+      <input type="password" id="contrasenasu" placeholder="Contraseña Superadmin" autocomplete="off" />
+    </div>
+    <div class="form-row">
       <label for="nombreAgencia">Nombre Agencia:</label>
       <input type="text" id="nombreAgencia" placeholder="Nombre de la Agencia" />
     </div>
@@ -384,12 +388,30 @@
         setTimeout(()=>input.focus({ preventScroll: true }), 50);
       });
     }
+    function obtenerContrasenaSuperadmin(datos){
+      if(!datos || typeof datos !== 'object') return '';
+      const posiblesClaves = ['contrasenasu','contrasenaSu','contrasenaSU','Contrasenasu','ContrasenaSu','ContrasenaSU'];
+      for(const clave of posiblesClaves){
+        const valor = datos[clave];
+        if(typeof valor === 'string'){
+          const limpio = valor.trim();
+          if(limpio){
+            return limpio;
+          }
+        } else if(typeof valor === 'number' && !Number.isNaN(valor)){
+          return valor.toString();
+        }
+      }
+      return '';
+    }
+
     function cargarFormulario(data){
       document.getElementById('aplicacion').value = data.Aplicacion || '';
       document.getElementById('cliente').value = data.Cliente || '';
       document.getElementById('agencia').value = data.Agencia || '';
       document.getElementById('telefonoA').value = data.TelefonoA || '';
       document.getElementById('emailA').value = data.EmailA || '';
+      document.getElementById('contrasenasu').value = obtenerContrasenaSuperadmin(data);
       document.getElementById('nombreAgencia').value = data.NombreAgencia || '';
       document.getElementById('direccion').value = data.Direccion || '';
       if(data.Pais){ document.getElementById('pais').value = data.Pais; }
@@ -413,6 +435,7 @@
         Agencia: document.getElementById('agencia').value.trim(),
         TelefonoA: document.getElementById('telefonoA').value.trim(),
         EmailA: document.getElementById('emailA').value.trim(),
+        contrasenasu: document.getElementById('contrasenasu').value.trim(),
         NombreAgencia: document.getElementById('nombreAgencia').value.trim(),
         Direccion: document.getElementById('direccion').value.trim(),
         Pais: document.getElementById('pais').value.trim(),
@@ -453,13 +476,15 @@
         return;
       }
 
-      const contrasenaEsperada = (datosParametros.contrasenasu || '').toString().trim();
+      const contrasenaEsperada = obtenerContrasenaSuperadmin(datosParametros);
       if(contrasenaEsperada){
         const accesoPermitido = await solicitarPassword(contrasenaEsperada);
         if(!accesoPermitido){
           window.location.href='super.html';
           return;
         }
+      }else{
+        alert('No hay una contraseña configurada para Superadmin. Configúrala en este formulario y guarda los cambios.');
       }
 
       cargarFormulario(datosParametros);
