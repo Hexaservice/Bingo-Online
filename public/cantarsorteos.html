@@ -5187,6 +5187,10 @@
             const datosFinal = docFinal.data() || {};
             estadoPdfResultado = (datosFinal.pdfresul || '').toString().trim().toLowerCase() || estadoPdfResultado;
             currentSorteoData.pdfresul = estadoPdfResultado;
+            const indiceSorteo = sorteos.findIndex(s=>s && s.id === currentSorteoId);
+            if(indiceSorteo >= 0){
+              sorteos[indiceSorteo] = { ...sorteos[indiceSorteo], pdfresul: estadoPdfResultado };
+            }
           }
         } catch (errFinal) {
           console.warn('No se pudo actualizar el estado del PDF de resultados', errFinal);
@@ -5266,8 +5270,49 @@
     }
   }
 
+  async function encontrarSorteoJugandoEnCurso(idExcluido){
+    let sorteoJugando = null;
+    if(Array.isArray(sorteos) && sorteos.length){
+      sorteoJugando = sorteos.find(sorteo=>{
+        if(!sorteo || !sorteo.id) return false;
+        if(idExcluido && sorteo.id === idExcluido) return false;
+        const estadoNormalizado = (sorteo.estado || '').toString().toLowerCase();
+        return estadoNormalizado === 'jugando';
+      }) || null;
+    }
+
+    if(sorteoJugando){
+      return sorteoJugando;
+    }
+
+    try {
+      await asegurarDbListo();
+      const snap = await db.collection('sorteos').where('estado', '==', 'Jugando').get();
+      let encontrado = null;
+      snap.forEach(doc=>{
+        if(encontrado) return;
+        if(idExcluido && doc.id === idExcluido) return;
+        const datos = doc.data() || {};
+        encontrado = { id: doc.id, ...datos };
+      });
+      return encontrado;
+    } catch (err) {
+      console.error('Error verificando sorteos en estado Jugando', err);
+      return null;
+    }
+  }
+
   async function cambiarAJugando(){
     if(!currentSorteoId || !currentSorteoData){ alert('Selecciona un sorteo primero.'); return; }
+
+    const sorteoJugando = await encontrarSorteoJugandoEnCurso(currentSorteoId);
+    if(sorteoJugando){
+      const nombreActual = obtenerNombreSorteoActual();
+      const nombreJugando = (sorteoJugando.nombre || '').toString().trim() || 'otro sorteo';
+      mostrarAvisoSimple(`No se puede cambiar el estado de ${nombreActual} a Jugando porque actualmente está jugando el sorteo: ${nombreJugando}`, 'Sorteo en juego');
+      return;
+    }
+
     if(esModoManual()){
       const nombre = obtenerNombreSorteoActual();
       await confirmarYAplicarEstadoManual({
@@ -5332,6 +5377,14 @@
       const confirmarGeneral = await preguntarAccionEstado('¿Deseas cambiar el estado del sorteo a "Jugando"?');
       if(!confirmarGeneral) return false;
     }
+
+    const sorteoJugando = await encontrarSorteoJugandoEnCurso(currentSorteoId);
+    if(sorteoJugando){
+      const nombreActual = obtenerNombreSorteoActual();
+      const nombreJugando = (sorteoJugando.nombre || '').toString().trim() || 'otro sorteo';
+      mostrarAvisoSimple(`No se puede cambiar el estado de ${nombreActual} a Jugando porque actualmente está jugando el sorteo: ${nombreJugando}`, 'Sorteo en juego');
+      return false;
+    }
     try {
       await db.collection('sorteos').doc(currentSorteoId).update({ estado: 'Jugando' });
       mensajeEl.textContent = 'El sorteo cambió a estado Jugando.';
@@ -5363,7 +5416,25 @@
 
     const estadoActual = (currentSorteoData.estado || '').toString().toLowerCase();
     if(estadoActual === 'finalizado'){
-      const estadoPdfResultado = (currentSorteoData.pdfresul || '').toString().trim().toLowerCase();
+      let estadoPdfResultado = (currentSorteoData.pdfresul || '').toString().trim().toLowerCase();
+      if(estadoPdfResultado !== 'si'){
+        try {
+          await asegurarDbListo();
+          const docFinal = await db.collection('sorteos').doc(currentSorteoId).get();
+          if(docFinal.exists){
+            const datosFinal = docFinal.data() || {};
+            estadoPdfResultado = (datosFinal.pdfresul || '').toString().trim().toLowerCase() || estadoPdfResultado;
+            currentSorteoData.pdfresul = estadoPdfResultado;
+            const indiceSorteo = sorteos.findIndex(s=>s && s.id === currentSorteoId);
+            if(indiceSorteo >= 0){
+              sorteos[indiceSorteo] = { ...sorteos[indiceSorteo], pdfresul: estadoPdfResultado };
+            }
+          }
+        } catch (errFinal) {
+          console.warn('No se pudo actualizar el estado del PDF de resultados al reintentar la descarga', errFinal);
+        }
+      }
+
       if(estadoPdfResultado !== 'si'){
         mostrarAvisoSimple('El sorteo ya se encuentra finalizado. Se abrirá el PDF de resultados para que confirmes su descarga.', 'PDF pendiente');
         abrirPdfResultados();
