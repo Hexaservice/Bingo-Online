@@ -501,7 +501,29 @@
       document.getElementById('session-info').style.display = 'flex';
     }
 
-    iniciarParametros();
+    let parametrosYaInicializados=false;
+    function iniciarCuandoAuthEsteLista(){
+      initFirebase()
+        .then(()=>{
+          auth.onAuthStateChanged(async usuario=>{
+            if(!usuario || parametrosYaInicializados) return;
+            try{
+              await iniciarParametros();
+              parametrosYaInicializados=true;
+            }catch(err){
+              parametrosYaInicializados=false;
+              console.error('Fallo al cargar parámetros tras autenticar',err);
+            }
+          });
+        })
+        .catch(error=>{
+          console.error('No se pudo esperar a la autenticación para cargar parámetros',error);
+          alert('No fue posible preparar la autenticación. Intenta nuevamente desde el menú Superadmin.');
+          window.location.href='super.html';
+        });
+    }
+
+    iniciarCuandoAuthEsteLista();
   </script>
   <script src="js/backNavigation.js"></script>
 </body>
