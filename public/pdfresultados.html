@@ -1037,23 +1037,44 @@
       --pdf-section-padding: clamp(8px, 1.1vw, 14px);
       --pdf-bloque-padding: clamp(6px, 0.9vw, 10px);
       --pdf-columnas: 6;
+      --pdf-page-width: 1120px;
+      --pdf-page-height: calc(var(--pdf-page-width) / 1.414);
       --formas-min-width: 240px;
       --formas-scale: 0.96;
-      --formas-mini-max: clamp(140px, 26vw, 200px);
+      --formas-mini-max: 192px;
     }
     body.pdf-captura #salir-btn,
     body.pdf-captura #acciones-fixed {
       display: none !important;
     }
     body.pdf-captura #pdf-wrapper {
-      max-width: 1440px;
-      width: min(1440px, 100%);
+      max-width: var(--pdf-page-width);
+      width: min(var(--pdf-page-width), 100%);
       padding: clamp(8px, 1.4vw, 14px);
       box-sizing: border-box;
       gap: var(--pdf-gap);
     }
     body.pdf-captura #first-page-layout {
-      width: 100%;
+      width: min(var(--pdf-page-width), 100%);
+      max-width: 100%;
+      min-height: var(--pdf-page-height);
+      margin: 0 auto;
+      padding: var(--pdf-gap);
+      border: 1px solid rgba(11,83,148,0.22);
+      border-radius: 18px;
+      background: #ffffff;
+      display: grid;
+    }
+    body.pdf-captura #first-page-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+      align-items: stretch;
+      gap: var(--pdf-gap);
+      min-height: calc(var(--pdf-page-height) - var(--pdf-gap) * 2);
+    }
+    body.pdf-captura .first-page-section {
+      min-height: 0;
+      height: 100%;
     }
     body.pdf-captura #resumen-layout {
       display: grid;
@@ -1125,12 +1146,18 @@
       gap: var(--pdf-gap);
       align-content: stretch;
     }
+    body.pdf-captura #formas-resumen .forma-slot {
+      display: flex;
+      flex: 1 1 auto;
+    }
     body.pdf-captura #formas-resumen .forma-item {
       width: 100%;
       min-height: 100%;
       border-width: 0.7px;
       border-color: rgba(11,83,148,0.28);
       grid-template-columns: minmax(0, 1fr) minmax(0, var(--formas-mini-max));
+      display: grid;
+      align-items: stretch;
     }
     body.pdf-captura .forma-resumen {
       padding: clamp(8px, 1vw, 12px);
@@ -1153,6 +1180,11 @@
       border-left-width: 0.6px;
       min-height: clamp(130px, 24vw, 190px);
       max-width: var(--formas-mini-max);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
     }
     body.pdf-captura #cartones-section {
       margin-top: clamp(20px, 2.6vw, 28px);
@@ -1195,8 +1227,22 @@
       font-size: 1.06em;
     }
     body.pdf-captura .forma-mini-carton {
+      position: relative;
+      inset: auto;
+      transform: none;
       font-size: calc(0.88rem * var(--formas-scale));
       width: min(100%, var(--formas-mini-max));
+      max-width: 100%;
+      aspect-ratio: 5 / 6;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      grid-auto-rows: 1fr;
+      margin: 0;
+    }
+    body.pdf-captura .forma-mini-carton thead,
+    body.pdf-captura .forma-mini-carton tbody,
+    body.pdf-captura .forma-mini-carton tr {
+      display: contents;
     }
     body.pdf-captura .forma-mini-carton th,
     body.pdf-captura .forma-mini-carton td {
@@ -2701,27 +2747,28 @@
 
     let minWidth = 240;
     let escala = 0.96;
-    let miniMax = 200;
+    let miniMax = 192;
     if(total >= 5){
       minWidth = 220;
       escala = 0.9;
-      miniMax = 185;
+      miniMax = 182;
     }
     if(total >= 8){
       minWidth = 200;
       escala = 0.86;
-      miniMax = 170;
+      miniMax = 168;
     }
     if(total >= 12){
       minWidth = 185;
       escala = 0.82;
-      miniMax = 160;
+      miniMax = 156;
     }
     if(total >= 16){
       minWidth = 170;
       escala = 0.78;
-      miniMax = 150;
+      miniMax = 148;
     }
+    miniMax = Math.max(140, Math.min(192, miniMax));
     document.body.style.setProperty('--formas-min-width', `${minWidth}px`);
     document.body.style.setProperty('--formas-scale', escala.toFixed(3));
     document.body.style.setProperty('--formas-mini-max', `${miniMax}px`);
