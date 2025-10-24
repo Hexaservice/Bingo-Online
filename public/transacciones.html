@@ -171,15 +171,17 @@
     let unsubscribeTransacciones = null;
 
     function volverConFallback(){
+      const role=(window.currentRole||'').trim();
+      if(role && typeof redirectByRole==='function'){
+        redirectByRole(role);
+        return;
+      }
       if(window.history.length>1){
         window.history.back();
         return;
       }
-      const role=(window.currentRole)||'';
-      if(role==='Administrador'){
-        window.location.href='admin.html';
-      }else if(role==='Superadmin'){
-        window.location.href='super.html';
+      if(typeof redirectByRole==='function'){
+        redirectByRole('Colaborador');
       }else{
         window.location.href='collab.html';
       }
@@ -302,8 +304,9 @@
       snap.forEach(d=>{
         const dt={id:d.id,...d.data()};
         dt.Condicion = dt.Condicion || (dt.estado==='ARCHIVADO'?'ARCHIVADA':'VISIBLE');
-        if(dt.tipotrans==='deposito') datosRec.push(dt);
-        else datosRet.push(dt);
+        const tipo=(dt.tipotrans||'').toLowerCase();
+        if(tipo==='deposito') datosRec.push(dt);
+        else if(tipo==='retiro') datosRet.push(dt);
       });
       datosRec.sort(sortTrans);
       datosRet.sort(sortTrans);
