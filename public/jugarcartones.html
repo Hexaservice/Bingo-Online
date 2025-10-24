@@ -164,6 +164,10 @@
     .datos-sorteo div{font-weight:bold;font-size:1.2rem;}
     #valor-carton span,#cartones-jugando span{font-size:1.5rem;}
     #valor-carton-valor,#premio-valor{animation:pulse 1s infinite;display:inline-block;}
+    #premio-valor{
+      font-family:'Poppins',sans-serif;
+      font-weight:600;
+    }
     #cartones-jugando-valor,#gratis-plus,#cartones-gratis-jugando{animation:wiggle 1s infinite;display:inline-block;}
     #cartones-gratis-jugando{color:#00008b;}
     #valor-carton{color:green;display:flex;align-items:center;gap:5px;}
@@ -175,8 +179,20 @@
     #premio-repartir{color:white;font-family:'Bangers',cursive;font-size:1.8rem;text-shadow:0 0 10px #004400;position:relative;}
     #forma-nombre{font-family:'Bangers',cursive;color:#4B0082;font-size:1rem;text-shadow:0 0 5px #fff;text-align:center;visibility:hidden;min-height:8px;margin:0;}
     .wallet-row{display:flex;align-items:center;gap:5px;margin:3px 0;font-size:1rem;font-weight:bold;}
-    #creditos-label,#gratis-label{font-family:'Bangers',cursive;font-size:1.5rem;text-shadow:0 0 5px green;display:inline-block;animation:pulse 1s infinite;}
-    #gratis-label{color:#4b0082;text-shadow:0 0 5px #fff;}
+    #gratis-label{
+      font-family:'Bangers',cursive;
+      font-size:1.5rem;
+      display:inline-block;
+      animation:pulse 1s infinite;
+      color:#4b0082;
+      text-shadow:0 0 5px #fff;
+    }
+    #creditos-label{
+      font-family:'Poppins',sans-serif;
+      font-size:1.5rem;
+      display:inline-block;
+      animation:pulse 1s infinite;
+    }
     #creditos-label{color:#333;text-shadow:0 0 5px green;}
     .credit-icon{color:white;font-weight:bold;text-shadow:0 0 5px lime;}
     .action-btn{
@@ -466,6 +482,19 @@ const CONSECUTIVOS_COLLECTION='ConsecutivosCarton';
 let unsubscribeConsecutivoCarton=null;
 let ultimoNumeroCartonAsignado=0;
 let siguienteNumeroCarton=1;
+
+function actualizarEstadoCartonesGratis(){
+  const gratisLabel=document.getElementById('gratis-label');
+  if(!gratisLabel) return;
+  const limiteAlcanzado=maxCartonesGratis>0 && cartonesGratisJugando>=maxCartonesGratis;
+  if(limiteAlcanzado){
+    gratisLabel.style.color='red';
+    gratisLabel.style.animation='none';
+  }else{
+    gratisLabel.style.color='';
+    gratisLabel.style.animation='';
+  }
+}
 
 function normalizarHex(hex){
   if(typeof hex!=='string') return hex;
@@ -929,14 +958,7 @@ function toggleForma(idx){
   document.getElementById('valor-carton-valor').textContent=valor;
   document.getElementById('cartones-jugando-valor').textContent=jug;
   document.getElementById('cartones-gratis-jugando').textContent=gratisJug;
-  const gratisLabel=document.getElementById('gratis-label');
-  if(gratisJug>=maxCartonesGratis && maxCartonesGratis>0 && parseInt(gratisLabel.textContent)>0){
-    gratisLabel.style.color='red';
-    gratisLabel.style.animation='none';
-  }else{
-    gratisLabel.style.color='';
-    gratisLabel.style.animation='';
-  }
+  actualizarEstadoCartonesGratis();
   const pv=document.getElementById('premio-valor');
   if(formaActiva>0){
     const f=formasSorteo.find(x=>x.idx===formaActiva);
@@ -1986,6 +2008,7 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
             document.getElementById('creditos-label').textContent='0';
             document.getElementById('gratis-label').textContent='0';
           }
+          actualizarEstadoCartonesGratis();
           cookieKey='jugarcarton_'+user.email.replace(/[^\w]/g,'_');
           sorteoCookieKey=`${cookieKey}_sorteo`;
           loadFromCookie();
