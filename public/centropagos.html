@@ -75,7 +75,7 @@
     #premios-section h3 {
       margin: 0;
       color: #1fa74a;
-      text-shadow: 0 0 4px rgba(0,0,0,0.6);
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.75);
       font-size: 1.4rem;
     }
     #premios-section .icon-btn,
@@ -92,7 +92,7 @@
     #pagos-section h3 {
       margin: 0;
       color: #b85c00;
-      text-shadow: 0 0 4px rgba(0,0,0,0.6);
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.75);
       font-size: 1.4rem;
     }
     #pagos-section .icon-btn,
@@ -109,7 +109,7 @@
     #colaboradores-section h3 {
       margin: 0;
       color: #4a148c;
-      text-shadow: 0 0 4px rgba(0,0,0,0.6);
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.75);
       font-size: 1.4rem;
     }
     #colaboradores-section .icon-btn,
@@ -169,6 +169,16 @@
       padding: 4px 0;
       margin: 0;
     }
+    .acciones .filtro-tipo {
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 0.75rem;
+      padding: 4px 6px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      background: rgba(255,255,255,0.95);
+      font-weight: 600;
+      cursor: pointer;
+    }
     .icon-btn {
       display: inline-flex;
       align-items: center;
@@ -202,6 +212,8 @@
       white-space: nowrap;
       font-weight: bold;
     }
+    td.gmail { word-break: break-word; white-space: normal; }
+    td.estado { white-space: normal; }
     #tabla-premios th:nth-child(2), #tabla-premios td:nth-child(2),
     #tabla-premios th:nth-child(3), #tabla-premios td:nth-child(3),
     #tabla-premios th:nth-child(4), #tabla-premios td:nth-child(4),
@@ -225,6 +237,9 @@
       border-radius: 50%;
       font-size: 0.9rem;
       animation: pulse 1s infinite;
+    }
+    #badge-colaboradores {
+      display: none !important;
     }
     .badge.oculto { display: none; }
     .filtros input,
@@ -279,6 +294,67 @@
       border-radius: 10px;
       border: 1px dashed rgba(13,71,161,0.3);
     }
+    .gmail-cell {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .gmail-cell .gmail-short {
+      display: none;
+    }
+    .gmail-cell .gmail-full {
+      display: inline;
+    }
+    .estado-rol {
+      display: inline-block;
+      padding: 2px 4px;
+      background: rgba(0,0,0,0.1);
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .modal-capa {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    .modal-capa.activo {
+      display: flex;
+    }
+    .modal-contenido {
+      background: #fff;
+      padding: 16px 20px;
+      border-radius: 10px;
+      max-width: 320px;
+      width: calc(100% - 40px);
+      font-family: Calibri, Arial, sans-serif;
+      text-align: left;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    }
+    .modal-contenido h4 {
+      margin: 0 0 8px;
+      font-size: 1.1rem;
+      text-transform: uppercase;
+    }
+    .modal-contenido p {
+      margin: 0 0 16px;
+      line-height: 1.4;
+    }
+    .modal-contenido button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 16px;
+      border-radius: 6px;
+      background: #4a148c;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
     @keyframes pulse {
       0% { transform: scale(1); }
       50% { transform: scale(1.1); }
@@ -293,6 +369,18 @@
       #pagos-content { max-height: 70vh; overflow: auto; }
       #volver-btn { width: 40px; }
       #volver-btn .label { display: none; }
+      .gmail-cell .gmail-full { display: none; }
+      .gmail-cell .gmail-short { display: inline; }
+      td.estado span,
+      td.estado .estado-rol {
+        display: inline-block;
+        max-width: 100%;
+        white-space: normal;
+        word-break: break-word;
+      }
+      #tabla-colaboradores td.gmail {
+        word-break: break-word;
+      }
     }
     @media (orientation: landscape) { table { font-size: 0.9rem; } }
   </style>
@@ -409,8 +497,12 @@
     <div id="colaboradores-content">
       <div class="acciones">
         <button class="icon-btn" id="colaboradores-aprobar"><span class="icon check">&#10004;</span><span>Aprobar</span></button>
-        <button class="icon-btn" id="colaboradores-archivar"><span class="icon">&#128194;</span><span>Archivar</span></button>
-        <button class="icon-btn" id="colaboradores-ver-archivo"><span class="icon">&#128230;</span><span>Archivo</span></button>
+        <select id="colaboradores-filtro-tipo" class="filtro-tipo">
+          <option value="">Todos</option>
+          <option value="Colaborador">Colaborador</option>
+          <option value="Administrador">Administrador</option>
+          <option value="Superadmin">Superadmin</option>
+        </select>
       </div>
       <table id="tabla-colaboradores">
         <colgroup>
@@ -428,14 +520,8 @@
             <th><input type="text" id="filtro-colab-gmail" placeholder="Gmail"></th>
             <th><input type="text" id="filtro-colab-nombre" placeholder="Nombre"></th>
             <th><input type="text" id="filtro-colab-creditos" placeholder="Créditos"></th>
-            <th><input type="date" id="filtro-colab-fecha"></th>
-            <th>
-              <select id="filtro-colab-estado">
-                <option value="">Estado</option>
-                <option value="PENDIENTE">Pendiente</option>
-                <option value="APROBADO">Aprobado</option>
-              </select>
-            </th>
+            <th>-</th>
+            <th>Tipo</th>
             <th><span id="colaboradores-marcar" class="check-header">✔</span></th>
           </tr>
         </thead>
@@ -443,6 +529,14 @@
       </table>
     </div>
   </section>
+
+  <div id="modal-informacion" class="modal-capa">
+    <div class="modal-contenido">
+      <h4 id="modal-info-titulo"></h4>
+      <p id="modal-info-mensaje"></p>
+      <button id="modal-info-aceptar" type="button">Aceptar</button>
+    </div>
+  </div>
 
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
@@ -458,7 +552,7 @@
 
     const filtrosPremios = { gmail:'', alias:'', creditos:'', cartones:'', fecha:'', estado:'' };
     const filtrosPagos = { gmail:'', nombre:'', creditos:'', fecha:'', estado:'' };
-    const filtrosColaboradores = { gmail:'', nombre:'', creditos:'', fecha:'', estado:'' };
+    const filtrosColaboradores = { gmail:'', nombre:'', creditos:'', tipo:'' };
 
     let mostrarPremiosArchivo = false;
     let mostrarPagosArchivo = false;
@@ -475,8 +569,8 @@
     const pagosAdminMapa = new Map();
     const pagosAdminArchivoMapa = new Map();
     const pagosColaboradoresMapa = new Map();
-    const pagosColaboradoresArchivoMapa = new Map();
     const pagosColaboradoresEdicion = new Map();
+    const usuariosInfoCache = new Map();
 
     let unsubscribePremios = null;
     let unsubscribePremiosArchivo = null;
@@ -484,8 +578,10 @@
     let unsubscribePagosArchivo = null;
     let unsubscribeColaboradores = null;
     let unsubscribeColaboradoresArchivo = null;
+    let unsubscribeUsuariosCentro = null;
 
     const formatNumber = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2, minimumFractionDigits: 0 });
+    const formatNumberEntero = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 0, minimumFractionDigits: 0 });
     let firebaseReadyPromiseCentro = null;
 
     function ensureFirebaseListo(){
@@ -1313,30 +1409,6 @@
         operaciones.push(cpActualizarDocumentoCentroPagos(ctx, ctx.db.collection('PagosAdministracion').doc(docId), payload));
       });
 
-      colaboradores.forEach(colaborador=>{
-        const email = cpNormalizarEmail(colaborador.gmail);
-        const docId = cpConstruirIdSolicitud(`${ctx.sorteoId}_colaborador`, email || colaborador.alias || 'colaborador');
-        const payload = {
-          sorteoId: ctx.sorteoId,
-          sorteoNombre,
-          gmail: email || '',
-          email: email || '',
-          nombre: colaborador.nombre || colaborador.alias || '',
-          alias: colaborador.alias || '',
-          creditos: Number(colaborador.creditos) || 0,
-          estado: 'PENDIENTE',
-          fechaAsignacion: timestamp,
-          fecha: timestamp,
-          creadoEn: timestamp,
-          actualizadoEn: timestamp,
-          tipoRegistro: 'COLABORADOR_SORTEO',
-          userIds: colaborador.userIds || [],
-          generadoDesde: 'centropagos'
-        };
-        if(email){ payload.idBilletera = email; }
-        operaciones.push(cpActualizarDocumentoCentroPagos(ctx, ctx.db.collection('PagosColaboradores').doc(docId), payload));
-      });
-
       const resumenRef = ctx.db.collection('SorteosCentroPagos').doc(ctx.sorteoId);
       const resumenPayload = {
         sorteoId: ctx.sorteoId,
@@ -1550,6 +1622,125 @@
       };
     }
 
+    function construirGmailHtml(gmail = ''){
+      const completo = (gmail || '').toString();
+      const indice = completo.toLowerCase().endsWith('@gmail.com') ? completo.length - 10 : -1;
+      const corto = indice >= 0 ? completo.slice(0, indice) : completo;
+      const cortoSeguro = escapeHtml(corto);
+      const largoSeguro = escapeHtml(completo);
+      return `<span class="gmail-cell"><span class="gmail-full">${largoSeguro}</span><span class="gmail-short">${cortoSeguro}</span></span>`;
+    }
+
+    function normalizarTipoUsuario(valor){
+      const texto = (valor || '').toString().trim();
+      if(!texto) return 'Colaborador';
+      const base = texto.toLowerCase();
+      if(base.includes('super')) return 'Superadmin';
+      if(base.includes('admin')) return 'Administrador';
+      if(base.includes('colab')) return 'Colaborador';
+      return texto.charAt(0).toUpperCase() + texto.slice(1);
+    }
+
+    function guardarInfoUsuarioCache(info = {}){
+      const base = { ...info };
+      if(base.email){
+        const claveEmail = base.email.toLowerCase();
+        const previo = usuariosInfoCache.get(claveEmail) || {};
+        usuariosInfoCache.set(claveEmail, { ...previo, ...base });
+      }
+      if(base.alias){
+        const claveAlias = `alias::${base.alias.toLowerCase()}`;
+        const previoAlias = usuariosInfoCache.get(claveAlias) || {};
+        usuariosInfoCache.set(claveAlias, { ...previoAlias, ...base });
+      }
+    }
+
+    function obtenerInfoUsuarioCache(email, alias){
+      if(email){
+        const clave = email.toLowerCase();
+        if(usuariosInfoCache.has(clave)) return usuariosInfoCache.get(clave);
+      }
+      if(alias){
+        const claveAlias = `alias::${alias.toLowerCase()}`;
+        if(usuariosInfoCache.has(claveAlias)) return usuariosInfoCache.get(claveAlias);
+      }
+      return null;
+    }
+
+    async function obtenerDatosBilletera(email){
+      if(!email) return { creditos: 0, cartonesGratis: 0 };
+      try {
+        const snap = await dbRef().collection('Billetera').doc(email).get();
+        if(!snap.exists) return { creditos: 0, cartonesGratis: 0 };
+        const data = snap.data() || {};
+        return {
+          creditos: Number(data.creditos) || 0,
+          cartonesGratis: Number(data.CartonesGratis ?? data.cartonesGratis ?? 0) || 0
+        };
+      } catch (err) {
+        console.warn('No se pudo obtener la billetera para', email, err);
+        return { creditos: 0, cartonesGratis: 0 };
+      }
+    }
+
+    async function obtenerInfoUsuarioDetallada(email, alias){
+      const emailNormalizado = cpNormalizarEmail(email || '');
+      const cacheado = obtenerInfoUsuarioCache(emailNormalizado, alias);
+      if(cacheado && cacheado.completo){
+        return cacheado;
+      }
+      await ensureFirebaseListo();
+      const db = dbRef();
+      let doc = null;
+      if(emailNormalizado){
+        try {
+          const candidato = await db.collection('users').doc(emailNormalizado).get();
+          if(candidato.exists) doc = candidato;
+        } catch (err) {
+          console.warn('No se pudo obtener usuario por email', emailNormalizado, err);
+        }
+      }
+      if(!doc && alias){
+        try {
+          const snap = await db.collection('users').where('alias','==',alias).limit(1).get();
+          if(!snap.empty) doc = snap.docs[0];
+        } catch (err) {
+          console.warn('No se pudo obtener usuario por alias', alias, err);
+        }
+      }
+      const data = doc?.data() || {};
+      const emailFinal = cpNormalizarEmail(data.email || doc?.id || emailNormalizado || '');
+      const info = {
+        email: emailFinal,
+        alias: (data.alias || alias || '').toString(),
+        nombre: (data.nombre || data.name || '').toString(),
+        tipo: normalizarTipoUsuario(data.role || data.rol || data.rolinterno || ''),
+        telefono: (data.telefono || data.Telefono || data.celular || data.whatsapp || data.phoneNumber || '').toString()
+      };
+      const billetera = await obtenerDatosBilletera(emailFinal);
+      info.creditos = billetera.creditos;
+      info.cartonesGratis = billetera.cartonesGratis;
+      info.completo = true;
+      guardarInfoUsuarioCache(info);
+      return info;
+    }
+
+    function mostrarModalInfo(titulo, mensaje){
+      const capa = document.getElementById('modal-informacion');
+      if(!capa) return;
+      const tituloEl = document.getElementById('modal-info-titulo');
+      const mensajeEl = document.getElementById('modal-info-mensaje');
+      if(tituloEl) tituloEl.textContent = titulo || '';
+      if(mensajeEl) mensajeEl.textContent = mensaje || 'Sin información disponible.';
+      capa.classList.add('activo');
+    }
+
+    function ocultarModalInfo(){
+      const capa = document.getElementById('modal-informacion');
+      if(!capa) return;
+      capa.classList.remove('activo');
+    }
+
     function renderTabla(lista, tbodyId, opciones = {}){
       const tbody = document.querySelector(`#${tbodyId} tbody`);
       if(!tbody) return;
@@ -1559,17 +1750,19 @@
         return;
       }
       const filas = lista.map((item, indice)=>{
-        const numero = indice + 1;
-        const estadoClase = item.estado === 'APROBADO' ? 'estado-aprobado' : (item.estado === 'PENDIENTE' ? 'estado-pendiente' : 'estado-archivado');
-        const estadoHtml = `<span class="${estadoClase}">${item.estado}</span>`;
+      const numero = indice + 1;
+      const estadoClase = item.estado === 'APROBADO' ? 'estado-aprobado' : (item.estado === 'PENDIENTE' ? 'estado-pendiente' : 'estado-archivado');
+      const estadoHtml = tipo === 'colaboradores'
+        ? `<span class="estado-rol">${escapeHtml(item.tipo || item.estado || '')}</span>`
+        : `<span class="${estadoClase}">${escapeHtml(item.estado)}</span>`;
         const disabled = mostrarArchivo ? 'disabled' : '';
         if(tipo === 'premios'){
           return `<tr data-id="${item.id}">
             <td>${numero}</td>
-            <td class="gmail">${escapeHtml(item.gmail)}</td>
+            <td class="gmail">${construirGmailHtml(item.gmail)}</td>
             <td class="alias">${escapeHtml(item.alias)}</td>
-            <td>${formatNumber.format(item.creditos)}</td>
-            <td>${formatNumber.format(item.cartones)}</td>
+            <td class="creditos">${formatNumber.format(item.creditos)}</td>
+            <td class="cart">${formatNumber.format(item.cartones)}</td>
             <td>${escapeHtml(item.fechaMostrar)}</td>
             <td class="estado">${estadoHtml}</td>
             <td><input type="checkbox" data-id="${item.id}" ${disabled}></td>
@@ -1582,21 +1775,24 @@
           const numeroValor = Number(valorReferencia);
           const valorInput = Number.isFinite(numeroValor) ? numeroValor.toFixed(2) : '';
           const archivoAttr = mostrarArchivo ? ' data-archivo="1"' : '';
+          const placeholder = Number.isFinite(Number(item.creditosActuales))
+            ? formatNumberEntero.format(Math.round(Number(item.creditosActuales)))
+            : '0';
           return `<tr data-id="${item.id}">
             <td>${numero}</td>
-            <td class="gmail">${escapeHtml(item.gmail)}</td>
+            <td class="gmail">${construirGmailHtml(item.gmail)}</td>
             <td class="alias">${escapeHtml(item.nombre)}</td>
-            <td><input type="number" class="colab-input" step="0.01" min="0" data-id="${item.id}" value="${valorInput}" disabled${archivoAttr}></td>
-            <td>${escapeHtml(item.fechaMostrar)}</td>
+            <td><input type="number" class="colab-input" step="0.01" min="0" data-id="${item.id}" value="${valorInput}" placeholder="${escapeHtml(placeholder)}" disabled${archivoAttr}></td>
+            <td>${escapeHtml(item.fechaMostrar || '-')}</td>
             <td class="estado">${estadoHtml}</td>
             <td><input type="checkbox" data-id="${item.id}" ${disabled}></td>
           </tr>`;
         }
         return `<tr data-id="${item.id}">
           <td>${numero}</td>
-          <td class="gmail">${escapeHtml(item.gmail)}</td>
+          <td class="gmail">${construirGmailHtml(item.gmail)}</td>
           <td class="alias">${escapeHtml(item.nombre)}</td>
-          <td>${formatNumber.format(item.creditos)}</td>
+          <td class="creditos">${formatNumberEntero.format(Math.round(item.creditos))}</td>
           <td>${escapeHtml(item.fechaMostrar)}</td>
           <td class="estado">${estadoHtml}</td>
           <td><input type="checkbox" data-id="${item.id}" ${disabled}></td>
@@ -1632,11 +1828,16 @@
       return origen.filter(item=>{
         if(filtrosColaboradores.gmail && !item.gmail.toLowerCase().includes(filtrosColaboradores.gmail)) return false;
         if(filtrosColaboradores.nombre && !item.nombre.toLowerCase().includes(filtrosColaboradores.nombre)) return false;
-        if(filtrosColaboradores.creditos && !item.creditos.toString().includes(filtrosColaboradores.creditos)) return false;
-        if(filtrosColaboradores.fecha && item.fechaFiltro !== filtrosColaboradores.fecha) return false;
-        if(filtrosColaboradores.estado && item.estado !== filtrosColaboradores.estado) return false;
+        if(filtrosColaboradores.creditos && !String(item.creditos ?? '').includes(filtrosColaboradores.creditos)) return false;
+        if(filtrosColaboradores.tipo){
+          const tipoActual = (item.tipo || item.estado || '').toString().toLowerCase();
+          if(tipoActual !== filtrosColaboradores.tipo) return false;
+        }
         return true;
-      }).sort((a,b)=>b.fechaOrden - a.fechaOrden || b.creditos - a.creditos);
+      }).sort((a,b)=>{
+        if(b.fechaOrden !== a.fechaOrden) return b.fechaOrden - a.fechaOrden;
+        return (b.nombre || '').localeCompare(a.nombre || '');
+      });
     }
 
     function renderPremios(){
@@ -1658,7 +1859,7 @@
         ? aplicarFiltrosColaboradores(pagosColaboradoresArchivados)
         : aplicarFiltrosColaboradores(pagosColaboradoresActivos);
       renderTabla(lista, 'tabla-colaboradores', { mostrarArchivo: mostrarColaboradoresArchivo, tipo: 'colaboradores' });
-      actualizarBadge('colaboradores', pagosColaboradoresActivos.filter(item=>item.estado === 'PENDIENTE').length);
+      actualizarBadge('colaboradores', 0);
       actualizarEstadoBotones();
     }
 
@@ -1696,10 +1897,11 @@
       document.getElementById('premios-ver-archivo').classList.toggle('archivo-activo', mostrarPremiosArchivo);
       document.getElementById('pagos-ver-archivo').classList.toggle('archivo-activo', mostrarPagosArchivo);
       const colabAprobar = document.getElementById('colaboradores-aprobar');
+      if(colabAprobar) colabAprobar.disabled = false;
       const colabArchivar = document.getElementById('colaboradores-archivar');
-      if(colabAprobar) colabAprobar.disabled = mostrarColaboradoresArchivo;
-      if(colabArchivar) colabArchivar.disabled = mostrarColaboradoresArchivo;
-      document.getElementById('colaboradores-ver-archivo').classList.toggle('archivo-activo', mostrarColaboradoresArchivo);
+      if(colabArchivar) colabArchivar.disabled = true;
+      const colabVerArchivo = document.getElementById('colaboradores-ver-archivo');
+      if(colabVerArchivo) colabVerArchivo.classList.toggle('archivo-activo', mostrarColaboradoresArchivo);
     }
 
     async function registrarTransaccionPremio(enRegistro){
@@ -1720,9 +1922,9 @@
           horagestion: typeof horaServidor === 'function' ? horaServidor() : '',
           usuariogestor: authInstance().currentUser?.email || '',
           rolusuario: window.currentRole || '',
-          referencia: 'PREMIO',
+          referencia: enRegistro.referencia || 'PREMIO',
           sorteoId: enRegistro.sorteoId || '',
-          sorteoNombre: enRegistro.sorteoNombre || ''
+          sorteoNombre: enRegistro.sorteoNombre || (enRegistro.referencia === 'ASIGNACION_MANUAL' ? 'Asignación manual' : '')
         });
       } catch (err) {
         console.error('No se pudo registrar la transacción de premio', err);
@@ -1826,45 +2028,62 @@
 
     async function aprobarPagosColaboradores(ids){
       if(!ids.length) return;
-      const db = dbRef();
+      await ensureFirebaseListo();
       await initServerTime();
+      const procesados = [];
       for(const id of ids){
         const registro = pagosColaboradoresMapa.get(id);
-        if(!registro){ console.warn('Pago de colaborador no encontrado', id); continue; }
-        if(registro.estado === 'APROBADO'){ continue; }
+        if(!registro){ console.warn('Usuario no encontrado para asignación manual', id); continue; }
         const valorEdicion = pagosColaboradoresEdicion.has(id)
           ? pagosColaboradoresEdicion.get(id)
-          : registro.creditos;
+          : '';
         const monto = Number(valorEdicion);
         if(!Number.isFinite(monto) || monto <= 0){
-          alert(' para poder APROBAR el pago, debes ingresar una cantidad de CREDITOS mayor a 0');
+          alert('Para asignar créditos manuales debes ingresar un monto mayor a 0.');
+          return;
+        }
+        const billetera = cpNormalizarEmail(registro.gmail || id);
+        if(!billetera){
+          alert('No se pudo determinar la billetera del usuario seleccionado.');
           return;
         }
         try {
-          await db.runTransaction(async tx => {
-            const ref = db.collection('PagosColaboradores').doc(id);
-            const snap = await tx.get(ref);
-            if(!snap.exists) return;
-            const data = snap.data();
-            const estadoActual = normalizarEstado(data.estado);
-            if(estadoActual === 'APROBADO') return;
-            tx.update(ref, {
-              estado: 'APROBADO',
-              creditos: monto,
-              fechaGestion: fechaServidor(),
-              horaGestion: horaServidor(),
-              gestionadoPor: authInstance().currentUser?.email || '',
-              rolGestor: window.currentRole || ''
-            });
+          await acreditarPago({
+            ...registro,
+            billetera,
+            creditos: monto,
+            sorteoId: '',
+            sorteoNombre: 'Asignación manual',
+            referencia: 'ASIGNACION_MANUAL'
           });
-          pagosColaboradoresEdicion.delete(id);
-          await acreditarPago({ ...registro, creditos: monto });
+          registro.creditosActuales = (Number(registro.creditosActuales) || 0) + monto;
+          guardarInfoUsuarioCache({
+            email: billetera,
+            alias: registro.alias,
+            nombre: registro.nombre,
+            tipo: registro.tipo,
+            telefono: registro.telefono,
+            creditos: registro.creditosActuales,
+            cartonesGratis: registro.cartonesGratis || 0,
+            completo: true
+          });
+          procesados.push(registro.nombre || billetera);
         } catch (err) {
-          console.error('Error aprobando pago de colaborador', err);
-          alert('Ocurrió un error al aprobar un pago de colaborador. Revisa la consola para más detalles.');
-          break;
+          console.error('Error asignando créditos manuales', err);
+          alert('Ocurrió un error al asignar créditos manualmente. Revisa la consola para más detalles.');
+          return;
         }
       }
+      pagosColaboradoresEdicion.clear();
+      const tabla = document.getElementById('tabla-colaboradores');
+      if(tabla){
+        tabla.querySelectorAll('tbody input[type="checkbox"]').forEach(chk=>{ chk.checked = false; });
+        tabla.querySelectorAll('.colab-input').forEach(input=>{ input.disabled = true; input.value = ''; });
+      }
+      if(procesados.length){
+        alert(`Se asignaron créditos manuales a ${procesados.length} usuario(s).`);
+      }
+      renderColaboradores();
     }
 
     async function archivarRegistros(ids, tipo){
@@ -1922,8 +2141,10 @@
       document.getElementById('filtro-colab-gmail').addEventListener('input', e=>{ filtrosColaboradores.gmail = e.target.value.toLowerCase().trim(); renderColaboradores(); });
       document.getElementById('filtro-colab-nombre').addEventListener('input', e=>{ filtrosColaboradores.nombre = e.target.value.toLowerCase().trim(); renderColaboradores(); });
       document.getElementById('filtro-colab-creditos').addEventListener('input', e=>{ filtrosColaboradores.creditos = e.target.value.replace(/[^0-9.]/g,''); renderColaboradores(); });
-      document.getElementById('filtro-colab-fecha').addEventListener('change', e=>{ filtrosColaboradores.fecha = e.target.value; renderColaboradores(); });
-      document.getElementById('filtro-colab-estado').addEventListener('change', e=>{ filtrosColaboradores.estado = e.target.value; renderColaboradores(); });
+      document.getElementById('colaboradores-filtro-tipo').addEventListener('change', e=>{
+        filtrosColaboradores.tipo = (e.target.value || '').toLowerCase();
+        renderColaboradores();
+      });
     }
 
     function configurarBotones(){
@@ -1973,17 +2194,6 @@
         if(!seleccion.length){ alert('Selecciona al menos un registro.'); return; }
         await aprobarPagosColaboradores(seleccion);
       });
-      document.getElementById('colaboradores-archivar').addEventListener('click', async()=>{
-        const seleccion = obtenerSeleccion('tabla-colaboradores');
-        if(!seleccion.length){ alert('Selecciona registros para archivar.'); return; }
-        if(!(await confirm('¿Deseas archivar los registros seleccionados?'))) return;
-        await archivarRegistros(seleccion, 'colaboradores');
-      });
-      document.getElementById('colaboradores-ver-archivo').addEventListener('click', ()=>{
-        mostrarColaboradoresArchivo = !mostrarColaboradoresArchivo;
-        renderColaboradores();
-      });
-
       const tablaColaboradores = document.getElementById('tabla-colaboradores');
       tablaColaboradores.addEventListener('change', e=>{
         if(e.target.matches('tbody input[type="checkbox"]')){
@@ -1991,22 +2201,14 @@
           const fila = e.target.closest('tr');
           const input = fila ? fila.querySelector('.colab-input') : null;
           if(!input) return;
-          const registroActual = pagosColaboradoresMapa.get(id);
-          if(registroActual && registroActual.estado === 'APROBADO'){
-            e.target.checked = false;
-            input.disabled = true;
-            return;
-          }
-          if(e.target.checked && !mostrarColaboradoresArchivo){
+          if(e.target.checked){
             input.disabled = false;
             input.focus();
             input.select();
           } else {
             input.disabled = true;
-            const registro = pagosColaboradoresMapa.get(id) || pagosColaboradoresArchivoMapa.get(id) || null;
-            const valor = registro ? Number(registro.creditos) || 0 : 0;
             pagosColaboradoresEdicion.delete(id);
-            input.value = valor.toFixed(2);
+            input.value = '';
           }
         }
       });
@@ -2015,6 +2217,11 @@
           pagosColaboradoresEdicion.set(e.target.dataset.id, e.target.value);
         }
       });
+
+      const modalAceptar = document.getElementById('modal-info-aceptar');
+      if(modalAceptar){ modalAceptar.addEventListener('click', ()=>ocultarModalInfo()); }
+      const modalCapa = document.getElementById('modal-informacion');
+      if(modalCapa){ modalCapa.addEventListener('click', e=>{ if(e.target === modalCapa) ocultarModalInfo(); }); }
 
       const togglePremios = document.getElementById('toggle-premios');
       const contenidoPremios = document.getElementById('premios-content');
@@ -2032,6 +2239,76 @@
       contenidoColaboradores.style.display = 'none';
 
       document.getElementById('volver-btn').addEventListener('click', e=>volverConFallback(e));
+    }
+
+    function obtenerRegistroPorTipo(tipo, id){
+      if(tipo === 'premios'){ return premiosMapa.get(id) || premiosArchivoMapa.get(id) || null; }
+      if(tipo === 'pagos'){ return pagosAdminMapa.get(id) || pagosAdminArchivoMapa.get(id) || null; }
+      return null;
+    }
+
+    function configurarInteraccionesTablas(){
+      const tablaPremios = document.getElementById('tabla-premios');
+      if(tablaPremios){
+        tablaPremios.addEventListener('click', async e => {
+          if(e.target.closest('input,button,select,textarea')) return;
+          const fila = e.target.closest('tr[data-id]');
+          if(!fila) return;
+          const id = fila.dataset.id;
+          const registro = obtenerRegistroPorTipo('premios', id);
+          if(!registro) return;
+          if(e.target.closest('td.creditos')){
+            const sorteo = registro.sorteoNombre || 'Sin sorteo asociado.';
+            mostrarModalInfo('Sorteo asignado', sorteo || 'Sin sorteo asociado.');
+            return;
+          }
+          if(e.target.closest('td.alias')){
+            const info = await obtenerInfoUsuarioDetallada(registro.gmail, registro.alias);
+            const tipo = info?.tipo || 'Sin tipo registrado.';
+            mostrarModalInfo('Tipo de usuario', tipo || 'Sin tipo registrado.');
+            return;
+          }
+          if(e.target.closest('td.gmail')){
+            const info = await obtenerInfoUsuarioDetallada(registro.gmail, registro.alias);
+            const telefono = info?.telefono || 'Sin número registrado.';
+            mostrarModalInfo('Teléfono del usuario', telefono || 'Sin número registrado.');
+            return;
+          }
+          if(e.target.closest('td.cart')){
+            const info = await obtenerInfoUsuarioDetallada(registro.gmail, registro.alias);
+            const cartones = Number(info?.cartonesGratis) || 0;
+            mostrarModalInfo('Cartones gratis', `Cartones gratis actuales: ${formatNumberEntero.format(Math.round(cartones))}`);
+          }
+        });
+      }
+
+      const tablaPagos = document.getElementById('tabla-pagos');
+      if(tablaPagos){
+        tablaPagos.addEventListener('click', async e => {
+          if(e.target.closest('input,button,select,textarea')) return;
+          const fila = e.target.closest('tr[data-id]');
+          if(!fila) return;
+          const id = fila.dataset.id;
+          const registro = obtenerRegistroPorTipo('pagos', id);
+          if(!registro) return;
+          if(e.target.closest('td.creditos')){
+            const sorteo = registro.sorteoNombre || 'Sin sorteo asociado.';
+            mostrarModalInfo('Sorteo asignado', sorteo || 'Sin sorteo asociado.');
+            return;
+          }
+          if(e.target.closest('td.alias')){
+            const info = await obtenerInfoUsuarioDetallada(registro.gmail, registro.alias || registro.nombre);
+            const tipo = info?.tipo || 'Sin tipo registrado.';
+            mostrarModalInfo('Tipo de usuario', tipo || 'Sin tipo registrado.');
+            return;
+          }
+          if(e.target.closest('td.gmail')){
+            const info = await obtenerInfoUsuarioDetallada(registro.gmail, registro.alias || registro.nombre);
+            const telefono = info?.telefono || 'Sin número registrado.';
+            mostrarModalInfo('Teléfono del usuario', telefono || 'Sin número registrado.');
+          }
+        });
+      }
     }
 
     let intentoRetornoActivo = false;
@@ -2105,27 +2382,63 @@
         });
         if(mostrarPagosArchivo) renderPagos();
       });
-      unsubscribeColaboradores = db.collection('PagosColaboradores').onSnapshot(snapshot => {
-        pagosColaboradoresActivos.length = 0;
+      unsubscribeUsuariosCentro = db.collection('users').onSnapshot(async snapshot => {
+        const registros = [];
         pagosColaboradoresMapa.clear();
+        pagosColaboradoresEdicion.clear();
+        const tareas = [];
         snapshot.forEach(doc => {
-          const registro = prepararPago(doc.id, doc.data());
-          pagosColaboradoresActivos.push(registro);
-          pagosColaboradoresMapa.set(doc.id, registro);
-          pagosColaboradoresEdicion.delete(doc.id);
+          const data = doc.data() || {};
+          const email = cpNormalizarEmail(data.email || doc.id);
+          if(!email) return;
+          const tipo = normalizarTipoUsuario(data.role || data.rol || data.rolinterno || '');
+          const tipoLower = tipo.toLowerCase();
+          if(!['colaborador','administrador','superadmin'].includes(tipoLower)) return;
+          const nombre = (data.nombre || data.name || data.alias || '').toString();
+          const alias = (data.alias || '').toString();
+          const telefono = (data.telefono || data.Telefono || data.celular || data.whatsapp || data.phoneNumber || '').toString();
+          const registro = {
+            id: email,
+            gmail: email,
+            nombre: nombre,
+            alias,
+            creditos: 0,
+            fechaMostrar: '-',
+            fechaFiltro: '',
+            fechaOrden: 0,
+            estado: tipo,
+            tipo,
+            billetera: email,
+            telefono
+          };
+          guardarInfoUsuarioCache({ email, alias, nombre, tipo, telefono, completo: false });
+          pagosColaboradoresMapa.set(email, registro);
+          registros.push(registro);
+          tareas.push((async()=>{
+            const billetera = await obtenerDatosBilletera(email);
+            registro.creditosActuales = billetera.creditos;
+            registro.cartonesGratis = billetera.cartonesGratis;
+            registro.creditos = billetera.creditos;
+            guardarInfoUsuarioCache({
+              email,
+              alias,
+              nombre,
+              tipo,
+              telefono,
+              creditos: billetera.creditos,
+              cartonesGratis: billetera.cartonesGratis,
+              completo: true
+            });
+          })());
         });
+        try {
+          await Promise.all(tareas);
+        } catch (err) {
+          console.warn('No se pudieron sincronizar algunas billeteras', err);
+        }
+        pagosColaboradoresActivos.length = 0;
+        pagosColaboradoresActivos.push(...registros.sort((a,b)=> (a.nombre || a.alias || '').localeCompare(b.nombre || b.alias || '')));
         renderColaboradores();
-      });
-      unsubscribeColaboradoresArchivo = db.collection('PagosColaboradoresArchivo').onSnapshot(snapshot => {
-        pagosColaboradoresArchivados.length = 0;
-        pagosColaboradoresArchivoMapa.clear();
-        snapshot.forEach(doc => {
-          const registro = prepararPago(doc.id, doc.data());
-          registro.estado = normalizarEstado(doc.data().estado || 'ARCHIVADO');
-          pagosColaboradoresArchivados.push(registro);
-          pagosColaboradoresArchivoMapa.set(doc.id, registro);
-        });
-        if(mostrarColaboradoresArchivo) renderColaboradores();
       });
     }
 
@@ -2135,8 +2448,7 @@
         unsubscribePremiosArchivo,
         unsubscribePagos,
         unsubscribePagosArchivo,
-        unsubscribeColaboradores,
-        unsubscribeColaboradoresArchivo
+        unsubscribeUsuariosCentro
       ].forEach(unsub=>{
         if(typeof unsub === 'function') unsub();
       });
@@ -2145,6 +2457,7 @@
     async function iniciarCentroPagos(){
       configurarFiltros();
       configurarBotones();
+      configurarInteraccionesTablas();
       try {
         await ensureFirebaseListo();
       } catch (err) {
