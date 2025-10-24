@@ -441,6 +441,9 @@
       border-color: #ffcc80;
       box-shadow: 0 6px 14px rgba(255, 152, 0, 0.32);
     }
+    #centro-pagos-btn.animacion-pagos {
+      animation: zoomPulse 1.9s ease-in-out infinite;
+    }
     .estado-btn img,
     .estado-btn svg { width: 24px; height: 24px; }
     .estado-btn .pdf-floating-icon {
@@ -4477,6 +4480,9 @@
       if(resultadoBtn){
         resultadoBtn.classList.remove('pdf-disponible');
       }
+      if(centroPagosBtn){
+        centroPagosBtn.classList.remove('animacion-pagos');
+      }
       forzarVisibilidadResultado(false);
       return;
     }
@@ -4497,6 +4503,10 @@
     pdfBtn.classList.toggle('pdf-disponible', pdfEstado === 'si');
     if(resultadoBtn){
       resultadoBtn.classList.toggle('pdf-disponible', pdfResultadoEstado === 'si');
+    }
+    if(centroPagosBtn){
+      const animarPagos = pdfResultadoEstado === 'si';
+      centroPagosBtn.classList.toggle('animacion-pagos', animarPagos);
     }
     forzarVisibilidadResultado(esFinalizado);
   }
@@ -4540,6 +4550,9 @@
       if(resultadoBtn){
         resultadoBtn.classList.remove('pdf-disponible');
       }
+      if(centroPagosBtn){
+        centroPagosBtn.classList.remove('animacion-pagos');
+      }
       forzarVisibilidadResultado(false);
       actualizarAnimaciones();
       aplicarDatosCantos([]);
@@ -4552,6 +4565,10 @@
     const data = currentSorteoData;
     sincronizarFormasBase(data.formas || []);
     btnSorteo.textContent = data.nombre || 'Sorteo';
+    if(centroPagosBtn){
+      const animarPagos = (data.pdfresul || '').toString().trim().toLowerCase() === 'si';
+      centroPagosBtn.classList.toggle('animacion-pagos', animarPagos);
+    }
     btnSorteo.classList.remove('diario','especial','jugando','finalizado');
     const estadoActual = data.estado || '';
     const tipoActual = (data.tipo || '').toLowerCase();
