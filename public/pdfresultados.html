@@ -1059,6 +1059,53 @@
       min-height: 0;
       height: 100%;
     }
+    body.pdf-captura.pdf-firstpage-horizontal {
+      padding-left: 0;
+      padding-right: 0;
+    }
+    body.pdf-captura.pdf-firstpage-horizontal #pdf-wrapper {
+      max-width: none;
+      width: 100%;
+      padding-left: 0;
+      padding-right: 0;
+    }
+    body.pdf-captura.pdf-firstpage-horizontal #first-page-layout {
+      width: 100%;
+      max-width: none;
+      min-height: 0;
+      margin: 0;
+      padding: 0;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      grid-auto-rows: minmax(0, auto);
+      align-items: start;
+      gap: var(--pdf-gap);
+    }
+    body.pdf-captura.pdf-firstpage-horizontal #first-page-layout > * {
+      min-width: 0;
+    }
+    body.pdf-captura.pdf-firstpage-horizontal #first-page-layout #resumen-layout {
+      display: contents;
+    }
+    body.pdf-captura.pdf-firstpage-horizontal #first-page-layout #resumen-header,
+    body.pdf-captura.pdf-firstpage-horizontal #first-page-layout .datos-generales-grid,
+    body.pdf-captura.pdf-firstpage-horizontal #first-page-layout .totales-header {
+      grid-column: 1 / span 5;
+    }
+    body.pdf-captura.pdf-firstpage-horizontal #first-page-layout #formas-section {
+      grid-column: 6 / -1;
+      grid-row: 1 / -1;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: var(--pdf-gap);
+      min-height: 100%;
+      align-content: start;
+    }
+    body.pdf-captura.pdf-firstpage-horizontal #first-page-layout #formas-resumen {
+      align-content: stretch;
+    }
     body.pdf-captura .formas-intro {
       padding: var(--pdf-bloque-padding);
       box-shadow: none;
@@ -3012,6 +3059,7 @@
     }
     const nombreArchivo = `${construirNombreArchivo()}.pdf`;
     const primeraPagina = document.getElementById('first-page-layout');
+    let removerClaseHorizontal = false;
     if(!primeraPagina){
       alert('No se encontró el contenido del sorteo para generar el PDF.');
       return;
@@ -3054,6 +3102,10 @@
       }
 
       document.body.classList.add('pdf-captura');
+      if(!document.body.classList.contains('pdf-firstpage-horizontal')){
+        document.body.classList.add('pdf-firstpage-horizontal');
+        removerClaseHorizontal = true;
+      }
       await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
 
       restaurarFormas = ajustarFormasParaPdf();
@@ -3203,6 +3255,9 @@
       restaurarCartones();
       restaurarFormas();
       document.body.classList.remove('pdf-captura');
+      if(removerClaseHorizontal){
+        document.body.classList.remove('pdf-firstpage-horizontal');
+      }
       if(debeForzarPaisaje){
         document.body.classList.remove('forzar-orientacion-landscape');
       }
