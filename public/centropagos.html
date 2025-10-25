@@ -133,6 +133,15 @@
     #tabla-colaboradores .colab-input:disabled {
       color: inherit;
     }
+    #tabla-colaboradores td.creditos-actuales {
+      font-family: Calibri, Arial, sans-serif;
+      font-weight: 700;
+      color: #0d47a1;
+      text-align: right;
+    }
+    #tabla-colaboradores td.colab-asignar {
+      background: rgba(255,255,255,0.7);
+    }
     .switch { position: relative; display: inline-block; width: 42px; height: 24px; }
     .switch input { display: none; }
     .slider {
@@ -281,6 +290,13 @@
       cursor: pointer;
       font-size: 1rem;
     }
+    .th-asignados {
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
     .estado-pendiente { color: orange; }
     .estado-aprobado { color: green; }
     .estado-archivado { color: brown; }
@@ -305,12 +321,39 @@
     .gmail-cell .gmail-full {
       display: inline;
     }
-    .estado-rol {
-      display: inline-block;
-      padding: 2px 4px;
-      background: rgba(0,0,0,0.1);
-      border-radius: 4px;
-      font-weight: 600;
+    .rol-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-family: Calibri, Arial, sans-serif;
+      border: 1px solid transparent;
+      background: rgba(255,255,255,0.85);
+    }
+    .rol-badge--colaborador {
+      color: #1b5e20;
+      border-color: rgba(27,94,32,0.35);
+      background: rgba(27,94,32,0.12);
+    }
+    .rol-badge--administrador {
+      color: #0d47a1;
+      border-color: rgba(13,71,161,0.35);
+      background: rgba(13,71,161,0.12);
+    }
+    .rol-badge--superadmin {
+      color: #6a1b9a;
+      border-color: rgba(106,27,154,0.35);
+      background: rgba(106,27,154,0.12);
+    }
+    .rol-badge--jugador {
+      color: #f57c00;
+      border-color: rgba(245,124,0,0.35);
+      background: rgba(245,124,0,0.12);
     }
     .modal-capa {
       position: fixed;
@@ -509,9 +552,10 @@
           <col style="width:6%">
           <col style="width:22%">
           <col style="width:22%">
-          <col style="width:18%">
-          <col style="width:16%">
+          <col style="width:14%">
+          <col style="width:14%">
           <col style="width:12%">
+          <col style="width:10%">
           <col style="width:4%">
         </colgroup>
         <thead>
@@ -519,9 +563,10 @@
             <th>N°</th>
             <th><input type="text" id="filtro-colab-gmail" placeholder="Gmail"></th>
             <th><input type="text" id="filtro-colab-nombre" placeholder="Nombre"></th>
-            <th><input type="text" id="filtro-colab-creditos" placeholder="Créditos"></th>
-            <th>-</th>
-            <th>Tipo</th>
+            <th><input type="text" id="filtro-colab-creditos" placeholder="C. Actuales"></th>
+            <th class="th-asignados">C. Asignados</th>
+            <th>Fecha</th>
+            <th>Rol</th>
             <th><span id="colaboradores-marcar" class="check-header">✔</span></th>
           </tr>
         </thead>
@@ -1641,6 +1686,16 @@
       return texto.charAt(0).toUpperCase() + texto.slice(1);
     }
 
+    function construirRolBadgeHtml(tipo){
+      const texto = (tipo || '').toString().trim();
+      if(!texto) return '';
+      const base = texto.toLowerCase();
+      const clasePermitida = ['colaborador','administrador','superadmin','jugador'].includes(base)
+        ? base
+        : 'colaborador';
+      return `<span class="rol-badge rol-badge--${clasePermitida}">${escapeHtml(texto)}</span>`;
+    }
+
     function guardarInfoUsuarioCache(info = {}){
       const base = { ...info };
       if(base.email){
@@ -1746,14 +1801,16 @@
       if(!tbody) return;
       const { mostrarArchivo = false, tipo } = opciones;
       if(!lista.length){
-        tbody.innerHTML = `<tr><td colspan="${tipo==='premios'?8:7}"><div class="mensaje-tabla">No hay registros para mostrar.</div></td></tr>`;
+        const columnasTabla = tipo==='premios' ? 8 : (tipo==='colaboradores' ? 8 : 7);
+        tbody.innerHTML = `<tr><td colspan="${columnasTabla}"><div class="mensaje-tabla">No hay registros para mostrar.</div></td></tr>`;
         return;
       }
       const filas = lista.map((item, indice)=>{
       const numero = indice + 1;
       const estadoClase = item.estado === 'APROBADO' ? 'estado-aprobado' : (item.estado === 'PENDIENTE' ? 'estado-pendiente' : 'estado-archivado');
+      const rolNormalizado = normalizarTipoUsuario(item.tipo || item.estado || '');
       const estadoHtml = tipo === 'colaboradores'
-        ? `<span class="estado-rol">${escapeHtml(item.tipo || item.estado || '')}</span>`
+        ? construirRolBadgeHtml(rolNormalizado)
         : `<span class="${estadoClase}">${escapeHtml(item.estado)}</span>`;
         const disabled = mostrarArchivo ? 'disabled' : '';
         if(tipo === 'premios'){
@@ -1771,18 +1828,17 @@
         if(tipo === 'colaboradores'){
           const valorReferencia = pagosColaboradoresEdicion.has(item.id)
             ? pagosColaboradoresEdicion.get(item.id)
-            : item.creditos;
+            : '';
           const numeroValor = Number(valorReferencia);
           const valorInput = Number.isFinite(numeroValor) ? numeroValor.toFixed(2) : '';
           const archivoAttr = mostrarArchivo ? ' data-archivo="1"' : '';
-          const placeholder = Number.isFinite(Number(item.creditosActuales))
-            ? formatNumberEntero.format(Math.round(Number(item.creditosActuales)))
-            : '0';
+          const creditosActuales = Number(item.creditosActuales ?? item.creditos ?? 0);
           return `<tr data-id="${item.id}">
             <td>${numero}</td>
             <td class="gmail">${construirGmailHtml(item.gmail)}</td>
             <td class="alias">${escapeHtml(item.nombre)}</td>
-            <td><input type="number" class="colab-input" step="0.01" min="0" data-id="${item.id}" value="${valorInput}" placeholder="${escapeHtml(placeholder)}" disabled${archivoAttr}></td>
+            <td class="creditos-actuales">${formatNumber.format(creditosActuales)}</td>
+            <td class="colab-asignar"><input type="number" class="colab-input" step="0.01" min="0" data-id="${item.id}" value="${valorInput}" placeholder="0.00" disabled${archivoAttr}></td>
             <td>${escapeHtml(item.fechaMostrar || '-')}</td>
             <td class="estado">${estadoHtml}</td>
             <td><input type="checkbox" data-id="${item.id}" ${disabled}></td>
@@ -1828,7 +1884,8 @@
       return origen.filter(item=>{
         if(filtrosColaboradores.gmail && !item.gmail.toLowerCase().includes(filtrosColaboradores.gmail)) return false;
         if(filtrosColaboradores.nombre && !item.nombre.toLowerCase().includes(filtrosColaboradores.nombre)) return false;
-        if(filtrosColaboradores.creditos && !String(item.creditos ?? '').includes(filtrosColaboradores.creditos)) return false;
+        const creditosTexto = String(item.creditosActuales ?? item.creditos ?? '');
+        if(filtrosColaboradores.creditos && !creditosTexto.includes(filtrosColaboradores.creditos)) return false;
         if(filtrosColaboradores.tipo){
           const tipoActual = (item.tipo || item.estado || '').toString().toLowerCase();
           if(tipoActual !== filtrosColaboradores.tipo) return false;
@@ -1911,8 +1968,15 @@
         if(typeof fechaServidor !== 'function' || typeof horaServidor !== 'function'){
           await initServerTime();
         }
+        const tipoTransaccion = (enRegistro.tipotrans || 'premio').toString().toLowerCase();
+        const referencia = enRegistro.referencia
+          || (tipoTransaccion === 'pago' ? 'PAGO' : 'PREMIO');
+        const sorteoNombre = enRegistro.sorteoNombre
+          || (tipoTransaccion === 'pago'
+            ? 'Pago a colaborador'
+            : (enRegistro.referencia === 'ASIGNACION_MANUAL' ? 'Asignación manual' : ''));
         await dbRef().collection('transacciones').add({
-          tipotrans: 'premio',
+          tipotrans: tipoTransaccion,
           Monto: monto,
           estado: 'APROBADO',
           IDbilletera: enRegistro.billetera,
@@ -1922,9 +1986,9 @@
           horagestion: typeof horaServidor === 'function' ? horaServidor() : '',
           usuariogestor: authInstance().currentUser?.email || '',
           rolusuario: window.currentRole || '',
-          referencia: enRegistro.referencia || 'PREMIO',
+          referencia,
           sorteoId: enRegistro.sorteoId || '',
-          sorteoNombre: enRegistro.sorteoNombre || (enRegistro.referencia === 'ASIGNACION_MANUAL' ? 'Asignación manual' : '')
+          sorteoNombre
         });
       } catch (err) {
         console.error('No se pudo registrar la transacción de premio', err);
@@ -2053,10 +2117,12 @@
             billetera,
             creditos: monto,
             sorteoId: '',
-            sorteoNombre: 'Asignación manual',
-            referencia: 'ASIGNACION_MANUAL'
+            sorteoNombre: 'Pago a colaborador',
+            referencia: 'PAGO',
+            tipotrans: 'pago'
           });
           registro.creditosActuales = (Number(registro.creditosActuales) || 0) + monto;
+          registro.creditos = registro.creditosActuales;
           guardarInfoUsuarioCache({
             email: billetera,
             alias: registro.alias,

@@ -366,6 +366,7 @@
                 <option value="deposito">DEPOSITO</option>
                 <option value="retiro">RETIRO</option>
                 <option value="premio">PREMIO</option>
+                <option value="pago" id="filtro-tipo-pago">PAGO</option>
               </select>
             </th>
             <th><input id="filtro-monto" type="number" placeholder="MONTO"></th>
@@ -443,6 +444,16 @@
     initFirebase().then(() => {
       auth.onAuthStateChanged(async user => {
         if(!user) return;
+        const filtroTipoSelect = document.getElementById('filtro-tipo');
+        const opcionPago = document.getElementById('filtro-tipo-pago');
+        if(opcionPago && filtroTipoSelect){
+          const rolActual = (window.currentRole || '').toLowerCase();
+          const visible = rolActual === 'colaborador';
+          opcionPago.hidden = !visible;
+          if(!visible && filtroTipoSelect.value === 'pago'){
+            filtroTipoSelect.value = '';
+          }
+        }
         cargarBancosBilletera();
         cargarBancosBingo();
         const paramDoc = await db.collection('Variablesglobales').doc('Parametros').get();
@@ -586,9 +597,11 @@
         const esDeposito=tipoTrans==='deposito';
         const esRetiro=tipoTrans==='retiro';
         const esPremio=tipoTrans==='premio';
+        const esPago=tipoTrans==='pago';
+        const esResaltado=esPremio||esPago;
         const colorTipo=esDeposito?'green':esRetiro?'red':'#1b5e20';
-        const montoStyle=esPremio?`background:#1b5e20;color:#fff;`:`color:${colorTipo};`;
-        const fechaStyle=esPremio?`color:#1b5e20;`:'';
+        const montoStyle=esResaltado?`background:#1b5e20;color:#fff;`:`color:${colorTipo};`;
+        const fechaStyle=esResaltado?`color:#1b5e20;`:'';
         tr.innerHTML=`<td>${n}</td><td style="color:${colorTipo}">${tipoTrans.toUpperCase()}</td><td class="celda-monto" style="${montoStyle}">${montoFmt}</td><td class="celda-fecha" style="${fechaStyle}">${f}</td><td style="color:${estadoColor}">${t.estado}</td>`;
         const fechaTd=tr.querySelector('.celda-fecha');
         fechaTd.style.cursor='pointer';
@@ -611,8 +624,9 @@
         const fg=formatearFecha(t.fechagestion||'');
         const hg=formatearHora(t.horagestion||'');
         const cont=document.querySelector('#modal-detalle .contenido');
-        if(t.tipotrans==='premio'){
-          cont.innerHTML=`<div style="color:#1b5e20;font-weight:bold;">Referencia: PREMIO</div>`+
+        if(t.tipotrans==='premio' || t.tipotrans==='pago'){
+          const etiqueta=t.tipotrans==='pago'?'PAGO':'PREMIO';
+          cont.innerHTML=`<div style="color:#1b5e20;font-weight:bold;">Referencia: ${etiqueta}</div>`+
           `<div style="color:green;">Fecha de gestión: ${fg}</div>`+
           `<div style="color:green;">Hora de gestión: ${hg}</div>`+
           `<button id="modal-ok">Aceptar</button>`;
@@ -635,7 +649,7 @@
         const comG=t.tipotrans==='retiro'?solicitado*porcentajeAdministra/100:0;
         const total=parseFloat(t.Monto);
         const cont=document.querySelector('#modal-detalle .contenido');
-        if(t.tipotrans==='premio'){
+        if(t.tipotrans==='premio' || t.tipotrans==='pago'){
           cont.innerHTML=
             `<div style="font-weight:bold;color:#1b5e20;">Total recibido: ${total.toFixed(2)}</div>`+
             `<button id='modal-ok'>Aceptar</button>`;
