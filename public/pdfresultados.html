@@ -252,18 +252,24 @@
     }
     #resumen-layout {
       display: flex;
-      flex-direction: column;
+      flex-wrap: wrap;
       gap: clamp(14px, 2.2vw, 24px);
       margin: 0 auto;
       width: 100%;
       text-align: left;
+      align-content: stretch;
     }
     .datos-generales-grid {
-      display: grid;
+      display: flex;
+      flex-wrap: wrap;
       width: 100%;
       gap: clamp(10px, 1.8vw, 20px);
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       align-items: stretch;
+    }
+    .datos-generales-grid .dato-inline {
+      flex: 1 1 clamp(200px, 28%, 260px);
+      min-width: clamp(200px, 28%, 260px);
+      max-width: 100%;
     }
     .resumen-bloque {
       background: #ffffff;
@@ -280,6 +286,11 @@
       text-align: left;
       min-width: 0;
       width: 100%;
+    }
+    #resumen-layout > #resumen-header,
+    #resumen-layout > .totales-header,
+    #resumen-layout > .datos-generales-grid {
+      flex: 1 1 100%;
     }
     #resumen-header .header-logo {
       display: flex;
@@ -373,8 +384,9 @@
       text-shadow: 0 0 6px rgba(255,255,255,0.9);
     }
     @media (min-width: 1024px) {
-      .datos-generales-grid {
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      .datos-generales-grid .dato-inline {
+        flex: 1 1 clamp(220px, 24%, 280px);
+        min-width: clamp(220px, 24%, 280px);
       }
     }
     .forma-item {
@@ -922,7 +934,11 @@
     }
     @media (max-width: 480px) {
       .datos-generales-grid {
-        grid-template-columns: 1fr;
+        flex-direction: column;
+      }
+      .datos-generales-grid .dato-inline {
+        flex: 1 1 100%;
+        min-width: 0;
       }
       #acciones-fixed {
         left: 50%;
@@ -1082,6 +1098,10 @@
       display: flex;
       flex-direction: column;
     }
+    body.pdf-captura #first-page-layout > #resumen-layout {
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
     body.pdf-captura #formas-section {
       display: flex;
       flex-direction: column;
@@ -1129,6 +1149,10 @@
       display: flex;
       flex-direction: column;
     }
+    body.pdf-captura.pdf-firstpage-horizontal #first-page-layout > #resumen-layout {
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
     body.pdf-captura.pdf-firstpage-horizontal #first-page-layout #resumen-layout,
     body.pdf-captura.pdf-firstpage-horizontal #first-page-layout #formas-section {
       display: flex;
@@ -1136,6 +1160,10 @@
       gap: var(--pdf-gap);
       min-height: 0;
       flex: 1 1 auto;
+    }
+    body.pdf-captura.pdf-firstpage-horizontal #first-page-layout #resumen-layout {
+      flex-wrap: wrap;
+      align-content: stretch;
     }
     body.pdf-captura.pdf-firstpage-horizontal #first-page-layout #formas-resumen {
       align-content: stretch;
@@ -1148,7 +1176,7 @@
     }
     body.pdf-captura #resumen-layout {
       display: flex;
-      flex-direction: column;
+      flex-wrap: wrap;
       gap: var(--pdf-gap);
       width: 100%;
       max-width: none;
@@ -1156,6 +1184,7 @@
       height: 100%;
       margin: 0 auto;
       flex: 1 1 auto;
+      align-content: stretch;
     }
     body.pdf-captura #resumen-layout > .resumen-bloque {
       padding: var(--pdf-bloque-padding);
@@ -1165,9 +1194,12 @@
     }
     body.pdf-captura .datos-generales-grid {
       gap: var(--pdf-gap);
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
       flex: 1 1 auto;
       min-height: 0;
+    }
+    body.pdf-captura .datos-generales-grid .dato-inline {
+      flex: 1 1 clamp(210px, 28%, 260px);
+      min-width: clamp(210px, 28%, 260px);
     }
     body.pdf-captura #nombre-sorteo {
       font-size: clamp(2.2rem, 4.6vw, 2.9rem);
