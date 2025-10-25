@@ -1049,7 +1049,7 @@
     body.pdf-captura {
       display: flex;
       flex-direction: column;
-      align-items: center;
+      align-items: stretch;
       justify-content: flex-start;
       width: 100%;
       margin: 0;
@@ -1059,9 +1059,6 @@
       --pdf-section-padding: clamp(8px, 1.1vw, 14px);
       --pdf-bloque-padding: clamp(6px, 0.9vw, 10px);
       --pdf-columnas: 6;
-      --pdf-page-width: 1120px;
-      --pdf-page-height: calc(var(--pdf-page-width) * 0.693);
-      --pdf-firstpage-basis: min(540px, 100%);
       --formas-min-width: 240px;
       --formas-scale: 0.96;
       --formas-mini-max: 192px;
@@ -1071,44 +1068,34 @@
       display: none !important;
     }
     body.pdf-captura #pdf-wrapper {
-      max-width: var(--pdf-page-width);
-      width: min(var(--pdf-page-width), 100%);
+      width: 100%;
+      max-width: none;
       padding: clamp(8px, 1.4vw, 14px);
       box-sizing: border-box;
       gap: var(--pdf-gap);
     }
     body.pdf-captura #first-page-layout {
-      width: min(var(--pdf-page-width), 100%);
-      max-width: 100%;
-      min-height: var(--pdf-page-height);
-      margin: 0 auto;
-      padding: var(--pdf-gap);
-      border: 1px solid rgba(11,83,148,0.22);
-      border-radius: 18px;
-      background: #ffffff;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: stretch;
-      justify-content: center;
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
       gap: var(--pdf-gap);
+      align-items: stretch;
     }
     body.pdf-captura #first-page-layout > * {
       min-width: 0;
-      flex: 1 1 var(--pdf-firstpage-basis);
-      display: flex;
-      flex-direction: column;
     }
-    body.pdf-captura #first-page-layout > #resumen-layout {
-      flex-direction: row;
-      flex-wrap: wrap;
-    }
-    body.pdf-captura #formas-section {
+    body.pdf-captura #first-page-layout > #resumen-layout,
+    body.pdf-captura #first-page-layout > #formas-section {
       display: flex;
       flex-direction: column;
       gap: var(--pdf-gap);
-      min-height: 0;
       height: 100%;
-      flex: 1 1 auto;
+    }
+    body.pdf-captura #formas-section {
+      min-height: 0;
     }
     body.pdf-captura.pdf-firstpage-horizontal {
       padding-left: 0;
@@ -1116,57 +1103,14 @@
       overflow-x: auto;
     }
     body.pdf-captura.pdf-firstpage-horizontal #pdf-wrapper {
-      max-width: var(--pdf-page-width);
-      width: var(--pdf-page-width);
-      min-width: var(--pdf-page-width);
+      width: 100%;
+      max-width: none;
       margin: 0 auto;
-      padding-left: var(--pdf-gap);
-      padding-right: var(--pdf-gap);
-      display: grid;
-      gap: var(--pdf-gap);
+      padding-left: clamp(8px, 1.4vw, 14px);
+      padding-right: clamp(8px, 1.4vw, 14px);
     }
     body.pdf-captura.pdf-firstpage-horizontal #first-page-layout {
-      width: 100%;
-      max-width: var(--pdf-page-width);
-      min-width: var(--pdf-page-width);
-      min-height: var(--pdf-page-height);
-      margin: 0 auto;
-      padding: var(--pdf-gap);
-      border: 1px solid rgba(11,83,148,0.22);
-      border-radius: 18px;
-      background: #ffffff;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: stretch;
-      justify-content: center;
-      gap: var(--pdf-gap);
-      box-sizing: border-box;
-    }
-    body.pdf-captura.pdf-firstpage-horizontal #first-page-layout > * {
-      min-width: 0;
-      width: auto;
-      flex: 1 1 var(--pdf-firstpage-basis);
-      display: flex;
-      flex-direction: column;
-    }
-    body.pdf-captura.pdf-firstpage-horizontal #first-page-layout > #resumen-layout {
-      flex-direction: row;
-      flex-wrap: wrap;
-    }
-    body.pdf-captura.pdf-firstpage-horizontal #first-page-layout #resumen-layout,
-    body.pdf-captura.pdf-firstpage-horizontal #first-page-layout #formas-section {
-      display: flex;
-      flex-direction: column;
-      gap: var(--pdf-gap);
-      min-height: 0;
-      flex: 1 1 auto;
-    }
-    body.pdf-captura.pdf-firstpage-horizontal #first-page-layout #resumen-layout {
-      flex-wrap: wrap;
-      align-content: stretch;
-    }
-    body.pdf-captura.pdf-firstpage-horizontal #first-page-layout #formas-resumen {
-      align-content: stretch;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     }
     body.pdf-captura .formas-intro {
       padding: var(--pdf-bloque-padding);
@@ -1175,15 +1119,14 @@
       border-color: rgba(11,83,148,0.28);
     }
     body.pdf-captura #resumen-layout {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: var(--pdf-gap);
       width: 100%;
       max-width: none;
       min-height: 0;
       height: 100%;
-      margin: 0 auto;
-      flex: 1 1 auto;
+      margin: 0;
       align-content: stretch;
     }
     body.pdf-captura #resumen-layout > .resumen-bloque {
@@ -1193,13 +1136,14 @@
       border-color: rgba(11,83,148,0.28);
     }
     body.pdf-captura .datos-generales-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: var(--pdf-gap);
-      flex: 1 1 auto;
       min-height: 0;
+      width: 100%;
     }
     body.pdf-captura .datos-generales-grid .dato-inline {
-      flex: 1 1 clamp(210px, 28%, 260px);
-      min-width: clamp(210px, 28%, 260px);
+      width: 100%;
     }
     body.pdf-captura #nombre-sorteo {
       font-size: clamp(2.2rem, 4.6vw, 2.9rem);
