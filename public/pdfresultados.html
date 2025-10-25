@@ -3056,13 +3056,19 @@
       const primeraPaginaCanvas = await window.html2canvas(primeraPagina, canvasOptions);
       const availableWidth = pageWidth - marginX * 2;
       const availableHeight = pageHeight - marginY * 2;
-      const widthRatio = availableWidth / primeraPaginaCanvas.width;
-      const heightRatio = availableHeight / primeraPaginaCanvas.height;
-      const resumenRatio = Math.min(widthRatio, heightRatio);
-      const resumenWidth = primeraPaginaCanvas.width * resumenRatio;
-      const resumenHeight = primeraPaginaCanvas.height * resumenRatio;
-      const resumenX = marginX + (availableWidth - resumenWidth) / 2;
-      const resumenY = marginY + (availableHeight - resumenHeight) / 2;
+
+      let resumenWidth = availableWidth;
+      let resumenHeight = primeraPaginaCanvas.height * (resumenWidth / primeraPaginaCanvas.width);
+      let resumenX = marginX;
+      let resumenY = marginY + (availableHeight - resumenHeight) / 2;
+
+      if(resumenHeight > availableHeight){
+        const ajusteRatio = availableHeight / primeraPaginaCanvas.height;
+        resumenHeight = primeraPaginaCanvas.height * ajusteRatio;
+        resumenWidth = primeraPaginaCanvas.width * ajusteRatio;
+        resumenX = marginX + (availableWidth - resumenWidth) / 2;
+        resumenY = marginY;
+      }
       pdf.addImage(primeraPaginaCanvas.toDataURL('image/jpeg', 0.85), 'JPEG', resumenX, resumenY, resumenWidth, resumenHeight);
       const tituloDocumento = document.title || `Resultado ${sorteoData?.nombre || ''}`.trim();
       if(tituloDocumento && typeof pdf.setProperties === 'function'){
