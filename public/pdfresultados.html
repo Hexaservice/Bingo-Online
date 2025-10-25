@@ -198,14 +198,16 @@
       gap: clamp(18px, 2.4vw, 26px);
     }
     #first-page-layout {
-      display: grid;
+      display: flex;
+      flex-direction: column;
       gap: clamp(18px, 2.6vw, 28px);
       margin: 0 auto;
       width: 100%;
       text-align: left;
     }
     #formas-section {
-      display: grid;
+      display: flex;
+      flex-direction: column;
       gap: clamp(12px, 2vw, 18px);
     }
     .formas-intro {
@@ -235,7 +237,7 @@
       --formas-col-min: var(--formas-min-width);
       display: grid;
       gap: clamp(10px, calc(1.8vw * var(--formas-scale, 1)), 20px);
-      grid-template-columns: repeat(auto-fit, minmax(var(--formas-col-min), 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(clamp(220px, 28%, var(--formas-col-min)), 1fr));
       width: 100%;
       align-content: start;
     }
@@ -249,15 +251,19 @@
       height: 100%;
     }
     #resumen-layout {
-      display: grid;
-      gap: clamp(8px, 1.4vw, 16px);
+      display: flex;
+      flex-direction: column;
+      gap: clamp(14px, 2.2vw, 24px);
       margin: 0 auto;
       width: 100%;
       text-align: left;
+    }
+    .datos-generales-grid {
+      display: grid;
+      width: 100%;
+      gap: clamp(10px, 1.8vw, 20px);
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      grid-auto-rows: minmax(0, auto);
       align-items: stretch;
-      grid-auto-flow: dense;
     }
     .resumen-bloque {
       background: #ffffff;
@@ -268,12 +274,12 @@
     }
     #resumen-header {
       display: flex;
-      flex-wrap: nowrap;
+      flex-wrap: wrap;
       align-items: center;
       gap: clamp(8px, 1.4vw, 14px);
       text-align: left;
       min-width: 0;
-      grid-column: 1 / -1;
+      width: 100%;
     }
     #resumen-header .header-logo {
       display: flex;
@@ -351,7 +357,7 @@
       margin: 0;
       justify-content: center;
       text-align: center;
-      grid-column: 1 / -1;
+      width: 100%;
     }
     .totales-header h2 {
       font-family: 'Bangers', cursive;
@@ -367,12 +373,8 @@
       text-shadow: 0 0 6px rgba(255,255,255,0.9);
     }
     @media (min-width: 1024px) {
-      #resumen-layout {
+      .datos-generales-grid {
         grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        grid-auto-flow: dense;
-      }
-      #resumen-layout > .dato-inline {
-        min-height: 100%;
       }
     }
     .forma-item {
@@ -892,7 +894,7 @@
       .pdf-carton { max-width: clamp(170px, 28vw, 210px); }
     }
     @media (max-width: 480px) {
-      #resumen-layout {
+      .datos-generales-grid {
         grid-template-columns: 1fr;
       }
       #acciones-fixed {
@@ -1040,14 +1042,14 @@
       border: 1px solid rgba(11,83,148,0.22);
       border-radius: 18px;
       background: #ffffff;
-      display: grid;
-      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+      display: flex;
+      flex-direction: column;
       align-items: stretch;
       gap: var(--pdf-gap);
     }
     body.pdf-captura #formas-section {
-      display: grid;
-      grid-template-rows: auto 1fr;
+      display: flex;
+      flex-direction: column;
       gap: var(--pdf-gap);
       min-height: 0;
     }
@@ -1058,22 +1060,23 @@
       border-color: rgba(11,83,148,0.28);
     }
     body.pdf-captura #resumen-layout {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-      column-gap: var(--pdf-gap);
-      row-gap: var(--pdf-gap);
+      display: flex;
+      flex-direction: column;
+      gap: var(--pdf-gap);
       width: 100%;
       max-width: none;
       min-height: clamp(380px, 36vw, 520px);
       margin: 0 auto;
-      align-content: stretch;
-      grid-auto-flow: dense;
     }
     body.pdf-captura #resumen-layout > .resumen-bloque {
       padding: var(--pdf-bloque-padding);
       box-shadow: none;
       border-width: 0.7px;
       border-color: rgba(11,83,148,0.28);
+    }
+    body.pdf-captura .datos-generales-grid {
+      gap: var(--pdf-gap);
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
     }
     body.pdf-captura #nombre-sorteo {
       font-size: clamp(2.2rem, 4.6vw, 2.9rem);
@@ -1082,7 +1085,6 @@
       font-size: clamp(1.05rem, 1.8vw, 1.2rem);
     }
     body.pdf-captura #resumen-header {
-      grid-column: 1 / -1;
       align-items: center;
       flex-wrap: nowrap;
       gap: var(--pdf-gap);
@@ -1096,7 +1098,6 @@
       width: 100%;
     }
     body.pdf-captura .totales-header {
-      grid-column: 1 / -1;
       justify-content: flex-start;
       text-align: left;
       align-items: center;
@@ -1265,29 +1266,31 @@
             <div id="tipo-sorteo-titulo"></div>
           </div>
         </div>
-        <div class="dato-inline">
-          <span class="dato-label">Tipo de sorteo:</span>
-          <span id="dato-tipo" class="dato-valor">-</span>
-        </div>
-        <div class="dato-inline">
-          <span class="dato-label">Fecha del sorteo:</span>
-          <span id="dato-fecha" class="dato-valor">-</span>
-        </div>
-        <div class="dato-inline">
-          <span class="dato-label">Hora de cierre:</span>
-          <span id="dato-cierre" class="dato-valor">-</span>
-        </div>
-        <div class="dato-inline">
-          <span class="dato-label">Hora del sorteo:</span>
-          <span id="dato-hora" class="dato-valor">-</span>
-        </div>
-        <div class="dato-inline">
-          <span class="dato-label">Valor del cartón:</span>
-          <span id="dato-valor" class="dato-valor">-</span>
-        </div>
-        <div class="dato-inline">
-          <span class="dato-label">CARTONES GRATIS MÁXIMOS POR JUGADOR:</span>
-          <span id="dato-maxgratis" class="dato-valor">-</span>
+        <div class="datos-generales-grid">
+          <div class="dato-inline">
+            <span class="dato-label">Tipo de sorteo:</span>
+            <span id="dato-tipo" class="dato-valor">-</span>
+          </div>
+          <div class="dato-inline">
+            <span class="dato-label">Fecha del sorteo:</span>
+            <span id="dato-fecha" class="dato-valor">-</span>
+          </div>
+          <div class="dato-inline">
+            <span class="dato-label">Hora de cierre:</span>
+            <span id="dato-cierre" class="dato-valor">-</span>
+          </div>
+          <div class="dato-inline">
+            <span class="dato-label">Hora del sorteo:</span>
+            <span id="dato-hora" class="dato-valor">-</span>
+          </div>
+          <div class="dato-inline">
+            <span class="dato-label">Valor del cartón:</span>
+            <span id="dato-valor" class="dato-valor">-</span>
+          </div>
+          <div class="dato-inline">
+            <span class="dato-label">CARTONES GRATIS MÁXIMOS POR JUGADOR:</span>
+            <span id="dato-maxgratis" class="dato-valor">-</span>
+          </div>
         </div>
         <div class="totales-header resumen-bloque">
           <h2>CRÉDITOS TOTALES A REPARTIR</h2>
