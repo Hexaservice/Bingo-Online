@@ -1045,7 +1045,7 @@
       --pdf-columnas: 6;
       --pdf-page-width: 1120px;
       --pdf-page-height: calc(var(--pdf-page-width) * 0.693);
-      --pdf-firstpage-columns: minmax(0, 0.64fr) minmax(0, 1fr);
+      --pdf-firstpage-basis: min(540px, 100%);
       --formas-min-width: 240px;
       --formas-scale: 0.96;
       --formas-mini-max: 192px;
@@ -1070,21 +1070,25 @@
       border: 1px solid rgba(11,83,148,0.22);
       border-radius: 18px;
       background: #ffffff;
-      display: grid;
-      grid-template-columns: var(--pdf-firstpage-columns);
-      grid-auto-rows: minmax(0, 1fr);
+      display: flex;
+      flex-wrap: wrap;
       align-items: stretch;
+      justify-content: center;
       gap: var(--pdf-gap);
     }
     body.pdf-captura #first-page-layout > * {
       min-width: 0;
+      flex: 1 1 var(--pdf-firstpage-basis);
+      display: flex;
+      flex-direction: column;
     }
     body.pdf-captura #formas-section {
-      display: grid;
-      grid-template-rows: auto 1fr;
+      display: flex;
+      flex-direction: column;
       gap: var(--pdf-gap);
       min-height: 0;
       height: 100%;
+      flex: 1 1 auto;
     }
     body.pdf-captura.pdf-firstpage-horizontal {
       padding-left: 0;
@@ -1111,27 +1115,27 @@
       border: 1px solid rgba(11,83,148,0.22);
       border-radius: 18px;
       background: #ffffff;
-      display: grid;
-      grid-template-columns: var(--pdf-firstpage-columns);
-      grid-auto-rows: minmax(0, 1fr);
+      display: flex;
+      flex-wrap: wrap;
       align-items: stretch;
+      justify-content: center;
       gap: var(--pdf-gap);
       box-sizing: border-box;
     }
     body.pdf-captura.pdf-firstpage-horizontal #first-page-layout > * {
       min-width: 0;
       width: auto;
+      flex: 1 1 var(--pdf-firstpage-basis);
+      display: flex;
+      flex-direction: column;
     }
-    body.pdf-captura.pdf-firstpage-horizontal #first-page-layout #resumen-layout {
+    body.pdf-captura.pdf-firstpage-horizontal #first-page-layout #resumen-layout,
+    body.pdf-captura.pdf-firstpage-horizontal #first-page-layout #formas-section {
       display: flex;
       flex-direction: column;
       gap: var(--pdf-gap);
-    }
-    body.pdf-captura.pdf-firstpage-horizontal #first-page-layout #formas-section {
-      display: grid;
-      grid-template-rows: auto 1fr;
-      gap: var(--pdf-gap);
       min-height: 0;
+      flex: 1 1 auto;
     }
     body.pdf-captura.pdf-firstpage-horizontal #first-page-layout #formas-resumen {
       align-content: stretch;
@@ -1151,6 +1155,7 @@
       min-height: 0;
       height: 100%;
       margin: 0 auto;
+      flex: 1 1 auto;
     }
     body.pdf-captura #resumen-layout > .resumen-bloque {
       padding: var(--pdf-bloque-padding);
