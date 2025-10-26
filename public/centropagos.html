@@ -322,38 +322,29 @@
       display: inline;
     }
     .rol-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 3px 8px;
-      border-radius: 999px;
+      display: inline;
       font-weight: 700;
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      font-size: clamp(0.78rem, 0.7rem + 0.35vw, 1rem);
+      text-transform: none;
+      letter-spacing: normal;
       font-family: Calibri, Arial, sans-serif;
-      border: 1px solid transparent;
-      background: rgba(255,255,255,0.85);
+      border: none;
+      background: transparent;
+      padding: 0;
+      line-height: 1.2;
+      white-space: normal;
     }
     .rol-badge--colaborador {
       color: #1b5e20;
-      border-color: rgba(27,94,32,0.35);
-      background: rgba(27,94,32,0.12);
     }
     .rol-badge--administrador {
       color: #0d47a1;
-      border-color: rgba(13,71,161,0.35);
-      background: rgba(13,71,161,0.12);
     }
     .rol-badge--superadmin {
       color: #6a1b9a;
-      border-color: rgba(106,27,154,0.35);
-      background: rgba(106,27,154,0.12);
     }
     .rol-badge--jugador {
       color: #f57c00;
-      border-color: rgba(245,124,0,0.35);
-      background: rgba(245,124,0,0.12);
     }
     .modal-capa {
       position: fixed;
@@ -552,10 +543,9 @@
           <col style="width:6%">
           <col style="width:22%">
           <col style="width:22%">
-          <col style="width:14%">
-          <col style="width:14%">
+          <col style="width:16%">
+          <col style="width:18%">
           <col style="width:12%">
-          <col style="width:10%">
           <col style="width:4%">
         </colgroup>
         <thead>
@@ -565,7 +555,6 @@
             <th><input type="text" id="filtro-colab-nombre" placeholder="Nombre"></th>
             <th><input type="text" id="filtro-colab-creditos" placeholder="C. Actuales"></th>
             <th class="th-asignados">C. Asignados</th>
-            <th>Fecha</th>
             <th>Rol</th>
             <th><span id="colaboradores-marcar" class="check-header">✔</span></th>
           </tr>
@@ -1801,7 +1790,7 @@
       if(!tbody) return;
       const { mostrarArchivo = false, tipo } = opciones;
       if(!lista.length){
-        const columnasTabla = tipo==='premios' ? 8 : (tipo==='colaboradores' ? 8 : 7);
+        const columnasTabla = tipo==='premios' ? 8 : (tipo==='colaboradores' ? 7 : 7);
         tbody.innerHTML = `<tr><td colspan="${columnasTabla}"><div class="mensaje-tabla">No hay registros para mostrar.</div></td></tr>`;
         return;
       }
@@ -1830,7 +1819,8 @@
             ? pagosColaboradoresEdicion.get(item.id)
             : '';
           const numeroValor = Number(valorReferencia);
-          const valorInput = Number.isFinite(numeroValor) ? numeroValor.toFixed(2) : '';
+          const tieneDato = valorReferencia !== '' && valorReferencia !== null && valorReferencia !== undefined;
+          const valorInput = (tieneDato && Number.isFinite(numeroValor)) ? Math.trunc(numeroValor).toString() : '';
           const archivoAttr = mostrarArchivo ? ' data-archivo="1"' : '';
           const creditosActuales = Number(item.creditosActuales ?? item.creditos ?? 0);
           return `<tr data-id="${item.id}">
@@ -1838,8 +1828,7 @@
             <td class="gmail">${construirGmailHtml(item.gmail)}</td>
             <td class="alias">${escapeHtml(item.nombre)}</td>
             <td class="creditos-actuales">${formatNumber.format(creditosActuales)}</td>
-            <td class="colab-asignar"><input type="number" class="colab-input" step="0.01" min="0" data-id="${item.id}" value="${valorInput}" placeholder="0.00" disabled${archivoAttr}></td>
-            <td>${escapeHtml(item.fechaMostrar || '-')}</td>
+            <td class="colab-asignar"><input type="number" class="colab-input" step="1" min="0" data-id="${item.id}" value="${valorInput}" placeholder="0" disabled${archivoAttr}></td>
             <td class="estado">${estadoHtml}</td>
             <td><input type="checkbox" data-id="${item.id}" ${disabled}></td>
           </tr>`;
