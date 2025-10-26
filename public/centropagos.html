@@ -129,6 +129,8 @@
       font-weight: bold;
       color: #4a148c;
       text-align: right;
+      font-size: clamp(0.65rem, 2.4vw, 0.95rem);
+      padding: 4px 2px;
     }
     #tabla-colaboradores .colab-input:disabled {
       color: inherit;
@@ -138,9 +140,36 @@
       font-weight: 700;
       color: #0d47a1;
       text-align: right;
+      font-size: clamp(0.68rem, 2.6vw, 1rem);
+      line-height: 1.25;
+      cursor: pointer;
+      word-break: break-word;
+      white-space: normal;
     }
     #tabla-colaboradores td.colab-asignar {
       background: rgba(255,255,255,0.7);
+    }
+    @media (orientation: portrait) {
+      #tabla-colaboradores col:nth-child(5) {
+        width: 16%;
+      }
+      #tabla-colaboradores col:nth-child(7) {
+        width: 6%;
+      }
+    }
+    @media (max-width: 600px) and (orientation: portrait) {
+      #tabla-colaboradores col:nth-child(5) {
+        width: 14%;
+      }
+      #tabla-colaboradores col:nth-child(7) {
+        width: 7%;
+      }
+      #tabla-colaboradores td.creditos-actuales {
+        font-size: clamp(0.7rem, 4vw, 0.95rem);
+      }
+      #tabla-colaboradores .colab-input {
+        font-size: clamp(0.68rem, 3.8vw, 0.9rem);
+      }
     }
     .switch { position: relative; display: inline-block; width: 42px; height: 24px; }
     .switch input { display: none; }
@@ -1828,7 +1857,7 @@
             <td class="gmail">${construirGmailHtml(item.gmail)}</td>
             <td class="alias">${escapeHtml(item.nombre)}</td>
             <td class="creditos-actuales">${formatNumber.format(creditosActuales)}</td>
-            <td class="colab-asignar"><input type="number" class="colab-input" step="1" min="0" data-id="${item.id}" value="${valorInput}" placeholder="0" disabled${archivoAttr}></td>
+            <td class="colab-asignar"><input type="number" class="colab-input" step="1" inputmode="numeric" data-id="${item.id}" value="${valorInput}" placeholder="0" disabled${archivoAttr}></td>
             <td class="estado">${estadoHtml}</td>
             <td><input type="checkbox" data-id="${item.id}" ${disabled}></td>
           </tr>`;
@@ -2000,17 +2029,22 @@
 
     async function acreditarPago(enRegistro){
       const db = dbRef();
-      if(!enRegistro.billetera) return;
+      if(!enRegistro.billetera) return null;
       const creditos = Number(enRegistro.creditos) || 0;
-      if(creditos <= 0) return;
+      if(!creditos) return null;
+      let nuevoSaldo = null;
       await db.runTransaction(async tx => {
         const billeteraRef = db.collection('Billetera').doc(enRegistro.billetera);
         const billeteraDoc = await tx.get(billeteraRef);
         const datos = billeteraDoc.exists ? billeteraDoc.data() : {};
-        const nuevosCreditos = (Number(datos.creditos) || 0) + creditos;
-        tx.set(billeteraRef, { creditos: nuevosCreditos }, { merge: true });
+        const saldoActual = Number(datos.creditos) || 0;
+        nuevoSaldo = Math.max(0, saldoActual + creditos);
+        tx.set(billeteraRef, { creditos: nuevoSaldo }, { merge: true });
       });
-      await registrarTransaccionPremio({ ...enRegistro, creditos, cartones: 0 });
+      if(creditos > 0){
+        await registrarTransaccionPremio({ ...enRegistro, creditos, cartones: 0 });
+      }
+      return nuevoSaldo;
     }
 
     async function aprobarPremios(ids){
@@ -2084,6 +2118,8 @@
       await ensureFirebaseListo();
       await initServerTime();
       const procesados = [];
+      let asignacionesPositivas = 0;
+      let ajustesNegativos = 0;
       for(const id of ids){
         const registro = pagosColaboradoresMapa.get(id);
         if(!registro){ console.warn('Usuario no encontrado para asignación manual', id); continue; }
@@ -2091,8 +2127,8 @@
           ? pagosColaboradoresEdicion.get(id)
           : '';
         const monto = Number(valorEdicion);
-        if(!Number.isFinite(monto) || monto <= 0){
-          alert('Para asignar créditos manuales debes ingresar un monto mayor a 0.');
+        if(!Number.isFinite(monto) || monto === 0){
+          alert('Para asignar créditos manuales debes ingresar un monto distinto de cero.');
           return;
         }
         const billetera = cpNormalizarEmail(registro.gmail || id);
@@ -2100,32 +2136,43 @@
           alert('No se pudo determinar la billetera del usuario seleccionado.');
           return;
         }
+        const esPositivo = monto > 0;
+        const referencia = esPositivo ? 'PAGO' : 'AJUSTE_MANUAL';
+        const tipoTransaccion = esPositivo ? 'pago' : 'ajuste_colaborador';
         try {
-          await acreditarPago({
+          const saldoActualizado = await acreditarPago({
             ...registro,
             billetera,
             creditos: monto,
             sorteoId: '',
             sorteoNombre: 'Pago a colaborador',
-            referencia: 'PAGO',
-            tipotrans: 'pago'
+            referencia,
+            tipotrans: tipoTransaccion
           });
-          registro.creditosActuales = (Number(registro.creditosActuales) || 0) + monto;
-          registro.creditos = registro.creditosActuales;
+          const saldoSeguro = Number.isFinite(saldoActualizado)
+            ? Number(saldoActualizado)
+            : Math.max(0, (Number(registro.creditosActuales) || 0) + monto);
+          registro.creditosActuales = saldoSeguro;
+          registro.creditos = saldoSeguro;
           guardarInfoUsuarioCache({
             email: billetera,
             alias: registro.alias,
             nombre: registro.nombre,
             tipo: registro.tipo,
             telefono: registro.telefono,
-            creditos: registro.creditosActuales,
+            creditos: saldoSeguro,
             cartonesGratis: registro.cartonesGratis || 0,
             completo: true
           });
           procesados.push(registro.nombre || billetera);
+          if(esPositivo){
+            asignacionesPositivas++;
+          } else {
+            ajustesNegativos++;
+          }
         } catch (err) {
           console.error('Error asignando créditos manuales', err);
-          alert('Ocurrió un error al asignar créditos manualmente. Revisa la consola para más detalles.');
+          alert('Ocurrió un error al procesar la asignación manual. Revisa la consola para más detalles.');
           return;
         }
       }
@@ -2136,7 +2183,11 @@
         tabla.querySelectorAll('.colab-input').forEach(input=>{ input.disabled = true; input.value = ''; });
       }
       if(procesados.length){
-        alert(`Se asignaron créditos manuales a ${procesados.length} usuario(s).`);
+        const partes = [];
+        if(asignacionesPositivas){ partes.push(`${asignacionesPositivas} asignación(es) positiva(s)`); }
+        if(ajustesNegativos){ partes.push(`${ajustesNegativos} ajuste(s) negativo(s)`); }
+        const detalle = partes.length ? ` (${partes.join(' y ')})` : '';
+        alert(`Se procesaron ${procesados.length} registro(s) de colaboradores${detalle}.`);
       }
       renderColaboradores();
     }
@@ -2303,6 +2354,23 @@
     }
 
     function configurarInteraccionesTablas(){
+      const tablaColaboradores = document.getElementById('tabla-colaboradores');
+      if(tablaColaboradores){
+        tablaColaboradores.addEventListener('click', async e => {
+          if(e.target.closest('input,button,select,textarea')) return;
+          const fila = e.target.closest('tr[data-id]');
+          if(!fila) return;
+          const id = fila.dataset.id;
+          const registro = pagosColaboradoresMapa.get(id);
+          if(!registro) return;
+          if(e.target.closest('td.creditos-actuales')){
+            const info = await obtenerInfoUsuarioDetallada(registro.gmail, registro.alias || registro.nombre);
+            const cartones = Number(info?.cartonesGratis ?? registro.cartonesGratis ?? 0);
+            mostrarModalInfo('Cartones gratis', `Cartones gratis actuales: ${formatNumberEntero.format(Math.round(cartones))}`);
+          }
+        });
+      }
+
       const tablaPremios = document.getElementById('tabla-premios');
       if(tablaPremios){
         tablaPremios.addEventListener('click', async e => {

@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mis Pagos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)), url('https://img.freepik.com/vectores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg');
+      background-repeat: repeat;
+      text-align: center;
+      padding: 20px;
+      margin: 0;
+    }
+    .menu-btn {
+      width: 250px;
+      height: 60px;
+      font-family: 'Bangers', cursive;
+      font-size: 1.4rem;
+      background: rgba(0, 170, 255, 0.85);
+      color: white;
+      border: 4px solid #FFD700;
+      border-radius: 10px;
+      text-shadow: 2px 2px 4px #000;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+      margin: 5px;
+    }
+    .menu-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+    }
+    .back-btn {
+      position: fixed;
+      top: 5px;
+      left: 5px;
+      width: 120px;
+      height: 40px;
+      background: orange;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:5px;
+      z-index:1000;
+    }
+    #creditos-container {
+      margin: 10px auto 20px;
+    }
+    #creditos-title, #creditos-valor {
+      font-family: 'Bangers', cursive;
+      color: #fff;
+    }
+    #creditos-title {
+      font-size: 2rem;
+      text-shadow: 0 0 8px #ff8c00;
+      margin-bottom: 5px;
+    }
+    #creditos-valor {
+      font-size: 2.4rem;
+      text-shadow: 0 0 8px #1b5e20;
+    }
+    #creditos-valor.rojo { text-shadow: 0 0 5px red; }
+    #mis-datos {
+      margin: 15px auto;
+      max-width: 480px;
+      background: rgba(255,255,255,0.65);
+      border-radius: 12px;
+      padding: 10px 12px 18px;
+    }
+    #mis-datos h3 {
+      margin: 0;
+      font-family: 'Bangers', cursive;
+      font-size: 1.5rem;
+      color: #0b4dda;
+      text-shadow: 0 0 6px #fff;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 42px;
+      height: 24px;
+    }
+    .switch input { display: none; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background-color: #4caf50; }
+    input:checked + .slider:before { transform: translateX(18px); }
+    #datos-content {
+      display: none;
+      margin-top: 10px;
+    }
+    .campo {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 260px;
+      margin: 6px auto;
+    }
+    select, input, textarea {
+      font-size: 1rem;
+      padding: 6px;
+      width: 100%;
+      box-sizing: border-box;
+      text-align: center;
+    }
+    #tipo-cuenta {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    #tipo-cuenta label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: bold;
+    }
+    #guardar-datos {
+      font-family: 'Bangers', cursive;
+      font-size: 1.2rem;
+      background: #0a8800;
+      color: white;
+      border: 3px solid #FFD700;
+      border-radius: 8px;
+      text-shadow: 2px 2px 4px #000;
+      width: 220px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    #pagos-section {
+      margin: 15px auto;
+      max-width: 960px;
+      background: rgba(255,255,255,0.65);
+      border-radius: 12px;
+      padding: 10px 12px 18px;
+    }
+    #pagos-section h3 {
+      margin: 0;
+      font-family: 'Bangers', cursive;
+      font-size: 1.5rem;
+      color: #1b5e20;
+      text-shadow: 0 0 6px #fff;
+    }
+    #pagos-content {
+      display: none;
+      overflow-x: auto;
+    }
+    table {
+      margin: 10px auto;
+      border-collapse: collapse;
+      width: 100%;
+      background: rgba(255,255,255,0.95);
+      font-family: Calibri, Arial, sans-serif;
+      table-layout: fixed;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 4px 6px;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+    th:nth-child(1), td:nth-child(1) { width: 48px; }
+    th:nth-child(2), td:nth-child(2) { width: 110px; }
+    th:nth-child(3), td:nth-child(3) { width: 120px; }
+    th:nth-child(4), td:nth-child(4) { width: 140px; }
+    th:nth-child(5), td:nth-child(5) { width: 120px; }
+    th select, th input { width: 100%; box-sizing: border-box; font-size: 0.85rem; }
+    td.celda-monto { cursor: pointer; color: #1b5e20; font-weight: bold; }
+    td.celda-fecha { cursor: pointer; color: #0d47a1; font-weight: bold; }
+    td.estado { font-weight: bold; }
+    #modal-detalle {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+    #modal-detalle .contenido {
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: Calibri, Arial, sans-serif;
+      font-weight: bold;
+      text-align: left;
+      min-width: 240px;
+      max-width: 90%;
+    }
+    #modal-detalle button {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    @media (max-width: 480px) and (orientation: portrait) {
+      body { padding: 8px; }
+      #creditos-title { font-size: 1.6rem; }
+      #creditos-valor { font-size: 2rem; }
+      th, td { font-size: 0.75rem; }
+      th:nth-child(1), td:nth-child(1) { width: 40px; }
+      th:nth-child(2), td:nth-child(2) { width: 90px; }
+      th:nth-child(3), td:nth-child(3) { width: 100px; }
+      th:nth-child(4), td:nth-child(4) { width: 120px; }
+      th:nth-child(5), td:nth-child(5) { width: 100px; }
+      .menu-btn.back-btn { width: 44px; height: 44px; font-size: 0; }
+      .menu-btn.back-btn::before { content: '\25C0'; font-size: 22px; }
+      .menu-btn.back-btn > * { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <button id="volver-btn" class="menu-btn back-btn" data-compact-back="true">&#9664; Volver</button>
+  <div id="creditos-container">
+    <div id="creditos-title">CREDITOS</div>
+    <div id="creditos-valor" class="rojo">0</div>
+  </div>
+
+  <section id="mis-datos">
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
+      <h3>Mis datos bancarios</h3>
+      <label class="switch">
+        <input type="checkbox" id="toggle-datos">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div id="datos-content">
+      <div class="campo">
+        <select id="banco">
+          <option value="" disabled selected>Banco</option>
+        </select>
+      </div>
+      <div class="campo">
+        <input type="text" id="cuenta" placeholder="N° Cuenta Bancaria">
+      </div>
+      <div id="tipo-cuenta">
+        <label><input type="radio" name="tipo-cuenta" value="Ahorro"> Ahorro</label>
+        <label><input type="radio" name="tipo-cuenta" value="Corriente"> Corriente</label>
+      </div>
+      <div class="campo">
+        <input type="text" id="cedula" placeholder="Cédula">
+      </div>
+      <div class="campo">
+        <input type="text" id="pagomovil" placeholder="Número Pago móvil">
+      </div>
+      <button id="guardar-datos">Guardar Datos</button>
+    </div>
+  </section>
+
+  <section id="pagos-section">
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
+      <h3>Mis Pagos</h3>
+      <label class="switch">
+        <input type="checkbox" id="toggle-pagos">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div id="pagos-content">
+      <table id="tabla-pagos-colab">
+        <thead>
+          <tr>
+            <th>N°</th>
+            <th>
+              <select id="filtro-tipo">
+                <option value="">TIPO</option>
+                <option value="pago">PAGO</option>
+              </select>
+            </th>
+            <th><input id="filtro-monto" type="number" placeholder="MONTO"></th>
+            <th><input id="filtro-fecha" type="date"></th>
+            <th>
+              <select id="filtro-estado">
+                <option value="">ESTADO</option>
+                <option value="PENDIENTE">Pendiente</option>
+                <option value="APROBADO">Aprobado</option>
+                <option value="ANULADO">Anulado</option>
+              </select>
+            </th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div id="modal-detalle"><div class="contenido"></div></div>
+
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/timezone.js"></script>
+  <script>
+    ensureAuth('Colaborador');
+    initServerTime();
+
+    const transacciones = [];
+    let billeteraActual = { creditos: 0, cartonesGratis: 0 };
+
+    function formatearFecha(str){
+      if(!str) return '';
+      if(str.includes('/')){
+        const [d,m,a] = str.split('/');
+        return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${a.padStart(4,'0')}`;
+      }
+      const [a,m,d] = str.split('-');
+      return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${a}`;
+    }
+
+    function aHora24(str){
+      if(!str) return '00:00';
+      const limpio = str.toLowerCase().replace(/\./g,'').replace(/\s+/g,'');
+      const match = limpio.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?(a|p)?m?/);
+      if(!match) return limpio;
+      let h = parseInt(match[1], 10);
+      const min = match[2];
+      const ap = match[4];
+      if(ap === 'p' && h < 12) h += 12;
+      if(ap === 'a' && h === 12) h = 0;
+      return `${String(h).padStart(2,'0')}:${min}`;
+    }
+
+    function parseFechaHora(f, h){
+      const [d,m,a] = f.split('/');
+      return new Date(`${a}-${m}-${d}T${aHora24(h)}:00`);
+    }
+
+    function formatearHora(str){
+      if(!str) return '';
+      const [h24, min] = aHora24(str).split(':');
+      let h = parseInt(h24, 10);
+      const ampm = h >= 12 ? 'pm' : 'am';
+      h = h % 12;
+      if(h === 0) h = 12;
+      return `${h}:${min} ${ampm}`;
+    }
+
+    function actualizarCreditos(creditos){
+      const valor = Number(creditos) || 0;
+      billeteraActual.creditos = valor;
+      const valorEl = document.getElementById('creditos-valor');
+      valorEl.textContent = valor.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      valorEl.classList.toggle('rojo', valor <= 0);
+    }
+
+    function cargarBancosColaborador(){
+      db.collection('Bancos').where('estado','==','Activo').onSnapshot(snap => {
+        const selectBanco = document.getElementById('banco');
+        const opciones = ['<option value="" disabled selected>Banco</option>'];
+        snap.forEach(doc => {
+          const nombre = doc.data().nombre || doc.id;
+          opciones.push(`<option value="${nombre}">${nombre}</option>`);
+        });
+        selectBanco.innerHTML = opciones.join('');
+        const seleccionado = billeteraActual.banco || '';
+        if(seleccionado){ selectBanco.value = seleccionado; }
+      });
+    }
+
+    async function cargarPagosColaborador(){
+      const user = auth.currentUser;
+      if(!user) return;
+      const snap = await db.collection('transacciones').where('IDbilletera','==',user.email).get();
+      transacciones.length = 0;
+      snap.forEach(doc => {
+        const data = doc.data();
+        if((data.tipotrans || '').toLowerCase() !== 'pago') return;
+        data.fechasolicitud = formatearFecha(data.fechasolicitud || '');
+        data.fechagestion = formatearFecha(data.fechagestion || '');
+        transacciones.push({ id: doc.id, ...data });
+      });
+      transacciones.sort((a,b) => {
+        const fechaA = parseFechaHora(a.fechagestion || a.fechasolicitud, a.horagestion || a.horasolicitud || '00:00');
+        const fechaB = parseFechaHora(b.fechagestion || b.fechasolicitud, b.horagestion || b.horasolicitud || '00:00');
+        return fechaB - fechaA;
+      });
+      filtrarPagos();
+    }
+
+    function filtrarPagos(){
+      const tipo = (document.getElementById('filtro-tipo').value || '').toLowerCase();
+      const monto = document.getElementById('filtro-monto').value.trim();
+      const fechaInput = document.getElementById('filtro-fecha').value;
+      const fechaFiltro = fechaInput ? fechaInput.split('-').reverse().join('/') : '';
+      const estado = (document.getElementById('filtro-estado').value || '').toUpperCase();
+      const tbody = document.querySelector('#tabla-pagos-colab tbody');
+      tbody.innerHTML = '';
+      let contador = 1;
+      transacciones.forEach(tx => {
+        const tipoTx = (tx.tipotrans || '').toLowerCase();
+        if(tipo && tipoTx !== tipo) return;
+        if(monto && parseFloat(tx.Monto) !== parseFloat(monto)) return;
+        const fechaMostrar = formatearFecha(tx.fechagestion || tx.fechasolicitud || '');
+        if(fechaFiltro && fechaMostrar !== fechaFiltro) return;
+        const estadoTx = (tx.estado || '').toUpperCase();
+        if(estado && estadoTx !== estado) return;
+        const montoFmt = (parseFloat(tx.Monto) || 0).toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
+        const estadoColor = estadoTx === 'APROBADO' ? '#1b5e20' : estadoTx === 'PENDIENTE' ? '#ff8c00' : '#b71c1c';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${contador}</td>
+          <td>${tipoTx.toUpperCase()}</td>
+          <td class="celda-monto">${montoFmt}</td>
+          <td class="celda-fecha">${fechaMostrar}</td>
+          <td class="estado" style="color:${estadoColor}">${estadoTx || '-'}</td>
+        `;
+        tr.querySelector('.celda-fecha').addEventListener('click', () => mostrarDetallePago(tx));
+        tr.querySelector('.celda-monto').addEventListener('click', () => mostrarDetalleMonto(tx));
+        tbody.appendChild(tr);
+        contador++;
+      });
+    }
+
+    function mostrarDetallePago(tx){
+      const cont = document.querySelector('#modal-detalle .contenido');
+      cont.innerHTML = `
+        <div style="color:#1b5e20;">Referencia: ${tx.referencia || 'PAGO'}</div>
+        <div style="color:#1b5e20;">Fecha de gestión: ${formatearFecha(tx.fechagestion || tx.fechasolicitud || '')}</div>
+        <div style="color:#1b5e20;">Hora de gestión: ${formatearHora(tx.horagestion || tx.horasolicitud || '')}</div>
+        <div style="color:#0d47a1;">Detalle: ${(tx.sorteoNombre || 'Pago a colaborador')}</div>
+        <button id="modal-ok">Aceptar</button>
+      `;
+      const modal = document.getElementById('modal-detalle');
+      modal.style.display = 'flex';
+      document.getElementById('modal-ok').addEventListener('click', () => { modal.style.display = 'none'; }, { once: true });
+    }
+
+    function mostrarDetalleMonto(tx){
+      const cont = document.querySelector('#modal-detalle .contenido');
+      const total = (parseFloat(tx.Monto) || 0).toFixed(2);
+      cont.innerHTML = `
+        <div style="font-weight:bold;color:#1b5e20;">Total recibido: ${total}</div>
+        <button id="modal-ok">Aceptar</button>
+      `;
+      const modal = document.getElementById('modal-detalle');
+      modal.style.display = 'flex';
+      document.getElementById('modal-ok').addEventListener('click', () => { modal.style.display = 'none'; }, { once: true });
+    }
+
+    document.getElementById('modal-detalle').addEventListener('click', e => {
+      if(e.target === e.currentTarget){
+        e.currentTarget.style.display = 'none';
+      }
+    });
+
+    document.getElementById('guardar-datos').addEventListener('click', async () => {
+      const user = auth.currentUser;
+      if(!user){ alert('Sesión no encontrada.'); return; }
+      const data = {
+        banco: document.getElementById('banco').value,
+        cuenta: document.getElementById('cuenta').value.trim(),
+        tipoCuenta: document.querySelector('input[name="tipo-cuenta"]:checked')?.value || '',
+        cedula: document.getElementById('cedula').value.trim(),
+        pagomovil: document.getElementById('pagomovil').value.trim(),
+        creditos: billeteraActual.creditos,
+        CartonesGratis: billeteraActual.cartonesGratis || 0
+      };
+      if(!data.cedula){ alert('Ingrese su cédula'); document.getElementById('cedula').focus(); return; }
+      if(!/^\d+$/.test(data.cedula)){ alert('La cédula solo debe contener números'); document.getElementById('cedula').focus(); return; }
+      if(!data.pagomovil){ alert('Ingrese su número de pago móvil'); document.getElementById('pagomovil').focus(); return; }
+      if(!/^\d+$/.test(data.pagomovil)){ alert('El pago móvil solo debe contener números'); document.getElementById('pagomovil').focus(); return; }
+      if(!data.banco){ alert('Seleccione su banco'); document.getElementById('banco').focus(); return; }
+      if(!data.cuenta){ alert('Ingrese su número de cuenta'); document.getElementById('cuenta').focus(); return; }
+      if(!/^\d+$/.test(data.cuenta)){ alert('La cuenta solo debe contener números'); document.getElementById('cuenta').focus(); return; }
+      if(!data.tipoCuenta){ alert('Seleccione el tipo de cuenta'); return; }
+      try {
+        await db.collection('Billetera').doc(user.email).set(data, { merge: true });
+        billeteraActual = { ...billeteraActual, ...data };
+        alert('Datos guardados');
+      } catch (err) {
+        console.error('No se pudo guardar la información bancaria', err);
+        alert('Ocurrió un error al guardar los datos.');
+      }
+    });
+
+    document.getElementById('filtro-tipo').addEventListener('change', filtrarPagos);
+    document.getElementById('filtro-monto').addEventListener('input', filtrarPagos);
+    document.getElementById('filtro-fecha').addEventListener('change', filtrarPagos);
+    document.getElementById('filtro-estado').addEventListener('change', filtrarPagos);
+
+    document.getElementById('volver-btn').addEventListener('click', () => {
+      if(typeof redirectByRole === 'function'){
+        redirectByRole('Colaborador');
+      } else {
+        window.location.href = 'collab.html';
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const toggleDatos = document.getElementById('toggle-datos');
+      const datos = document.getElementById('datos-content');
+      const togglePagos = document.getElementById('toggle-pagos');
+      const pagos = document.getElementById('pagos-content');
+      const actualizarDatos = () => { datos.style.display = toggleDatos.checked ? 'block' : 'none'; };
+      const actualizarPagos = () => { pagos.style.display = togglePagos.checked ? 'block' : 'none'; };
+      toggleDatos.addEventListener('change', actualizarDatos);
+      togglePagos.addEventListener('change', actualizarPagos);
+      actualizarDatos();
+      actualizarPagos();
+    });
+
+    initFirebase().then(() => {
+      auth.onAuthStateChanged(async user => {
+        if(!user) return;
+        try {
+          const billeteraRef = db.collection('Billetera').doc(user.email);
+          const doc = await billeteraRef.get();
+          if(doc.exists){
+            const datos = doc.data();
+            billeteraActual = {
+              creditos: Number(datos.creditos) || 0,
+              cartonesGratis: Number(datos.CartonesGratis ?? datos.cartonesGratis ?? 0) || 0,
+              banco: datos.banco || '',
+              cuenta: datos.cuenta || '',
+              tipoCuenta: datos.tipoCuenta || '',
+              cedula: datos.cedula || '',
+              pagomovil: datos.pagomovil || ''
+            };
+            actualizarCreditos(billeteraActual.creditos);
+            document.getElementById('cedula').value = billeteraActual.cedula || '';
+            document.getElementById('pagomovil').value = billeteraActual.pagomovil || '';
+            document.getElementById('cuenta').value = billeteraActual.cuenta || '';
+            if(billeteraActual.tipoCuenta){
+              const radio = document.querySelector(`input[name='tipo-cuenta'][value='${billeteraActual.tipoCuenta}']`);
+              if(radio) radio.checked = true;
+            }
+          } else {
+            await billeteraRef.set({ creditos: 0, CartonesGratis: 0 });
+            actualizarCreditos(0);
+          }
+        } catch (err) {
+          console.error('No se pudo obtener la billetera del colaborador', err);
+          actualizarCreditos(0);
+        }
+        cargarBancosColaborador();
+        cargarPagosColaborador();
+      });
+    }).catch(err => {
+      console.error('No se pudo inicializar Firebase en Mis Pagos', err);
+      alert('No fue posible inicializar la conexión con la base de datos.');
+    });
+  </script>
+  <script src="js/backNavigation.js"></script>
+</body>
+</html>
