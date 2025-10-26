@@ -1070,38 +1070,34 @@
       padding-right: 0;
       display: flex;
       flex-direction: column;
-      align-items: center;
       gap: var(--pdf-gap);
     }
     body.pdf-captura.pdf-firstpage-horizontal #first-page-layout {
-      width: var(--pdf-page-width);
+      width: 100%;
       max-width: none;
-      min-width: var(--pdf-page-width);
-      min-height: var(--pdf-page-height);
+      min-height: 0;
       margin: 0;
-      padding: var(--pdf-gap);
+      padding: 0;
       border: none;
       border-radius: 0;
       background: transparent;
-      display: grid;
-      grid-template-columns: var(--pdf-firstpage-columns);
-      grid-auto-rows: minmax(0, 1fr);
+      display: flex;
+      flex-direction: column;
       align-items: stretch;
       gap: var(--pdf-gap);
-      box-sizing: border-box;
     }
     body.pdf-captura.pdf-firstpage-horizontal #first-page-layout > * {
       min-width: 0;
       width: 100%;
     }
     body.pdf-captura.pdf-firstpage-horizontal #first-page-layout #resumen-layout {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      display: flex;
+      flex-direction: column;
       gap: var(--pdf-gap);
     }
     body.pdf-captura.pdf-firstpage-horizontal #first-page-layout #formas-section {
-      display: grid;
-      grid-template-rows: auto 1fr;
+      display: flex;
+      flex-direction: column;
       gap: var(--pdf-gap);
       min-height: 0;
     }
@@ -3065,9 +3061,6 @@
     const nombreArchivo = `${construirNombreArchivo()}.pdf`;
     const primeraPagina = document.getElementById('first-page-layout');
     let removerClaseHorizontal = false;
-    const valorPrevioAnchoPagina = document.body.style.getPropertyValue('--pdf-page-width');
-    const valorPrevioAltoPagina = document.body.style.getPropertyValue('--pdf-page-height');
-    let restaurarDimensionesPagina = false;
     if(!primeraPagina){
       alert('No se encontró el contenido del sorteo para generar el PDF.');
       return;
@@ -3125,10 +3118,6 @@
       }
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const factorPuntosAPixeles = 96 / 72;
-      document.body.style.setProperty('--pdf-page-width', `${Math.round(pageWidth * factorPuntosAPixeles)}px`);
-      document.body.style.setProperty('--pdf-page-height', `${Math.round(pageHeight * factorPuntosAPixeles)}px`);
-      restaurarDimensionesPagina = true;
       const marginX = 18;
       const marginY = 18;
 
@@ -3267,18 +3256,6 @@
       restaurarCartones();
       restaurarFormas();
       document.body.classList.remove('pdf-captura');
-      if(restaurarDimensionesPagina){
-        if(valorPrevioAnchoPagina){
-          document.body.style.setProperty('--pdf-page-width', valorPrevioAnchoPagina);
-        } else {
-          document.body.style.removeProperty('--pdf-page-width');
-        }
-        if(valorPrevioAltoPagina){
-          document.body.style.setProperty('--pdf-page-height', valorPrevioAltoPagina);
-        } else {
-          document.body.style.removeProperty('--pdf-page-height');
-        }
-      }
       if(removerClaseHorizontal){
         document.body.classList.remove('pdf-firstpage-horizontal');
       }
