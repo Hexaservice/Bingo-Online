@@ -484,6 +484,11 @@
       display: flex;
       animation: pdfFloat 3.4s ease-in-out infinite, pdfGlowRojo 2.8s ease-in-out infinite;
     }
+    #resultado-btn .pdf-btn-icon {
+      width: 30px;
+      height: 30px;
+      filter: drop-shadow(0 2px 2px rgba(0,0,0,0.35));
+    }
     #resultado-btn .pdf-floating-icon {
       background: radial-gradient(circle at 35% 30%, #ffffff 0%, #e8f5e9 58%, #a5d6a7 100%);
       border: 2px solid rgba(56, 142, 60, 0.35);
@@ -5585,9 +5590,10 @@
     }
     const estadoPdfResultado = (currentSorteoData.pdfresul || '').toString().trim().toLowerCase();
     if(estadoPdfResultado !== 'si'){
-      mostrarAvisoSimple('Se abrirá el PDF de resultados para confirmar su descarga.', 'PDF pendiente');
+      mostrarAvisoSimple('El PDF de resultados se habilitará cuando se confirme su disponibilidad. Utiliza el icono flotante para abrirlo cuando esté listo.', 'PDF pendiente');
+      return;
     }
-    abrirPdfResultados();
+    mostrarAvisoSimple('Para abrir el PDF de resultados utiliza el icono flotante en la esquina del botón.', 'PDF disponible');
   }
 
   function manejarClickPdfResultadosAlmacenado(evento){
@@ -5597,12 +5603,17 @@
       alert('Selecciona un sorteo primero.');
       return;
     }
-    const estadoPdfResultado = (currentSorteoData.pdfresul || '').toString().trim().toLowerCase();
-    if(estadoPdfResultado !== 'si'){
-      alert('No se ha confirmado la descarga del archivo PDF de resultados de este sorteo.');
+    const estadoActual = obtenerEstadoActualNormalizado();
+    if(estadoActual !== 'finalizado'){
+      alert('El sorteo debe estar finalizado para ver los resultados.');
       return;
     }
-    alert('Ya se ha confirmado la descarga del archivo PDF de resultados de este sorteo');
+    const estadoPdfResultado = (currentSorteoData.pdfresul || '').toString().trim().toLowerCase();
+    if(estadoPdfResultado !== 'si'){
+      mostrarAvisoSimple('Se abrirá el PDF de resultados para confirmar su descarga.', 'PDF pendiente');
+    } else {
+      alert('Ya se ha confirmado la descarga del archivo PDF de resultados de este sorteo');
+    }
     abrirPdfResultados();
   }
 
