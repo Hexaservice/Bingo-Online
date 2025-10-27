@@ -1225,6 +1225,43 @@
       return 0;
     }
 
+    function cpObtenerCartonesGratisPorGanador(forma,totalGanadores){
+      const totalCartones = cpObtenerCartonesGratisForma(forma);
+      if(totalCartones <= 0) return 0;
+      let ganadoresNumero = Number(totalGanadores);
+      if(!Number.isFinite(ganadoresNumero)){
+        ganadoresNumero = 1;
+      }else{
+        ganadoresNumero = Math.floor(ganadoresNumero);
+      }
+      if(ganadoresNumero <= 0){
+        return 0;
+      }
+      if(ganadoresNumero === 1){
+        return totalCartones;
+      }
+      if(totalCartones < ganadoresNumero){
+        return totalCartones;
+      }
+      const dividido = Math.floor(totalCartones / ganadoresNumero);
+      return dividido > 0 ? dividido : totalCartones;
+    }
+
+    function cpObtenerCartonesGratisTotalesEntregados(forma,totalGanadores){
+      const porGanador = cpObtenerCartonesGratisPorGanador(forma,totalGanadores);
+      if(porGanador <= 0) return 0;
+      let ganadoresNumero = Number(totalGanadores);
+      if(!Number.isFinite(ganadoresNumero)){
+        ganadoresNumero = 1;
+      }else{
+        ganadoresNumero = Math.floor(ganadoresNumero);
+      }
+      if(ganadoresNumero <= 0){
+        return 0;
+      }
+      return porGanador * ganadoresNumero;
+    }
+
     function cpCalcularResultados(ctx){
       ctx.cartonesGanadoresPorForma = new Map();
       ctx.formasPorCarton = new Map();
@@ -1305,10 +1342,10 @@
         const ganadores = Array.isArray(registro?.cartones) ? registro.cartones : [];
         if(!forma || !ganadores.length) return;
         const totalCreditos = cpObtenerCreditosForma(ctx, forma);
-        const totalGratis = cpObtenerCartonesGratisForma(forma);
         const cantidad = ganadores.length || 1;
+        const totalGratis = cpObtenerCartonesGratisTotalesEntregados(forma, cantidad);
         const creditosPorGanador = cantidad > 0 ? Math.floor(totalCreditos / cantidad) : 0;
-        const gratisPorGanador = cantidad > 0 ? Math.floor(totalGratis / cantidad) : 0;
+        const gratisPorGanador = cpObtenerCartonesGratisPorGanador(forma, cantidad);
         ganadores.forEach(carton=>{
           const claveUsuario = (carton?.userId || carton?.usuarioId || '').toString().trim();
           const correoCarton = (carton?.gmail || carton?.email || carton?.IDbilletera || '').toString().trim();

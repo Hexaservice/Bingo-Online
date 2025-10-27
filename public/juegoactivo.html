@@ -4358,8 +4358,38 @@
   function obtenerCartonesGratisPorGanador(forma,totalGanadores){
     const totalCartones=obtenerCartonesGratisForma(forma);
     if(totalCartones<=0) return 0;
-    const ganadores=Math.max(1, Number(totalGanadores)||0);
-    return Math.max(0, Math.floor(totalCartones/ganadores));
+    let ganadoresNumero=Number(totalGanadores);
+    if(!Number.isFinite(ganadoresNumero)){
+      ganadoresNumero=1;
+    }else{
+      ganadoresNumero=Math.floor(ganadoresNumero);
+    }
+    if(ganadoresNumero<=0){
+      return 0;
+    }
+    if(ganadoresNumero===1){
+      return totalCartones;
+    }
+    if(totalCartones<ganadoresNumero){
+      return totalCartones;
+    }
+    const dividido=Math.floor(totalCartones/ganadoresNumero);
+    return dividido>0?dividido:totalCartones;
+  }
+
+  function obtenerCartonesGratisTotalEntregados(forma,totalGanadores){
+    const porGanador=obtenerCartonesGratisPorGanador(forma,totalGanadores);
+    if(porGanador<=0) return 0;
+    let ganadoresNumero=Number(totalGanadores);
+    if(!Number.isFinite(ganadoresNumero)){
+      ganadoresNumero=1;
+    }else{
+      ganadoresNumero=Math.floor(ganadoresNumero);
+    }
+    if(ganadoresNumero<=0){
+      return 0;
+    }
+    return porGanador*ganadoresNumero;
   }
 
   function actualizarHeader(){
@@ -5008,7 +5038,7 @@
       const premioFormaTotal=obtenerCreditosForma(forma);
       const totalGanadores=ordenados.length;
       const premioIndividual=totalGanadores>0?Math.floor(premioFormaTotal/totalGanadores):0;
-      const cartonesGratisTotales=obtenerCartonesGratisForma(forma);
+      const cartonesGratisTotales=obtenerCartonesGratisTotalEntregados(forma,totalGanadores);
       const cartonesGratisPorGanador=obtenerCartonesGratisPorGanador(forma,totalGanadores);
       ordenados.forEach(carton=>{
         const card=document.createElement('div');
