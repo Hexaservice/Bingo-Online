@@ -2456,6 +2456,78 @@
     return null;
   }
 
+  function getPreciseTimestamp(){
+    const ctor = firebase?.firestore?.Timestamp;
+    if(!ctor) return null;
+    if(typeof ctor.now === 'function'){
+      try {
+        return ctor.now();
+      } catch (error) {
+        console.error('Error obteniendo Timestamp.now()', error);
+      }
+    }
+    if(typeof ctor.fromMillis === 'function'){
+      try {
+        return ctor.fromMillis(Date.now());
+      } catch (error) {
+        console.error('Error creando Timestamp desde milisegundos', error);
+      }
+    }
+    return null;
+  }
+
+  function normalizarValorTimestamp(valor){
+    if(!valor) return null;
+    if(typeof valor?.toDate === 'function') return valor;
+    const ctor = firebase?.firestore?.Timestamp;
+    if(!ctor) return null;
+    if(valor instanceof Date){
+      try {
+        return ctor.fromDate(valor);
+      } catch (error) {
+        console.error('Error convirtiendo Date a Timestamp', error);
+        return null;
+      }
+    }
+    if(typeof valor === 'number' && Number.isFinite(valor)){
+      try {
+        return ctor.fromMillis(valor);
+      } catch (error) {
+        console.error('Error convirtiendo número a Timestamp', error);
+        return null;
+      }
+    }
+    if(typeof valor === 'string'){
+      const millis = Date.parse(valor);
+      if(Number.isFinite(millis)){
+        try {
+          return ctor.fromMillis(millis);
+        } catch (error) {
+          console.error('Error convirtiendo texto a Timestamp', error);
+        }
+      }
+      return null;
+    }
+    if(typeof valor === 'object'){
+      const segundos = Number(valor.seconds ?? valor._seconds);
+      const nanos = Number(valor.nanoseconds ?? valor._nanoseconds);
+      if(Number.isFinite(segundos) && Number.isFinite(nanos)){
+        try {
+          return new ctor(segundos, nanos);
+        } catch (error) {
+          if(typeof ctor.fromMillis === 'function'){
+            try {
+              return ctor.fromMillis(segundos * 1000 + Math.floor(nanos / 1e6));
+            } catch (fallbackError) {
+              console.error('Error convirtiendo estructura a Timestamp', fallbackError);
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   function esModoManual(){
     return modoManual === true;
   }
@@ -2622,17 +2694,16 @@
         numerosExistentes.push(claveNormalizada);
         const detallesExistentes = Array.isArray(data.detalles) ? [...data.detalles] : [];
         const timestampServidor = getServerTimestamp();
-        const timestampFallback = firebase?.firestore?.Timestamp?.now?.()
-          ?? firebase?.firestore?.Timestamp?.fromMillis?.(Date.now())
-          ?? null;
-        const marcaTiempo = timestampServidor || timestampFallback;
+        const timestampPreciso = getPreciseTimestamp();
+        const marcaTiempo = timestampServidor || timestampPreciso;
+        const marcaTiempoDetalle = timestampPreciso || normalizarValorTimestamp(timestampServidor);
         detallesExistentes.push({
           numero: claveNormalizada,
           orden: numerosExistentes.length - 1,
           estatus: 'g',
           adminId: usuario.uid || '',
           adminEmail: usuario.email || '',
-          creado: marcaTiempo
+          creado: marcaTiempoDetalle
         });
         const payload = {
           numeros: numerosExistentes,
@@ -3146,6 +3217,7 @@
       });
       const limiteGanador = obtenerIndiceLimiteGanador(numeros.length);
       let requiereActualizacion = detallesActuales.length !== numeros.length;
+      const timestampPreciso = getPreciseTimestamp();
       const nuevosDetalles = numeros.map((numero, idx)=>{
         const clave = (numero ?? '').toString().toUpperCase();
         const existente = mapaDetalles.get(clave) || {};
@@ -3153,12 +3225,9 @@
         const adminId = existente.adminId || existente.administradorId || '';
         const adminEmail = existente.adminEmail || existente.emailAdministrador || '';
         let creado = existente.creado || existente.timestamp || null;
+        creado = normalizarValorTimestamp(creado);
         if(!creado){
-          const nuevoTimestamp = getServerTimestamp()
-            || firebase?.firestore?.Timestamp?.now?.()
-            || firebase?.firestore?.Timestamp?.fromMillis?.(Date.now())
-            || null;
-          creado = nuevoTimestamp;
+          creado = timestampPreciso || normalizarValorTimestamp(getServerTimestamp());
           requiereActualizacion = true;
         }
         if((existente.estatus || '').toLowerCase() !== estatusEsperado){
