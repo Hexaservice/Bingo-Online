@@ -4336,6 +4336,33 @@
     return 0;
   }
 
+  function normalizarCartonesGratisValor(valor){
+    if(typeof valor==='number' && Number.isFinite(valor)){
+      return Math.max(0, Math.round(valor));
+    }
+    if(typeof valor==='string'){
+      const texto=valor.trim();
+      if(!texto) return null;
+      const numeroDirecto=Number(texto.replace(/\s+/g,''));
+      if(Number.isFinite(numeroDirecto)){
+        return Math.max(0, Math.round(numeroDirecto));
+      }
+      const soloDigitos=texto.replace(/[^.\d,-]/g,'').replace(/[.,](?=\d{3}(\D|$))/g,'');
+      const numero=parseFloat(soloDigitos.replace(',','.'));
+      if(Number.isFinite(numero)){
+        return Math.max(0, Math.round(numero));
+      }
+      const extraerEntero=texto.replace(/[^\d-]/g,'');
+      if(extraerEntero){
+        const entero=parseInt(extraerEntero,10);
+        if(Number.isFinite(entero)){
+          return Math.max(0, entero);
+        }
+      }
+    }
+    return null;
+  }
+
   function obtenerCartonesGratisForma(forma){
     if(!forma) return 0;
     const candidatos=[
@@ -4347,9 +4374,9 @@
       forma?.cartones
     ];
     for(const candidato of candidatos){
-      const numero=Number(candidato);
-      if(Number.isFinite(numero)){
-        return Math.max(0, Math.round(numero));
+      const numero=normalizarCartonesGratisValor(candidato);
+      if(numero!==null){
+        return numero;
       }
     }
     return 0;
@@ -5370,6 +5397,10 @@
       const normalizadas=posiciones
         .map(p=>({r:Number(p.r),c:Number(p.c)}))
         .filter(p=>Number.isInteger(p.r)&&Number.isInteger(p.c));
+      const cartonesGratis=normalizarCartonesGratisValor(
+        data.cartonesGratis ?? data.cartonesgratis ?? data.cartones_gratis ??
+        data.premioCartonesGratis ?? data.premioCartonesgratis ?? data.cartones
+      ) ?? 0;
       arr.push({
         id:doc.id,
         idx,
@@ -5377,7 +5408,8 @@
         premioImagen:data.premioImagen||data.imagen||'',
         posicionesNormalizadas:normalizadas,
         porcentaje:Number(data.porcentaje ?? data.porcentajePremio ?? data.porcentajepremio ?? 0) || 0,
-        premioCreditos:Number(data.premioCreditos ?? data.premiocreditos ?? data.creditos ?? data.premio ?? 0) || 0
+        premioCreditos:Number(data.premioCreditos ?? data.premiocreditos ?? data.creditos ?? data.premio ?? 0) || 0,
+        cartonesGratis
       });
     });
     arr.sort((a,b)=>(a.idx||0)-(b.idx||0));
