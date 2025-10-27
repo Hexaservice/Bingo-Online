@@ -169,7 +169,7 @@
       font-weight:600;
     }
     #cartones-jugando-valor,#gratis-plus,#cartones-gratis-jugando{animation:wiggle 1s infinite;display:inline-block;}
-    #cartones-gratis-jugando{color:#00008b;}
+    #cartones-gratis-jugando{color:#0b3d91;}
     #valor-carton{color:green;display:flex;align-items:center;gap:5px;}
     #cartones-jugando{color:purple;display:flex;align-items:center;gap:5px;}
     #gratis-plus{font-weight:bold;color:black;font-family:'Bangers',cursive;}
@@ -184,7 +184,7 @@
       font-size:1.5rem;
       display:inline-block;
       animation:pulse 1s infinite;
-      color:#4b0082;
+      color:#0b3d91;
       text-shadow:0 0 5px #fff;
     }
     #creditos-label{
@@ -207,7 +207,7 @@
     #jugados-btn-container{position:absolute;bottom:5px;right:50px;}
     #ver-jugados-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:linear-gradient(purple,#ffffff);border:3px solid #FFD700;border-radius:8px;cursor:pointer;position:relative;}
     #jugados-count{position:absolute;top:-8px;left:-8px;background:purple;color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-family:'Bangers',cursive;z-index:10;}
-    #jugados-gratis-count{position:absolute;top:-8px;right:-8px;background:#00008b;color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-family:'Bangers',cursive;z-index:10;}
+    #jugados-gratis-count{position:absolute;top:-8px;right:-8px;background:#0b3d91;color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-family:'Bangers',cursive;z-index:10;}
     #limpiar-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;position:absolute;bottom:5px;right:95px;background:linear-gradient(gray,#ffffff);border:3px solid #FFD700;border-radius:8px;cursor:pointer;}
     #azar-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;position:absolute;bottom:5px;right:140px;background:linear-gradient(#ffffff,#dddddd);border:3px solid #FFD700;border-radius:8px;cursor:pointer;}
     #ir-billetera-btn{width:40px;height:40px;font-size:1.2rem;display:flex;align-items:center;justify-content:center;position:absolute;bottom:5px;right:5px;margin-left:0;}
@@ -474,6 +474,8 @@ let cartonesJugando=0;
 let cartonesGratisJugando=0;
 const formColors=['#90ee90','#fffacd','#add8e6','#d8b0ff','#ffcc99'];
 const formGlows=['#006400','#b8860b','#00008b','#4b0082','#8b4513'];
+const COLOR_CARTONES_GRATIS_DISPONIBLE='#0b3d91';
+const COLOR_CARTONES_GRATIS_LIMITE='#c62828';
 let editandoTipo=null;
 let editandoId=null;
 const selladoOverlay=document.getElementById('sellado-overlay');
@@ -483,16 +485,27 @@ let unsubscribeConsecutivoCarton=null;
 let ultimoNumeroCartonAsignado=0;
 let siguienteNumeroCarton=1;
 
+function obtenerColorCartonesGratisActual(){
+  const limiteAlcanzado=maxCartonesGratis>0 && cartonesGratisJugando>=maxCartonesGratis;
+  return limiteAlcanzado?COLOR_CARTONES_GRATIS_LIMITE:COLOR_CARTONES_GRATIS_DISPONIBLE;
+}
+
 function actualizarEstadoCartonesGratis(){
   const gratisLabel=document.getElementById('gratis-label');
   if(!gratisLabel) return;
   const limiteAlcanzado=maxCartonesGratis>0 && cartonesGratisJugando>=maxCartonesGratis;
+  const colorActual=obtenerColorCartonesGratisActual();
+  gratisLabel.style.color=colorActual;
+  const gratisJugandoEl=document.getElementById('cartones-gratis-jugando');
+  if(gratisJugandoEl){
+    gratisJugandoEl.style.color=colorActual;
+  }
   if(limiteAlcanzado){
-    gratisLabel.style.color='red';
     gratisLabel.style.animation='none';
+    gratisLabel.style.textShadow='0 0 6px rgba(198,40,40,0.35)';
   }else{
-    gratisLabel.style.color='';
     gratisLabel.style.animation='';
+    gratisLabel.style.textShadow='0 0 5px #fff';
   }
 }
 
@@ -1654,7 +1667,8 @@ function toggleForma(idx){
     const cj=document.getElementById('info-cartones-jugando');
     cj.innerHTML=`Cartones jugando: <strong style="color:purple;">${cartonesJugando}</strong>`;
     const cg=document.getElementById('info-cartones-gratis');
-    cg.innerHTML=`Cartones Gratis jugando: <strong style="color:#00008b;">${cartonesGratisJugando}</strong>`;
+    const colorGratis=obtenerColorCartonesGratisActual();
+    cg.innerHTML=`Cartones Gratis jugando: <strong style="color:${colorGratis};">${cartonesGratisJugando}</strong>`;
     document.getElementById('info-cartones-modal').style.display='flex';
   }
 

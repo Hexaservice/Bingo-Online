@@ -4355,6 +4355,13 @@
     return 0;
   }
 
+  function obtenerCartonesGratisPorGanador(forma,totalGanadores){
+    const totalCartones=obtenerCartonesGratisForma(forma);
+    if(totalCartones<=0) return 0;
+    const ganadores=Math.max(1, Number(totalGanadores)||0);
+    return Math.max(0, Math.floor(totalCartones/ganadores));
+  }
+
   function actualizarHeader(){
     const mostrarManual = !haySorteoJugando && !!(activeSorteo && sorteoManualSeleccionadoId);
     if(!haySorteoJugando && !mostrarManual){
@@ -4709,7 +4716,8 @@
         registro.add(idx);
         const forma=item?.forma || formasActivas.find(f=>Number(f.idx)===idx) || {idx};
         const creditos=obtenerCreditosForma(forma);
-        const cartonesGratis=obtenerCartonesGratisForma(forma);
+        const totalGanadores=Math.max(1,(cartonesGanadoresPorForma.get(idx)?.cartones?.length)||0);
+        const cartonesGratis=obtenerCartonesGratisPorGanador(forma,totalGanadores);
         const nombre=(forma?.nombre||'').toString().trim();
         const color=obtenerColorParaForma(idx);
         const cartonLabel=formatearInfoCarton(carton);
@@ -5000,7 +5008,8 @@
       const premioFormaTotal=obtenerCreditosForma(forma);
       const totalGanadores=ordenados.length;
       const premioIndividual=totalGanadores>0?Math.floor(premioFormaTotal/totalGanadores):0;
-      const cartonesGratisForma=obtenerCartonesGratisForma(forma);
+      const cartonesGratisTotales=obtenerCartonesGratisForma(forma);
+      const cartonesGratisPorGanador=obtenerCartonesGratisPorGanador(forma,totalGanadores);
       ordenados.forEach(carton=>{
         const card=document.createElement('div');
         card.className='ganador-card';
@@ -5045,11 +5054,14 @@
         cartonesItem.className='ganador-premio-item';
         const cartonesLabel=document.createElement('div');
         cartonesLabel.className='ganador-premio-label';
-        cartonesLabel.textContent='CARTONES GRATIS:';
+        cartonesLabel.textContent='CARTONES GRATIS POR GANADOR:';
         const cartonesValor=document.createElement('div');
         cartonesValor.className='ganador-premio-monto ganador-premio-monto--cartones';
-        cartonesValor.textContent=formatearCreditos(cartonesGratisForma);
-        if(cartonesGratisForma<=0){
+        cartonesValor.textContent=formatearCreditos(cartonesGratisPorGanador);
+        if(cartonesGratisTotales>0){
+          cartonesItem.title=`Total forma: ${formatearCreditos(cartonesGratisTotales)} cartones gratis`;
+        }
+        if(cartonesGratisPorGanador<=0){
           cartonesItem.classList.add('ganador-premio-item--sin-premio');
           cartonesValor.classList.add('sin-premio');
         }
