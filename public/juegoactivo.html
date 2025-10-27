@@ -306,7 +306,7 @@
           padding: 0;
           background: transparent;
           width: 100%;
-          min-width: calc(var(--canto-cell-size) * 5 + clamp(6px, 2vw, 14px));
+          min-width: calc(var(--canto-cell-size) * 5 + clamp(8px, 1.6vw, 16px) * 2);
           position: relative;
       }
       h2 {
@@ -325,6 +325,8 @@
           font-family: 'Poppins', sans-serif;
           margin: 0;
           width: min(100%, calc(var(--canto-cell-size) * 5));
+          padding: var(--conducto-padding, 0);
+          box-sizing: border-box;
       }
       .canto-cell {
           width: var(--canto-cell-size);
@@ -379,6 +381,177 @@
       .canto-cell.ultimo {
           box-shadow: 0 0 14px rgba(255,215,0,0.9);
           animation: focoUltimo 1.6s ease-in-out infinite;
+      }
+      #cantos-tablas-contenedor {
+          --conducto-padding: clamp(8px, 1.6vw, 16px);
+          position: relative;
+          width: min(100%, calc(var(--canto-cell-size) * 5 + var(--conducto-padding) * 2));
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0;
+      }
+      .cantos-tabla {
+          width: 100%;
+      }
+      .cantos-tabla[hidden] {
+          display: none !important;
+      }
+      .cantos-tabla--lista {
+          padding: 0;
+      }
+      .cantos-tabla--conducto {
+          position: relative;
+          padding: var(--conducto-padding);
+          border-radius: clamp(14px, 3vw, 22px);
+          background: linear-gradient(160deg, rgba(255,255,255,0.98), rgba(243,244,248,0.9));
+          box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+      }
+      #cantos-conducto-grid {
+          display: grid;
+          grid-template-columns: repeat(5, var(--canto-cell-size));
+          gap: 0;
+          position: relative;
+          z-index: 1;
+      }
+      #cantos-conducto-track {
+          position: absolute;
+          inset: var(--conducto-padding);
+          pointer-events: none;
+          z-index: 2;
+      }
+      #cantos-panel.conducto-activo #cantos-conducto-track {
+          z-index: 3;
+      }
+      .conducto-cell {
+          position: relative;
+          width: var(--canto-cell-size);
+          height: var(--canto-cell-size);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: 'Poppins', sans-serif;
+          font-weight: 600;
+          font-size: clamp(0.68rem, 2.2vw, 0.86rem);
+          color: #3a3a3a;
+          background: #ffffff;
+          border: var(--conducto-borde, 3px) solid transparent;
+          box-sizing: border-box;
+          border-radius: 0;
+          box-shadow: inset 0 0 0 1px rgba(0,0,0,0.04);
+          transition: border-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+      }
+      .conducto-cell::after {
+          content: '';
+          position: absolute;
+          inset: 18% 20%;
+          border-radius: 50%;
+          background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.55), rgba(255,255,255,0));
+          opacity: 0.9;
+          pointer-events: none;
+      }
+      .conducto-cell .conducto-cell-label {
+          position: relative;
+          z-index: 1;
+      }
+      .conducto-borde-top { border-top-color: #cfd4dd; }
+      .conducto-borde-bottom { border-bottom-color: #cfd4dd; }
+      .conducto-borde-left { border-left-color: #cfd4dd; }
+      .conducto-borde-right { border-right-color: #cfd4dd; }
+      .conducto-curva-top-right { border-top-right-radius: clamp(12px, 2.6vw, 18px); }
+      .conducto-curva-bottom-right { border-bottom-right-radius: clamp(12px, 2.6vw, 18px); }
+      .conducto-curva-top-left { border-top-left-radius: clamp(12px, 2.6vw, 18px); }
+      .conducto-curva-bottom-left { border-bottom-left-radius: clamp(12px, 2.6vw, 18px); }
+      .conducto-cell.inicio-conducto {
+          border-top-color: #cfd4dd;
+          border-top-left-radius: clamp(12px, 2.6vw, 18px);
+      }
+      .conducto-cell.fin-conducto {
+          border-bottom-color: #cfd4dd;
+      }
+      .conducto-cell.fin-conducto.derecha {
+          border-bottom-right-radius: clamp(12px, 2.6vw, 18px);
+      }
+      .conducto-cell.fin-conducto.izquierda {
+          border-bottom-left-radius: clamp(12px, 2.6vw, 18px);
+      }
+      .conducto-cell.conducto-borde-top,
+      .conducto-cell.conducto-borde-bottom,
+      .conducto-cell.conducto-borde-left,
+      .conducto-cell.conducto-borde-right {
+          box-shadow: inset 0 0 0 1px rgba(255,255,255,0.82);
+      }
+      .conducto-cell:hover {
+          color: #1f1f1f;
+      }
+      .conducto-sphere {
+          position: absolute;
+          width: calc(var(--canto-cell-size) * 0.88);
+          height: calc(var(--canto-cell-size) * 0.88);
+          min-width: 32px;
+          min-height: 32px;
+          max-width: calc(var(--canto-cell-size) * 0.95);
+          max-height: calc(var(--canto-cell-size) * 0.95);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: 'Poppins', sans-serif;
+          font-weight: 700;
+          font-size: clamp(0.72rem, 2.6vw, 1rem);
+          color: #1b1b1b;
+          background: var(--conducto-esfera-bg, radial-gradient(circle at 30% 30%, #ffffff 0%, #e2e5ec 55%, #bec3ce 100%));
+          box-shadow: 0 10px 22px rgba(0,0,0,0.28);
+          transform: translate(-50%, -50%);
+          transition: left 0.45s cubic-bezier(0.4, 0, 0.2, 1), top 0.45s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease, transform 0.35s ease, box-shadow 0.35s ease;
+          opacity: 0;
+          letter-spacing: 0.4px;
+          pointer-events: none;
+      }
+      .conducto-sphere::after {
+          content: '';
+          position: absolute;
+          inset: 16% 18%;
+          border-radius: 50%;
+          background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.9), rgba(255,255,255,0));
+          pointer-events: none;
+      }
+      .conducto-sphere::before {
+          content: '';
+          position: absolute;
+          inset: -6%;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(255,255,255,0.32), rgba(255,255,255,0));
+          opacity: 0.9;
+          pointer-events: none;
+      }
+      .conducto-sphere.activa {
+          opacity: 1;
+      }
+      .conducto-sphere--pre {
+          transform: translate(-50%, -50%) scale(1.32);
+          opacity: 0;
+      }
+      .conducto-sphere--ganador {
+          color: #ffffff;
+          text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+      }
+      .conducto-sphere--ganador::before {
+          background: radial-gradient(circle, rgba(255,255,255,0.55), rgba(255,255,255,0));
+      }
+      .conducto-sphere--complementario {
+          color: #ffffff;
+          text-shadow: 0 1px 4px rgba(0,0,0,0.75), 0 0 12px rgba(255,149,0,0.8);
+          box-shadow: 0 12px 26px rgba(255,149,0,0.35), 0 0 12px rgba(255,149,0,0.25);
+      }
+      .conducto-sphere--complementario::before {
+          background: radial-gradient(circle, rgba(255,181,64,0.45), rgba(255,149,0,0));
+      }
+      .conducto-sphere--complementario::after {
+          opacity: 1;
+      }
+      .conducto-sphere.multicolor::after {
+          opacity: 0.75;
       }
       #ultimo-canto {
           font-size: 0.78rem;
@@ -445,6 +618,12 @@
       #ultimo-canto .ultimo-boton.complementarios-activos:focus-visible {
           outline: 3px solid rgba(255,145,0,0.45);
           outline-offset: 2px;
+      }
+      #ultimo-canto .ultimo-boton.vista-conducto-activa {
+          background: linear-gradient(135deg, rgba(248,248,255,0.98) 0%, rgba(0,123,255,0.92) 50%, rgba(0,97,205,0.94) 100%);
+          color: #ffffff;
+          text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+          box-shadow: 0 10px 24px rgba(0,108,214,0.3);
       }
       .ultimo-canto-popup {
           position: absolute;
@@ -2064,7 +2243,7 @@
       }
       @media (orientation: portrait) {
           #panel-superior {
-              grid-template-columns: minmax(calc(var(--canto-cell-size) * 5 + clamp(6px, 2vw, 16px)), 1fr) minmax(var(--panel-columna-derecha-min, clamp(180px, 48vw, 420px)), clamp(240px, 68vw, 520px));
+          grid-template-columns: minmax(calc(var(--canto-cell-size) * 5 + clamp(6px, 2vw, 16px) * 2), 1fr) minmax(var(--panel-columna-derecha-min, clamp(180px, 48vw, 420px)), clamp(240px, 68vw, 520px));
               grid-template-areas:
                   "cantos carton"
                   "mensaje carton";
@@ -2310,7 +2489,7 @@
       }
       @media (orientation: landscape) {
           #panel-superior {
-              grid-template-columns: minmax(calc(var(--canto-cell-size) * 5 + clamp(6px, 1.6vw, 18px)), clamp(320px, 52vw, 580px)) minmax(var(--panel-columna-derecha-min, clamp(240px, 32vw, 520px)), clamp(340px, 48vw, 640px));
+              grid-template-columns: minmax(calc(var(--canto-cell-size) * 5 + clamp(6px, 1.6vw, 18px) * 2), clamp(320px, 52vw, 580px)) minmax(var(--panel-columna-derecha-min, clamp(240px, 32vw, 520px)), clamp(340px, 48vw, 640px));
               grid-template-areas:
                   "cantos carton"
                   "mensaje carton";
@@ -2548,7 +2727,7 @@
             #panel-superior {
                 column-gap: clamp(4px, 1.4vw, 12px);
                 row-gap: clamp(6px, 1.2vw, 12px);
-                grid-template-columns: minmax(calc(var(--canto-cell-size) * 5 + clamp(6px, 1.6vw, 16px)), 1fr) minmax(var(--panel-columna-derecha-min, clamp(220px, 44vw, 520px)), clamp(320px, 58vw, 560px));
+                grid-template-columns: minmax(calc(var(--canto-cell-size) * 5 + clamp(6px, 1.6vw, 16px) * 2), 1fr) minmax(var(--panel-columna-derecha-min, clamp(220px, 44vw, 520px)), clamp(320px, 58vw, 560px));
                 grid-template-areas:
                     "cantos carton"
                     "mensaje carton";
@@ -2596,7 +2775,7 @@
             #panel-superior {
                 column-gap: clamp(6px, 1.4vw, 18px);
                 row-gap: clamp(6px, 1.2vw, 14px);
-                grid-template-columns: minmax(calc(var(--canto-cell-size) * 5 + clamp(6px, 1.4vw, 18px)), clamp(360px, 48vw, 640px)) minmax(var(--panel-columna-derecha-min, clamp(280px, 32vw, 560px)), clamp(360px, 44vw, 640px));
+                grid-template-columns: minmax(calc(var(--canto-cell-size) * 5 + clamp(6px, 1.4vw, 18px) * 2), clamp(360px, 48vw, 640px)) minmax(var(--panel-columna-derecha-min, clamp(280px, 32vw, 560px)), clamp(360px, 44vw, 640px));
                 grid-template-areas:
                     "cantos carton"
                     "mensaje carton";
@@ -2629,7 +2808,13 @@
     </header>
     <section id="panel-superior">
       <div id="cantos-panel">
-        <div id="cantos-grid"></div>
+        <div id="cantos-tablas-contenedor">
+          <div id="cantos-grid" class="cantos-tabla cantos-tabla--lista"></div>
+          <div id="cantos-conducto" class="cantos-tabla cantos-tabla--conducto" hidden>
+            <div id="cantos-conducto-grid" aria-hidden="true"></div>
+            <div id="cantos-conducto-track" aria-hidden="true"></div>
+          </div>
+        </div>
         <div id="ultimo-canto"></div>
       </div>
       <div id="formas-mensaje" class="mensaje"></div>
@@ -2722,6 +2907,9 @@
   volverBtn.addEventListener('click',()=>{window.location.href='player.html';});
 
   const cantosGridEl = document.getElementById('cantos-grid');
+  const cantosConductoEl = document.getElementById('cantos-conducto');
+  const cantosConductoGridEl = document.getElementById('cantos-conducto-grid');
+  const cantosConductoTrackEl = document.getElementById('cantos-conducto-track');
   const ultimoCantoEl = document.getElementById('ultimo-canto');
   const sorteoHeaderEl = document.getElementById('sorteo-header');
   const sorteoResumenEl = document.getElementById('sorteo-resumen');
@@ -2805,6 +2993,14 @@
   let ultimoCantoPopupEl = null;
   let ultimoCantoPopupNumeroEl = null;
   let ultimoCantoTimer = null;
+  const conductoCellsOrden = [];
+  const conductoCellsMatriz = [];
+  const conductoSpheresMap = new Map();
+  let conductoTablaInicializada = false;
+  let conductoPositions = [];
+  let conductoSyncPendiente = false;
+  let vistaConductoActiva = false;
+  let cantoColorMap = new Map();
   let formasSinGanadoresAlertaClave = '';
   let celebracionModalActiva = false;
 
@@ -3346,6 +3542,340 @@
         cantosGridEl.appendChild(celda);
         cantoCellsMap.set(numero,celda);
       }
+    }
+  }
+
+  function aplicarBordesHorizontalesConducto(fila, filaCeldas, totalFilas){
+    if(!Array.isArray(filaCeldas) || !filaCeldas.length) return;
+    const totalColumnas=filaCeldas.length;
+    const esPar=fila%2===0;
+    for(let col=0; col<totalColumnas; col++){
+      const celda=filaCeldas[col];
+      if(!celda) continue;
+      if(esPar){
+        if(col<=totalColumnas-2) celda.classList.add('conducto-borde-bottom');
+        if(fila>0 && col>=1) celda.classList.add('conducto-borde-top');
+      }else{
+        if(col<=totalColumnas-2) celda.classList.add('conducto-borde-top');
+        if(col>=1) celda.classList.add('conducto-borde-bottom');
+      }
+    }
+    if(fila===0){
+      const primera=filaCeldas[0];
+      if(primera){
+        primera.classList.add('inicio-conducto','conducto-curva-top-left','conducto-borde-top');
+      }
+    }
+    if(fila===totalFilas-1){
+      const indiceFinal=esPar?totalColumnas-1:0;
+      const celdaFinal=filaCeldas[indiceFinal];
+      if(celdaFinal){
+        celdaFinal.classList.add('fin-conducto', esPar?'derecha':'izquierda','conducto-borde-bottom');
+      }
+    }
+  }
+
+  function aplicarCurvasConducto(){
+    const totalFilas=conductoCellsMatriz.length;
+    if(!totalFilas) return;
+    const totalColumnas=conductoCellsMatriz[0]?.length||0;
+    for(let fila=0; fila<totalFilas; fila++){
+      const esPar=fila%2===0;
+      if(esPar){
+        const celdaDerecha=conductoCellsMatriz[fila]?.[totalColumnas-1];
+        if(celdaDerecha){
+          celdaDerecha.classList.add('conducto-borde-right','conducto-curva-top-right');
+        }
+        if(fila<totalFilas-1){
+          const celdaInferior=conductoCellsMatriz[fila+1]?.[totalColumnas-1];
+          if(celdaInferior){
+            celdaInferior.classList.add('conducto-borde-right','conducto-curva-bottom-right');
+          }
+        }else if(celdaDerecha){
+          celdaDerecha.classList.add('conducto-curva-bottom-right');
+        }
+      }else{
+        const celdaIzquierda=conductoCellsMatriz[fila]?.[0];
+        if(celdaIzquierda){
+          celdaIzquierda.classList.add('conducto-borde-left','conducto-curva-top-left');
+        }
+        if(fila<totalFilas-1){
+          const celdaInferior=conductoCellsMatriz[fila+1]?.[0];
+          if(celdaInferior){
+            celdaInferior.classList.add('conducto-borde-left','conducto-curva-bottom-left');
+          }
+        }else if(celdaIzquierda){
+          celdaIzquierda.classList.add('conducto-curva-bottom-left');
+        }
+      }
+    }
+    const ultimaFila=totalFilas-1;
+    if(ultimaFila>=0){
+      const esParFinal=ultimaFila%2===0;
+      const indice=esParFinal?(conductoCellsMatriz[ultimaFila]?.length||1)-1:0;
+      const celdaFinal=conductoCellsMatriz[ultimaFila]?.[indice];
+      if(celdaFinal){
+        celdaFinal.classList.add(esParFinal?'conducto-curva-bottom-right':'conducto-curva-bottom-left');
+      }
+    }
+  }
+
+  function crearConductoTabla(){
+    if(conductoTablaInicializada) return;
+    if(!cantosConductoGridEl) return;
+    conductoTablaInicializada=true;
+    conductoCellsOrden.length=0;
+    conductoCellsMatriz.length=0;
+    cantosConductoGridEl.innerHTML='';
+    const totalFilas=15;
+    const totalColumnas=5;
+    for(let fila=0; fila<totalFilas; fila++){
+      const filaCeldas=[];
+      for(let col=0; col<totalColumnas; col++){
+        const celda=document.createElement('div');
+        celda.className='conducto-cell';
+        celda.dataset.row=String(fila);
+        celda.dataset.col=String(col);
+        const slot=fila*totalColumnas+col+1;
+        celda.dataset.slot=String(slot);
+        const etiqueta=document.createElement('span');
+        etiqueta.className='conducto-cell-label';
+        etiqueta.textContent=String(slot).padStart(2,'0');
+        celda.appendChild(etiqueta);
+        cantosConductoGridEl.appendChild(celda);
+        filaCeldas.push(celda);
+      }
+      aplicarBordesHorizontalesConducto(fila, filaCeldas, totalFilas);
+      conductoCellsMatriz.push(filaCeldas);
+      const ordenFila=fila%2===0?filaCeldas:filaCeldas.slice().reverse();
+      conductoCellsOrden.push(...ordenFila);
+    }
+    aplicarCurvasConducto();
+  }
+
+  function obtenerColoresCanto(numero){
+    if(!(cantoColorMap instanceof Map)) return [];
+    const lista=cantoColorMap.get(numero);
+    if(!Array.isArray(lista) || !lista.length) return [];
+    return lista.slice();
+  }
+
+  function actualizarMapaColoresConducto(){
+    cantoColorMap=new Map();
+    if(!(cartonesGanadoresPorForma instanceof Map)) return;
+    cartonesGanadoresPorForma.forEach((registro, claveIdx)=>{
+      if(!registro) return;
+      const paso=Number(registro?.paso);
+      if(!Number.isInteger(paso) || paso<0 || paso>=cantosOrdenados.length) return;
+      const numeroGanador=cantosOrdenados[paso];
+      if(!Number.isFinite(numeroGanador)) return;
+      const indiceForma=Number(claveIdx);
+      const colorForma=obtenerColorParaForma(indiceForma);
+      if(!cantoColorMap.has(numeroGanador)){
+        cantoColorMap.set(numeroGanador, []);
+      }
+      const lista=cantoColorMap.get(numeroGanador);
+      lista.push({color:colorForma, idx:indiceForma});
+    });
+    cantoColorMap.forEach(lista=>{
+      lista.sort((a,b)=>a.idx-b.idx);
+    });
+  }
+
+  function obtenerIndiceConductoParaNumero(numero){
+    if(!(cantosIndiceMap instanceof Map)) return null;
+    if(!cantosIndiceMap.has(numero)) return null;
+    const idxOrden=cantosIndiceMap.get(numero);
+    if(!Number.isInteger(idxOrden)) return null;
+    const total=cantosOrdenados.length;
+    if(total<=0) return null;
+    return (total-1)-idxOrden;
+  }
+
+  function crearConductoSphere(numero){
+    if(!cantosConductoTrackEl) return null;
+    const valor=Number(numero);
+    const esfera=document.createElement('div');
+    esfera.className='conducto-sphere conducto-sphere--pre';
+    esfera.dataset.numero=String(valor);
+    esfera.textContent=String(valor).padStart(2,'0');
+    esfera.setAttribute('aria-label',`Canto ${String(valor).padStart(2,'0')}`);
+    cantosConductoTrackEl.appendChild(esfera);
+    return {numero:valor, element:esfera, destino:null, recienCreada:true, pendiente:false};
+  }
+
+  function actualizarAspectoSphere(sphere, numero){
+    if(!sphere || !sphere.element) return;
+    const colores=obtenerColoresCanto(numero);
+    if(colores.length){
+      const total=colores.length;
+      const partes=colores.map((info, idx)=>{
+        const color=typeof info==='string'?info:info?.color;
+        if(!color) return null;
+        const inicio=(idx/total)*100;
+        const fin=((idx+1)/total)*100;
+        return `${color} ${inicio}% ${fin}%`;
+      }).filter(Boolean);
+      if(partes.length){
+        const gradiente=`conic-gradient(from 90deg, ${partes.join(', ')})`;
+        sphere.element.style.setProperty('--conducto-esfera-bg', gradiente);
+        sphere.element.classList.add('conducto-sphere--ganador');
+        sphere.element.classList.toggle('multicolor', partes.length>1);
+      }
+    }else{
+      sphere.element.style.removeProperty('--conducto-esfera-bg');
+      sphere.element.classList.remove('conducto-sphere--ganador');
+      sphere.element.classList.remove('multicolor');
+    }
+    const esComplementario=esCantoComplementario(numero);
+    sphere.element.classList.toggle('conducto-sphere--complementario', esComplementario);
+  }
+
+  function colocarSphereEnDestino(sphere, animar=true){
+    if(!sphere || !sphere.element) return;
+    const destino=sphere.destino;
+    if(!Number.isInteger(destino) || destino<0){
+      sphere.element.classList.remove('activa');
+      return;
+    }
+    const posicion=conductoPositions[destino];
+    if(!posicion){
+      sphere.element.classList.remove('activa');
+      sphere.pendiente=true;
+      conductoSyncPendiente=true;
+      return;
+    }
+    sphere.pendiente=false;
+    const aplicarPosicion=()=>{
+      sphere.element.style.left=`${posicion.left}px`;
+      sphere.element.style.top=`${posicion.top}px`;
+      sphere.element.classList.add('activa');
+    };
+    if(!animar){
+      const transicionAnterior=sphere.element.style.transition;
+      sphere.element.style.transition='none';
+      aplicarPosicion();
+      void sphere.element.offsetWidth;
+      sphere.element.style.transition=transicionAnterior || '';
+    }else{
+      aplicarPosicion();
+    }
+    if(sphere.recienCreada){
+      requestAnimationFrame(()=>{
+        sphere.element.classList.remove('conducto-sphere--pre');
+      });
+      sphere.recienCreada=false;
+    }
+  }
+
+  function actualizarEsferasSegunDestinos(animar=true){
+    conductoSpheresMap.forEach(sphere=>{
+      colocarSphereEnDestino(sphere, animar);
+    });
+  }
+
+  function actualizarPosicionesConducto(animar=true){
+    if(!vistaConductoActiva) return;
+    if(!cantosConductoEl || cantosConductoEl.hidden){
+      conductoSyncPendiente=true;
+      return;
+    }
+    crearConductoTabla();
+    if(!cantosConductoTrackEl || !conductoCellsOrden.length){
+      conductoSyncPendiente=true;
+      return;
+    }
+    const referencia=cantosConductoTrackEl.getBoundingClientRect();
+    if(!referencia || (!referencia.width && !referencia.height)){
+      conductoSyncPendiente=true;
+      return;
+    }
+    conductoPositions=conductoCellsOrden.map(celda=>{
+      const rect=celda.getBoundingClientRect();
+      return {
+        left: rect.left - referencia.left + rect.width/2,
+        top: rect.top - referencia.top + rect.height/2
+      };
+    });
+    actualizarEsferasSegunDestinos(animar);
+    conductoSyncPendiente=false;
+  }
+
+  function actualizarConductoEsferas(nuevosCantos=[], forzar=false){
+    if(!cantosConductoEl || !cantosConductoGridEl) return;
+    crearConductoTabla();
+    const numerosActivos=new Set(cantosOrdenados);
+    conductoSpheresMap.forEach((sphere, numero)=>{
+      if(!numerosActivos.has(numero)){
+        sphere.element.remove();
+        conductoSpheresMap.delete(numero);
+      }
+    });
+    const nuevosSet=new Set(Array.isArray(nuevosCantos)?nuevosCantos:[]);
+    if(forzar){
+      cantosOrdenados.forEach(numero=>{
+        if(!conductoSpheresMap.has(numero)){
+          const sphere=crearConductoSphere(numero);
+          if(sphere) conductoSpheresMap.set(numero, sphere);
+        }
+      });
+    }else{
+      nuevosSet.forEach(numero=>{
+        if(!conductoSpheresMap.has(numero)){
+          const sphere=crearConductoSphere(numero);
+          if(sphere) conductoSpheresMap.set(numero, sphere);
+        }
+      });
+    }
+    if(!cantosOrdenados.length){
+      conductoSpheresMap.forEach(sphere=>sphere.element.classList.remove('activa'));
+      return;
+    }
+    cantosOrdenados.forEach(numero=>{
+      const sphere=conductoSpheresMap.get(numero);
+      if(!sphere) return;
+      sphere.destino=obtenerIndiceConductoParaNumero(numero);
+      sphere.recienCreada=sphere.recienCreada || nuevosSet.has(numero);
+      actualizarAspectoSphere(sphere, numero);
+    });
+    conductoSyncPendiente=true;
+    if(vistaConductoActiva){
+      requestAnimationFrame(()=>actualizarPosicionesConducto(true));
+    }
+  }
+
+  function alternarVistaConducto(estado){
+    const proximo=typeof estado==='boolean'?estado:!vistaConductoActiva;
+    if(proximo===vistaConductoActiva) return;
+    vistaConductoActiva=proximo;
+    aplicarEstadoVistaConducto();
+  }
+
+  function aplicarEstadoVistaConducto(){
+    if(!cantosGridEl || !cantosConductoEl) return;
+    if(vistaConductoActiva){
+      cantosConductoEl.hidden=false;
+      cantosGridEl.hidden=true;
+      cantosPanelEl?.classList.add('conducto-activo');
+      crearConductoTabla();
+      requestAnimationFrame(()=>{
+        actualizarPosicionesConducto(false);
+        conductoSpheresMap.forEach(sphere=>{
+          if(Number.isInteger(sphere.destino) && sphere.destino>=0){
+            sphere.element.classList.add('activa');
+          }
+        });
+      });
+    }else{
+      cantosConductoEl.hidden=true;
+      cantosGridEl.hidden=false;
+      cantosPanelEl?.classList.remove('conducto-activo');
+    }
+    if(ultimoCantoBoton){
+      ultimoCantoBoton.classList.toggle('vista-conducto-activa', vistaConductoActiva);
+      ultimoCantoBoton.setAttribute('aria-pressed', vistaConductoActiva?'true':'false');
+      ultimoCantoBoton.setAttribute('aria-label', vistaConductoActiva?'Mostrar tabla tradicional de cantos':'Mostrar vista animada de cantos');
+      ultimoCantoBoton.title=vistaConductoActiva?'Ver tabla tradicional de cantos':'Ver recorrido animado de cantos';
     }
   }
 
@@ -4545,7 +5075,7 @@
         ultimoCantoBoton.title='Ver detalle del último canto';
         ultimoCantoBoton.addEventListener('click',evento=>{
           evento.preventDefault();
-          mostrarVentanaUltimoCanto();
+          alternarVistaConducto();
         });
       }
       ultimoCantoBoton.textContent=etiqueta;
@@ -4561,6 +5091,7 @@
       ultimoCantoEl.appendChild(etiquetaSpan);
       ultimoCantoEl.appendChild(totalSpan);
       ultimoCantoEl.appendChild(separador);
+      ultimoCantoBoton.setAttribute('aria-pressed', vistaConductoActiva?'true':'false');
       ultimoCantoEl.appendChild(ultimoCantoBoton);
     }else{
       ultimoCantoValorActual='';
@@ -4573,6 +5104,7 @@
     if(ultimoCantoPopupEl){
       ultimoCantoPopupEl.classList.toggle('complementarios-activos', ultimoEstadoEsPenalizado);
     }
+    aplicarEstadoVistaConducto();
   }
 
   function limpiarPanelFormas(){
@@ -5207,6 +5739,9 @@
     if(sinCartonesActivosEl?.classList?.contains('visible')){
       actualizarDimensionSinCartones();
     }
+    if(vistaConductoActiva){
+      requestAnimationFrame(()=>actualizarPosicionesConducto(false));
+    }
   });
 
   actualizarSinSorteoUI();
@@ -5378,7 +5913,9 @@
     cantosEtiquetas=etiquetas;
     const nuevosCantos=normalizados.filter(num=>!cantosPrevios.has(num));
     calcularGanadores();
+    actualizarMapaColoresConducto();
     renderCantos();
+    actualizarConductoEsferas(nuevosCantos, cantosPrevios.size===0);
     if(nuevosPenalizados.length){
       resaltarCeldasPenalizadasTemporalmente(nuevosPenalizados);
     }
@@ -5415,6 +5952,8 @@
     arr.sort((a,b)=>(a.idx||0)-(b.idx||0));
     formasActivas=arr;
     calcularGanadores();
+    actualizarMapaColoresConducto();
+    actualizarConductoEsferas([], false);
   }
 
   function procesarCartones(snapshot){
@@ -5443,6 +5982,8 @@
     });
     cartonesSorteo=mapa;
     calcularGanadores();
+    actualizarMapaColoresConducto();
+    actualizarConductoEsferas([], false);
   }
 
   function evaluarEstadoFormasGanadoras(){
@@ -5764,6 +6305,8 @@
       console.error('Error escuchando sorteos en juego',err);
     });
   }
+
+  aplicarEstadoVistaConducto();
 
   initFirebase()
     .then(()=>{
