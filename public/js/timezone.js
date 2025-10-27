@@ -4,7 +4,11 @@ const serverTime = {
   locale: 'es-ES',
   zonaIana: '',
   diferencia: 0,
-  offsetMinutos: null
+  offsetMinutos: null,
+  baseEpochMs: null,
+  baseMonotonicMs: null,
+  ultimaSync: null,
+  origen: 'desconocido'
 };
 
 const IANA_OVERRIDES = {
@@ -30,6 +34,64 @@ function diferenciaPorOffset(offsetMinutos) {
   if (typeof offsetMinutos !== 'number' || Number.isNaN(offsetMinutos)) return 0;
   const localOffset = new Date().getTimezoneOffset();
   return (localOffset - offsetMinutos) * 60000;
+}
+
+function monotonicNow() {
+  if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+    return performance.now();
+  }
+  return Date.now();
+}
+
+function fijarBaseTemporal(epochMs) {
+  if (typeof epochMs !== 'number' || Number.isNaN(epochMs)) return;
+  serverTime.baseEpochMs = epochMs;
+  serverTime.baseMonotonicMs = monotonicNow();
+  serverTime.ultimaSync = Date.now();
+  serverTime.diferencia = epochMs - Date.now();
+}
+
+function obtenerEpochActual() {
+  if (typeof serverTime.baseEpochMs === 'number' && typeof serverTime.baseMonotonicMs === 'number') {
+    const transcurrido = monotonicNow() - serverTime.baseMonotonicMs;
+    return serverTime.baseEpochMs + transcurrido;
+  }
+  return Date.now() + (serverTime.diferencia || 0);
+}
+
+function obtenerFechaServidor() {
+  const epoch = obtenerEpochActual();
+  return new Date(epoch);
+}
+
+async function obtenerEpochDesdeFirestore(database) {
+  if (typeof firebase === 'undefined') return null;
+  const fieldValue = firebase?.firestore?.FieldValue;
+  if (!fieldValue || typeof fieldValue.serverTimestamp !== 'function') return null;
+  try {
+    const ref = database.collection('Variablesglobales').doc('HoraServidor');
+    await ref.set({ ultimaSync: fieldValue.serverTimestamp() }, { merge: true });
+    const snap = await ref.get({ source: 'server' });
+    if (!snap.exists) return null;
+    const data = snap.data() || {};
+    const marca = data.ultimaSync;
+    if (marca && typeof marca.toMillis === 'function') {
+      return marca.toMillis();
+    }
+  } catch (err) {
+    console.error('No se pudo obtener la hora del servidor desde Firestore', err);
+  }
+  return null;
+}
+
+async function obtenerEpochServidor(database) {
+  const epochFirestore = await obtenerEpochDesdeFirestore(database);
+  if (typeof epochFirestore === 'number' && !Number.isNaN(epochFirestore)) {
+    serverTime.origen = 'firestore';
+    return epochFirestore;
+  }
+  serverTime.origen = 'offset';
+  return null;
 }
 
 function parseZona(zona) {
@@ -76,7 +138,20 @@ async function sincronizarHora() {
     }
   }
   const fallback = diferenciaPorOffset(offsetUsado);
+
+  try {
+    const database = await asegurarDb();
+    const epochServidor = await obtenerEpochServidor(database);
+    if (typeof epochServidor === 'number' && !Number.isNaN(epochServidor)) {
+      fijarBaseTemporal(epochServidor);
+      return;
+    }
+  } catch (err) {
+    console.error('No se pudo sincronizar la hora con el servidor', err);
+  }
+
   serverTime.diferencia = fallback;
+  fijarBaseTemporal(Date.now() + fallback);
 }
 
 async function asegurarDb() {
@@ -118,7 +193,7 @@ async function initServerTime() {
     const zonaNormalizada = override || parseZona(ZonaHoraria);
     serverTime.zonaIana = typeof zonaNormalizada === 'string' ? zonaNormalizada : '';
     await sincronizarHora();
-    setInterval(sincronizarHora, 3600000);
+    setInterval(sincronizarHora, 300000);
   } catch (e) {
     console.error('Error obteniendo parámetros', e);
   }
@@ -130,8 +205,11 @@ function obtenerFecha() {
     month: '2-digit',
     year: 'numeric'
   };
-  const fechaBase = new Date(Date.now() + serverTime.diferencia);
-  const formatter = new Intl.DateTimeFormat(serverTime.locale || 'es-ES', opciones);
+  const fechaBase = obtenerFechaServidor();
+  const formatter = new Intl.DateTimeFormat(serverTime.locale || 'es-ES', {
+    ...opciones,
+    ...(serverTime.zonaIana ? { timeZone: serverTime.zonaIana } : {})
+  });
   return formatter.format(fechaBase);
 }
 
@@ -145,7 +223,8 @@ function obtenerHora() {
     minute: '2-digit',
     hour12: true
   };
-  const d = new Date(Date.now() + serverTime.diferencia);
+  if (serverTime.zonaIana) opciones.timeZone = serverTime.zonaIana;
+  const d = obtenerFechaServidor();
   const hora = d.toLocaleTimeString(serverTime.locale, opciones);
   return limpiarMeridiano(hora);
 }
@@ -194,3 +273,17 @@ window.initServerTime = initServerTime;
 window.fechaServidor = obtenerFecha;
 window.horaServidor = obtenerHora;
 window.initFechaHora = initFechaHora;
+serverTime.now = function () {
+  return obtenerFechaServidor();
+};
+serverTime.nowMs = function () {
+  return obtenerEpochActual();
+};
+serverTime.serverTimestamp = function () {
+  if (typeof firebase === 'undefined') return null;
+  const fieldValue = firebase?.firestore?.FieldValue;
+  if (fieldValue && typeof fieldValue.serverTimestamp === 'function') {
+    return fieldValue.serverTimestamp();
+  }
+  return null;
+};
