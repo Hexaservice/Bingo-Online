@@ -2779,6 +2779,50 @@
     return null;
   }
 
+  function normalizarCartonesGratisValor(valor){
+    if(typeof valor === 'number' && Number.isFinite(valor)){
+      return Math.max(0, Math.round(valor));
+    }
+    if(typeof valor === 'string'){
+      const texto = valor.trim();
+      if(!texto) return null;
+      const numeroDirecto = Number(texto.replace(/\s+/g,''));
+      if(Number.isFinite(numeroDirecto)){
+        return Math.max(0, Math.round(numeroDirecto));
+      }
+      const soloDigitos = texto.replace(/[^.\d,-]/g,'').replace(/[.,](?=\d{3}(\D|$))/g,'');
+      const numero = parseFloat(soloDigitos.replace(',','.'));
+      if(Number.isFinite(numero)){
+        return Math.max(0, Math.round(numero));
+      }
+      const extraerEntero = texto.replace(/[^\d-]/g,'');
+      if(extraerEntero){
+        const entero = parseInt(extraerEntero, 10);
+        if(Number.isFinite(entero)){
+          return Math.max(0, entero);
+        }
+      }
+    }
+    return null;
+  }
+
+  function obtenerCartonesGratisDesde(datos){
+    if(!datos || typeof datos!=='object') return null;
+    const claves=[
+      'cartonesGratis','cartonesgratis','cartones_gratis',
+      'premioCartonesGratis','premioCartonesgratis','cartones'
+    ];
+    for(const clave of claves){
+      if(Object.prototype.hasOwnProperty.call(datos, clave)){
+        const valor=normalizarCartonesGratisValor(datos[clave]);
+        if(valor!==null){
+          return valor;
+        }
+      }
+    }
+    return null;
+  }
+
   function sincronizarFormasBase(formas){
     const lista = Array.isArray(formas) ? formas : [];
     formasBaseResumen = lista
@@ -2786,11 +2830,13 @@
         const idx = Number(item?.idx ?? item?.indice);
         if(!Number.isFinite(idx)) return null;
         const posicionesNorm = Array.isArray(item.posicionesNormalizadas) ? item.posicionesNormalizadas : [];
+        const cartonesGratis = obtenerCartonesGratisDesde(item);
         return {
           idx,
           nombre: item?.nombre || '',
           porcentaje: Number(item?.porcentaje ?? item?.porcentajePremio ?? 0) || 0,
           premioCreditos: Number(item?.premioCreditos ?? item?.premiocreditos ?? item?.creditos ?? 0) || 0,
+          cartonesGratis: cartonesGratis ?? 0,
           posicionesNormalizadas: posicionesNorm
             .map(pos=>({ r: Number(pos?.r ?? pos?.row ?? pos?.fila), c: Number(pos?.c ?? pos?.col ?? pos?.columna) }))
             .filter(pos=>Number.isInteger(pos.r) && Number.isInteger(pos.c))
@@ -2834,6 +2880,7 @@
               .filter(pos=>Number.isInteger(pos.r) && Number.isInteger(pos.c))
           : [];
         const base = obtenerResumenForma(idx) || {};
+        const cartonesGratis = obtenerCartonesGratisDesde(data);
         mapa.set(idx, {
           ...base,
           id: doc.id,
@@ -2841,6 +2888,7 @@
           nombre: data?.nombre || base?.nombre || '',
           porcentaje: Number(data?.porcentaje ?? data?.porcentajePremio ?? base?.porcentaje ?? 0) || 0,
           premioCreditos: Number(data?.premioCreditos ?? data?.premiocreditos ?? data?.creditos ?? base?.premioCreditos ?? 0) || 0,
+          cartonesGratis: cartonesGratis ?? base?.cartonesGratis ?? 0,
           posicionesNormalizadas: posiciones
         });
       });
@@ -3269,9 +3317,9 @@
       forma?.cartones
     ];
     for(const candidato of candidatos){
-      const numero = Number(candidato);
-      if(Number.isFinite(numero)){
-        return Math.max(0, Math.round(numero));
+      const numero = normalizarCartonesGratisValor(candidato);
+      if(numero !== null){
+        return numero;
       }
     }
     return 0;
