@@ -2409,10 +2409,32 @@
 
   function getServerNow(){
     const st = obtenerServerTime();
+    if (st && typeof st.now === 'function') {
+      const fecha = st.now();
+      if (fecha instanceof Date && !Number.isNaN(fecha.getTime())) {
+        return fecha;
+      }
+    }
+    if (st && typeof st.nowMs === 'function') {
+      const millis = st.nowMs();
+      if (Number.isFinite(millis)) {
+        return new Date(millis);
+      }
+    }
     return new Date(Date.now() + (st?.diferencia || 0));
   }
 
   function getServerTimestamp(){
+    const st = obtenerServerTime();
+    if(st && typeof st.serverTimestamp === 'function'){
+      const marca = st.serverTimestamp();
+      if(marca) return marca;
+    }
+    const fieldValue = firebase?.firestore?.FieldValue;
+    if(fieldValue && typeof fieldValue.serverTimestamp === 'function'){
+      const marca = fieldValue.serverTimestamp();
+      if(marca) return marca;
+    }
     const timestampCtor = firebase?.firestore?.Timestamp;
     if(!timestampCtor){
       return null;
@@ -2448,8 +2470,8 @@
     if(!fechaActualValorEl || !horaActualValorEl) return;
     try {
       const st = obtenerServerTime();
-      const diferencia = st?.diferencia || 0;
-      const ahora = new Date(Date.now() + diferencia);
+      const ahora = getServerNow();
+      if(!(ahora instanceof Date) || Number.isNaN(ahora.getTime())) return;
       const zona = st?.zonaIana;
       const opcionesFecha = { day: '2-digit', month: '2-digit', year: 'numeric' };
       const opcionesHora = { hour: '2-digit', minute: '2-digit', hour12: true };
@@ -2457,7 +2479,8 @@
         opcionesFecha.timeZone = zona;
         opcionesHora.timeZone = zona;
       }
-      const fechaFormatter = new Intl.DateTimeFormat('es-ES', opcionesFecha);
+      const localeFecha = st?.locale || 'es-ES';
+      const fechaFormatter = new Intl.DateTimeFormat(localeFecha, opcionesFecha);
       const horaFormatter = new Intl.DateTimeFormat('en-US', opcionesHora);
       const fechaStr = fechaFormatter.format(ahora);
       const horaStr = horaFormatter.format(ahora).toUpperCase();
@@ -2475,11 +2498,15 @@
     function renderFooter(){
       try {
         const st = obtenerServerTime();
-        const diferencia = Number.isFinite(st?.diferencia) ? st.diferencia : 0;
-        const ahora = new Date(Date.now() + diferencia);
+        const ahora = getServerNow();
+        if(!(ahora instanceof Date) || Number.isNaN(ahora.getTime())) return;
         const locale = st?.locale || 'es-ES';
         const opcionesFecha = { year: 'numeric', month: 'long', day: 'numeric' };
         const opcionesHora = { hour: '2-digit', minute: '2-digit', hour12: true };
+        if(st?.zonaIana){
+          opcionesFecha.timeZone = st.zonaIana;
+          opcionesHora.timeZone = st.zonaIana;
+        }
         const fechaStr = ahora.toLocaleDateString(locale, opcionesFecha);
         let horaStr = ahora.toLocaleTimeString(locale, opcionesHora);
         horaStr = horaStr

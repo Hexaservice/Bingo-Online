@@ -56,7 +56,10 @@ function obtenerFechaHoraCierre(d,sorteoDate){
 
 async function actualizarEstadosSorteos(){
   await initServerTime();
-  const ahora = new Date(Date.now() + serverTime.diferencia);
+  let ahora = serverTime?.now?.();
+  if (!(ahora instanceof Date) || Number.isNaN(ahora?.getTime?.())) {
+    ahora = new Date(Date.now() + (serverTime?.diferencia || 0));
+  }
   try{
     const snap = await db.collection('sorteos').where('estado','in',['Activo','Sellado']).get();
     const updates=[];
