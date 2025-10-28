@@ -424,6 +424,7 @@
       #cantos-conducto-grid {
           --conducto-gap: 0px;
           --conducto-cell-size: calc(100% / 5);
+          --conducto-cell-size-real: var(--conducto-cell-size);
           display: grid;
           grid-template-columns: repeat(5, minmax(0, var(--conducto-cell-size)));
           gap: var(--conducto-gap);
@@ -505,14 +506,14 @@
           color: #1f1f1f;
       }
       .conducto-sphere {
-          --conducto-esfera-base: clamp(calc(var(--conducto-cell-size) * 0.6), 32px, calc(var(--conducto-cell-size) * 0.85));
+          --conducto-esfera-base: clamp(calc(var(--conducto-cell-size-real) * 0.6), 32px, calc(var(--conducto-cell-size-real) * 0.85));
           --conducto-esfera-font-base: clamp(0.72rem, 2.6vw, 1rem);
-          --conducto-esfera-size: min(var(--conducto-esfera-base), var(--conducto-cell-size));
+          --conducto-esfera-size: min(var(--conducto-esfera-base), var(--conducto-cell-size-real));
           position: absolute;
           inline-size: var(--conducto-esfera-size);
-          block-size: var(--conducto-esfera-size);
+          block-size: auto;
           width: var(--conducto-esfera-size);
-          height: var(--conducto-esfera-size);
+          height: auto;
           aspect-ratio: 1 / 1;
           min-width: 0;
           min-height: 0;
@@ -605,11 +606,11 @@
           outline-offset: 4px;
       }
       .conducto-sphere--ingreso {
-          --conducto-esfera-ingreso-size: min(calc(var(--conducto-esfera-base) * 1.35), var(--conducto-cell-size));
+          --conducto-esfera-ingreso-size: min(calc(var(--conducto-esfera-base) * 1.35), var(--conducto-cell-size-real));
           inline-size: var(--conducto-esfera-ingreso-size);
-          block-size: var(--conducto-esfera-ingreso-size);
+          block-size: auto;
           width: var(--conducto-esfera-ingreso-size);
-          height: var(--conducto-esfera-ingreso-size);
+          height: auto;
           font-size: calc(var(--conducto-esfera-font-base) * 2);
           border-radius: 50%;
           box-shadow: 0 14px 32px rgba(0,0,0,0.28), 0 0 18px rgba(255,255,255,0.85);
@@ -4152,13 +4153,24 @@
       conductoSyncPendiente=true;
       return;
     }
-    conductoPositions=conductoCellsOrden.map(celda=>{
+    let cellSizePx=null;
+    conductoPositions=conductoCellsOrden.map((celda, indice)=>{
       const rect=celda.getBoundingClientRect();
+      if(indice===0){
+        const cellSize=Math.max(rect?.width||0, 0);
+        if(cellSize){
+          cellSizePx=`${cellSize}px`;
+        }
+      }
       return {
         left: rect.left - referencia.left + rect.width/2,
         top: rect.top - referencia.top + rect.height/2
       };
     });
+    if(cellSizePx){
+      cantosConductoTrackEl.style.setProperty('--conducto-cell-size-real', cellSizePx);
+      cantosConductoEl?.style?.setProperty('--conducto-cell-size-real', cellSizePx);
+    }
     if(animar && conductoAnimacionBloqueada){
       conductoActualizacionProgramada=true;
       conductoSyncPendiente=true;
