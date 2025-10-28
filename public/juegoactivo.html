@@ -1166,17 +1166,23 @@
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 4px;
+          gap: clamp(6px, 1vw, 12px);
           width: 100%;
-          margin-top: clamp(0px, 0.3vw, 2px);
+          margin-top: clamp(2px, 0.6vw, 8px);
+          padding: clamp(6px, 1.1vw, 12px) clamp(10px, 1.6vw, 18px);
           font-family: 'Bangers', cursive;
-          color: #ffffff;
-          text-shadow: 0 0 16px rgba(147, 51, 234, 0.95), 0 0 32px rgba(168, 85, 247, 0.75);
+          background: linear-gradient(135deg, rgba(236, 233, 254, 0.85), rgba(221, 214, 254, 0.92));
+          border-radius: clamp(10px, 2.4vw, 18px);
+          border: 1px solid rgba(124, 58, 237, 0.25);
+          box-shadow: 0 4px 12px rgba(76, 29, 149, 0.18);
+          color: #2f106a;
       }
       #carton-destacado .carton-back-cartones-label {
           font-size: clamp(0.98rem, 3.2vw, 1.2rem);
           letter-spacing: 0.8px;
           line-height: 1.05;
+          color: #2f106a;
+          text-shadow: none;
       }
       #carton-destacado .carton-back-cartones-valor {
           font-family: 'Poppins', sans-serif;
@@ -1184,9 +1190,14 @@
           font-size: clamp(1.2rem, 3.6vw, 1.6rem);
           color: #ffffff;
           line-height: 1.05;
-          text-shadow: 0 0 18px rgba(147, 51, 234, 0.95), 0 0 36px rgba(196, 181, 253, 0.75);
+          text-shadow: none;
           margin-left: 0;
-          text-align: right;
+          text-align: center;
+          padding: clamp(2px, 0.6vw, 6px) clamp(12px, 1.8vw, 20px);
+          border-radius: 999px;
+          background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+          box-shadow: 0 6px 16px rgba(124, 58, 237, 0.32);
+          min-width: clamp(56px, 12vw, 92px);
       }
       #panel-botones-formas {
           grid-area: botones;
@@ -3077,6 +3088,8 @@
   const BINGO_LETRAS = ['B','I','N','G','O'];
 
   const TEXTO_BOTON_CONSULTAR_SELECCIONADOS = 'CONSULTAR SORTEOS FINALIZADOS';
+  const MENSAJE_COMPLEMENTARIOS_PENDIENTES = 'Ya hay GANADORES en todas las FORMAS, ahora se continua con los cantos de números faltantes para transparencia del SORTEO';
+  const MENSAJE_COMPLEMENTARIOS_COMPLETOS = 'Ya hay GANADORES en todas las FORMAS, y ya se han cantado todos los cantos restantes para la transparencia del SORTEO';
   const cantoCellsMap = new Map();
   let cantosOrdenados = [];
   let cantosEtiquetas = [];
@@ -3422,6 +3435,8 @@
   let indiceUltimoGanador = null;
   let cantosComplementariosActivos = false;
   let avisoComplementariosMostrado = false;
+  let totalCantosRegistrados = 0;
+  let transparenciaCompletaAnunciada = false;
 
   function limpiarBotonesFormas(){
     if(panelBotonesFormasEl){
@@ -3627,14 +3642,34 @@
     },4000);
   }
 
+  function obtenerMensajeAvisoComplementarios(){
+    return totalCantosRegistrados >= 75
+      ? MENSAJE_COMPLEMENTARIOS_COMPLETOS
+      : MENSAJE_COMPLEMENTARIOS_PENDIENTES;
+  }
+
+  function actualizarMensajeAvisoComplementarios(totalCantos){
+    if(typeof totalCantos==='number' && Number.isFinite(totalCantos)){
+      const totalNormalizado=Math.max(0, Math.min(75, Math.floor(totalCantos)));
+      totalCantosRegistrados=totalNormalizado;
+    }
+    if(!complementariosAvisoMensajeEl) return;
+    const mensajeActual=obtenerMensajeAvisoComplementarios();
+    if(complementariosAvisoMensajeEl.textContent!==mensajeActual){
+      complementariosAvisoMensajeEl.textContent=mensajeActual;
+    }
+  }
+
   function mostrarAvisoComplementarios(){
     if(!haySorteoJugando){
       avisoComplementariosMostrado = false;
+      transparenciaCompletaAnunciada = false;
       return;
     }
     avisoComplementariosMostrado = true;
+    actualizarMensajeAvisoComplementarios(totalCantosRegistrados);
     if(!complementariosAvisoEl){
-      alert('Ya hay GANADORES en todas las FORMAS, ahora se continua con los cantos de números faltantes para transparencia del SORTEO');
+      alert(obtenerMensajeAvisoComplementarios());
       return;
     }
     complementariosAvisoEl.classList.add('activa');
@@ -6413,6 +6448,7 @@
     cantosResultadoMap=new Map(resultadoMapa);
     cantosOrdenados=normalizados;
     cantosEtiquetas=etiquetas;
+    actualizarMensajeAvisoComplementarios(cantosOrdenados.length);
     const nuevosCantos=normalizados.filter(num=>!cantosPrevios.has(num));
     calcularGanadores();
     actualizarMapaColoresConducto();
@@ -6520,8 +6556,17 @@
     }else{
       cantosComplementariosActivos=false;
     }
+    actualizarMensajeAvisoComplementarios(totalCantos);
+    const transparenciaCompleta=cantosComplementariosActivos && totalCantos>=75;
+    if(transparenciaCompleta && !transparenciaCompletaAnunciada){
+      avisoComplementariosMostrado=false;
+      transparenciaCompletaAnunciada=true;
+    }else if(!transparenciaCompleta){
+      transparenciaCompletaAnunciada=false;
+    }
     if(!cantosComplementariosActivos || !haySorteoJugando){
       avisoComplementariosMostrado=false;
+      transparenciaCompletaAnunciada=false;
       cerrarAvisoComplementarios();
     }else if(!avisoComplementariosMostrado){
       mostrarAvisoComplementarios();
@@ -6594,6 +6639,7 @@
       indiceUltimoGanador=null;
       cantosComplementariosActivos=false;
       avisoComplementariosMostrado=false;
+      transparenciaCompletaAnunciada=false;
       cerrarAvisoComplementarios();
       return;
     }
@@ -6609,6 +6655,7 @@
       indiceUltimoGanador=null;
       cantosComplementariosActivos=false;
       avisoComplementariosMostrado=false;
+      transparenciaCompletaAnunciada=false;
       cerrarAvisoComplementarios();
       procesarCantos([]);
       formasActivas=[];
@@ -6770,6 +6817,7 @@
       indiceUltimoGanador=null;
       cantosComplementariosActivos=false;
       avisoComplementariosMostrado=false;
+      transparenciaCompletaAnunciada=false;
       cerrarAvisoComplementarios();
       procesarCantos([]);
       formasActivas=[];
