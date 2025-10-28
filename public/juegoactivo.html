@@ -303,7 +303,7 @@
           flex-direction: column;
           align-items: stretch;
           justify-content: flex-start;
-          gap: clamp(6px, 1.2vw, 12px);
+          gap: clamp(4px, 0.9vw, 10px);
           padding: 0;
           background: transparent;
           width: 100%;
@@ -312,11 +312,12 @@
       }
       #cantos-encabezado {
           font-family: 'Bangers', cursive;
-          font-size: clamp(1.1rem, 3vw, 1.6rem);
+          font-size: clamp(1.15rem, 3.4vw, 1.8rem);
           letter-spacing: 2px;
           text-transform: uppercase;
           color: #ffffff;
-          text-shadow: 0 0 14px rgba(2, 17, 58, 0.88), 0 0 28px rgba(2, 26, 91, 0.72);
+          text-align: center;
+          text-shadow: 0 0 14px rgba(5, 86, 208, 0.92), 0 0 32px rgba(33, 150, 243, 0.82);
           line-height: 1;
           margin: 0;
       }
@@ -393,33 +394,25 @@
           box-shadow: 0 0 14px rgba(255,215,0,0.9);
           animation: focoUltimo 1.6s ease-in-out infinite;
       }
-      #cantos-conducto {
-          --conducto-padding: clamp(8px, 1.6vw, 16px);
-          --conducto-cell-size: calc((100% - var(--conducto-padding) * 2) / 5);
-          position: relative;
-          padding: var(--conducto-padding);
-          border-radius: clamp(14px, 3vw, 22px);
-          background: linear-gradient(160deg, rgba(255,255,255,0.98), rgba(243,244,248,0.9));
-          box-shadow: 0 12px 28px rgba(0,0,0,0.18);
-          width: 100%;
-          box-sizing: border-box;
-          margin-inline: auto;
-      }
-      #cantos-conducto[hidden] {
-          display: none !important;
-      }
       #cantos-conducto-grid {
+          --conducto-gap: clamp(2px, 0.7vw, 8px);
+          --conducto-cell-size: calc((100% - var(--conducto-gap) * 4) / 5);
           display: grid;
           grid-template-columns: repeat(5, minmax(0, var(--conducto-cell-size)));
-          gap: 0;
+          gap: var(--conducto-gap);
           position: relative;
-          z-index: 1;
+          z-index: 0;
           width: 100%;
-          margin: 0 auto;
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+      }
+      #cantos-conducto-grid[hidden] {
+          display: none !important;
       }
       #cantos-conducto-track {
           position: absolute;
-          inset: var(--conducto-padding);
+          inset: 0;
           pointer-events: none;
           z-index: 2;
       }
@@ -486,11 +479,11 @@
       }
       .conducto-sphere {
           position: absolute;
-          width: clamp(calc(var(--conducto-cell-size) * 0.7), 7vw, calc(var(--conducto-cell-size) * 0.9));
+          width: clamp(calc(var(--conducto-cell-size) * 0.6), 32px, calc(var(--conducto-cell-size) * 0.85));
           aspect-ratio: 1 / 1;
-          min-width: clamp(32px, 6vw, 48px);
+          min-width: 0;
           min-height: 0;
-          max-width: clamp(42px, 9vw, 96px);
+          max-width: calc(var(--conducto-cell-size) * 0.92);
           border-radius: 50%;
           display: grid;
           place-items: center;
@@ -2814,10 +2807,9 @@
     </header>
     <section id="panel-superior">
       <div id="cantos-panel">
-        <div id="cantos-encabezado" aria-hidden="true">CANTOS</div>
         <div id="cantos-grid"></div>
-        <div id="cantos-conducto" hidden>
-          <div id="cantos-conducto-grid" aria-hidden="true"></div>
+        <div id="cantos-encabezado" hidden aria-hidden="true">CANTOS</div>
+        <div id="cantos-conducto-grid" hidden aria-hidden="true">
           <div id="cantos-conducto-track" aria-hidden="true"></div>
         </div>
         <div id="ultimo-canto"></div>
@@ -2912,8 +2904,9 @@
   volverBtn.addEventListener('click',()=>{window.location.href='player.html';});
 
   const cantosGridEl = document.getElementById('cantos-grid');
-  const cantosConductoEl = document.getElementById('cantos-conducto');
-  const cantosConductoGridEl = document.getElementById('cantos-conducto-grid');
+  const cantosConductoTituloEl = document.getElementById('cantos-encabezado');
+  const cantosConductoEl = document.getElementById('cantos-conducto-grid');
+  const cantosConductoGridEl = cantosConductoEl;
   const cantosConductoTrackEl = document.getElementById('cantos-conducto-track');
   const ultimoCantoEl = document.getElementById('ultimo-canto');
   const sorteoHeaderEl = document.getElementById('sorteo-header');
@@ -3631,6 +3624,7 @@
     conductoTablaInicializada=true;
     conductoCellsOrden.length=0;
     conductoCellsMatriz.length=0;
+    const trackElement = cantosConductoTrackEl || null;
     cantosConductoGridEl.innerHTML='';
     const totalFilas=15;
     const totalColumnas=5;
@@ -3651,6 +3645,9 @@
       conductoCellsMatriz.push(filaCeldas);
       const ordenFila=fila%2===0?filaCeldas:filaCeldas.slice().reverse();
       conductoCellsOrden.push(...ordenFila);
+    }
+    if(trackElement && !cantosConductoGridEl.contains(trackElement)){
+      cantosConductoGridEl.appendChild(trackElement);
     }
     conductoCellsOrden.forEach((celda, indice)=>{
       if(!celda) return;
@@ -3868,7 +3865,12 @@
   function aplicarEstadoVistaConducto(){
     if(!cantosGridEl || !cantosConductoEl) return;
     if(vistaConductoActiva){
+      if(cantosConductoTituloEl){
+        cantosConductoTituloEl.hidden=false;
+        cantosConductoTituloEl.setAttribute('aria-hidden','false');
+      }
       cantosConductoEl.hidden=false;
+      cantosConductoEl.setAttribute('aria-hidden','false');
       cantosGridEl.hidden=true;
       cantosPanelEl?.classList.add('conducto-activo');
       crearConductoTabla();
@@ -3882,6 +3884,11 @@
       });
     }else{
       cantosConductoEl.hidden=true;
+      cantosConductoEl.setAttribute('aria-hidden','true');
+      if(cantosConductoTituloEl){
+        cantosConductoTituloEl.hidden=true;
+        cantosConductoTituloEl.setAttribute('aria-hidden','true');
+      }
       cantosGridEl.hidden=false;
       cantosPanelEl?.classList.remove('conducto-activo');
     }
