@@ -385,8 +385,8 @@
               var(--naranja-penalizacion-suave) 10%,
               var(--naranja-penalizacion-medio) 55%,
               var(--naranja-penalizacion-intenso) 100%);
-          color: var(--naranja-penalizacion-texto);
-          text-shadow: 0 0 8px rgba(0, 0, 0, 0.85);
+          color: #111111;
+          text-shadow: 0 0 6px rgba(255,255,255,0.95), 0 0 14px rgba(255,255,255,0.85);
       }
       .canto-cell.invalido {
           background: radial-gradient(circle at center,
@@ -403,6 +403,23 @@
       .canto-cell.ultimo {
           box-shadow: 0 0 14px rgba(255,215,0,0.9);
           animation: focoUltimo 1.6s ease-in-out infinite;
+      }
+      .canto-cell.ganador {
+          color: #111111;
+          text-shadow: 0 0 6px rgba(255,255,255,0.95), 0 0 14px rgba(255,255,255,0.85);
+          cursor: pointer;
+          outline: none;
+      }
+      .canto-cell.cantado.ganador {
+          color: #111111;
+      }
+      .canto-cell.cantado.ganador.complementario,
+      .canto-cell.cantado.ganador.invalido {
+          color: #111111;
+      }
+      .canto-cell.ganador:focus-visible {
+          outline: 2px solid rgba(255,255,255,0.85);
+          outline-offset: 2px;
       }
       #cantos-conducto-grid {
           --conducto-gap: 0px;
@@ -504,7 +521,7 @@
           background: var(--conducto-esfera-bg, radial-gradient(circle at 30% 30%, #ffffff 0%, #e2e5ec 55%, #bec3ce 100%));
           box-shadow: 0 10px 22px rgba(0,0,0,0.28), 0 0 6px rgba(0,0,0,0.45);
           transform: translate(-50%, -50%);
-          transition: left 0.45s cubic-bezier(0.4, 0, 0.2, 1), top 0.45s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease, transform 0.35s ease, box-shadow 0.35s ease;
+          transition: left 1s cubic-bezier(0.4, 0, 0.2, 1), top 1s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease, transform 0.6s ease, box-shadow 0.6s ease, width 0.6s ease, height 0.6s ease;
           opacity: 0;
           letter-spacing: 0.4px;
           pointer-events: none;
@@ -542,25 +559,57 @@
           opacity: 0;
       }
       .conducto-sphere--ganador {
-          color: #ffffff;
-          text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+          color: #111111;
+          text-shadow: 0 0 6px rgba(255,255,255,0.95), 0 0 14px rgba(255,255,255,0.85);
+          cursor: pointer;
+          pointer-events: auto;
+          z-index: 4;
       }
       .conducto-sphere--ganador::before {
-          background: radial-gradient(circle, rgba(255,255,255,0.55), rgba(255,255,255,0));
+          background: radial-gradient(circle, rgba(255,255,255,0.8), rgba(255,255,255,0));
       }
       .conducto-sphere--complementario {
-          color: #ffffff;
-          text-shadow: 0 1px 4px rgba(0,0,0,0.75), 0 0 12px rgba(255,149,0,0.8);
+          color: #111111;
+          text-shadow: 0 0 6px rgba(255,255,255,0.95), 0 0 12px rgba(255,255,255,0.8);
           box-shadow: 0 12px 26px rgba(255,149,0,0.35), 0 0 12px rgba(255,149,0,0.25), 0 0 6px rgba(0,0,0,0.5);
+          background: radial-gradient(circle at center,
+              var(--naranja-penalizacion-suave) 12%,
+              var(--naranja-penalizacion-medio) 58%,
+              var(--naranja-penalizacion-intenso) 100%);
       }
       .conducto-sphere--complementario::before {
-          background: radial-gradient(circle, rgba(255,181,64,0.45), rgba(255,149,0,0));
+          background: radial-gradient(circle, rgba(255,214,153,0.65), rgba(255,149,0,0));
       }
       .conducto-sphere--complementario::after {
-          opacity: 1;
+          opacity: 0.8;
       }
       .conducto-sphere.multicolor::after {
           opacity: 0.75;
+      }
+      .conducto-sphere--ganador:focus-visible {
+          outline: 3px solid rgba(255,255,255,0.85);
+          outline-offset: 4px;
+      }
+      .conducto-sphere--ingreso {
+          width: clamp(calc(var(--conducto-cell-size) * 4.6), 180px, calc(var(--conducto-cell-size) * 5));
+          height: clamp(calc(var(--conducto-cell-size) * 4.6), 180px, calc(var(--conducto-cell-size) * 5));
+          font-size: clamp(2rem, 12vw, 3.4rem);
+          box-shadow: 0 18px 42px rgba(0,0,0,0.35), 0 0 18px rgba(255,255,255,0.85);
+          z-index: 6;
+          pointer-events: none;
+      }
+      .conducto-sphere--ingreso .conducto-sphere-label {
+          text-shadow: 0 0 18px rgba(255,255,255,0.85), 0 0 24px rgba(255,255,255,0.75);
+      }
+      .conducto-sphere--ingreso.conducto-sphere--ganador {
+          pointer-events: none;
+          cursor: default;
+      }
+      .conducto-sphere--ingreso.conducto-sphere--complementario {
+          background: radial-gradient(circle at center,
+              rgba(255, 214, 153, 0.9) 10%,
+              rgba(255, 170, 64, 0.88) 55%,
+              rgba(255, 111, 0, 0.92) 100%);
       }
       #ultimo-canto {
           font-size: 0.78rem;
@@ -2817,9 +2866,9 @@
     </header>
     <section id="panel-superior">
       <div id="cantos-panel">
-        <div id="cantos-grid"></div>
+        <div id="cantos-grid" hidden aria-hidden="true"></div>
         <div id="cantos-encabezado" hidden aria-hidden="true">CANTOS</div>
-        <div id="cantos-conducto-grid" hidden aria-hidden="true">
+        <div id="cantos-conducto-grid" aria-hidden="false">
           <div id="cantos-conducto-track" aria-hidden="true"></div>
         </div>
         <div id="ultimo-canto"></div>
@@ -3007,7 +3056,13 @@
   let conductoTablaInicializada = false;
   let conductoPositions = [];
   let conductoSyncPendiente = false;
-  let vistaConductoActiva = false;
+  let vistaConductoActiva = true;
+  const conductoIngresoCola = [];
+  let conductoAnimacionEntradaActiva = false;
+  let conductoAnimacionBloqueada = false;
+  let conductoActualizacionProgramada = false;
+  const CONDUCTO_DESTACADO_DURACION = 2000;
+  const CONDUCTO_TRANSICION_DURACION = 1000;
   let cantoColorMap = new Map();
   let formasSinGanadoresAlertaClave = '';
   let celebracionModalActiva = false;
@@ -3543,10 +3598,25 @@
       for(let col=0;col<5;col++){
         const numero=fila+1+col*15;
         const celda=document.createElement('div');
+        const etiquetaBase=generarEtiquetaDesdeNumero(numero);
         celda.textContent=String(numero).padStart(2,'0');
         celda.dataset.numero=numero;
-        celda.title=generarEtiquetaDesdeNumero(numero);
+        celda.dataset.tituloBase=etiquetaBase;
+        celda.title=etiquetaBase;
         celda.className='canto-cell';
+        celda.setAttribute('aria-label', etiquetaBase);
+        celda.tabIndex=-1;
+        celda.addEventListener('click',evento=>{
+          evento.stopPropagation();
+          manejarInteraccionCantoGanador(numero);
+        });
+        celda.addEventListener('keydown',evento=>{
+          if(evento.key==='Enter' || evento.key===' '){
+            evento.preventDefault();
+            evento.stopPropagation();
+            manejarInteraccionCantoGanador(numero);
+          }
+        });
         cantosGridEl.appendChild(celda);
         cantoCellsMap.set(numero,celda);
       }
@@ -3706,6 +3776,143 @@
     });
   }
 
+  function obtenerFormasGanadorasPorNumero(numero){
+    const resultado=[];
+    const valor=Number(numero);
+    if(!Number.isFinite(valor) || !(cartonesGanadoresPorForma instanceof Map) || !cantosOrdenados.length){
+      return resultado;
+    }
+    cartonesGanadoresPorForma.forEach((registro, claveIdx)=>{
+      if(!registro) return;
+      const paso=Number(registro?.paso);
+      if(!Number.isInteger(paso)) return;
+      const numeroGanador=cantosOrdenados[paso];
+      if(numeroGanador!==valor) return;
+      const idxForma=Number(claveIdx);
+      const forma=formasActivas.find(f=>Number(f.idx)===idxForma) || registro.forma || {idx: idxForma, nombre:''};
+      resultado.push({forma, registro});
+    });
+    resultado.sort((a,b)=>{
+      const idxA=Number(a?.forma?.idx);
+      const idxB=Number(b?.forma?.idx);
+      return (Number.isFinite(idxA)?idxA:0)-(Number.isFinite(idxB)?idxB:0);
+    });
+    return resultado;
+  }
+
+  function obtenerCentroIngresoConducto(){
+    if(!cantosConductoGridEl || !cantosConductoTrackEl) return null;
+    const gridRect=cantosConductoGridEl.getBoundingClientRect();
+    const trackRect=cantosConductoTrackEl.getBoundingClientRect();
+    if(!gridRect || !trackRect || (!gridRect.width && !trackRect.width)) return null;
+    const cellSize=gridRect.width/5;
+    const centroX=trackRect.width/2;
+    const alturaDisponible=trackRect.height;
+    const mitadCelda=cellSize/2;
+    const centroY=Math.max(mitadCelda, Math.min(alturaDisponible-mitadCelda, cellSize*2.5));
+    return {left: centroX, top: centroY};
+  }
+
+  function programarAnimacionIngresoConducto(numero){
+    if(!vistaConductoActiva) return;
+    const sphere=conductoSpheresMap.get(numero);
+    if(!sphere || !sphere.element) return;
+    if(conductoIngresoCola.some(item=>Number(item?.numero)===Number(numero))) return;
+    conductoIngresoCola.push({numero, sphere});
+    procesarColaIngresoConducto();
+  }
+
+  function procesarColaIngresoConducto(){
+    if(conductoAnimacionEntradaActiva) return;
+    if(!conductoIngresoCola.length){
+      if(conductoActualizacionProgramada && !conductoAnimacionBloqueada && vistaConductoActiva){
+        conductoActualizacionProgramada=false;
+        requestAnimationFrame(()=>actualizarPosicionesConducto(true));
+      }
+      return;
+    }
+    const item=conductoIngresoCola.shift();
+    iniciarAnimacionIngresoConducto(item);
+  }
+
+  function iniciarAnimacionIngresoConducto(item){
+    if(!item || !item.sphere || !item.sphere.element){
+      conductoAnimacionBloqueada=false;
+      conductoAnimacionEntradaActiva=false;
+      procesarColaIngresoConducto();
+      return;
+    }
+    const sphere=item.sphere;
+    const elemento=sphere.element;
+    const centro=obtenerCentroIngresoConducto();
+    if(!centro){
+      conductoAnimacionBloqueada=false;
+      conductoAnimacionEntradaActiva=false;
+      if(vistaConductoActiva){
+        requestAnimationFrame(()=>actualizarPosicionesConducto(true));
+      }
+      procesarColaIngresoConducto();
+      return;
+    }
+    conductoAnimacionEntradaActiva=true;
+    conductoAnimacionBloqueada=true;
+    const transicionAnterior=elemento.style.transition;
+    elemento.style.transition='none';
+    elemento.style.left=`${centro.left}px`;
+    elemento.style.top=`${centro.top}px`;
+    elemento.classList.add('activa');
+    elemento.classList.add('conducto-sphere--ingreso');
+    elemento.classList.remove('conducto-sphere--pre');
+    elemento.style.opacity='1';
+    void elemento.offsetWidth;
+    elemento.style.transition=transicionAnterior || '';
+    sphere.recienCreada=false;
+    setTimeout(()=>{
+      elemento.classList.remove('conducto-sphere--ingreso');
+      conductoAnimacionBloqueada=false;
+      if(vistaConductoActiva){
+        requestAnimationFrame(()=>actualizarPosicionesConducto(true));
+      }
+      setTimeout(()=>{
+        conductoAnimacionEntradaActiva=false;
+        procesarColaIngresoConducto();
+      }, CONDUCTO_TRANSICION_DURACION);
+    }, CONDUCTO_DESTACADO_DURACION);
+  }
+
+  function manejarInteraccionCantoGanador(numero){
+    const valor=Number(numero);
+    if(!Number.isFinite(valor)) return;
+    const formas=obtenerFormasGanadorasPorNumero(valor);
+    if(!formas.length) return;
+    const principal=formas[0]?.forma;
+    if(!principal) return;
+    abrirModalGanadores(principal);
+    actualizarModalGanadoresConExtras(formas);
+  }
+
+  function actualizarModalGanadoresConExtras(formas){
+    if(!modalSubtituloEl) return;
+    const base=modalSubtituloEl.dataset?.nombreBase ?? modalSubtituloEl.textContent ?? '';
+    if(!Array.isArray(formas) || formas.length<=1){
+      modalSubtituloEl.textContent=base || '';
+      return;
+    }
+    const extras=formas.slice(1)
+      .map(item=>{
+        const idx=Number(item?.forma?.idx ?? item?.idx);
+        if(!Number.isFinite(idx)) return null;
+        return `F${String(idx).padStart(2,'0')}`;
+      })
+      .filter(Boolean);
+    if(!extras.length){
+      modalSubtituloEl.textContent=base || '';
+      return;
+    }
+    const mensaje=`También ganaron las formas ${extras.join(', ')}`;
+    modalSubtituloEl.textContent=base?`${base} • ${mensaje}`:mensaje;
+  }
+
   function obtenerIndiceConductoParaNumero(numero){
     if(!(cantosIndiceMap instanceof Map)) return null;
     if(!cantosIndiceMap.has(numero)) return null;
@@ -3724,9 +3931,25 @@
     esfera.dataset.numero=String(valor);
     const etiqueta=document.createElement('span');
     etiqueta.className='conducto-sphere-label';
-    etiqueta.textContent=String(valor).padStart(2,'0');
+    const etiquetaNumero=String(valor).padStart(2,'0');
+    etiqueta.textContent=etiquetaNumero;
     esfera.appendChild(etiqueta);
-    esfera.setAttribute('aria-label',`Canto ${String(valor).padStart(2,'0')}`);
+    const etiquetaBase=`Canto ${etiquetaNumero}`;
+    esfera.dataset.etiquetaBase=etiquetaBase;
+    esfera.setAttribute('aria-label',etiquetaBase);
+    esfera.tabIndex=-1;
+    esfera.addEventListener('click',evento=>{
+      evento.preventDefault();
+      evento.stopPropagation();
+      manejarInteraccionCantoGanador(valor);
+    });
+    esfera.addEventListener('keydown',evento=>{
+      if(evento.key==='Enter' || evento.key===' '){
+        evento.preventDefault();
+        evento.stopPropagation();
+        manejarInteraccionCantoGanador(valor);
+      }
+    });
     cantosConductoTrackEl.appendChild(esfera);
     return {numero:valor, element:esfera, destino:null, recienCreada:true, pendiente:false};
   }
@@ -3734,9 +3957,10 @@
   function actualizarAspectoSphere(sphere, numero){
     if(!sphere || !sphere.element) return;
     const colores=obtenerColoresCanto(numero);
+    let partes=[];
     if(colores.length){
       const total=colores.length;
-      const partes=colores.map((info, idx)=>{
+      partes=colores.map((info, idx)=>{
         const color=typeof info==='string'?info:info?.color;
         if(!color) return null;
         const inicio=(idx/total)*100;
@@ -3746,16 +3970,43 @@
       if(partes.length){
         const gradiente=`conic-gradient(from 90deg, ${partes.join(', ')})`;
         sphere.element.style.setProperty('--conducto-esfera-bg', gradiente);
-        sphere.element.classList.add('conducto-sphere--ganador');
         sphere.element.classList.toggle('multicolor', partes.length>1);
+      }else{
+        sphere.element.style.removeProperty('--conducto-esfera-bg');
+        sphere.element.classList.remove('multicolor');
       }
     }else{
       sphere.element.style.removeProperty('--conducto-esfera-bg');
-      sphere.element.classList.remove('conducto-sphere--ganador');
       sphere.element.classList.remove('multicolor');
     }
     const esComplementario=esCantoComplementario(numero);
     sphere.element.classList.toggle('conducto-sphere--complementario', esComplementario);
+    const formasGanadoras=obtenerFormasGanadorasPorNumero(numero);
+    const hayGanadores=Array.isArray(formasGanadoras) && formasGanadoras.length>0;
+    sphere.element.classList.toggle('conducto-sphere--ganador', hayGanadores);
+    const baseEtiqueta=sphere.element.dataset?.etiquetaBase || `Canto ${String(numero).padStart(2,'0')}`;
+    if(hayGanadores){
+      const etiquetasFormas=formasGanadoras.map(item=>{
+        const idx=Number(item?.forma?.idx ?? item?.idx);
+        if(!Number.isFinite(idx)) return null;
+        return `F${String(idx).padStart(2,'0')}`;
+      }).filter(Boolean);
+      if(etiquetasFormas.length){
+        sphere.element.dataset.formasGanadoras=etiquetasFormas.join(', ');
+        const descripcion=etiquetasFormas.map(texto=>`Forma ${texto.slice(1)}`).join(', ');
+        sphere.element.setAttribute('aria-label',`${baseEtiqueta}, ${descripcion}`);
+      }else{
+        delete sphere.element.dataset.formasGanadoras;
+        sphere.element.setAttribute('aria-label',baseEtiqueta);
+      }
+      sphere.element.tabIndex=0;
+      sphere.element.setAttribute('role','button');
+    }else{
+      delete sphere.element.dataset.formasGanadoras;
+      sphere.element.setAttribute('aria-label',baseEtiqueta);
+      sphere.element.tabIndex=-1;
+      sphere.element.removeAttribute('role');
+    }
   }
 
   function colocarSphereEnDestino(sphere, animar=true){
@@ -3824,8 +4075,14 @@
         top: rect.top - referencia.top + rect.height/2
       };
     });
+    if(animar && conductoAnimacionBloqueada){
+      conductoActualizacionProgramada=true;
+      conductoSyncPendiente=true;
+      return;
+    }
     actualizarEsferasSegunDestinos(animar);
     conductoSyncPendiente=false;
+    conductoActualizacionProgramada=false;
   }
 
   function actualizarConductoEsferas(nuevosCantos=[], forzar=false){
@@ -3866,6 +4123,13 @@
       actualizarAspectoSphere(sphere, numero);
     });
     conductoSyncPendiente=true;
+    if(vistaConductoActiva && !forzar && nuevosSet.size){
+      nuevosSet.forEach(numero=>{
+        if(conductoSpheresMap.has(numero)){
+          programarAnimacionIngresoConducto(numero);
+        }
+      });
+    }
     if(vistaConductoActiva){
       requestAnimationFrame(()=>actualizarPosicionesConducto(true));
     }
@@ -3902,6 +4166,7 @@
           }
         });
       });
+      procesarColaIngresoConducto();
     }else{
       cantosConductoEl.hidden=true;
       cantosConductoEl.setAttribute('hidden','');
@@ -5073,7 +5338,14 @@
   function renderCantos(){
     if(!cantoCellsMap.size) crearGridCantos();
     cantoCellsMap.forEach(celda=>{
-      celda.classList.remove('cantado','ultimo','complementario','invalido');
+      celda.classList.remove('cantado','ultimo','complementario','invalido','ganador');
+      delete celda.dataset.formasGanadoras;
+      const tituloBase=celda.dataset?.tituloBase;
+      if(tituloBase){
+        celda.title=tituloBase;
+        celda.setAttribute('aria-label', tituloBase);
+      }
+      celda.tabIndex=-1;
     });
     ultimoCantoEl.innerHTML='';
     const total=cantosOrdenados.length;
@@ -5105,6 +5377,30 @@
         if(!celda) return;
         celda.classList.add('cantado','invalido');
         celda.classList.remove('complementario');
+      });
+    }
+    if(cantoColorMap instanceof Map){
+      cantoColorMap.forEach((lista,numero)=>{
+        if(!Array.isArray(lista) || !lista.length) return;
+        const celda=cantoCellsMap.get(numero);
+        if(!celda) return;
+        celda.classList.add('ganador');
+        const etiquetasFormas=lista
+          .map(info=>{
+            const idx=Number(info?.idx);
+            if(!Number.isFinite(idx)) return null;
+            return `F${String(idx).padStart(2,'0')}`;
+          })
+          .filter(Boolean);
+        if(etiquetasFormas.length){
+          celda.dataset.formasGanadoras=etiquetasFormas.join(', ');
+          const tituloBase=celda.dataset?.tituloBase || generarEtiquetaDesdeNumero(numero);
+          const descripcionFormas=etiquetasFormas.map(texto=>`Forma ${texto.slice(1)}`).join(', ');
+          const titulo=`${tituloBase} • Formas ${etiquetasFormas.join(', ')}`;
+          celda.title=titulo;
+          celda.setAttribute('aria-label',`${tituloBase}, ${descripcionFormas}`);
+        }
+        celda.tabIndex=0;
       });
     }
     const ultimoEstadoEsPenalizado=total>0 && (ultimoEstadoNormalizado==='p' || (!ultimoEstadoNormalizado && complementariosActivos));
@@ -5625,7 +5921,11 @@
     const info=cartonesGanadoresPorForma.get(forma.idx);
     const ganadores=info&&Array.isArray(info.cartones)?info.cartones:[];
     modalTituloEl.textContent=`Ganadores Forma ${String(forma.idx).padStart(2,'0')}`;
-    modalSubtituloEl.textContent=forma.nombre?forma.nombre:'';
+    const nombreBase=forma.nombre?forma.nombre:'';
+    if(modalSubtituloEl){
+      modalSubtituloEl.textContent=nombreBase;
+      modalSubtituloEl.dataset.nombreBase=nombreBase;
+    }
     modalListaEl.innerHTML='';
     modalSinGanadoresEl.textContent='';
     if(!ganadores.length){
@@ -5707,6 +6007,7 @@
         modalListaEl.appendChild(card);
       });
     }
+    actualizarModalGanadoresConExtras([]);
     modalGanadores.classList.add('activa');
   }
 
