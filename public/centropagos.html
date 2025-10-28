@@ -613,8 +613,6 @@
           <option value="Superadmin">Superadmin</option>
         </select>
         <button class="icon-btn" id="colaboradores-aprobar"><span class="icon check">&#10004;</span><span>Aprobar</span></button>
-        <button class="icon-btn" id="colaboradores-archivar"><span class="icon">&#128194;</span><span>Archivar</span></button>
-        <button class="icon-btn" id="colaboradores-ver-archivo"><span class="icon">&#128230;</span><span>Archivo</span></button>
       </div>
       <table id="tabla-colaboradores">
         <colgroup>
@@ -666,22 +664,18 @@
 
     let mostrarPremiosArchivo = false;
     let mostrarPagosArchivo = false;
-    let mostrarColaboradoresArchivo = false;
 
     const colaboradoresBase = [];
-    const colaboradoresArchivadosSet = new Set();
     const premiosActivos = [];
     const premiosArchivados = [];
     const pagosAdminActivos = [];
     const pagosAdminArchivados = [];
     const pagosColaboradoresActivos = [];
-    const pagosColaboradoresArchivados = [];
     const premiosMapa = new Map();
     const premiosArchivoMapa = new Map();
     const pagosAdminMapa = new Map();
     const pagosAdminArchivoMapa = new Map();
     const pagosColaboradoresMapa = new Map();
-    const pagosColaboradoresArchivoMapa = new Map();
     const pagosColaboradoresEdicion = new Map();
     const usuariosInfoCache = new Map();
 
@@ -690,7 +684,6 @@
     let unsubscribePagos = null;
     let unsubscribePagosArchivo = null;
     let unsubscribeColaboradores = null;
-    let unsubscribeColaboradoresArchivo = null;
     let unsubscribeUsuariosCentro = null;
 
     const formatNumber = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2, minimumFractionDigits: 0 });
@@ -2030,8 +2023,6 @@
       const visibles = [];
       pagosColaboradoresMapa.clear();
       colaboradoresBase.forEach(registro => {
-        const clave = cpNormalizarEmail(registro.gmail);
-        if(clave && colaboradoresArchivadosSet.has(clave)) return;
         visibles.push(registro);
         pagosColaboradoresMapa.set(registro.id, registro);
       });
@@ -2041,10 +2032,8 @@
     }
 
     function renderColaboradores(){
-      const lista = mostrarColaboradoresArchivo
-        ? aplicarFiltrosColaboradores(pagosColaboradoresArchivados)
-        : aplicarFiltrosColaboradores(pagosColaboradoresActivos);
-      renderTabla(lista, 'tabla-colaboradores', { mostrarArchivo: mostrarColaboradoresArchivo, tipo: 'colaboradores' });
+      const lista = aplicarFiltrosColaboradores(pagosColaboradoresActivos);
+      renderTabla(lista, 'tabla-colaboradores', { mostrarArchivo: false, tipo: 'colaboradores' });
       actualizarBadge('colaboradores', 0);
       actualizarEstadoBotones();
     }
@@ -2083,11 +2072,7 @@
       document.getElementById('premios-ver-archivo').classList.toggle('archivo-activo', mostrarPremiosArchivo);
       document.getElementById('pagos-ver-archivo').classList.toggle('archivo-activo', mostrarPagosArchivo);
       const colabAprobar = document.getElementById('colaboradores-aprobar');
-      if(colabAprobar) colabAprobar.disabled = mostrarColaboradoresArchivo;
-      const colabArchivar = document.getElementById('colaboradores-archivar');
-      if(colabArchivar) colabArchivar.disabled = mostrarColaboradoresArchivo;
-      const colabVerArchivo = document.getElementById('colaboradores-ver-archivo');
-      if(colabVerArchivo) colabVerArchivo.classList.toggle('archivo-activo', mostrarColaboradoresArchivo);
+      if(colabAprobar) colabAprobar.disabled = false;
     }
 
     async function registrarTransaccionPremio(enRegistro){
@@ -2307,46 +2292,6 @@
       if(!ids.length) return;
       const db = dbRef();
       await initServerTime();
-      if(tipo === 'colaboradores'){
-        const coleccionArchivo = db.collection('PagosColaboradoresArchivo');
-        const idsNormalizados = new Set();
-        for(const id of ids){
-          const registro = pagosColaboradoresMapa.get(id);
-          if(!registro) continue;
-          try {
-            const datosArchivo = {
-              gmail: registro.gmail,
-              nombre: registro.nombre || '',
-              alias: registro.alias || '',
-              tipo: registro.tipo || registro.estado || '',
-              telefono: registro.telefono || '',
-              creditosActuales: Number(registro.creditosActuales ?? registro.creditos ?? 0),
-              creditos: Number(registro.creditosActuales ?? registro.creditos ?? 0),
-              archivadoEn: fechaServidor(),
-              horaArchivado: horaServidor(),
-              archivadoPor: authInstance().currentUser?.email || '',
-              estado: 'ARCHIVADO'
-            };
-            await coleccionArchivo.doc(id).set(datosArchivo, { merge: true });
-            pagosColaboradoresEdicion.delete(id);
-            pagosColaboradoresMapa.delete(id);
-            const normalizado = cpNormalizarEmail(registro.gmail || id);
-            if(normalizado){
-              idsNormalizados.add(normalizado);
-              colaboradoresArchivadosSet.add(normalizado);
-            }
-          } catch (err) {
-            console.error('Error archivando registro', tipo, err);
-            alert('No se pudo archivar uno de los registros seleccionados.');
-            break;
-          }
-        }
-        if(idsNormalizados.size){
-          actualizarColaboradoresDesdeBase();
-        }
-        renderColaboradores();
-        return;
-      }
       let coleccionBase = db.collection('PagosAdministracion');
       let coleccionArchivo = db.collection('PagosAdministracionArchivo');
       if(tipo === 'premios'){
@@ -2445,19 +2390,6 @@
         if(!seleccion.length){ alert('Selecciona al menos un registro.'); return; }
         await aprobarPagosColaboradores(seleccion);
       });
-      document.getElementById('colaboradores-archivar').addEventListener('click', async()=>{
-        const seleccion = obtenerSeleccion('tabla-colaboradores');
-        if(!seleccion.length){ alert('Selecciona registros para archivar.'); return; }
-        if(!(await confirm('¿Deseas archivar los registros seleccionados?'))) return;
-        await archivarRegistros(seleccion, 'colaboradores');
-      });
-      document.getElementById('colaboradores-ver-archivo').addEventListener('click', ()=>{
-        mostrarColaboradoresArchivo = !mostrarColaboradoresArchivo;
-        if(mostrarColaboradoresArchivo){
-          pagosColaboradoresEdicion.clear();
-        }
-        renderColaboradores();
-      });
       const tablaColaboradores = document.getElementById('tabla-colaboradores');
       tablaColaboradores.addEventListener('change', e=>{
         if(e.target.matches('tbody input[type="checkbox"]')){
@@ -2519,7 +2451,7 @@
           const fila = e.target.closest('tr[data-id]');
           if(!fila) return;
           const id = fila.dataset.id;
-          const registro = pagosColaboradoresMapa.get(id) || pagosColaboradoresArchivoMapa.get(id);
+          const registro = pagosColaboradoresMapa.get(id);
           if(!registro) return;
           if(e.target.closest('td.gmail')){
             let nombre = registro.nombre || registro.alias || '';
@@ -2727,51 +2659,6 @@
           renderColaboradores();
         }
       });
-      unsubscribeColaboradoresArchivo = db.collection('PagosColaboradoresArchivo').onSnapshot(snapshot => {
-        const nuevosArchivados = new Set();
-        pagosColaboradoresArchivados.length = 0;
-        pagosColaboradoresArchivoMapa.clear();
-        snapshot.forEach(doc => {
-          const data = doc.data() || {};
-          const email = cpNormalizarEmail(data.gmail || doc.id);
-          if(email) nuevosArchivados.add(email);
-          const tipo = normalizarTipoUsuario(data.tipo || data.estado || 'Archivado');
-          const fechaInfo = normalizarFecha(data.archivadoEn || data.fechaArchivado || data.fechaGestion || '');
-          const creditosActuales = Number(data.creditosActuales ?? data.creditos ?? 0);
-          const registro = {
-            id: doc.id,
-            gmail: email || doc.id,
-            nombre: (data.nombre || data.alias || '').toString(),
-            alias: (data.alias || '').toString(),
-            creditos: creditosActuales,
-            creditosActuales,
-            fechaMostrar: fechaInfo.mostrar,
-            fechaFiltro: fechaInfo.filtro,
-            fechaOrden: fechaInfo.orden,
-            estado: tipo || 'Archivado',
-            tipo: tipo || 'Archivado',
-            billetera: email || doc.id,
-            telefono: (data.telefono || '').toString(),
-            cartonesGratis: Number(data.cartonesGratis ?? 0)
-          };
-          pagosColaboradoresArchivados.push(registro);
-          pagosColaboradoresArchivoMapa.set(doc.id, registro);
-          guardarInfoUsuarioCache({
-            email: registro.gmail,
-            alias: registro.alias,
-            nombre: registro.nombre,
-            tipo: registro.tipo,
-            telefono: registro.telefono,
-            creditos: registro.creditosActuales,
-            cartonesGratis: registro.cartonesGratis,
-            completo: false
-          });
-        });
-        colaboradoresArchivadosSet.clear();
-        nuevosArchivados.forEach(valor => colaboradoresArchivadosSet.add(valor));
-        actualizarColaboradoresDesdeBase();
-        renderColaboradores();
-      });
     }
 
     window.addEventListener('beforeunload', ()=>{
@@ -2780,8 +2667,7 @@
         unsubscribePremiosArchivo,
         unsubscribePagos,
         unsubscribePagosArchivo,
-        unsubscribeUsuariosCentro,
-        unsubscribeColaboradoresArchivo
+        unsubscribeUsuariosCentro
       ].forEach(unsub=>{
         if(typeof unsub === 'function') unsub();
       });
