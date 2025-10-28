@@ -395,8 +395,8 @@
           animation: focoUltimo 1.6s ease-in-out infinite;
       }
       #cantos-conducto-grid {
-          --conducto-gap: clamp(2px, 0.7vw, 8px);
-          --conducto-cell-size: calc((100% - var(--conducto-gap) * 4) / 5);
+          --conducto-gap: 0px;
+          --conducto-cell-size: calc(100% / 5);
           display: grid;
           grid-template-columns: repeat(5, minmax(0, var(--conducto-cell-size)));
           gap: var(--conducto-gap);
@@ -492,7 +492,7 @@
           font-size: clamp(0.72rem, 2.6vw, 1rem);
           color: #0b0b0f;
           background: var(--conducto-esfera-bg, radial-gradient(circle at 30% 30%, #ffffff 0%, #e2e5ec 55%, #bec3ce 100%));
-          box-shadow: 0 10px 22px rgba(0,0,0,0.28);
+          box-shadow: 0 10px 22px rgba(0,0,0,0.28), 0 0 6px rgba(0,0,0,0.45);
           transform: translate(-50%, -50%);
           transition: left 0.45s cubic-bezier(0.4, 0, 0.2, 1), top 0.45s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease, transform 0.35s ease, box-shadow 0.35s ease;
           opacity: 0;
@@ -541,7 +541,7 @@
       .conducto-sphere--complementario {
           color: #ffffff;
           text-shadow: 0 1px 4px rgba(0,0,0,0.75), 0 0 12px rgba(255,149,0,0.8);
-          box-shadow: 0 12px 26px rgba(255,149,0,0.35), 0 0 12px rgba(255,149,0,0.25);
+          box-shadow: 0 12px 26px rgba(255,149,0,0.35), 0 0 12px rgba(255,149,0,0.25), 0 0 6px rgba(0,0,0,0.5);
       }
       .conducto-sphere--complementario::before {
           background: radial-gradient(circle, rgba(255,181,64,0.45), rgba(255,149,0,0));
@@ -3561,8 +3561,14 @@
     if(fila===0){
       const primera=filaCeldas[0];
       if(primera){
-        primera.classList.add('inicio-conducto','conducto-curva-top-left','conducto-borde-top');
+        primera.classList.add('inicio-conducto','conducto-curva-top-left','conducto-curva-bottom-left','conducto-borde-top','conducto-borde-left');
       }
+      [1,2,3].forEach(indice=>{
+        const celdaSuperior=filaCeldas[indice];
+        if(celdaSuperior){
+          celdaSuperior.classList.add('conducto-borde-top');
+        }
+      });
     }
     if(fila===totalFilas-1){
       const indiceFinal=esPar?totalColumnas-1:0;
@@ -3872,6 +3878,7 @@
       cantosConductoEl.hidden=false;
       cantosConductoEl.setAttribute('aria-hidden','false');
       cantosGridEl.hidden=true;
+      cantosGridEl.setAttribute('aria-hidden','true');
       cantosPanelEl?.classList.add('conducto-activo');
       crearConductoTabla();
       requestAnimationFrame(()=>{
@@ -3890,6 +3897,7 @@
         cantosConductoTituloEl.setAttribute('aria-hidden','true');
       }
       cantosGridEl.hidden=false;
+      cantosGridEl.setAttribute('aria-hidden','false');
       cantosPanelEl?.classList.remove('conducto-activo');
     }
     if(ultimoCantoBoton){
