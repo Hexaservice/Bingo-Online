@@ -310,6 +310,16 @@
           min-width: 0;
           position: relative;
       }
+      #cantos-panel #cantos-grid,
+      #cantos-panel #cantos-conducto-grid {
+          transition: opacity 0.25s ease;
+      }
+      #cantos-panel:not(.conducto-activo) #cantos-conducto-grid {
+          display: none !important;
+      }
+      #cantos-panel.conducto-activo #cantos-grid {
+          display: none !important;
+      }
       #cantos-encabezado {
           font-family: 'Bangers', cursive;
           font-size: clamp(1.15rem, 3.4vw, 1.8rem);
@@ -3563,12 +3573,12 @@
       if(primera){
         primera.classList.add('inicio-conducto','conducto-curva-top-left','conducto-curva-bottom-left','conducto-borde-top','conducto-borde-left');
       }
-      [1,2,3].forEach(indice=>{
+      for(let indice=1; indice<totalColumnas; indice++){
         const celdaSuperior=filaCeldas[indice];
         if(celdaSuperior){
           celdaSuperior.classList.add('conducto-borde-top');
         }
-      });
+      }
     }
     if(fila===totalFilas-1){
       const indiceFinal=esPar?totalColumnas-1:0;
@@ -3873,11 +3883,14 @@
     if(vistaConductoActiva){
       if(cantosConductoTituloEl){
         cantosConductoTituloEl.hidden=false;
+        cantosConductoTituloEl.removeAttribute('hidden');
         cantosConductoTituloEl.setAttribute('aria-hidden','false');
       }
       cantosConductoEl.hidden=false;
+      cantosConductoEl.removeAttribute('hidden');
       cantosConductoEl.setAttribute('aria-hidden','false');
       cantosGridEl.hidden=true;
+      cantosGridEl.setAttribute('hidden','');
       cantosGridEl.setAttribute('aria-hidden','true');
       cantosPanelEl?.classList.add('conducto-activo');
       crearConductoTabla();
@@ -3891,12 +3904,15 @@
       });
     }else{
       cantosConductoEl.hidden=true;
+      cantosConductoEl.setAttribute('hidden','');
       cantosConductoEl.setAttribute('aria-hidden','true');
       if(cantosConductoTituloEl){
         cantosConductoTituloEl.hidden=true;
+        cantosConductoTituloEl.setAttribute('hidden','');
         cantosConductoTituloEl.setAttribute('aria-hidden','true');
       }
       cantosGridEl.hidden=false;
+      cantosGridEl.removeAttribute('hidden');
       cantosGridEl.setAttribute('aria-hidden','false');
       cantosPanelEl?.classList.remove('conducto-activo');
     }
