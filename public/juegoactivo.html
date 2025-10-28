@@ -521,7 +521,16 @@
           background: var(--conducto-esfera-bg, radial-gradient(circle at 30% 30%, #ffffff 0%, #e2e5ec 55%, #bec3ce 100%));
           box-shadow: 0 10px 22px rgba(0,0,0,0.28), 0 0 6px rgba(0,0,0,0.45);
           transform: translate(-50%, -50%);
-          transition: left 1s cubic-bezier(0.4, 0, 0.2, 1), top 1s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease, transform 0.6s ease, box-shadow 0.6s ease, width 0.6s ease, height 0.6s ease;
+          --conducto-move-duration: 1.5s;
+          --conducto-scale-duration: 0.8s;
+          transition:
+              left var(--conducto-move-duration, 1.5s) cubic-bezier(0.4, 0, 0.2, 1),
+              top var(--conducto-move-duration, 1.5s) cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.35s ease,
+              transform var(--conducto-scale-duration, 0.8s) ease,
+              box-shadow var(--conducto-scale-duration, 0.8s) ease,
+              width var(--conducto-scale-duration, 0.8s) ease,
+              height var(--conducto-scale-duration, 0.8s) ease;
           opacity: 0;
           letter-spacing: 0.4px;
           pointer-events: none;
@@ -3062,7 +3071,8 @@
   let conductoAnimacionBloqueada = false;
   let conductoActualizacionProgramada = false;
   const CONDUCTO_DESTACADO_DURACION = 2000;
-  const CONDUCTO_TRANSICION_DURACION = 1000;
+  const CONDUCTO_INSERCION_DURACION = 800;
+  const CONDUCTO_TRANSICION_DURACION = 1500;
   let cantoColorMap = new Map();
   let formasSinGanadoresAlertaClave = '';
   let celebracionModalActiva = false;
@@ -3813,6 +3823,22 @@
     return {left: centroX, top: centroY};
   }
 
+  function obtenerPosicionCeldaConducto(indice){
+    const idx=Number(indice);
+    if(!Number.isInteger(idx) || idx<0) return null;
+    if(!cantosConductoTrackEl) return null;
+    crearConductoTabla();
+    const celda=conductoCellsOrden[idx];
+    if(!celda) return null;
+    const referencia=cantosConductoTrackEl.getBoundingClientRect();
+    const rect=celda.getBoundingClientRect();
+    if(!referencia || !rect || (!rect.width && !rect.height)) return null;
+    return {
+      left: rect.left - referencia.left + rect.width/2,
+      top: rect.top - referencia.top + rect.height/2
+    };
+  }
+
   function programarAnimacionIngresoConducto(numero){
     if(!vistaConductoActiva) return;
     const sphere=conductoSpheresMap.get(numero);
@@ -3857,6 +3883,8 @@
     conductoAnimacionEntradaActiva=true;
     conductoAnimacionBloqueada=true;
     const transicionAnterior=elemento.style.transition;
+    const moveDurationAnterior=elemento.style.getPropertyValue('--conducto-move-duration');
+    const scaleDurationAnterior=elemento.style.getPropertyValue('--conducto-scale-duration');
     elemento.style.transition='none';
     elemento.style.left=`${centro.left}px`;
     elemento.style.top=`${centro.top}px`;
@@ -3867,17 +3895,55 @@
     void elemento.offsetWidth;
     elemento.style.transition=transicionAnterior || '';
     sphere.recienCreada=false;
-    setTimeout(()=>{
-      elemento.classList.remove('conducto-sphere--ingreso');
+
+    const finalizarCola=()=>{
+      conductoAnimacionEntradaActiva=false;
+      procesarColaIngresoConducto();
+    };
+
+    const iniciarEmpuje=()=>{
       conductoAnimacionBloqueada=false;
       if(vistaConductoActiva){
         requestAnimationFrame(()=>actualizarPosicionesConducto(true));
       }
-      setTimeout(()=>{
-        conductoAnimacionEntradaActiva=false;
-        procesarColaIngresoConducto();
-      }, CONDUCTO_TRANSICION_DURACION);
-    }, CONDUCTO_DESTACADO_DURACION);
+      setTimeout(finalizarCola, CONDUCTO_TRANSICION_DURACION);
+    };
+
+    const restaurarDuraciones=()=>{
+      if(moveDurationAnterior){
+        elemento.style.setProperty('--conducto-move-duration', moveDurationAnterior);
+      }else{
+        elemento.style.removeProperty('--conducto-move-duration');
+      }
+      if(scaleDurationAnterior){
+        elemento.style.setProperty('--conducto-scale-duration', scaleDurationAnterior);
+      }else{
+        elemento.style.removeProperty('--conducto-scale-duration');
+      }
+    };
+
+    const animarInsercionInicial=()=>{
+      const primeraPosicion=obtenerPosicionCeldaConducto(0);
+      if(primeraPosicion){
+        elemento.style.setProperty('--conducto-move-duration', `${CONDUCTO_INSERCION_DURACION}ms`);
+        elemento.style.setProperty('--conducto-scale-duration', `${CONDUCTO_INSERCION_DURACION}ms`);
+        requestAnimationFrame(()=>{
+          elemento.classList.remove('conducto-sphere--ingreso');
+          elemento.style.left=`${primeraPosicion.left}px`;
+          elemento.style.top=`${primeraPosicion.top}px`;
+        });
+        setTimeout(()=>{
+          restaurarDuraciones();
+          iniciarEmpuje();
+        }, CONDUCTO_INSERCION_DURACION);
+        return;
+      }
+      elemento.classList.remove('conducto-sphere--ingreso');
+      restaurarDuraciones();
+      iniciarEmpuje();
+    };
+
+    setTimeout(animarInsercionInicial, CONDUCTO_DESTACADO_DURACION);
   }
 
   function manejarInteraccionCantoGanador(numero){
