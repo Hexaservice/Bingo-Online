@@ -301,14 +301,24 @@
           grid-area: cantos;
           display: flex;
           flex-direction: column;
-          align-items: flex-start;
+          align-items: stretch;
           justify-content: flex-start;
-          gap: 10px;
+          gap: clamp(6px, 1.2vw, 12px);
           padding: 0;
           background: transparent;
           width: 100%;
-          min-width: calc(var(--canto-cell-size) * 5 + clamp(8px, 1.6vw, 16px) * 2);
+          min-width: 0;
           position: relative;
+      }
+      #cantos-encabezado {
+          font-family: 'Bangers', cursive;
+          font-size: clamp(1.1rem, 3vw, 1.6rem);
+          letter-spacing: 2px;
+          text-transform: uppercase;
+          color: #ffffff;
+          text-shadow: 0 0 14px rgba(2, 17, 58, 0.88), 0 0 28px rgba(2, 26, 91, 0.72);
+          line-height: 1;
+          margin: 0;
       }
       h2 {
           margin: 0;
@@ -326,7 +336,7 @@
           font-family: 'Poppins', sans-serif;
           margin: 0;
           width: min(100%, calc(var(--canto-cell-size) * 5));
-          padding: var(--conducto-padding, 0);
+          padding: 0;
           box-sizing: border-box;
       }
       .canto-cell {
@@ -383,41 +393,28 @@
           box-shadow: 0 0 14px rgba(255,215,0,0.9);
           animation: focoUltimo 1.6s ease-in-out infinite;
       }
-      #cantos-tablas-contenedor {
+      #cantos-conducto {
           --conducto-padding: clamp(8px, 1.6vw, 16px);
-          position: relative;
-          width: min(100%, calc(var(--canto-cell-size) * 5 + var(--conducto-padding) * 2));
-          display: flex;
-          flex-direction: column;
-          align-items: flex-start;
-          gap: 0;
-      }
-      .cantos-tabla {
-          width: 100%;
-      }
-      .cantos-tabla[hidden] {
-          display: none !important;
-      }
-      .cantos-tabla--lista {
-          padding: 0;
-      }
-      .cantos-tabla--conducto {
+          --conducto-cell-size: calc((100% - var(--conducto-padding) * 2) / 5);
           position: relative;
           padding: var(--conducto-padding);
           border-radius: clamp(14px, 3vw, 22px);
           background: linear-gradient(160deg, rgba(255,255,255,0.98), rgba(243,244,248,0.9));
           box-shadow: 0 12px 28px rgba(0,0,0,0.18);
-          width: min(100%, calc(var(--canto-cell-size) * 5 + var(--conducto-padding) * 2));
+          width: 100%;
           box-sizing: border-box;
           margin-inline: auto;
       }
+      #cantos-conducto[hidden] {
+          display: none !important;
+      }
       #cantos-conducto-grid {
           display: grid;
-          grid-template-columns: repeat(5, var(--canto-cell-size));
+          grid-template-columns: repeat(5, minmax(0, var(--conducto-cell-size)));
           gap: 0;
           position: relative;
           z-index: 1;
-          width: min(100%, calc(var(--canto-cell-size) * 5));
+          width: 100%;
           margin: 0 auto;
       }
       #cantos-conducto-track {
@@ -431,20 +428,27 @@
       }
       .conducto-cell {
           position: relative;
-          width: var(--canto-cell-size);
-          height: var(--canto-cell-size);
+          width: 100%;
+          aspect-ratio: 1 / 1;
           display: flex;
           align-items: center;
           justify-content: center;
           font-family: 'Poppins', sans-serif;
           font-weight: 600;
           font-size: clamp(0.68rem, 2.2vw, 0.86rem);
-          color: #d5dae6;
+          color: #e4e9f3;
           background: #ffffff;
-          border: var(--conducto-borde, 3px) solid transparent;
           box-sizing: border-box;
           border-radius: 0;
-          transition: border-color 0.3s ease, color 0.3s ease;
+          transition: color 0.3s ease;
+      }
+      .conducto-cell::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border: 0 solid transparent;
+          pointer-events: none;
+          border-radius: inherit;
       }
       .conducto-cell::after {
           content: '';
@@ -460,51 +464,40 @@
           z-index: 1;
           text-shadow: 0 1px 3px rgba(0,0,0,0.14);
       }
-      .conducto-borde-top { border-top-color: #cfd4dd; }
-      .conducto-borde-bottom { border-bottom-color: #cfd4dd; }
-      .conducto-borde-left { border-left-color: #cfd4dd; }
-      .conducto-borde-right { border-right-color: #cfd4dd; }
-      .conducto-curva-top-right { border-top-right-radius: clamp(12px, 2.6vw, 18px); }
-      .conducto-curva-bottom-right { border-bottom-right-radius: clamp(12px, 2.6vw, 18px); }
-      .conducto-curva-top-left { border-top-left-radius: clamp(12px, 2.6vw, 18px); }
-      .conducto-curva-bottom-left { border-bottom-left-radius: clamp(12px, 2.6vw, 18px); }
-      .conducto-cell.inicio-conducto {
-          border-top-color: #cfd4dd;
+      .conducto-borde-top::before { border-top: var(--conducto-borde, 3px) solid #cfd4dd; }
+      .conducto-borde-bottom::before { border-bottom: var(--conducto-borde, 3px) solid #cfd4dd; }
+      .conducto-borde-left::before { border-left: var(--conducto-borde, 3px) solid #cfd4dd; }
+      .conducto-borde-right::before { border-right: var(--conducto-borde, 3px) solid #cfd4dd; }
+      .conducto-curva-top-right::before { border-top-right-radius: clamp(12px, 2.6vw, 18px); }
+      .conducto-curva-bottom-right::before { border-bottom-right-radius: clamp(12px, 2.6vw, 18px); }
+      .conducto-curva-top-left::before { border-top-left-radius: clamp(12px, 2.6vw, 18px); }
+      .conducto-curva-bottom-left::before { border-bottom-left-radius: clamp(12px, 2.6vw, 18px); }
+      .conducto-cell.inicio-conducto::before {
           border-top-left-radius: clamp(12px, 2.6vw, 18px);
       }
-      .conducto-cell.fin-conducto {
-          border-bottom-color: #cfd4dd;
-      }
-      .conducto-cell.fin-conducto.derecha {
+      .conducto-cell.fin-conducto.derecha::before {
           border-bottom-right-radius: clamp(12px, 2.6vw, 18px);
       }
-      .conducto-cell.fin-conducto.izquierda {
+      .conducto-cell.fin-conducto.izquierda::before {
           border-bottom-left-radius: clamp(12px, 2.6vw, 18px);
-      }
-      .conducto-cell.conducto-borde-top,
-      .conducto-cell.conducto-borde-bottom,
-      .conducto-cell.conducto-borde-left,
-      .conducto-cell.conducto-borde-right {
-          box-shadow: none;
       }
       .conducto-cell:hover {
           color: #1f1f1f;
       }
       .conducto-sphere {
           position: absolute;
-          width: calc(var(--canto-cell-size) * 0.88);
-          height: calc(var(--canto-cell-size) * 0.88);
-          min-width: 32px;
-          min-height: 32px;
-          max-width: calc(var(--canto-cell-size) * 0.95);
-          max-height: calc(var(--canto-cell-size) * 0.95);
+          width: clamp(calc(var(--conducto-cell-size) * 0.7), 7vw, calc(var(--conducto-cell-size) * 0.9));
+          aspect-ratio: 1 / 1;
+          min-width: clamp(32px, 6vw, 48px);
+          min-height: 0;
+          max-width: clamp(42px, 9vw, 96px);
           border-radius: 50%;
           display: grid;
           place-items: center;
           font-family: 'Poppins', sans-serif;
           font-weight: 700;
           font-size: clamp(0.72rem, 2.6vw, 1rem);
-          color: #050505;
+          color: #0b0b0f;
           background: var(--conducto-esfera-bg, radial-gradient(circle at 30% 30%, #ffffff 0%, #e2e5ec 55%, #bec3ce 100%));
           box-shadow: 0 10px 22px rgba(0,0,0,0.28);
           transform: translate(-50%, -50%);
@@ -517,7 +510,7 @@
       .conducto-sphere-label {
           position: relative;
           z-index: 1;
-          text-shadow: 0 2px 4px rgba(255,255,255,0.45);
+          text-shadow: 0 1px 3px rgba(255,255,255,0.6);
       }
       .conducto-sphere::after {
           content: '';
@@ -2821,12 +2814,11 @@
     </header>
     <section id="panel-superior">
       <div id="cantos-panel">
-        <div id="cantos-tablas-contenedor">
-          <div id="cantos-grid" class="cantos-tabla cantos-tabla--lista"></div>
-          <div id="cantos-conducto" class="cantos-tabla cantos-tabla--conducto" hidden>
-            <div id="cantos-conducto-grid" aria-hidden="true"></div>
-            <div id="cantos-conducto-track" aria-hidden="true"></div>
-          </div>
+        <div id="cantos-encabezado" aria-hidden="true">CANTOS</div>
+        <div id="cantos-grid"></div>
+        <div id="cantos-conducto" hidden>
+          <div id="cantos-conducto-grid" aria-hidden="true"></div>
+          <div id="cantos-conducto-track" aria-hidden="true"></div>
         </div>
         <div id="ultimo-canto"></div>
       </div>
