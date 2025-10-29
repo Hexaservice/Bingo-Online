@@ -7,10 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
   <style>
     body {
-      background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)),
-                  url('https://img.freepik.com/vectores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg');
-      background-repeat: repeat;
-      background-size: auto;
+      background-color: #ffffff;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -19,6 +16,17 @@
       text-align: center;
       font-family: 'Bangers', cursive;
       margin: 0;
+      position: relative;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: url('https://img.freepik.com/vectores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg') repeat;
+      opacity: 0.08;
+      pointer-events: none;
+      z-index: -1;
     }
     #session-info {
       position: fixed;
@@ -115,7 +123,6 @@
       background: rgba(255,255,255,0.8);
     }
     #gestionar-section {
-      width: 95%;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -169,6 +176,7 @@
       font-family: Calibri, Arial, sans-serif;
       font-size: 0.9rem;
     }
+    .panel-section,
     .asignacion-section {
       width: 95%;
       margin-top: 20px;
@@ -177,12 +185,21 @@
       padding: 10px 12px 14px;
       box-sizing: border-box;
     }
+    #gestionar-section.panel-section {
+      margin-top: 10px;
+    }
     .asignacion-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 10px;
       color: #4a148c;
+    }
+    .asignacion-header.header-azul {
+      color: #1d4ed8;
+    }
+    .asignacion-header.header-azul h3 {
+      color: inherit;
     }
     .asignacion-header h3 {
       margin: 0;
@@ -294,6 +311,61 @@
       font-family: Calibri, Arial, sans-serif;
       font-size: 0.9rem;
     }
+    .whatsapp-section {
+      width: 95%;
+      margin-top: 16px;
+      background: rgba(255,255,255,0.4);
+      border-radius: 12px;
+      padding: 12px 14px 16px;
+      box-sizing: border-box;
+      font-family: Calibri, Arial, sans-serif;
+      text-align: left;
+    }
+    .whatsapp-section label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.8rem;
+      color: #15803d;
+      font-weight: 500;
+    }
+    .whatsapp-section textarea {
+      width: 100%;
+      min-height: 72px;
+      border-radius: 8px;
+      border: 1px solid #86efac;
+      padding: 8px 10px;
+      box-sizing: border-box;
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 0.85rem;
+      resize: vertical;
+    }
+    .whatsapp-actions {
+      margin-top: 8px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .whatsapp-actions button {
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 0.8rem;
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid #16a34a;
+      background: #22c55e;
+      color: #ffffff;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    .whatsapp-actions button:hover {
+      transform: scale(1.02);
+    }
+    @media (max-width: 600px) {
+      #tabla-asignacion col:nth-child(1) { width: 6%; }
+      #tabla-asignacion col:nth-child(2) { width: 32%; }
+      #tabla-asignacion col:nth-child(3) { width: 18%; }
+      #tabla-asignacion col:nth-child(4) { width: 18%; }
+      #tabla-asignacion col:nth-child(5) { width: 20%; }
+      #tabla-asignacion col:nth-child(6) { width: 6%; }
+    }
   </style>
 </head>
 <body>
@@ -303,9 +375,9 @@
     <a href="#" id="logout-link">Cerrar sesión</a>
   </div>
   <h2>Configuraciones</h2>
-  <section id="gestionar-section">
-    <div id="gestionar-header" style="display:flex;align-items:center;justify-content:center;gap:10px;">
-      <h3 style="margin:0;">Gestión de bancos</h3>
+  <section id="gestionar-section" class="panel-section">
+    <div id="gestionar-header" class="asignacion-header header-azul">
+      <h3>Gestión de bancos</h3>
       <label class="switch">
         <input type="checkbox" id="toggle-bancos">
         <span class="slider"></span>
@@ -383,6 +455,14 @@
         <button id="asignacion-aprobar" type="button">Aprobar</button>
       </div>
       <table class="asignacion-table" id="tabla-asignacion">
+        <colgroup>
+          <col style="width:6%">
+          <col style="width:32%">
+          <col style="width:18%">
+          <col style="width:18%">
+          <col style="width:20%">
+          <col style="width:6%">
+        </colgroup>
         <thead>
           <tr class="filtros">
             <th>N°</th>
@@ -395,6 +475,13 @@
         </thead>
         <tbody></tbody>
       </table>
+    </div>
+  </section>
+  <section class="whatsapp-section">
+    <label for="link-whatsapp">Link Grupo WhatsApp</label>
+    <textarea id="link-whatsapp" placeholder="https://chat.whatsapp.com/..." spellcheck="false"></textarea>
+    <div class="whatsapp-actions">
+      <button type="button" id="guardar-link-whatsapp">Guardar</button>
     </div>
   </section>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
@@ -548,6 +635,40 @@
       cont.style.display=toggle.checked?'block':'none';
       if(toggle.checked) cargarDatos();
     });
+    const campoLinkWhatsapp=document.getElementById('link-whatsapp');
+    const botonGuardarLink=document.getElementById('guardar-link-whatsapp');
+
+    async function cargarLinkWhatsapp(){
+      try {
+        const doc=await db.collection('Variablesglobales').doc('Parametros').get();
+        if(doc.exists){
+          const data=doc.data()||{};
+          if(data.linkwhatsapp){
+            campoLinkWhatsapp.value=data.linkwhatsapp;
+          }
+        }
+      } catch(err){
+        console.error('No se pudo obtener el link de WhatsApp',err);
+      }
+    }
+
+    botonGuardarLink.addEventListener('click',async ()=>{
+      const valor=campoLinkWhatsapp.value.trim();
+      if(!valor){
+        alert('El campo link de WhatsApp no puede estar vacío');
+        return;
+      }
+      const confirmar=await confirm('¿Deseas guardar este link para aplicar grupo de WhatsApp?');
+      if(!confirmar) return;
+      try {
+        await db.collection('Variablesglobales').doc('Parametros').set({linkwhatsapp:valor},{merge:true});
+        alert('Link de WhatsApp guardado correctamente.');
+      } catch(err){
+        console.error('No se pudo guardar el link de WhatsApp',err);
+        alert('Ocurrió un error al guardar el link de WhatsApp. Inténtalo nuevamente.');
+      }
+    });
+    cargarLinkWhatsapp();
     // ---- Sección de asignación de usuarios ----
     const asignacionFiltros={texto:'',rol:''};
     const asignacionUsuarios=[];
