@@ -290,6 +290,11 @@
       text-align: right;
       position: relative;
       padding-right: 8px;
+      cursor: pointer;
+    }
+    .asignacion-table td.col-creditos .asignacion-input,
+    .asignacion-table td.col-cartones .asignacion-input {
+      cursor: inherit;
     }
     .asignacion-table td.col-rol {
       text-align: center;
@@ -1059,10 +1064,14 @@
       aviso.classList.add('visible');
       const input=celda.querySelector('.asignacion-input');
       if(input){
-        if(!('valorTemporalBase' in input.dataset)){
-          input.dataset.valorTemporalBase=input.value;
+        const edicionActiva=!input.disabled && !celda.classList.contains('mostrar-valor-actual');
+        if(!edicionActiva){
+          if(!('valorTemporalBase' in input.dataset)){
+            input.dataset.valorTemporalBase=input.value;
+          }
+          input.classList.add('temporal-oculto');
+          input.dataset.temporalOculto='1';
         }
-        input.classList.add('temporal-oculto');
       }
       if(celda.classList.contains('mostrar-valor-actual')){
         celda.classList.add('temporal-activo');
@@ -1079,7 +1088,10 @@
             input.value=input.dataset.valorTemporalBase;
             delete input.dataset.valorTemporalBase;
           }
-          input.classList.remove('temporal-oculto');
+          if(input.dataset.temporalOculto==='1'){
+            input.classList.remove('temporal-oculto');
+          }
+          delete input.dataset.temporalOculto;
         }
         if(celda.isConnected){
           celda.classList.remove('temporal-activo');
@@ -1369,6 +1381,40 @@
     });
 
     tablaAsignacion.addEventListener('click',e=>{
+      const celdaCred=e.target.closest('td.col-creditos');
+      const celdaCart=e.target.closest('td.col-cartones');
+      if(celdaCred || celdaCart){
+        const celda=celdaCred||celdaCart;
+        const fila=celda.closest('tr');
+        const id=fila?.dataset.id;
+        if(id){
+          const registro=asignacionMapa.get(id);
+          if(celdaCred){
+            if(vistaCreditosActuales){
+              const valorAsignado=obtenerValorAsignadoTemporal(celdaCred);
+              mostrarValorTemporal(celdaCred,valorAsignado);
+            }else if(registro){
+              mostrarValorTemporal(celdaCred,registro.creditos);
+            }
+          }else if(celdaCart){
+            if(vistaCartonesActuales){
+              const valorAsignado=obtenerValorAsignadoTemporal(celdaCart);
+              mostrarValorTemporal(celdaCart,valorAsignado);
+            }else if(registro){
+              mostrarValorTemporal(celdaCart,registro.cartonesGratis);
+            }
+          }
+          const inputCelda=celda.querySelector('.asignacion-input');
+          if(inputCelda && !inputCelda.disabled && document.activeElement!==inputCelda){
+            setTimeout(()=>{
+              if(document.activeElement!==inputCelda && inputCelda.isConnected){
+                inputCelda.focus({preventScroll:true});
+              }
+            },0);
+          }
+        }
+        return;
+      }
       const inputObjetivo=e.target.closest('.asignacion-input');
       if(inputObjetivo && !inputObjetivo.disabled) return;
       const celdaGmail=e.target.closest('td.col-gmail');
@@ -1381,35 +1427,6 @@
           mostrarNombreTemporal(celdaGmail,nombrePreferido,celdaGmail.dataset.gmailCompleto);
         }
         return;
-      }
-      const celdaCred=e.target.closest('td.col-creditos');
-      if(celdaCred){
-        const fila=celdaCred.closest('tr');
-        const id=fila?.dataset.id;
-        if(id){
-          const registro=asignacionMapa.get(id);
-          if(vistaCreditosActuales){
-            const valorAsignado=obtenerValorAsignadoTemporal(celdaCred);
-            mostrarValorTemporal(celdaCred,valorAsignado);
-          }else if(registro){
-            mostrarValorTemporal(celdaCred,registro.creditos);
-          }
-        }
-        return;
-      }
-      const celdaCart=e.target.closest('td.col-cartones');
-      if(celdaCart){
-        const fila=celdaCart.closest('tr');
-        const id=fila?.dataset.id;
-        if(id){
-          const registro=asignacionMapa.get(id);
-          if(vistaCartonesActuales){
-            const valorAsignado=obtenerValorAsignadoTemporal(celdaCart);
-            mostrarValorTemporal(celdaCart,valorAsignado);
-          }else if(registro){
-            mostrarValorTemporal(celdaCart,registro.cartonesGratis);
-          }
-        }
       }
     });
 
