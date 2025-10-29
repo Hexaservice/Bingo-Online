@@ -289,6 +289,7 @@
     .asignacion-table td.col-cartones {
       text-align: right;
       position: relative;
+      padding-right: 8px;
     }
     .asignacion-table td.col-rol {
       text-align: center;
@@ -297,14 +298,19 @@
       align-items: center;
       justify-content: center;
     }
+    .asignacion-table th.col-check,
     .asignacion-table td.col-check {
       display: flex;
       align-items: center;
       justify-content: center;
     }
+    .asignacion-table td.col-check {
+      padding: 2px 0;
+    }
     .asignacion-table td.col-check input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
+      width: 16px;
+      height: 16px;
+      margin: 0;
     }
     .rol-badge {
       display: inline-block;
@@ -362,7 +368,7 @@
       display: flex;
       align-items: center;
       justify-content: flex-end;
-      padding: 0 6px;
+      padding: 0 8px;
       background: rgba(255,255,255,0.96);
       border-radius: 6px;
       box-shadow: 0 0 6px rgba(0,0,0,0.2);
@@ -385,6 +391,7 @@
       display: none;
       align-items: center;
       justify-content: flex-end;
+      padding: 0 8px;
       font-weight: 700;
       color: inherit;
       font-size: 0.78rem;
@@ -602,7 +609,7 @@
                 <option value="superadmin">SUPERADMIN</option>
               </select>
             </th>
-            <th></th>
+            <th class="col-check"></th>
           </tr>
           <tr class="filtros">
             <th>N°</th>
@@ -610,7 +617,7 @@
             <th class="col-creditos" id="asignacion-encabezado-creditos">CREDITOS ASIGNADOS</th>
             <th class="col-cartones" id="asignacion-encabezado-cartones">CARTONES ASIGNADOS</th>
             <th class="col-rol">Rol</th>
-            <th><span id="asignacion-marcar" class="check-header">✔</span></th>
+            <th class="col-check"><span id="asignacion-marcar" class="check-header">✔</span></th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -984,6 +991,14 @@
       return td;
     }
 
+    function obtenerValorAsignadoTemporal(celda){
+      if(!celda) return 0;
+      const input=celda.querySelector('.asignacion-input');
+      if(!input) return 0;
+      const texto=sanitizarEntradaAsignacion(input.value);
+      return texto===''?0:texto;
+    }
+
     function renderAsignacionTabla(){
       const cuerpo=document.querySelector('#tabla-asignacion tbody');
       if(!cuerpo) return;
@@ -1351,7 +1366,12 @@
         const id=fila?.dataset.id;
         if(id){
           const registro=asignacionMapa.get(id);
-          if(registro) mostrarValorTemporal(celdaCred,registro.creditos);
+          if(vistaCreditosActuales){
+            const valorAsignado=obtenerValorAsignadoTemporal(celdaCred);
+            mostrarValorTemporal(celdaCred,valorAsignado);
+          }else if(registro){
+            mostrarValorTemporal(celdaCred,registro.creditos);
+          }
         }
         return;
       }
@@ -1361,7 +1381,12 @@
         const id=fila?.dataset.id;
         if(id){
           const registro=asignacionMapa.get(id);
-          if(registro) mostrarValorTemporal(celdaCart,registro.cartonesGratis);
+          if(vistaCartonesActuales){
+            const valorAsignado=obtenerValorAsignadoTemporal(celdaCart);
+            mostrarValorTemporal(celdaCart,valorAsignado);
+          }else if(registro){
+            mostrarValorTemporal(celdaCart,registro.cartonesGratis);
+          }
         }
       }
     });
@@ -1371,7 +1396,7 @@
 
     encabezadoCreditos?.addEventListener('click',()=>{
       vistaCreditosActuales=!vistaCreditosActuales;
-      encabezadoCreditos.textContent=vistaCreditosActuales?'CREDITOOS ACTUALES':'CREDITOS ASIGNADOS';
+      encabezadoCreditos.textContent=vistaCreditosActuales?'CREDITOS ACTUALES':'CREDITOS ASIGNADOS';
       actualizarVistaColumnasAsignacion();
     });
 
