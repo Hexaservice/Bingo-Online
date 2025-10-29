@@ -346,6 +346,17 @@
       text-transform: uppercase;
       white-space: normal;
       word-break: break-word;
+      cursor: pointer;
+      background-color: #fff;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    .asignacion-table th.col-creditos.vista-actual {
+      background-color: #2e7d32;
+      color: #ffffff;
+    }
+    .asignacion-table th.col-cartones.vista-actual {
+      background-color: #6a1b9a;
+      color: #ffffff;
     }
     .asignacion-input {
       width: 100%;
@@ -1358,7 +1369,8 @@
     });
 
     tablaAsignacion.addEventListener('click',e=>{
-      if(e.target.closest('.asignacion-input')) return;
+      const inputObjetivo=e.target.closest('.asignacion-input');
+      if(inputObjetivo && !inputObjetivo.disabled) return;
       const celdaGmail=e.target.closest('td.col-gmail');
       if(celdaGmail){
         const fila=celdaGmail.closest('tr');
@@ -1404,17 +1416,32 @@
     const encabezadoCreditos=document.getElementById('asignacion-encabezado-creditos');
     const encabezadoCartones=document.getElementById('asignacion-encabezado-cartones');
 
+    function actualizarEncabezadoCreditos(){
+      if(!encabezadoCreditos) return;
+      encabezadoCreditos.textContent=vistaCreditosActuales?'CREDITOS ACTUALES':'CREDITOS ASIGNADOS';
+      encabezadoCreditos.classList.toggle('vista-actual',vistaCreditosActuales);
+    }
+
+    function actualizarEncabezadoCartones(){
+      if(!encabezadoCartones) return;
+      encabezadoCartones.textContent=vistaCartonesActuales?'CARTONES GRATIS':'CARTONES ASIGNADOS';
+      encabezadoCartones.classList.toggle('vista-actual',vistaCartonesActuales);
+    }
+
     encabezadoCreditos?.addEventListener('click',()=>{
       vistaCreditosActuales=!vistaCreditosActuales;
-      encabezadoCreditos.textContent=vistaCreditosActuales?'CREDITOS ACTUALES':'CREDITOS ASIGNADOS';
+      actualizarEncabezadoCreditos();
       actualizarVistaColumnasAsignacion();
     });
 
     encabezadoCartones?.addEventListener('click',()=>{
       vistaCartonesActuales=!vistaCartonesActuales;
-      encabezadoCartones.textContent=vistaCartonesActuales?'CARTONES GRATIS':'CARTONES ASIGNADOS';
+      actualizarEncabezadoCartones();
       actualizarVistaColumnasAsignacion();
     });
+
+    actualizarEncabezadoCreditos();
+    actualizarEncabezadoCartones();
 
     const toggleAsignacion=document.getElementById('toggle-asignacion');
     const contenidoAsignacion=document.getElementById('asignacion-content');
