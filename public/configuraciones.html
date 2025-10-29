@@ -294,15 +294,14 @@
     .asignacion-table td.col-rol {
       text-align: center;
       white-space: nowrap;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      position: relative;
+      vertical-align: middle;
     }
     .asignacion-table th.col-check,
     .asignacion-table td.col-check {
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      text-align: center;
+      vertical-align: middle;
+      min-width: 34px;
     }
     .asignacion-table td.col-check {
       padding: 2px 0;
@@ -310,7 +309,8 @@
     .asignacion-table td.col-check input[type="checkbox"] {
       width: 16px;
       height: 16px;
-      margin: 0;
+      margin: 0 auto;
+      display: block;
     }
     .rol-badge {
       display: inline-block;
@@ -402,6 +402,9 @@
     }
     .asignacion-table td.mostrar-valor-actual .valor-actual-fijo {
       display: flex;
+    }
+    .asignacion-table td.mostrar-valor-actual.temporal-activo .valor-actual-fijo {
+      display: none;
     }
     .check-header {
       display: inline-flex;
@@ -1034,6 +1037,7 @@
     function mostrarValorTemporal(celda,valor){
       if(!celda) return;
       if(!celda.isConnected) return;
+      celda.classList.remove('temporal-activo');
       let aviso=celda.querySelector('.valor-temporal');
       if(!aviso){
         aviso=document.createElement('div');
@@ -1049,6 +1053,9 @@
         }
         input.classList.add('temporal-oculto');
       }
+      if(celda.classList.contains('mostrar-valor-actual')){
+        celda.classList.add('temporal-activo');
+      }
       if(asignacionTemporales.has(celda)){
         clearTimeout(asignacionTemporales.get(celda));
       }
@@ -1062,6 +1069,9 @@
             delete input.dataset.valorTemporalBase;
           }
           input.classList.remove('temporal-oculto');
+        }
+        if(celda.isConnected){
+          celda.classList.remove('temporal-activo');
         }
         asignacionTemporales.delete(celda);
       },3000);
