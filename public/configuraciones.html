@@ -227,12 +227,15 @@
       z-index: 1;
     }
     .asignacion-table thead tr.controles-superiores th {
-      background: rgba(245, 245, 255, 0.95);
-      border-bottom: none;
+      background: transparent;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+      border-bottom: 1px solid #d1c4e9;
       padding: 6px 4px;
     }
     .asignacion-table thead tr.controles-superiores th + th {
-      border-left: 1px solid #d1c4e9;
+      border-left: none;
     }
     .th-aprobar {
       text-align: center;
@@ -290,13 +293,16 @@
     .asignacion-table td.col-rol {
       text-align: center;
       white-space: nowrap;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .asignacion-table td.col-check {
-      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .asignacion-table td.col-check input[type="checkbox"] {
-      display: inline-block;
-      margin: 0 auto;
       width: 18px;
       height: 18px;
     }
@@ -306,9 +312,12 @@
       letter-spacing: 0.3px;
       font-family: Calibri, Arial, sans-serif;
       text-transform: uppercase;
-      line-height: 1;
+      line-height: 1.1;
       white-space: nowrap;
-      font-size: clamp(0.62rem, 0.5rem + 0.4vw, 0.9rem);
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: clamp(0.5rem, 0.42rem + 1.4vw, 0.85rem);
     }
     .rol-badge--colaborador { color: #1b5e20; }
     .rol-badge--administrador { color: #0d47a1; }
@@ -349,15 +358,43 @@
     }
     .valor-temporal {
       position: absolute;
-      inset: 50% auto auto 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(255,255,255,0.95);
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0 6px;
+      background: rgba(255,255,255,0.96);
       border-radius: 6px;
-      padding: 2px 6px;
-      box-shadow: 0 0 6px rgba(0,0,0,0.25);
-      font-size: 0.75rem;
-      color: #283593;
+      box-shadow: 0 0 6px rgba(0,0,0,0.2);
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: inherit;
       pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .valor-temporal.visible {
+      opacity: 1;
+    }
+    .asignacion-table td .asignacion-input.temporal-oculto {
+      visibility: hidden;
+    }
+    .valor-actual-fijo {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: flex-end;
+      font-weight: 700;
+      color: inherit;
+      font-size: 0.78rem;
+      pointer-events: none;
+    }
+    .asignacion-table td.mostrar-valor-actual .asignacion-input {
+      visibility: hidden;
+    }
+    .asignacion-table td.mostrar-valor-actual .valor-actual-fijo {
+      display: flex;
     }
     .check-header {
       display: inline-flex;
@@ -558,7 +595,7 @@
             <th class="col-cartones"><input type="text" id="asignacion-masivo-cartones" class="masivo-input" placeholder="±0" inputmode="numeric" autocomplete="off"></th>
             <th class="col-rol">
               <select id="asignacion-filtro-rol">
-                <option value="">ROL</option>
+                <option value="">TODOS</option>
                 <option value="jugador">JUGADOR</option>
                 <option value="colaborador">COLABORADOR</option>
                 <option value="administrador">ADMINISTRADOR</option>
@@ -570,8 +607,8 @@
           <tr class="filtros">
             <th>N°</th>
             <th><input type="text" id="asignacion-filtro-gmail" placeholder="Gmail/Nombre" style="width:100%;box-sizing:border-box;"></th>
-            <th class="col-creditos">CREDITOS ASIGNADOS</th>
-            <th class="col-cartones">CARTONES GRATIS</th>
+            <th class="col-creditos" id="asignacion-encabezado-creditos">CREDITOS ASIGNADOS</th>
+            <th class="col-cartones" id="asignacion-encabezado-cartones">CARTONES ASIGNADOS</th>
             <th class="col-rol">Rol</th>
             <th><span id="asignacion-marcar" class="check-header">✔</span></th>
           </tr>
@@ -785,6 +822,8 @@
     const inputMasivoCartones=document.getElementById('asignacion-masivo-cartones');
     let unsubscribeAsignacionUsuarios=null;
     let asignacionInicializada=false;
+    let vistaCreditosActuales=false;
+    let vistaCartonesActuales=false;
 
     function normalizarRolUsuario(valor){
       const texto=(valor||'').toString().trim().toLowerCase();
@@ -974,6 +1013,7 @@
       });
       cuerpo.innerHTML='';
       cuerpo.appendChild(frag);
+      actualizarVistaColumnasAsignacion();
     }
 
     function mostrarValorTemporal(celda,valor){
@@ -986,12 +1026,27 @@
         celda.appendChild(aviso);
       }
       aviso.textContent=formatoAsignacionEntero.format(Math.round(Number(valor)||0));
+      aviso.classList.add('visible');
+      const input=celda.querySelector('.asignacion-input');
+      if(input){
+        if(!('valorTemporalBase' in input.dataset)){
+          input.dataset.valorTemporalBase=input.value;
+        }
+        input.classList.add('temporal-oculto');
+      }
       if(asignacionTemporales.has(celda)){
         clearTimeout(asignacionTemporales.get(celda));
       }
       const timeout=setTimeout(()=>{
         if(celda.isConnected && aviso.parentNode===celda){
-          celda.removeChild(aviso);
+          aviso.classList.remove('visible');
+        }
+        if(input && input.isConnected){
+          if('valorTemporalBase' in input.dataset){
+            input.value=input.dataset.valorTemporalBase;
+            delete input.dataset.valorTemporalBase;
+          }
+          input.classList.remove('temporal-oculto');
         }
         asignacionTemporales.delete(celda);
       },3000);
@@ -1015,10 +1070,69 @@
       asignacionTemporales.set(celda,timeout);
     }
 
+    function ajustarCeldaVistaActual(celda,mostrar,valor){
+      if(!celda) return;
+      let capa=celda.querySelector('.valor-actual-fijo');
+      if(mostrar){
+        if(!capa){
+          capa=document.createElement('div');
+          capa.className='valor-actual-fijo';
+          celda.appendChild(capa);
+        }
+        capa.textContent=formatoAsignacionEntero.format(Math.round(Number(valor)||0));
+        celda.classList.add('mostrar-valor-actual');
+      } else {
+        if(capa){
+          capa.textContent='';
+        }
+        celda.classList.remove('mostrar-valor-actual');
+      }
+    }
+
+    function actualizarVistaColumnasAsignacion(){
+      if(!tablaAsignacion) return;
+      const cuerpo=tablaAsignacion.querySelector('tbody');
+      if(!cuerpo) return;
+      cuerpo.querySelectorAll('tr').forEach(fila=>{
+        const id=fila.dataset.id;
+        const registro=id?asignacionMapa.get(id):null;
+        const celdaCred=fila.querySelector('td.col-creditos');
+        const celdaCart=fila.querySelector('td.col-cartones');
+        ajustarCeldaVistaActual(celdaCred,vistaCreditosActuales,registro?.creditos);
+        ajustarCeldaVistaActual(celdaCart,vistaCartonesActuales,registro?.cartonesGratis);
+      });
+    }
+
+    function obtenerValorEditado(edicion,campo){
+      const texto=(edicion?.[campo]??'').toString().trim();
+      return sanitizarEntradaAsignacion(texto);
+    }
+
     async function procesarAsignacionesUsuarios(ids){
       if(!ids.length){
         alert('Selecciona al menos un usuario.');
         return;
+      }
+      for(const id of ids){
+        const edicion=asignacionEdicion.get(id)||{};
+        const creditosTexto=obtenerValorEditado(edicion,'creditos');
+        const cartonesTexto=obtenerValorEditado(edicion,'cartones');
+        const creditosValor=creditosTexto?Number(creditosTexto):0;
+        const cartonesValor=cartonesTexto?Number(cartonesTexto):0;
+        const sinCreditos=(!creditosTexto || !Number.isFinite(creditosValor) || creditosValor===0);
+        const sinCartones=(!cartonesTexto || !Number.isFinite(cartonesValor) || cartonesValor===0);
+        if(sinCreditos && sinCartones){
+          alert('para APROBAR no pueden estar vacios ambos valores: Créditos y Cartones en los registros seleccionados');
+          return;
+        }
+        if(creditosTexto && !Number.isFinite(creditosValor)){
+          alert('Ingresa un número válido en CREDITOS ASIGNADOS.');
+          return;
+        }
+        if(cartonesTexto && !Number.isFinite(cartonesValor)){
+          alert('Ingresa un número válido en CARTONES ASIGNADOS.');
+          return;
+        }
       }
       let procesados=0;
       const procesadosIds=[];
@@ -1026,20 +1140,14 @@
         const registro=asignacionMapa.get(id);
         if(!registro) continue;
         const edicion=asignacionEdicion.get(id)||{};
-        const creditosTexto=(edicion.creditos??'').toString().trim();
-        const cartonesTexto=(edicion.cartones??'').toString().trim();
-        if(!creditosTexto || !cartonesTexto){
+        const creditosTexto=obtenerValorEditado(edicion,'creditos');
+        const cartonesTexto=obtenerValorEditado(edicion,'cartones');
+        const creditosValor=creditosTexto?Number(creditosTexto):0;
+        const cartonesValor=cartonesTexto?Number(cartonesTexto):0;
+        const actualizarCreditos=Number.isFinite(creditosValor) && creditosValor!==0;
+        const actualizarCartones=Number.isFinite(cartonesValor) && cartonesValor!==0;
+        if(!actualizarCreditos && !actualizarCartones){
           continue;
-        }
-        const creditosValor=Number(creditosTexto);
-        const cartonesValor=Number(cartonesTexto);
-        if(!Number.isFinite(creditosValor) || creditosValor===0){
-          alert('Ingresa un número distinto de cero en CREDITOS ASIGNADOS.');
-          return;
-        }
-        if(!Number.isFinite(cartonesValor) || cartonesValor===0){
-          alert('Ingresa un número distinto de cero en CARTONES GRATIS.');
-          return;
         }
         try {
           await db.runTransaction(async tx=>{
@@ -1048,11 +1156,20 @@
             const datos=snap.exists?(snap.data()||{}):{};
             let creditosActuales=Number(datos.creditos)||0;
             let cartonesActuales=Number(datos.CartonesGratis??datos.cartonesGratis??0)||0;
-            creditosActuales=Math.max(0,creditosActuales+creditosValor);
-            cartonesActuales=Math.max(0,cartonesActuales+cartonesValor);
-            tx.set(billeteraRef,{creditos:creditosActuales,CartonesGratis:cartonesActuales},{merge:true});
-            registro.creditos=creditosActuales;
-            registro.cartonesGratis=cartonesActuales;
+            const payload={};
+            if(actualizarCreditos){
+              creditosActuales=Math.max(0,creditosActuales+creditosValor);
+              payload.creditos=creditosActuales;
+              registro.creditos=creditosActuales;
+            }
+            if(actualizarCartones){
+              cartonesActuales=Math.max(0,cartonesActuales+cartonesValor);
+              payload.CartonesGratis=cartonesActuales;
+              registro.cartonesGratis=cartonesActuales;
+            }
+            if(Object.keys(payload).length){
+              tx.set(billeteraRef,payload,{merge:true});
+            }
           });
           procesados++;
           procesadosIds.push(id);
@@ -1247,6 +1364,21 @@
           if(registro) mostrarValorTemporal(celdaCart,registro.cartonesGratis);
         }
       }
+    });
+
+    const encabezadoCreditos=document.getElementById('asignacion-encabezado-creditos');
+    const encabezadoCartones=document.getElementById('asignacion-encabezado-cartones');
+
+    encabezadoCreditos?.addEventListener('click',()=>{
+      vistaCreditosActuales=!vistaCreditosActuales;
+      encabezadoCreditos.textContent=vistaCreditosActuales?'CREDITOOS ACTUALES':'CREDITOS ASIGNADOS';
+      actualizarVistaColumnasAsignacion();
+    });
+
+    encabezadoCartones?.addEventListener('click',()=>{
+      vistaCartonesActuales=!vistaCartonesActuales;
+      encabezadoCartones.textContent=vistaCartonesActuales?'CARTONES GRATIS':'CARTONES ASIGNADOS';
+      actualizarVistaColumnasAsignacion();
     });
 
     const toggleAsignacion=document.getElementById('toggle-asignacion');
