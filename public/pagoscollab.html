@@ -177,29 +177,22 @@
       color: #555;
       border: 1px solid #b0b0b0;
     }
-    .retiro-info {
-      font-family: Calibri, Arial, sans-serif;
-      font-size: 0.95rem;
-      color: #0b4dda;
-      margin: 6px 0 10px;
-    }
-    .retiro-resumen {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      align-items: center;
-      margin-bottom: 10px;
+    #banco-retiro {
       font-weight: bold;
-      color: #1b5e20;
+      color: #00008B;
+      text-shadow: 0 0 4px #fff;
     }
-    .retiro-resumen span {
-      background: rgba(27, 94, 32, 0.1);
-      padding: 6px 12px;
-      border-radius: 6px;
-      width: 100%;
-      max-width: 320px;
+    #btn-retirar {
+      font-family: 'Bangers', cursive;
+      background: linear-gradient(#cc0000, #ffffff);
+      color: white;
+      border: 3px solid #FFD700;
+      border-radius: 8px;
+      text-shadow: 2px 2px 4px #000;
+      font-size: 1.2rem;
+      width: 200px;
+      cursor: pointer;
     }
-    .retiro-resumen span strong { color: #0d47a1; }
     #datos-content {
       display: none;
       margin-top: 10px;
@@ -379,14 +372,19 @@
       <button type="button" id="btn-depositar-colab" disabled style="background:#9e9e9e;border:1px solid #777;color:#fff;cursor:not-allowed;">Solicitar Depósito</button>
     </div>
     <div id="retirar-colab" class="tab-content active">
-      <p class="retiro-info">Los pagos aprobados se acreditarán en los datos bancarios registrados.</p>
-      <div class="retiro-resumen">
-        <span>Banco registrado: <strong id="retiro-banco-registrado">-</strong></span>
-        <span>N° de cuenta: <strong id="retiro-cuenta-registrada">-</strong></span>
-        <span>Cédula: <strong id="retiro-cedula-registrada">-</strong></span>
-        <span>Pago móvil: <strong id="retiro-pm-registrado">-</strong></span>
+      <label id="banco-retiro"></label>
+      <input type="number" id="monto-retiro" placeholder="Monto" step="0.01">
+      <div id="descuentos-retiro">
+        <div id="descuento-bancario" style="font-weight:bold;">
+          Descuento Bancario <span id="porcentaje-retiro" style="color:#00008B;"></span>% por retiro bancario
+        </div>
+        <div id="descuento-admin" style="font-weight:bold;">
+          Descuento del <span id="porcentaje-admin" style="color:#00008B;"></span>% por gestión administrativa
+        </div>
       </div>
-      <p class="retiro-info" style="color:#1b5e20;">Verifica el estado de tus transferencias en la sección "Mis Pagos".</p>
+      <input type="number" id="monto-retiro-neto" placeholder="Monto a recibir" readonly>
+      <textarea id="comentario-retiro" placeholder="Comentario (opcional)"></textarea>
+      <button id="btn-retirar">Retirar</button>
     </div>
   </div>
 
@@ -439,6 +437,7 @@
 
     const transacciones = [];
     let billeteraActual = { creditos: 0, cartonesGratis: 0 };
+    let porcentajeRetiro = 0, porcentajeAdministra = 0;
 
     function formatearFecha(str){
       if(!str) return '';
@@ -486,27 +485,26 @@
       valorEl.classList.toggle('rojo', valor <= 0);
     }
 
-    function actualizarResumenRetiro(){
-      const bancoEl = document.getElementById('retiro-banco-registrado');
-      if(!bancoEl) return;
-      const cuentaEl = document.getElementById('retiro-cuenta-registrada');
-      const cedulaEl = document.getElementById('retiro-cedula-registrada');
-      const pmEl = document.getElementById('retiro-pm-registrado');
-      const mostrar = (valor, fallback = 'Sin registrar') => {
-        const limpio = (valor || '').toString().trim();
-        return limpio ? limpio : fallback;
-      };
-      bancoEl.textContent = mostrar(billeteraActual.banco);
-      const cuentaOriginal = (billeteraActual.cuenta || '').toString().trim();
-      if(cuentaOriginal){
-        cuentaEl.textContent = cuentaOriginal.length > 8
-          ? `${cuentaOriginal.slice(0, 4)} **** ${cuentaOriginal.slice(-4)}`
-          : cuentaOriginal;
-      } else {
-        cuentaEl.textContent = 'Sin registrar';
+    function actualizarDatosRetiro(){
+      const bancoLabel = document.getElementById('banco-retiro');
+      if(!bancoLabel) return;
+      const banco = (billeteraActual.banco || '').toString().trim();
+      bancoLabel.textContent = banco ? `Banco donde recibirás: ${banco}` : 'Banco donde recibirás:';
+    }
+
+    function actualizarMontoNeto(){
+      const montoEl = document.getElementById('monto-retiro');
+      const netoEl = document.getElementById('monto-retiro-neto');
+      if(!montoEl || !netoEl){
+        return;
       }
-      cedulaEl.textContent = mostrar(billeteraActual.cedula);
-      pmEl.textContent = mostrar(billeteraActual.pagomovil);
+      const monto = parseFloat(montoEl.value);
+      if(!monto || Number.isNaN(monto) || monto <= 0){
+        netoEl.value = '';
+        return;
+      }
+      const neto = monto - (monto * porcentajeRetiro / 100) - (monto * porcentajeAdministra / 100);
+      netoEl.value = neto > 0 ? neto.toFixed(2) : '';
     }
 
     function cargarBancosColaborador(){
@@ -603,11 +601,121 @@
       document.getElementById('modal-ok').addEventListener('click', () => { modal.style.display = 'none'; }, { once: true });
     }
 
+    function limpiarCamposRetiro(){
+      const monto = document.getElementById('monto-retiro');
+      const comentario = document.getElementById('comentario-retiro');
+      const neto = document.getElementById('monto-retiro-neto');
+      if(monto) monto.value = '';
+      if(comentario) comentario.value = '';
+      if(neto) neto.value = '';
+    }
+
+    async function validarDatosBancarios(){
+      const user = auth.currentUser;
+      if(!user) return false;
+      const doc = await db.collection('Billetera').doc(user.email).get();
+      const datos = doc.data() || {};
+      if(datos.banco && datos.cuenta && datos.cedula && datos.pagomovil && datos.tipoCuenta){
+        return true;
+      }
+      alert('Antes de solicitar un retiro debes tener todos tus datos bancarios registrados.');
+      const toggle = document.getElementById('toggle-datos');
+      if(toggle){
+        toggle.checked = true;
+        const datosContent = document.getElementById('datos-content');
+        if(datosContent){ datosContent.style.display = 'block'; }
+      }
+      if(!datos.banco){
+        document.getElementById('banco')?.focus();
+      } else if(!datos.cuenta){
+        document.getElementById('cuenta')?.focus();
+      } else if(!datos.cedula){
+        document.getElementById('cedula')?.focus();
+      } else if(!datos.pagomovil){
+        document.getElementById('pagomovil')?.focus();
+      } else if(!datos.tipoCuenta){
+        const primerTipo = document.querySelector('input[name="tipo-cuenta"]');
+        if(primerTipo){ primerTipo.focus(); }
+      }
+      return false;
+    }
+
+    function fechaActual(){
+      return typeof fechaServidor === 'function' ? fechaServidor() : '';
+    }
+
+    function horaActual(){
+      return typeof horaServidor === 'function' ? horaServidor() : '';
+    }
+
+    async function ejecutarRetiro(montoSolicitado, montoFinal){
+      const user = auth.currentUser;
+      if(!user) return;
+      await initServerTime();
+      const docBilletera = await db.collection('Billetera').doc(user.email).get();
+      const comentario = document.getElementById('comentario-retiro');
+      const data = {
+        tipotrans: 'retiro',
+        bancoreceptor: docBilletera.exists ? (docBilletera.data().banco || '') : '',
+        MontoSolicitado: montoSolicitado,
+        Monto: montoFinal,
+        referencia: '',
+        comentario: comentario ? comentario.value.trim() : '',
+        estado: 'PENDIENTE',
+        IDbilletera: user.email,
+        fechasolicitud: fechaActual(),
+        horasolicitud: horaActual(),
+        usuariogestor: '',
+        rolusuario: '',
+        fechagestion: '',
+        horagestion: '',
+        nota: ''
+      };
+      await db.collection('transacciones').add(data);
+      alert('Solicitud enviada, una vez validada se transferirá a tu pago móvil');
+      limpiarCamposRetiro();
+      actualizarMontoNeto();
+      await cargarPagosColaborador();
+    }
+
     document.getElementById('modal-detalle').addEventListener('click', e => {
       if(e.target === e.currentTarget){
         e.currentTarget.style.display = 'none';
       }
     });
+
+    const montoRetiroInput = document.getElementById('monto-retiro');
+    if(montoRetiroInput){
+      montoRetiroInput.addEventListener('input', actualizarMontoNeto);
+    }
+
+    const btnRetirar = document.getElementById('btn-retirar');
+    if(btnRetirar){
+      btnRetirar.addEventListener('click', async () => {
+        if(!await validarDatosBancarios()) return;
+        const montoInput = document.getElementById('monto-retiro');
+        const montoStr = montoInput ? montoInput.value.trim() : '';
+        const monto = parseFloat(montoStr);
+        if(!montoStr || Number.isNaN(monto) || monto <= 0){
+          alert('Ingrese un monto válido');
+          if(montoInput){ montoInput.focus(); }
+          return;
+        }
+        const creditosDisponibles = Number(billeteraActual.creditos) || 0;
+        if(monto > creditosDisponibles){
+          alert('El monto supera los créditos disponibles');
+          return;
+        }
+        const montoFinal = monto - (monto * porcentajeRetiro / 100) - (monto * porcentajeAdministra / 100);
+        const netoEl = document.getElementById('monto-retiro-neto');
+        if(netoEl){
+          netoEl.value = montoFinal > 0 ? montoFinal.toFixed(2) : '';
+        }
+        if(confirm(`¿Confirmas la solicitud de retiro por ${montoFinal.toFixed(2)}?`)){
+          await ejecutarRetiro(monto, montoFinal);
+        }
+      });
+    }
 
     document.getElementById('guardar-datos').addEventListener('click', async () => {
       const user = auth.currentUser;
@@ -632,7 +740,7 @@
       try {
         await db.collection('Billetera').doc(user.email).set(data, { merge: true });
         billeteraActual = { ...billeteraActual, ...data };
-        actualizarResumenRetiro();
+        actualizarDatosRetiro();
         alert('Datos guardados');
       } catch (err) {
         console.error('No se pudo guardar la información bancaria', err);
@@ -689,13 +797,22 @@
         }
       }
 
-      actualizarResumenRetiro();
+      actualizarDatosRetiro();
     });
 
     initFirebase().then(() => {
       auth.onAuthStateChanged(async user => {
         if(!user) return;
         try {
+          const parametros = await db.collection('Variablesglobales').doc('Parametros').get();
+          if(parametros.exists){
+            const dataParametros = parametros.data() || {};
+            porcentajeRetiro = parseFloat(dataParametros.porcentajeretiro) || 0;
+            porcentajeAdministra = parseFloat(dataParametros.porcentajeadministra) || 0;
+            document.getElementById('porcentaje-retiro').textContent = porcentajeRetiro;
+            document.getElementById('porcentaje-admin').textContent = porcentajeAdministra;
+            actualizarMontoNeto();
+          }
           const billeteraRef = db.collection('Billetera').doc(user.email);
           const doc = await billeteraRef.get();
           if(doc.exists){
@@ -717,16 +834,16 @@
               const radio = document.querySelector(`input[name='tipo-cuenta'][value='${billeteraActual.tipoCuenta}']`);
               if(radio) radio.checked = true;
             }
-            actualizarResumenRetiro();
+            actualizarDatosRetiro();
           } else {
             await billeteraRef.set({ creditos: 0, CartonesGratis: 0 });
             actualizarCreditos(0);
-            actualizarResumenRetiro();
+            actualizarDatosRetiro();
           }
         } catch (err) {
           console.error('No se pudo obtener la billetera del colaborador', err);
           actualizarCreditos(0);
-          actualizarResumenRetiro();
+          actualizarDatosRetiro();
         }
         cargarBancosColaborador();
         cargarPagosColaborador();
