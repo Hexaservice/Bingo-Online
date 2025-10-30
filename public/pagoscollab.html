@@ -405,6 +405,7 @@
               <select id="filtro-tipo">
                 <option value="">TIPO</option>
                 <option value="pago">PAGO</option>
+                <option value="retiro">RETIRO</option>
               </select>
             </th>
             <th><input id="filtro-monto" type="number" placeholder="MONTO"></th>
@@ -528,7 +529,8 @@
       transacciones.length = 0;
       snap.forEach(doc => {
         const data = doc.data();
-        if((data.tipotrans || '').toLowerCase() !== 'pago') return;
+        const tipoTransaccion = (data.tipotrans || '').toLowerCase();
+        if(!['pago','retiro'].includes(tipoTransaccion)) return;
         data.fechasolicitud = formatearFecha(data.fechasolicitud || '');
         data.fechagestion = formatearFecha(data.fechagestion || '');
         transacciones.push({ id: doc.id, ...data });

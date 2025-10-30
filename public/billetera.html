@@ -366,7 +366,6 @@
                 <option value="deposito">DEPOSITO</option>
                 <option value="retiro">RETIRO</option>
                 <option value="premio">PREMIO</option>
-                <option value="pago" id="filtro-tipo-pago">PAGO</option>
               </select>
             </th>
             <th><input id="filtro-monto" type="number" placeholder="MONTO"></th>
@@ -445,13 +444,26 @@
       auth.onAuthStateChanged(async user => {
         if(!user) return;
         const filtroTipoSelect = document.getElementById('filtro-tipo');
-        const opcionPago = document.getElementById('filtro-tipo-pago');
-        if(opcionPago && filtroTipoSelect){
+        if(filtroTipoSelect){
           const rolActual = (window.currentRole || '').toLowerCase();
-          const visible = ['administrador','superadmin'].includes(rolActual);
-          opcionPago.hidden = !visible;
-          if(!visible && filtroTipoSelect.value === 'pago'){
-            filtroTipoSelect.value = '';
+          const permitirPago = ['administrador','superadmin'].includes(rolActual);
+          let opcionPago = document.getElementById('filtro-tipo-pago');
+          if(permitirPago){
+            if(!opcionPago){
+              opcionPago = document.createElement('option');
+              opcionPago.value = 'pago';
+              opcionPago.id = 'filtro-tipo-pago';
+              opcionPago.textContent = 'PAGO';
+              filtroTipoSelect.appendChild(opcionPago);
+            } else {
+              opcionPago.disabled = false;
+              opcionPago.hidden = false;
+            }
+          } else if(opcionPago){
+            if(opcionPago.selected){
+              filtroTipoSelect.value = '';
+            }
+            opcionPago.remove();
           }
         }
         cargarBancosBilletera();
@@ -561,6 +573,8 @@
       const origen = (data.origen || '').toString().trim().toLowerCase();
       const referencia = (data.referencia || '').toString().trim().toUpperCase();
       const sorteoNombre = (data.sorteoNombre || '').toString().trim().toLowerCase();
+      const rolInterno = (data.rolInterno || data.rolinterno || '').toString().trim().toLowerCase();
+      const esRolEspecial = ['desarrolladores','desarrollador','agencia'].includes(rolInterno);
 
       if(['retiro','deposito','ajuste_colaborador'].includes(tipoCrudo)){
         return tipoCrudo;
@@ -573,6 +587,14 @@
       } else if(origen === 'premios_jugadores'){
         if(!tipo || tipo === 'pago'){
           tipo = 'premio';
+        }
+      }
+
+      if(esRolEspecial && tipo !== 'ajuste_colaborador'){
+        if(!tipo || tipo === 'premio' || tipo === 'pago' || !tipoCrudo){
+          if(!origen || origen === 'pagos_administracion' || sorteoNombre.includes('pago') || referencia === 'PAGO'){
+            tipo = 'pago';
+          }
         }
       }
 
