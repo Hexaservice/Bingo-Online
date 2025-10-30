@@ -3271,6 +3271,8 @@
   const CONDUCTO_DESTACADO_DURACION = 2000;
   const CONDUCTO_INSERCION_DURACION = 1000;
   const CONDUCTO_TRANSICION_DURACION = 1500;
+  const CONDUCTO_EMPUJE_DURACION = 2000;
+  const CONDUCTO_EMPUJE_RETARDO = 120;
   let cantoColorMap = new Map();
   let formasSinGanadoresAlertaClave = '';
   let celebracionModalActiva = false;
@@ -4134,6 +4136,63 @@
     };
   }
 
+  function animarEmpujePrevioConducto(sphereExcluida){
+    if(!vistaConductoActiva) return 0;
+    const esferas=Array.from(conductoSpheresMap.values())
+      .filter(item=>item && item!==sphereExcluida && item.element && Number.isInteger(item.destino) && item.destino>=0);
+    if(!esferas.length) return 0;
+    const ordenadas=esferas.sort((a,b)=>a.destino-b.destino);
+    let retrasoMaximo=0;
+    const restauradores=[];
+    ordenadas.forEach((sphere, idx)=>{
+      const posicionDestino=obtenerPosicionCeldaConducto(sphere.destino);
+      if(!posicionDestino) return;
+      const elemento=sphere.element;
+      const retraso=idx*CONDUCTO_EMPUJE_RETARDO;
+      if(retraso>retrasoMaximo) retrasoMaximo=retraso;
+      const moveAnterior=elemento.style.getPropertyValue('--conducto-move-duration');
+      const scaleAnterior=elemento.style.getPropertyValue('--conducto-scale-duration');
+      const delayAnterior=elemento.style.transitionDelay || '';
+      restauradores.push(()=>{
+        if(moveAnterior){
+          elemento.style.setProperty('--conducto-move-duration', moveAnterior);
+        }else{
+          elemento.style.removeProperty('--conducto-move-duration');
+        }
+        if(scaleAnterior){
+          elemento.style.setProperty('--conducto-scale-duration', scaleAnterior);
+        }else{
+          elemento.style.removeProperty('--conducto-scale-duration');
+        }
+        if(delayAnterior){
+          elemento.style.transitionDelay=delayAnterior;
+        }else{
+          elemento.style.removeProperty('transition-delay');
+        }
+      });
+      elemento.style.setProperty('--conducto-move-duration', `${CONDUCTO_EMPUJE_DURACION}ms`);
+      elemento.style.setProperty('--conducto-scale-duration', `${CONDUCTO_EMPUJE_DURACION}ms`);
+      elemento.style.transitionDelay=`${retraso}ms`;
+      requestAnimationFrame(()=>{
+        elemento.style.left=`${posicionDestino.left}px`;
+        elemento.style.top=`${posicionDestino.top}px`;
+      });
+    });
+    if(restauradores.length){
+      const tiempoRestauracion=CONDUCTO_EMPUJE_DURACION+retrasoMaximo+60;
+      setTimeout(()=>{
+        restauradores.forEach(fn=>{
+          try{
+            fn();
+          }catch(error){
+            console.error('Error restaurando animación del conducto', error);
+          }
+        });
+      }, tiempoRestauracion);
+    }
+    return CONDUCTO_EMPUJE_DURACION+retrasoMaximo;
+  }
+
   function programarAnimacionIngresoConducto(numero){
     if(!vistaConductoActiva) return;
     const sphere=conductoSpheresMap.get(numero);
@@ -4238,7 +4297,9 @@
       iniciarEmpuje();
     };
 
-    setTimeout(animarInsercionInicial, CONDUCTO_DESTACADO_DURACION);
+    const duracionEmpuje=animarEmpujePrevioConducto(sphere);
+    const esperaInsercion=Math.max(CONDUCTO_DESTACADO_DURACION, duracionEmpuje);
+    setTimeout(animarInsercionInicial, esperaInsercion);
   }
 
   function manejarInteraccionCantoGanador(numero){
