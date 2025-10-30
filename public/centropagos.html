@@ -2082,15 +2082,32 @@
         if(typeof fechaServidor !== 'function' || typeof horaServidor !== 'function'){
           await initServerTime();
         }
-        const tipoTransaccion = (enRegistro.tipotrans || 'premio').toString().toLowerCase();
-        const referencia = enRegistro.referencia
-          || (tipoTransaccion === 'pago' ? 'PAGO' : 'PREMIO');
-        const sorteoNombre = enRegistro.sorteoNombre
+        const origen = (enRegistro.origen || '').toString().toLowerCase();
+        let tipoTransaccion = (enRegistro.tipotrans || '').toString().toLowerCase();
+        if(origen === 'pagos_administracion' && tipoTransaccion !== 'ajuste_colaborador'){
+          tipoTransaccion = 'pago';
+        } else if(origen === 'premios_jugadores'){
+          if(!tipoTransaccion || tipoTransaccion === 'pago'){
+            tipoTransaccion = 'premio';
+          }
+        }
+        if(!tipoTransaccion){
+          tipoTransaccion = 'premio';
+        }
+        const referenciaBase = (enRegistro.referencia || '').toString().trim();
+        const referencia = referenciaBase
+          || (tipoTransaccion === 'pago'
+            ? 'PAGO'
+            : tipoTransaccion === 'ajuste_colaborador'
+              ? 'AJUSTE_MANUAL'
+              : 'PREMIO');
+        const sorteoNombre = (enRegistro.sorteoNombre
           || (tipoTransaccion === 'pago'
             ? 'Pago a colaborador'
-            : (enRegistro.referencia === 'ASIGNACION_MANUAL' ? 'Asignación manual' : ''));
+            : (referenciaBase === 'ASIGNACION_MANUAL' ? 'Asignación manual' : ''))).toString();
         await dbRef().collection('transacciones').add({
           tipotrans: tipoTransaccion,
+          origen,
           Monto: monto,
           estado: 'APROBADO',
           IDbilletera: enRegistro.billetera,
@@ -2120,7 +2137,7 @@
         const nuevosCartones = (Number(datos.CartonesGratis) || 0) + enRegistro.cartones;
         tx.set(billeteraRef, { creditos: nuevosCreditos, CartonesGratis: nuevosCartones }, { merge: true });
       });
-      await registrarTransaccionPremio(enRegistro);
+      await registrarTransaccionPremio({ ...enRegistro, origen: enRegistro.origen || 'premios_jugadores' });
     }
 
     async function acreditarPago(enRegistro){
@@ -2138,7 +2155,11 @@
         tx.set(billeteraRef, { creditos: nuevoSaldo }, { merge: true });
       });
       if(creditos > 0){
-        await registrarTransaccionPremio({ ...enRegistro, creditos, cartones: 0 });
+        const origenSeguro = enRegistro.origen
+          || ((enRegistro.tipotrans || '').toString().toLowerCase() === 'pago'
+            ? 'pagos_administracion'
+            : '');
+        await registrarTransaccionPremio({ ...enRegistro, creditos, cartones: 0, origen: origenSeguro });
       }
       return nuevoSaldo;
     }
@@ -2200,7 +2221,7 @@
               rolGestor: window.currentRole || ''
             });
           });
-          await acreditarPago({ ...registro, tipotrans: 'pago' });
+          await acreditarPago({ ...registro, tipotrans: 'pago', origen: 'pagos_administracion' });
         } catch (err) {
           console.error('Error aprobando pago', err);
           alert('Ocurrió un error al aprobar un pago. Revisa la consola para más detalles.');
@@ -2243,7 +2264,8 @@
             sorteoId: '',
             sorteoNombre: 'Pago a colaborador',
             referencia,
-            tipotrans: tipoTransaccion
+            tipotrans: tipoTransaccion,
+            origen: 'pagos_administracion'
           });
           const saldoSeguro = Number.isFinite(saldoActualizado)
             ? Number(saldoActualizado)

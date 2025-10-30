@@ -448,7 +448,7 @@
         const opcionPago = document.getElementById('filtro-tipo-pago');
         if(opcionPago && filtroTipoSelect){
           const rolActual = (window.currentRole || '').toLowerCase();
-          const visible = ['colaborador','administrador','superadmin'].includes(rolActual);
+          const visible = ['administrador','superadmin'].includes(rolActual);
           opcionPago.hidden = !visible;
           if(!visible && filtroTipoSelect.value === 'pago'){
             filtroTipoSelect.value = '';
@@ -556,6 +556,49 @@
       return `${h}:${min} ${ampm}`;
     }
 
+    function normalizarTipoTransaccion(data){
+      const tipoCrudo = (data.tipotrans || '').toString().trim().toLowerCase();
+      const origen = (data.origen || '').toString().trim().toLowerCase();
+      const referencia = (data.referencia || '').toString().trim().toUpperCase();
+      const sorteoNombre = (data.sorteoNombre || '').toString().trim().toLowerCase();
+
+      if(['retiro','deposito','ajuste_colaborador'].includes(tipoCrudo)){
+        return tipoCrudo;
+      }
+
+      let tipo = tipoCrudo;
+
+      if(origen === 'pagos_administracion' && tipo !== 'ajuste_colaborador'){
+        tipo = 'pago';
+      } else if(origen === 'premios_jugadores'){
+        if(!tipo || tipo === 'pago'){
+          tipo = 'premio';
+        }
+      }
+
+      if((!tipo || tipo === 'premio' || tipo === 'pago')){
+        if(referencia === 'PAGO' && tipo !== 'pago'){
+          tipo = 'pago';
+        } else if(referencia === 'PREMIO' && tipo !== 'premio'){
+          tipo = 'premio';
+        }
+      }
+
+      if(!tipo || (tipo !== 'pago' && tipo !== 'premio')){
+        if(sorteoNombre.includes('pago')){
+          tipo = 'pago';
+        } else if(sorteoNombre.includes('premio')){
+          tipo = 'premio';
+        }
+      }
+
+      if(!tipo){
+        tipo = 'premio';
+      }
+
+      return tipo;
+    }
+
     async function cargarTransacciones(){
       const user=auth.currentUser;
       const snap=await db.collection('transacciones').where('IDbilletera','==',user.email).get();
@@ -564,7 +607,8 @@
         const data=doc.data();
         data.fechasolicitud=formatearFecha(data.fechasolicitud);
         data.fechagestion=formatearFecha(data.fechagestion);
-        transacciones.push({id:doc.id,...data});
+        const tipoNormalizado = normalizarTipoTransaccion(data);
+        transacciones.push({id:doc.id,...data, tipotrans: tipoNormalizado});
       });
       transacciones.sort((a,b)=>{
         const da=parseFechaHora(a.fechagestion||a.fechasolicitud,a.horagestion||a.horasolicitud);
