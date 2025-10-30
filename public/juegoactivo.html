@@ -604,6 +604,7 @@
           transform: translate(-50%, -50%);
           --conducto-move-duration: 1.5s;
           --conducto-scale-duration: 0.8s;
+          will-change: left, top, transform;
           transition:
               left var(--conducto-move-duration, 1.5s) cubic-bezier(0.4, 0, 0.2, 1),
               top var(--conducto-move-duration, 1.5s) cubic-bezier(0.4, 0, 0.2, 1),
@@ -3271,8 +3272,8 @@
   const CONDUCTO_DESTACADO_DURACION = 2000;
   const CONDUCTO_INSERCION_DURACION = 1000;
   const CONDUCTO_TRANSICION_DURACION = 1500;
-  const CONDUCTO_EMPUJE_DURACION = 2000;
-  const CONDUCTO_EMPUJE_RETARDO = 120;
+  const CONDUCTO_EMPUJE_DURACION = 2800;
+  const CONDUCTO_EMPUJE_RETARDO = 180;
   let cantoColorMap = new Map();
   let formasSinGanadoresAlertaClave = '';
   let celebracionModalActiva = false;
@@ -4136,6 +4137,50 @@
     };
   }
 
+  function animarEmpujeVisualConducto(elemento, deltaX, deltaY, retraso){
+    if(!elemento || typeof elemento.animate!=='function') return;
+    const distancia=Math.hypot(deltaX || 0, deltaY || 0);
+    const duracion=Math.max(CONDUCTO_EMPUJE_DURACION, 400)+retraso;
+    const crearTransform=(offsetX, offsetY, escala)=>{
+      const ajustarCalc=(delta)=>{
+        if(!delta) return '-50%';
+        const valor=Number(delta.toFixed(2));
+        const signo=valor>=0?'+':'-';
+        return `calc(-50% ${signo} ${Math.abs(valor)}px)`;
+      };
+      const escalaClampeada=Math.max(0.85, Math.min(1.08, escala));
+      return `translate(${ajustarCalc(offsetX)}, ${ajustarCalc(offsetY)}) scale(${escalaClampeada})`;
+    };
+    const baseTransform=crearTransform(0, 0, 1);
+    const frames=[];
+    if(distancia<0.5){
+      frames.push(
+        {transform: baseTransform, offset: 0, easing: 'ease-out'},
+        {transform: crearTransform(0, 0, 1.06), offset: 0.45, easing: 'ease-in-out'},
+        {transform: baseTransform, offset: 1}
+      );
+    }else{
+      const direccionX=deltaX/distancia;
+      const direccionY=deltaY/distancia;
+      const retroceso=Math.min(20, distancia*0.28);
+      const avance=Math.min(16, distancia*0.22);
+      const amortiguacion=Math.min(8, distancia*0.12);
+      frames.push(
+        {transform: baseTransform, offset: 0, easing: 'ease-out'},
+        {transform: crearTransform(-direccionX*retroceso, -direccionY*retroceso, 0.94), offset: 0.32, easing: 'ease-in'},
+        {transform: crearTransform(direccionX*avance, direccionY*avance, 1.04), offset: 0.7, easing: 'ease-out'},
+        {transform: crearTransform(direccionX*amortiguacion*0.4, direccionY*amortiguacion*0.4, 1), offset: 0.88, easing: 'ease-in-out'},
+        {transform: baseTransform, offset: 1}
+      );
+    }
+    elemento.animate(frames, {
+      duration: duracion,
+      delay: retraso,
+      easing: 'linear',
+      fill: 'both'
+    });
+  }
+
   function animarEmpujePrevioConducto(sphereExcluida){
     if(!vistaConductoActiva) return 0;
     const esferas=Array.from(conductoSpheresMap.values())
@@ -4153,6 +4198,8 @@
       const moveAnterior=elemento.style.getPropertyValue('--conducto-move-duration');
       const scaleAnterior=elemento.style.getPropertyValue('--conducto-scale-duration');
       const delayAnterior=elemento.style.transitionDelay || '';
+      const posicionPrevLeft=parseFloat(elemento.style.left);
+      const posicionPrevTop=parseFloat(elemento.style.top);
       restauradores.push(()=>{
         if(moveAnterior){
           elemento.style.setProperty('--conducto-move-duration', moveAnterior);
@@ -4174,8 +4221,13 @@
       elemento.style.setProperty('--conducto-scale-duration', `${CONDUCTO_EMPUJE_DURACION}ms`);
       elemento.style.transitionDelay=`${retraso}ms`;
       requestAnimationFrame(()=>{
+        const destinoLeft=posicionDestino.left;
+        const destinoTop=posicionDestino.top;
+        const deltaX=destinoLeft-(Number.isFinite(posicionPrevLeft)?posicionPrevLeft:destinoLeft);
+        const deltaY=destinoTop-(Number.isFinite(posicionPrevTop)?posicionPrevTop:destinoTop);
         elemento.style.left=`${posicionDestino.left}px`;
         elemento.style.top=`${posicionDestino.top}px`;
+        animarEmpujeVisualConducto(elemento, deltaX, deltaY, retraso);
       });
     });
     if(restauradores.length){
