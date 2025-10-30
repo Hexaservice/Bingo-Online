@@ -440,32 +440,43 @@
       });
     });
 
+    function actualizarOpcionPagoFiltro(rol){
+      const filtroTipoSelect = document.getElementById('filtro-tipo');
+      if(!filtroTipoSelect) return;
+      const rolNormalizado = (rol || '').toLowerCase();
+      const permitirPago = ['administrador','superadmin'].includes(rolNormalizado);
+      let opcionPago = document.getElementById('filtro-tipo-pago');
+      if(permitirPago){
+        if(!opcionPago){
+          opcionPago = document.createElement('option');
+          opcionPago.value = 'pago';
+          opcionPago.id = 'filtro-tipo-pago';
+          opcionPago.textContent = 'PAGO';
+          filtroTipoSelect.appendChild(opcionPago);
+        }else{
+          opcionPago.disabled = false;
+          opcionPago.hidden = false;
+        }
+      }else if(opcionPago){
+        if(opcionPago.selected){
+          filtroTipoSelect.value = '';
+        }
+        opcionPago.remove();
+      }
+    }
+
     initFirebase().then(() => {
       auth.onAuthStateChanged(async user => {
         if(!user) return;
-        const filtroTipoSelect = document.getElementById('filtro-tipo');
-        if(filtroTipoSelect){
-          const rolActual = (window.currentRole || '').toLowerCase();
-          const permitirPago = ['administrador','superadmin'].includes(rolActual);
-          let opcionPago = document.getElementById('filtro-tipo-pago');
-          if(permitirPago){
-            if(!opcionPago){
-              opcionPago = document.createElement('option');
-              opcionPago.value = 'pago';
-              opcionPago.id = 'filtro-tipo-pago';
-              opcionPago.textContent = 'PAGO';
-              filtroTipoSelect.appendChild(opcionPago);
-            } else {
-              opcionPago.disabled = false;
-              opcionPago.hidden = false;
-            }
-          } else if(opcionPago){
-            if(opcionPago.selected){
-              filtroTipoSelect.value = '';
-            }
-            opcionPago.remove();
+        let rolActual = window.currentRole || '';
+        if(!rolActual){
+          try{
+            rolActual = await getUserRole(user);
+          }catch(err){
+            console.error('No se pudo determinar el rol del usuario para el filtro de transacciones', err);
           }
         }
+        actualizarOpcionPagoFiltro(rolActual);
         cargarBancosBilletera();
         cargarBancosBingo();
         const paramDoc = await db.collection('Variablesglobales').doc('Parametros').get();
