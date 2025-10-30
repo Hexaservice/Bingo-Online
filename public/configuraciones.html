@@ -195,12 +195,6 @@
       gap: 10px;
       color: #4a148c;
     }
-    .asignacion-header.header-azul {
-      color: #1d4ed8;
-    }
-    .asignacion-header.header-azul h3 {
-      color: inherit;
-    }
     .asignacion-header h3 {
       margin: 0;
       font-size: 1.2rem;
@@ -446,6 +440,48 @@
       font-family: Calibri, Arial, sans-serif;
       text-align: left;
     }
+    .whatsapp-number {
+      margin-bottom: 12px;
+    }
+    .whatsapp-number label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #6a1b9a;
+    }
+    .whatsapp-number-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .whatsapp-number-row input {
+      flex: 1 1 220px;
+      min-width: 180px;
+      border-radius: 8px;
+      border: 1px solid #7c3aed;
+      padding: 6px 8px;
+      box-sizing: border-box;
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 0.85rem;
+    }
+    .whatsapp-number-guardar {
+      background: #7c3aed;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 16px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: filter 0.2s ease;
+    }
+    .whatsapp-number-guardar:hover,
+    .whatsapp-number-guardar:focus {
+      filter: brightness(1.05);
+      outline: none;
+    }
     .whatsapp-section label {
       display: block;
       margin-bottom: 6px;
@@ -536,8 +572,8 @@
   </div>
   <h2>Configuraciones</h2>
   <section id="gestionar-section" class="panel-section">
-    <div id="gestionar-header" class="asignacion-header header-azul">
-      <h3>Gestión de bancos</h3>
+    <div id="gestionar-header" class="asignacion-header">
+      <h3>GESTIÓN DE BANCOS</h3>
       <label class="switch">
         <input type="checkbox" id="toggle-bancos">
         <span class="slider"></span>
@@ -597,7 +633,7 @@
   </section>
   <section class="asignacion-section" id="asignacion-usuarios-section">
     <div class="asignacion-header">
-      <h3>ASIGNACION USUARIOS</h3>
+      <h3>ASIGNACIÓN RECURSOS USUARIOS</h3>
       <label class="switch">
         <input type="checkbox" id="toggle-asignacion">
         <span class="slider"></span>
@@ -644,6 +680,13 @@
     </div>
   </section>
   <section class="whatsapp-section">
+    <div class="whatsapp-number">
+      <label id="numero-whatsapp-label" for="numero-whatsapp">Número WhatsApp para la aplicación</label>
+      <div class="whatsapp-number-row">
+        <input type="text" id="numero-whatsapp" placeholder="+58 000-0000000" autocomplete="tel" />
+        <button type="button" id="guardar-numero-whatsapp" class="whatsapp-number-guardar">Guardar</button>
+      </div>
+    </div>
     <label for="link-whatsapp">Link Grupo WhatsApp</label>
     <textarea id="link-whatsapp" placeholder="https://chat.whatsapp.com/..." spellcheck="false"></textarea>
     <div class="whatsapp-actions">
@@ -801,22 +844,54 @@
       cont.style.display=toggle.checked?'block':'none';
       if(toggle.checked) cargarDatos();
     });
+    const campoNumeroWhatsapp=document.getElementById('numero-whatsapp');
+    const botonGuardarNumeroWhatsapp=document.getElementById('guardar-numero-whatsapp');
+    const etiquetaNumeroWhatsapp=document.getElementById('numero-whatsapp-label');
     const campoLinkWhatsapp=document.getElementById('link-whatsapp');
     const botonGuardarLink=document.getElementById('guardar-link-whatsapp');
 
-    async function cargarLinkWhatsapp(){
+    async function cargarParametrosWhatsapp(){
       try {
         const doc=await db.collection('Variablesglobales').doc('Parametros').get();
         if(doc.exists){
           const data=doc.data()||{};
+          const nombreApp=data.Aplicacion||data.aplicacion||'';
+          if(nombreApp){
+            etiquetaNumeroWhatsapp.textContent=`Número WhatsApp para ${nombreApp}`;
+          }
+          if(data.numeroWhatsapp){
+            campoNumeroWhatsapp.value=data.numeroWhatsapp;
+          }
           if(data.linkwhatsapp){
             campoLinkWhatsapp.value=data.linkwhatsapp;
           }
         }
       } catch(err){
-        console.error('No se pudo obtener el link de WhatsApp',err);
+        console.error('No se pudieron obtener los datos de WhatsApp',err);
       }
     }
+
+    botonGuardarNumeroWhatsapp.addEventListener('click',async ()=>{
+      const valor=campoNumeroWhatsapp.value.trim();
+      if(!valor){
+        alert('El número de WhatsApp no puede estar vacío');
+        return;
+      }
+      const patronNumero=/^[+]?[-\d\s()]{6,}$/;
+      if(!patronNumero.test(valor)){
+        alert('Ingresa un número de WhatsApp válido.');
+        return;
+      }
+      const confirmar=await confirm('¿Deseas guardar este número de WhatsApp para la aplicación?');
+      if(!confirmar) return;
+      try {
+        await db.collection('Variablesglobales').doc('Parametros').set({numeroWhatsapp:valor},{merge:true});
+        alert('Número de WhatsApp guardado correctamente.');
+      } catch(err){
+        console.error('No se pudo guardar el número de WhatsApp',err);
+        alert('Ocurrió un error al guardar el número de WhatsApp. Inténtalo nuevamente.');
+      }
+    });
 
     botonGuardarLink.addEventListener('click',async ()=>{
       const valor=campoLinkWhatsapp.value.trim();
@@ -834,7 +909,7 @@
         alert('Ocurrió un error al guardar el link de WhatsApp. Inténtalo nuevamente.');
       }
     });
-    cargarLinkWhatsapp();
+    cargarParametrosWhatsapp();
     // ---- Sección de asignación de usuarios ----
     const asignacionFiltros={texto:'',rol:''};
     const asignacionUsuarios=[];
