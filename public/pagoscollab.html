@@ -108,6 +108,98 @@
     }
     input:checked + .slider { background-color: #4caf50; }
     input:checked + .slider:before { transform: translateX(18px); }
+    .tabs-colab {
+      margin: 15px auto;
+      max-width: 520px;
+      background: rgba(255,255,255,0.65);
+      border-radius: 12px;
+      padding: 12px 14px 18px;
+    }
+    .tabs-colab .tab-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .tabs-colab .tab-buttons button {
+      flex: 1;
+      min-width: 140px;
+      padding: 10px 0;
+      font-family: 'Bangers', cursive;
+      font-size: 1.1rem;
+      border: 1px solid #333;
+      border-bottom: none;
+      border-radius: 10px 10px 0 0;
+      color: white;
+      cursor: pointer;
+      text-shadow: 2px 2px 4px #000;
+      transition: filter 0.3s, transform 0.2s;
+    }
+    .tabs-colab .tab-buttons button[data-tab="depositar-colab"] {
+      background: #8d8d8d;
+      cursor: not-allowed;
+      filter: grayscale(0.4);
+    }
+    .tabs-colab .tab-buttons button[data-tab="retirar-colab"] {
+      background: #cc0000;
+    }
+    .tabs-colab .tab-buttons button.active {
+      filter: brightness(1.15);
+      transform: translateY(-2px);
+    }
+    .tabs-colab .tab-content {
+      display: none;
+      margin-top: 0;
+      border: 1px solid #333;
+      border-radius: 0 10px 10px 10px;
+      padding: 12px 10px 16px;
+      background: rgba(255,255,255,0.9);
+    }
+    .tabs-colab .tab-content.active { display: block; }
+    .tabs-colab .tab-content.disabled-content {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+    .tabs-colab select,
+    .tabs-colab input,
+    .tabs-colab textarea {
+      font-size: 1rem;
+      padding: 6px;
+      margin: 6px auto;
+      width: 260px;
+      box-sizing: border-box;
+      text-align: center;
+    }
+    .tabs-colab select[disabled],
+    .tabs-colab input[disabled],
+    .tabs-colab textarea[disabled] {
+      background: #d7d7d7;
+      color: #555;
+      border: 1px solid #b0b0b0;
+    }
+    .retiro-info {
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 0.95rem;
+      color: #0b4dda;
+      margin: 6px 0 10px;
+    }
+    .retiro-resumen {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 10px;
+      font-weight: bold;
+      color: #1b5e20;
+    }
+    .retiro-resumen span {
+      background: rgba(27, 94, 32, 0.1);
+      padding: 6px 12px;
+      border-radius: 6px;
+      width: 100%;
+      max-width: 320px;
+    }
+    .retiro-resumen span strong { color: #0d47a1; }
     #datos-content {
       display: none;
       margin-top: 10px;
@@ -271,6 +363,33 @@
     </div>
   </section>
 
+  <div class="tabs-colab">
+    <div class="tab-buttons">
+      <button type="button" data-tab="depositar-colab" class="disabled-tab">DEPÓSITOS</button>
+      <button type="button" data-tab="retirar-colab" class="active">RETIROS</button>
+    </div>
+    <div id="depositar-colab" class="tab-content disabled-content">
+      <p class="retiro-info" style="color:#555;">Los colaboradores no pueden solicitar recargas desde esta sección.</p>
+      <select id="banco-deposito-colab" disabled>
+        <option value="">Banco donde transferiste</option>
+      </select>
+      <input type="number" id="monto-deposito-colab" placeholder="Monto" disabled>
+      <input type="text" id="referencia-deposito-colab" placeholder="Referencia" disabled>
+      <textarea id="comentario-deposito-colab" placeholder="Comentario (opcional)" disabled></textarea>
+      <button type="button" id="btn-depositar-colab" disabled style="background:#9e9e9e;border:1px solid #777;color:#fff;cursor:not-allowed;">Solicitar Depósito</button>
+    </div>
+    <div id="retirar-colab" class="tab-content active">
+      <p class="retiro-info">Los pagos aprobados se acreditarán en los datos bancarios registrados.</p>
+      <div class="retiro-resumen">
+        <span>Banco registrado: <strong id="retiro-banco-registrado">-</strong></span>
+        <span>N° de cuenta: <strong id="retiro-cuenta-registrada">-</strong></span>
+        <span>Cédula: <strong id="retiro-cedula-registrada">-</strong></span>
+        <span>Pago móvil: <strong id="retiro-pm-registrado">-</strong></span>
+      </div>
+      <p class="retiro-info" style="color:#1b5e20;">Verifica el estado de tus transferencias en la sección "Mis Pagos".</p>
+    </div>
+  </div>
+
   <section id="pagos-section">
     <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
       <h3>Mis Pagos</h3>
@@ -365,6 +484,29 @@
       const valorEl = document.getElementById('creditos-valor');
       valorEl.textContent = valor.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
       valorEl.classList.toggle('rojo', valor <= 0);
+    }
+
+    function actualizarResumenRetiro(){
+      const bancoEl = document.getElementById('retiro-banco-registrado');
+      if(!bancoEl) return;
+      const cuentaEl = document.getElementById('retiro-cuenta-registrada');
+      const cedulaEl = document.getElementById('retiro-cedula-registrada');
+      const pmEl = document.getElementById('retiro-pm-registrado');
+      const mostrar = (valor, fallback = 'Sin registrar') => {
+        const limpio = (valor || '').toString().trim();
+        return limpio ? limpio : fallback;
+      };
+      bancoEl.textContent = mostrar(billeteraActual.banco);
+      const cuentaOriginal = (billeteraActual.cuenta || '').toString().trim();
+      if(cuentaOriginal){
+        cuentaEl.textContent = cuentaOriginal.length > 8
+          ? `${cuentaOriginal.slice(0, 4)} **** ${cuentaOriginal.slice(-4)}`
+          : cuentaOriginal;
+      } else {
+        cuentaEl.textContent = 'Sin registrar';
+      }
+      cedulaEl.textContent = mostrar(billeteraActual.cedula);
+      pmEl.textContent = mostrar(billeteraActual.pagomovil);
     }
 
     function cargarBancosColaborador(){
@@ -490,6 +632,7 @@
       try {
         await db.collection('Billetera').doc(user.email).set(data, { merge: true });
         billeteraActual = { ...billeteraActual, ...data };
+        actualizarResumenRetiro();
         alert('Datos guardados');
       } catch (err) {
         console.error('No se pudo guardar la información bancaria', err);
@@ -521,6 +664,32 @@
       togglePagos.addEventListener('change', actualizarPagos);
       actualizarDatos();
       actualizarPagos();
+
+      const tabsColab = document.querySelector('.tabs-colab');
+      if(tabsColab){
+        const tabButtons = tabsColab.querySelectorAll('.tab-buttons button');
+        const tabContents = tabsColab.querySelectorAll('.tab-content');
+        const activarContenido = boton => {
+          tabButtons.forEach(b => b.classList.remove('active'));
+          tabContents.forEach(c => c.classList.remove('active'));
+          boton.classList.add('active');
+          const destino = document.getElementById(boton.dataset.tab);
+          if(destino){
+            destino.classList.add('active');
+          }
+        };
+        tabButtons.forEach(btn => {
+          btn.addEventListener('click', () => activarContenido(btn));
+        });
+        const activoInicial = tabsColab.querySelector('.tab-buttons button.active');
+        if(activoInicial){
+          activarContenido(activoInicial);
+        } else if(tabButtons.length){
+          activarContenido(tabButtons[0]);
+        }
+      }
+
+      actualizarResumenRetiro();
     });
 
     initFirebase().then(() => {
@@ -548,13 +717,16 @@
               const radio = document.querySelector(`input[name='tipo-cuenta'][value='${billeteraActual.tipoCuenta}']`);
               if(radio) radio.checked = true;
             }
+            actualizarResumenRetiro();
           } else {
             await billeteraRef.set({ creditos: 0, CartonesGratis: 0 });
             actualizarCreditos(0);
+            actualizarResumenRetiro();
           }
         } catch (err) {
           console.error('No se pudo obtener la billetera del colaborador', err);
           actualizarCreditos(0);
+          actualizarResumenRetiro();
         }
         cargarBancosColaborador();
         cargarPagosColaborador();
