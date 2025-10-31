@@ -3281,6 +3281,7 @@
   const CONDUCTO_DESTACADO_DURACION = 2000;
   const CONDUCTO_INSERCION_DURACION = 1000;
   const CONDUCTO_TRANSICION_DURACION = 1500;
+  const CONDUCTO_NORMALIZACION_DURACION = 600;
   const CONDUCTO_EMPUJE_DURACION = 2800;
   const CONDUCTO_EMPUJE_RETARDO = 180;
   let cantoColorMap = new Map();
@@ -4146,42 +4147,14 @@
     };
   }
 
-  function animarEmpujeVisualConducto(elemento, deltaX, deltaY, retraso){
+  function animarEmpujeVisualConducto(elemento, _deltaX, _deltaY, retraso){
     if(!elemento || typeof elemento.animate!=='function') return;
-    const distancia=Math.hypot(deltaX || 0, deltaY || 0);
-    const duracion=Math.max(CONDUCTO_EMPUJE_DURACION, 400)+retraso;
-    const crearTransform=(offsetX, offsetY, escala)=>{
-      const ajustarCalc=(delta)=>{
-        if(!delta) return '-50%';
-        const valor=Number(delta.toFixed(2));
-        const signo=valor>=0?'+':'-';
-        return `calc(-50% ${signo} ${Math.abs(valor)}px)`;
-      };
-      const escalaClampeada=Math.max(0.85, Math.min(1.08, escala));
-      return `translate(${ajustarCalc(offsetX)}, ${ajustarCalc(offsetY)}) scale(${escalaClampeada})`;
-    };
-    const baseTransform=crearTransform(0, 0, 1);
-    const frames=[];
-    if(distancia<0.5){
-      frames.push(
-        {transform: baseTransform, offset: 0, easing: 'ease-out'},
-        {transform: crearTransform(0, 0, 1.06), offset: 0.45, easing: 'ease-in-out'},
-        {transform: baseTransform, offset: 1}
-      );
-    }else{
-      const direccionX=deltaX/distancia;
-      const direccionY=deltaY/distancia;
-      const retroceso=Math.min(20, distancia*0.28);
-      const avance=Math.min(16, distancia*0.22);
-      const amortiguacion=Math.min(8, distancia*0.12);
-      frames.push(
-        {transform: baseTransform, offset: 0, easing: 'ease-out'},
-        {transform: crearTransform(-direccionX*retroceso, -direccionY*retroceso, 0.94), offset: 0.32, easing: 'ease-in'},
-        {transform: crearTransform(direccionX*avance, direccionY*avance, 1.04), offset: 0.7, easing: 'ease-out'},
-        {transform: crearTransform(direccionX*amortiguacion*0.4, direccionY*amortiguacion*0.4, 1), offset: 0.88, easing: 'ease-in-out'},
-        {transform: baseTransform, offset: 1}
-      );
-    }
+    const duracion=Math.max(CONDUCTO_EMPUJE_DURACION, 400);
+    const frames=[
+      {transform: 'translate(-50%, -50%) scale(1)', offset: 0, easing: 'ease-in-out'},
+      {transform: 'translate(-50%, -50%) scale(1.08)', offset: 0.45, easing: 'ease-in-out'},
+      {transform: 'translate(-50%, -50%) scale(1)', offset: 1, easing: 'ease-in-out'}
+    ];
     elemento.animate(frames, {
       duration: duracion,
       delay: retraso,
@@ -4195,20 +4168,12 @@
     const esferas=Array.from(conductoSpheresMap.values())
       .filter(item=>item && item!==sphereExcluida && item.element && Number.isInteger(item.destino) && item.destino>=0);
     if(!esferas.length) return 0;
-    const ordenadas=esferas.sort((a,b)=>a.destino-b.destino);
-    let retrasoMaximo=0;
     const restauradores=[];
-    ordenadas.forEach((sphere, idx)=>{
-      const posicionDestino=obtenerPosicionCeldaConducto(sphere.destino);
-      if(!posicionDestino) return;
+    esferas.forEach(sphere=>{
       const elemento=sphere.element;
-      const retraso=idx*CONDUCTO_EMPUJE_RETARDO;
-      if(retraso>retrasoMaximo) retrasoMaximo=retraso;
       const moveAnterior=elemento.style.getPropertyValue('--conducto-move-duration');
       const scaleAnterior=elemento.style.getPropertyValue('--conducto-scale-duration');
       const delayAnterior=elemento.style.transitionDelay || '';
-      const posicionPrevLeft=parseFloat(elemento.style.left);
-      const posicionPrevTop=parseFloat(elemento.style.top);
       restauradores.push(()=>{
         if(moveAnterior){
           elemento.style.setProperty('--conducto-move-duration', moveAnterior);
@@ -4228,19 +4193,13 @@
       });
       elemento.style.setProperty('--conducto-move-duration', `${CONDUCTO_EMPUJE_DURACION}ms`);
       elemento.style.setProperty('--conducto-scale-duration', `${CONDUCTO_EMPUJE_DURACION}ms`);
-      elemento.style.transitionDelay=`${retraso}ms`;
+      elemento.style.transitionDelay='0ms';
       requestAnimationFrame(()=>{
-        const destinoLeft=posicionDestino.left;
-        const destinoTop=posicionDestino.top;
-        const deltaX=destinoLeft-(Number.isFinite(posicionPrevLeft)?posicionPrevLeft:destinoLeft);
-        const deltaY=destinoTop-(Number.isFinite(posicionPrevTop)?posicionPrevTop:destinoTop);
-        elemento.style.left=`${posicionDestino.left}px`;
-        elemento.style.top=`${posicionDestino.top}px`;
-        animarEmpujeVisualConducto(elemento, deltaX, deltaY, retraso);
+        animarEmpujeVisualConducto(elemento, 0, 0, 0);
       });
     });
     if(restauradores.length){
-      const tiempoRestauracion=CONDUCTO_EMPUJE_DURACION+retrasoMaximo+60;
+      const tiempoRestauracion=CONDUCTO_EMPUJE_DURACION+60;
       setTimeout(()=>{
         restauradores.forEach(fn=>{
           try{
@@ -4251,7 +4210,7 @@
         });
       }, tiempoRestauracion);
     }
-    return CONDUCTO_EMPUJE_DURACION+retrasoMaximo;
+    return CONDUCTO_EMPUJE_DURACION;
   }
 
   function programarAnimacionIngresoConducto(numero){
@@ -4338,28 +4297,45 @@
     };
 
     const animarInsercionInicial=()=>{
-      const primeraPosicion=obtenerPosicionCeldaConducto(0);
-      if(primeraPosicion){
-        elemento.style.setProperty('--conducto-move-duration', `${CONDUCTO_INSERCION_DURACION}ms`);
-        elemento.style.setProperty('--conducto-scale-duration', `${CONDUCTO_INSERCION_DURACION}ms`);
+      const normalizarEnCentro=()=>{
+        elemento.style.setProperty('--conducto-scale-duration', `${CONDUCTO_NORMALIZACION_DURACION}ms`);
         requestAnimationFrame(()=>{
           elemento.classList.remove('conducto-sphere--ingreso');
-          elemento.style.left=`${primeraPosicion.left}px`;
-          elemento.style.top=`${primeraPosicion.top}px`;
+          elemento.style.left=`${centro.left}px`;
+          elemento.style.top=`${centro.top}px`;
         });
+      };
+
+      const moverAlConducto=()=>{
+        elemento.style.setProperty('--conducto-move-duration', `${CONDUCTO_INSERCION_DURACION}ms`);
+        elemento.style.setProperty('--conducto-scale-duration', `${CONDUCTO_INSERCION_DURACION}ms`);
+        const duracionEmpuje=animarEmpujePrevioConducto(sphere);
+        iniciarEmpuje();
+        const esperaRestauracion=Math.max(CONDUCTO_INSERCION_DURACION, duracionEmpuje);
         setTimeout(()=>{
           restaurarDuraciones();
+        }, esperaRestauracion);
+      };
+
+      normalizarEnCentro();
+      setTimeout(()=>{
+        const primeraPosicion=obtenerPosicionCeldaConducto(0);
+        if(!primeraPosicion){
+          elemento.style.setProperty('--conducto-move-duration', `${CONDUCTO_INSERCION_DURACION}ms`);
+          elemento.style.setProperty('--conducto-scale-duration', `${CONDUCTO_INSERCION_DURACION}ms`);
+          const duracionEmergencia=animarEmpujePrevioConducto(sphere);
           iniciarEmpuje();
-        }, CONDUCTO_INSERCION_DURACION);
-        return;
-      }
-      elemento.classList.remove('conducto-sphere--ingreso');
-      restaurarDuraciones();
-      iniciarEmpuje();
+          const esperaRestauracion=Math.max(CONDUCTO_INSERCION_DURACION, duracionEmergencia);
+          setTimeout(()=>{
+            restaurarDuraciones();
+          }, esperaRestauracion);
+          return;
+        }
+        moverAlConducto();
+      }, CONDUCTO_NORMALIZACION_DURACION);
     };
 
-    const duracionEmpuje=animarEmpujePrevioConducto(sphere);
-    const esperaInsercion=Math.max(CONDUCTO_DESTACADO_DURACION, duracionEmpuje);
+    const esperaInsercion=CONDUCTO_DESTACADO_DURACION;
     setTimeout(animarInsercionInicial, esperaInsercion);
   }
 
