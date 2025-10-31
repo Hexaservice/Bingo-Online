@@ -584,6 +584,7 @@
           --conducto-esfera-base: clamp(calc(var(--conducto-cell-size-real) * 0.6), 32px, calc(var(--conducto-cell-size-real) * 0.85));
           --conducto-esfera-font-base: clamp(0.72rem, 2.6vw, 1rem);
           --conducto-esfera-size: min(var(--conducto-esfera-base), var(--conducto-cell-size-real));
+          --conducto-scale-factor: 1;
           position: absolute;
           inline-size: var(--conducto-esfera-size);
           block-size: auto;
@@ -601,18 +602,18 @@
           color: #0b0b0f;
           background: var(--conducto-esfera-bg, radial-gradient(circle at 30% 30%, #ffffff 0%, #e2e5ec 55%, #bec3ce 100%));
           box-shadow: 0 10px 22px rgba(0,0,0,0.28), 0 0 6px rgba(0,0,0,0.45);
-          transform: translate(-50%, -50%);
+          transform: translate(-50%, -50%) scale(var(--conducto-scale-factor));
           --conducto-move-duration: 1.5s;
           --conducto-scale-duration: 0.8s;
           will-change: left, top, transform;
           transition:
-              left var(--conducto-move-duration, 1.5s) cubic-bezier(0.4, 0, 0.2, 1),
-              top var(--conducto-move-duration, 1.5s) cubic-bezier(0.4, 0, 0.2, 1),
+              left var(--conducto-move-duration, 1.5s) cubic-bezier(0.25, 0.8, 0.25, 1),
+              top var(--conducto-move-duration, 1.5s) cubic-bezier(0.25, 0.8, 0.25, 1),
               opacity 0.35s ease,
-              transform var(--conducto-scale-duration, 0.8s) ease,
-              box-shadow var(--conducto-scale-duration, 0.8s) ease,
-              width var(--conducto-scale-duration, 0.8s) ease,
-              height var(--conducto-scale-duration, 0.8s) ease;
+              transform var(--conducto-scale-duration, 0.8s) cubic-bezier(0.25, 0.8, 0.25, 1),
+              box-shadow var(--conducto-scale-duration, 0.8s) cubic-bezier(0.25, 0.8, 0.25, 1),
+              width var(--conducto-scale-duration, 0.8s) cubic-bezier(0.25, 0.8, 0.25, 1),
+              height var(--conducto-scale-duration, 0.8s) cubic-bezier(0.25, 0.8, 0.25, 1);
           opacity: 0;
           letter-spacing: 0.4px;
           pointer-events: none;
@@ -646,7 +647,7 @@
           opacity: 1;
       }
       .conducto-sphere--pre {
-          transform: translate(-50%, -50%) scale(1.32);
+          --conducto-scale-factor: 1.32;
           opacity: 0;
       }
       .conducto-sphere--ganador {
@@ -682,16 +683,17 @@
           outline-offset: 4px;
       }
       .conducto-sphere--ingreso {
-          --conducto-esfera-ingreso-size: min(calc(var(--conducto-esfera-base) * 1.35), var(--conducto-cell-size-real));
+          --conducto-esfera-ingreso-size: min(calc(var(--conducto-esfera-base) * 1.6), calc(var(--conducto-cell-size-real) * 1.2));
           inline-size: var(--conducto-esfera-ingreso-size);
           block-size: auto;
           width: var(--conducto-esfera-ingreso-size);
           height: auto;
-          font-size: calc(var(--conducto-esfera-font-base) * 2);
+          font-size: calc(var(--conducto-esfera-font-base) * 2.15);
           border-radius: 50%;
           box-shadow: 0 14px 32px rgba(0,0,0,0.28), 0 0 18px rgba(255,255,255,0.85);
           z-index: 6;
           pointer-events: none;
+          --conducto-scale-factor: var(--conducto-ingreso-scale, 1.7);
       }
       .conducto-sphere--ingreso::after {
           inset: 12% 12%;
@@ -3278,12 +3280,12 @@
   let conductoAnimacionEntradaActiva = false;
   let conductoAnimacionBloqueada = false;
   let conductoActualizacionProgramada = false;
-  const CONDUCTO_DESTACADO_DURACION = 2000;
-  const CONDUCTO_INSERCION_DURACION = 1000;
-  const CONDUCTO_TRANSICION_DURACION = 1500;
-  const CONDUCTO_NORMALIZACION_DURACION = 600;
-  const CONDUCTO_EMPUJE_DURACION = 2800;
-  const CONDUCTO_EMPUJE_RETARDO = 180;
+  const CONDUCTO_DESTACADO_DURACION = 2200;
+  const CONDUCTO_INSERCION_DURACION = 1400;
+  const CONDUCTO_TRANSICION_DURACION = 2000;
+  const CONDUCTO_NORMALIZACION_DURACION = 900;
+  const CONDUCTO_EMPUJE_DURACION = 3600;
+  const CONDUCTO_EMPUJE_RETARDO = 220;
   let cantoColorMap = new Map();
   let formasSinGanadoresAlertaClave = '';
   let celebracionModalActiva = false;
@@ -4149,16 +4151,29 @@
 
   function animarEmpujeVisualConducto(elemento, _deltaX, _deltaY, retraso){
     if(!elemento || typeof elemento.animate!=='function') return;
-    const duracion=Math.max(CONDUCTO_EMPUJE_DURACION, 400);
+    const duracion=Math.max(CONDUCTO_EMPUJE_DURACION, 600);
+    let escalaBase=1;
+    try{
+      const estilos=window.getComputedStyle(elemento);
+      let escala=Number.parseFloat(estilos.getPropertyValue('--conducto-scale-factor'));
+      if(!Number.isFinite(escala) || escala<=0){
+        escala=Number.parseFloat(estilos.getPropertyValue('--conducto-ingreso-scale'));
+      }
+      if(Number.isFinite(escala) && escala>0){
+        escalaBase=escala;
+      }
+    }catch(_error){
+      escalaBase=1;
+    }
     const frames=[
-      {transform: 'translate(-50%, -50%) scale(1)', offset: 0, easing: 'ease-in-out'},
-      {transform: 'translate(-50%, -50%) scale(1.08)', offset: 0.45, easing: 'ease-in-out'},
-      {transform: 'translate(-50%, -50%) scale(1)', offset: 1, easing: 'ease-in-out'}
+      {transform: `translate(-50%, -50%) scale(${escalaBase})`, offset: 0, easing: 'ease-in-out'},
+      {transform: `translate(-50%, -50%) scale(${escalaBase * 1.08})`, offset: 0.52, easing: 'ease-in-out'},
+      {transform: `translate(-50%, -50%) scale(${escalaBase})`, offset: 1, easing: 'ease-in-out'}
     ];
     elemento.animate(frames, {
       duration: duracion,
       delay: retraso,
-      easing: 'linear',
+      easing: 'cubic-bezier(0.25, 0.8, 0.25, 1)',
       fill: 'both'
     });
   }
@@ -4273,6 +4288,7 @@
     elemento.classList.add('activa');
     elemento.classList.add('conducto-sphere--ingreso');
     elemento.classList.remove('conducto-sphere--pre');
+    elemento.style.setProperty('--conducto-ingreso-scale', '1.85');
     elemento.style.opacity='1';
     void elemento.offsetWidth;
     elemento.style.transition=transicionAnterior || '';
@@ -4302,6 +4318,7 @@
       }else{
         elemento.style.removeProperty('--conducto-scale-duration');
       }
+      elemento.style.removeProperty('--conducto-ingreso-scale');
       if(sphere.ingresando){
         sphere.ingresando=false;
       }
@@ -4329,6 +4346,7 @@
         requestAnimationFrame(()=>{
           elemento.style.left=`${centro.left}px`;
           elemento.style.top=`${centro.top}px`;
+          elemento.style.setProperty('--conducto-ingreso-scale', '1.85');
         });
       };
 
@@ -4336,6 +4354,9 @@
         prepararDestinoFinal();
         elemento.style.setProperty('--conducto-move-duration', `${CONDUCTO_INSERCION_DURACION}ms`);
         elemento.style.setProperty('--conducto-scale-duration', `${CONDUCTO_INSERCION_DURACION}ms`);
+        requestAnimationFrame(()=>{
+          elemento.style.setProperty('--conducto-ingreso-scale', '1');
+        });
         const duracionEmpuje=animarEmpujePrevioConducto(sphere);
         iniciarEmpuje();
         const esperaRestauracion=Math.max(CONDUCTO_INSERCION_DURACION, duracionEmpuje);
@@ -4351,6 +4372,7 @@
           prepararDestinoFinal();
           elemento.style.setProperty('--conducto-move-duration', `${CONDUCTO_INSERCION_DURACION}ms`);
           elemento.style.setProperty('--conducto-scale-duration', `${CONDUCTO_INSERCION_DURACION}ms`);
+          elemento.style.setProperty('--conducto-ingreso-scale', '1');
           const duracionEmergencia=animarEmpujePrevioConducto(sphere);
           iniciarEmpuje();
           const esperaRestauracion=Math.max(CONDUCTO_INSERCION_DURACION, duracionEmergencia);
