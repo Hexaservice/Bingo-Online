@@ -715,6 +715,35 @@
               rgba(255, 170, 64, 0.88) 55%,
               rgba(255, 111, 0, 0.92) 100%);
       }
+      .conducto-sphere--auxiliar {
+          --conducto-auxiliar-opacidad: 0.55;
+          background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.22) 0%, rgba(96,165,250,0.16) 48%, rgba(96,165,250,0.08) 72%, rgba(59,130,246,0) 100%);
+          border: 2px dashed rgba(147, 197, 253, 0.6);
+          box-shadow: none;
+          color: rgba(15, 23, 42, 0.45);
+          opacity: 0;
+          transform: translate(-50%, -50%) scale(0.82);
+          pointer-events: none;
+          transition: opacity 420ms ease, transform 420ms ease;
+          z-index: 2;
+      }
+      .conducto-sphere--auxiliar .conducto-sphere-label {
+          opacity: 0;
+      }
+      .conducto-sphere--auxiliar.activa {
+          filter: none;
+      }
+      .conducto-sphere--auxiliar-visible {
+          opacity: var(--conducto-auxiliar-opacidad, 0.55);
+          transform: translate(-50%, -50%) scale(1);
+      }
+      .conducto-sphere--auxiliar-salida {
+          opacity: 0 !important;
+          transform: translate(-50%, -50%) scale(0.7) !important;
+      }
+      .conducto-sphere--reemplazo {
+          box-shadow: 0 10px 26px rgba(96,165,250,0.32), 0 0 16px rgba(59,130,246,0.3);
+      }
       #ultimo-canto {
           font-size: 0.78rem;
           color: var(--verde-canto);
@@ -3278,12 +3307,16 @@
   let conductoAnimacionEntradaActiva = false;
   let conductoAnimacionBloqueada = false;
   let conductoActualizacionProgramada = false;
+  let conductoAuxiliarSphereEl = null;
+  let conductoAuxiliarFusionTimer = null;
+  let conductoAuxiliarSalidaTimer = null;
   const CONDUCTO_DESTACADO_DURACION = 2000;
   const CONDUCTO_INSERCION_DURACION = 1000;
   const CONDUCTO_TRANSICION_DURACION = 1500;
   const CONDUCTO_NORMALIZACION_DURACION = 600;
   const CONDUCTO_EMPUJE_DURACION = 2800;
   const CONDUCTO_EMPUJE_RETARDO = 180;
+  const CONDUCTO_AUXILIAR_DESVANECER_DURACION = 420;
   let cantoColorMap = new Map();
   let formasSinGanadoresAlertaClave = '';
   let celebracionModalActiva = false;
@@ -4147,6 +4180,116 @@
     };
   }
 
+  function cancelarFusionAuxiliar(){
+    if(conductoAuxiliarFusionTimer){
+      clearTimeout(conductoAuxiliarFusionTimer);
+      conductoAuxiliarFusionTimer=null;
+    }
+  }
+
+  function cancelarSalidaAuxiliar(){
+    if(conductoAuxiliarSalidaTimer){
+      clearTimeout(conductoAuxiliarSalidaTimer);
+      conductoAuxiliarSalidaTimer=null;
+    }
+  }
+
+  function crearAuxiliarConducto(){
+    if(!cantosConductoTrackEl) return null;
+    const auxiliar=document.createElement('div');
+    auxiliar.className='conducto-sphere conducto-sphere--auxiliar';
+    auxiliar.setAttribute('aria-hidden','true');
+    const etiqueta=document.createElement('span');
+    etiqueta.className='conducto-sphere-label';
+    etiqueta.textContent='';
+    auxiliar.appendChild(etiqueta);
+    cantosConductoTrackEl.appendChild(auxiliar);
+    return auxiliar;
+  }
+
+  function mostrarAuxiliarConducto(){
+    if(!vistaConductoActiva) return null;
+    cancelarFusionAuxiliar();
+    cancelarSalidaAuxiliar();
+    let auxiliar=conductoAuxiliarSphereEl;
+    if(auxiliar && !auxiliar.isConnected){
+      conductoAuxiliarSphereEl=null;
+      auxiliar=null;
+    }
+    if(!auxiliar){
+      auxiliar=crearAuxiliarConducto();
+      conductoAuxiliarSphereEl=auxiliar;
+    }
+    if(!auxiliar) return null;
+    const posicion=obtenerPosicionCeldaConducto(0);
+    if(!posicion){
+      fusionarAuxiliarConSphere(null);
+      return null;
+    }
+    auxiliar.classList.remove('conducto-sphere--auxiliar-salida');
+    auxiliar.classList.remove('conducto-sphere--auxiliar-visible');
+    auxiliar.style.left=`${posicion.left}px`;
+    auxiliar.style.top=`${posicion.top}px`;
+    auxiliar.classList.add('activa');
+    requestAnimationFrame(()=>{
+      auxiliar.classList.add('conducto-sphere--auxiliar-visible');
+    });
+    return auxiliar;
+  }
+
+  function fusionarAuxiliarConSphere(esferaReal){
+    const auxiliar=conductoAuxiliarSphereEl;
+    if(!auxiliar){
+      return;
+    }
+    if(!auxiliar.isConnected){
+      conductoAuxiliarSphereEl=null;
+      return;
+    }
+    cancelarFusionAuxiliar();
+    cancelarSalidaAuxiliar();
+    auxiliar.classList.add('conducto-sphere--auxiliar-salida');
+    auxiliar.classList.remove('conducto-sphere--auxiliar-visible');
+    const limpiar=()=>{
+      if(auxiliar.parentElement){
+        auxiliar.parentElement.removeChild(auxiliar);
+      }
+      if(conductoAuxiliarSphereEl===auxiliar){
+        conductoAuxiliarSphereEl=null;
+      }
+      cancelarSalidaAuxiliar();
+    };
+    const alTerminar=(evento)=>{
+      if(evento.propertyName==='opacity'){
+        auxiliar.removeEventListener('transitionend', alTerminar);
+        limpiar();
+      }
+    };
+    auxiliar.addEventListener('transitionend', alTerminar);
+    conductoAuxiliarSalidaTimer=setTimeout(()=>{
+      auxiliar.removeEventListener('transitionend', alTerminar);
+      limpiar();
+    }, CONDUCTO_AUXILIAR_DESVANECER_DURACION+120);
+    if(esferaReal && esferaReal.classList){
+      esferaReal.classList.add('conducto-sphere--reemplazo');
+      setTimeout(()=>{
+        esferaReal.classList.remove('conducto-sphere--reemplazo');
+      }, CONDUCTO_AUXILIAR_DESVANECER_DURACION+320);
+    }
+  }
+
+  function programarFusionAuxiliar(esferaReal, duracionTotal){
+    if(!conductoAuxiliarSphereEl || !conductoAuxiliarSphereEl.isConnected) return;
+    cancelarFusionAuxiliar();
+    const duracion=Number(duracionTotal);
+    const total=Number.isFinite(duracion)?Math.max(0, duracion):0;
+    const tiempo=Math.max(0, total - CONDUCTO_AUXILIAR_DESVANECER_DURACION);
+    conductoAuxiliarFusionTimer=setTimeout(()=>{
+      fusionarAuxiliarConSphere(esferaReal);
+      conductoAuxiliarFusionTimer=null;
+    }, tiempo);
+  }
+
   function animarEmpujeVisualConducto(elemento, _deltaX, _deltaY, retraso){
     if(!elemento || typeof elemento.animate!=='function') return;
     const duracion=Math.max(CONDUCTO_EMPUJE_DURACION, 400);
@@ -4165,9 +4308,10 @@
 
   function animarEmpujePrevioConducto(sphereExcluida){
     if(!vistaConductoActiva) return 0;
+    mostrarAuxiliarConducto();
     const esferas=Array.from(conductoSpheresMap.values())
       .filter(item=>item && item!==sphereExcluida && item.element && Number.isInteger(item.destino) && item.destino>=0);
-    if(!esferas.length) return 0;
+    if(!esferas.length) return CONDUCTO_EMPUJE_DURACION;
     const restauradores=[];
     esferas.forEach(sphere=>{
       const elemento=sphere.element;
@@ -4334,11 +4478,13 @@
 
       const moverAlConducto=()=>{
         prepararDestinoFinal();
-        elemento.style.setProperty('--conducto-move-duration', `${CONDUCTO_INSERCION_DURACION}ms`);
-        elemento.style.setProperty('--conducto-scale-duration', `${CONDUCTO_INSERCION_DURACION}ms`);
-        const duracionEmpuje=animarEmpujePrevioConducto(sphere);
+        const duracionEmpuje=animarEmpujePrevioConducto(sphere) || CONDUCTO_EMPUJE_DURACION;
+        const duracionInsercion=Math.max(CONDUCTO_INSERCION_DURACION, duracionEmpuje);
+        elemento.style.setProperty('--conducto-move-duration', `${duracionInsercion}ms`);
+        elemento.style.setProperty('--conducto-scale-duration', `${duracionInsercion}ms`);
         iniciarEmpuje();
-        const esperaRestauracion=Math.max(CONDUCTO_INSERCION_DURACION, duracionEmpuje);
+        programarFusionAuxiliar(elemento, duracionInsercion);
+        const esperaRestauracion=duracionInsercion;
         setTimeout(()=>{
           restaurarDuraciones();
         }, esperaRestauracion);
@@ -4676,6 +4822,7 @@
       cantosConductoEl.hidden=true;
       cantosConductoEl.setAttribute('hidden','');
       cantosConductoEl.setAttribute('aria-hidden','true');
+      fusionarAuxiliarConSphere(null);
       if(cantosConductoTituloEl){
         cantosConductoTituloEl.hidden=true;
         cantosConductoTituloEl.setAttribute('hidden','');
