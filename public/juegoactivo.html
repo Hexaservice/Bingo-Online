@@ -4259,6 +4259,14 @@
     const transicionAnterior=elemento.style.transition;
     const moveDurationAnterior=elemento.style.getPropertyValue('--conducto-move-duration');
     const scaleDurationAnterior=elemento.style.getPropertyValue('--conducto-scale-duration');
+    const destinoPlaneado=Number.isInteger(sphere.destino)?sphere.destino:obtenerIndiceConductoParaNumero(sphere.numero);
+    if(Number.isInteger(destinoPlaneado)){
+      sphere.destinoPendienteIngreso=destinoPlaneado;
+      sphere.destino=null;
+    }else{
+      sphere.destinoPendienteIngreso=null;
+    }
+    sphere.ingresando=true;
     elemento.style.transition='none';
     elemento.style.left=`${centro.left}px`;
     elemento.style.top=`${centro.top}px`;
@@ -4294,19 +4302,38 @@
       }else{
         elemento.style.removeProperty('--conducto-scale-duration');
       }
+      if(sphere.ingresando){
+        sphere.ingresando=false;
+      }
+      if('destinoPendienteIngreso' in sphere){
+        delete sphere.destinoPendienteIngreso;
+      }
+    };
+
+    const prepararDestinoFinal=()=>{
+      if(Number.isInteger(sphere.destinoPendienteIngreso)){
+        sphere.destino=sphere.destinoPendienteIngreso;
+      }
+      sphere.ingresando=false;
+      if('destinoPendienteIngreso' in sphere){
+        delete sphere.destinoPendienteIngreso;
+      }
+      requestAnimationFrame(()=>{
+        elemento.classList.remove('conducto-sphere--ingreso');
+      });
     };
 
     const animarInsercionInicial=()=>{
       const normalizarEnCentro=()=>{
         elemento.style.setProperty('--conducto-scale-duration', `${CONDUCTO_NORMALIZACION_DURACION}ms`);
         requestAnimationFrame(()=>{
-          elemento.classList.remove('conducto-sphere--ingreso');
           elemento.style.left=`${centro.left}px`;
           elemento.style.top=`${centro.top}px`;
         });
       };
 
       const moverAlConducto=()=>{
+        prepararDestinoFinal();
         elemento.style.setProperty('--conducto-move-duration', `${CONDUCTO_INSERCION_DURACION}ms`);
         elemento.style.setProperty('--conducto-scale-duration', `${CONDUCTO_INSERCION_DURACION}ms`);
         const duracionEmpuje=animarEmpujePrevioConducto(sphere);
@@ -4321,6 +4348,7 @@
       setTimeout(()=>{
         const primeraPosicion=obtenerPosicionCeldaConducto(0);
         if(!primeraPosicion){
+          prepararDestinoFinal();
           elemento.style.setProperty('--conducto-move-duration', `${CONDUCTO_INSERCION_DURACION}ms`);
           elemento.style.setProperty('--conducto-scale-duration', `${CONDUCTO_INSERCION_DURACION}ms`);
           const duracionEmergencia=animarEmpujePrevioConducto(sphere);
@@ -4472,7 +4500,9 @@
     if(!sphere || !sphere.element) return;
     const destino=sphere.destino;
     if(!Number.isInteger(destino) || destino<0){
-      sphere.element.classList.remove('activa');
+      if(!sphere.ingresando){
+        sphere.element.classList.remove('activa');
+      }
       return;
     }
     const posicion=conductoPositions[destino];
@@ -4588,7 +4618,12 @@
     cantosOrdenados.forEach(numero=>{
       const sphere=conductoSpheresMap.get(numero);
       if(!sphere) return;
-      sphere.destino=obtenerIndiceConductoParaNumero(numero);
+      const destinoCalculado=obtenerIndiceConductoParaNumero(numero);
+      if(sphere.ingresando){
+        sphere.destinoPendienteIngreso=destinoCalculado;
+      }else{
+        sphere.destino=destinoCalculado;
+      }
       sphere.recienCreada=sphere.recienCreada || nuevosSet.has(numero);
       actualizarAspectoSphere(sphere, numero);
     });
