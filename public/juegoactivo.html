@@ -602,15 +602,19 @@
           color: #0b0b0f;
           background: var(--conducto-esfera-bg, radial-gradient(circle at 30% 30%, #ffffff 0%, #e2e5ec 55%, #bec3ce 100%));
           box-shadow: 0 10px 22px rgba(0,0,0,0.28), 0 0 6px rgba(0,0,0,0.45);
-          transform: translate(-50%, -50%) scale(var(--conducto-scale-factor));
+          left: 0;
+          top: 0;
+          translate: calc(var(--conducto-pos-x, 50%) - 50%) calc(var(--conducto-pos-y, 50%) - 50%);
+          transform: translate3d(calc(var(--conducto-pos-x, 50%) - 50%), calc(var(--conducto-pos-y, 50%) - 50%), 0) scale(var(--conducto-scale-factor));
+          scale: var(--conducto-scale-factor);
           --conducto-move-duration: 1.5s;
           --conducto-scale-duration: 0.8s;
-          will-change: left, top, transform;
+          will-change: translate, transform;
           transition:
-              left var(--conducto-move-duration, 1.5s) cubic-bezier(0.25, 0.8, 0.25, 1),
-              top var(--conducto-move-duration, 1.5s) cubic-bezier(0.25, 0.8, 0.25, 1),
+              translate var(--conducto-move-duration, 1.5s) cubic-bezier(0.25, 0.8, 0.25, 1),
+              scale var(--conducto-scale-duration, 0.8s) cubic-bezier(0.25, 0.8, 0.25, 1),
+              transform var(--conducto-move-duration, 1.5s) cubic-bezier(0.25, 0.8, 0.25, 1),
               opacity 0.35s ease,
-              transform var(--conducto-scale-duration, 0.8s) cubic-bezier(0.25, 0.8, 0.25, 1),
               box-shadow var(--conducto-scale-duration, 0.8s) cubic-bezier(0.25, 0.8, 0.25, 1),
               width var(--conducto-scale-duration, 0.8s) cubic-bezier(0.25, 0.8, 0.25, 1),
               height var(--conducto-scale-duration, 0.8s) cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -691,6 +695,7 @@
           font-size: calc(var(--conducto-esfera-font-base) * 2.15);
           border-radius: 50%;
           box-shadow: 0 14px 32px rgba(0,0,0,0.28), 0 0 18px rgba(255,255,255,0.85);
+          filter: drop-shadow(0 18px 32px rgba(0,0,0,0.28));
           z-index: 6;
           pointer-events: none;
           --conducto-scale-factor: var(--conducto-ingreso-scale, 1.7);
@@ -4149,6 +4154,38 @@
     };
   }
 
+  function obtenerTransformacionSphere(elemento, escala){
+    let escalaAplicar=Number.isFinite(escala) && escala>0?escala:1;
+    let posX='50%';
+    let posY='50%';
+    try{
+      const estilos=window.getComputedStyle(elemento);
+      const x=estilos.getPropertyValue('--conducto-pos-x');
+      const y=estilos.getPropertyValue('--conducto-pos-y');
+      if(x && x.trim()){
+        posX=x.trim();
+      }
+      if(y && y.trim()){
+        posY=y.trim();
+      }
+    }catch(_error){
+      escalaAplicar=Number.isFinite(escalaAplicar)?escalaAplicar:1;
+    }
+    if((!posX || !posX.length) && elemento?.dataset?.conductoPosX){
+      const numeroX=Number(elemento.dataset.conductoPosX);
+      if(Number.isFinite(numeroX)){
+        posX=`${numeroX}px`;
+      }
+    }
+    if((!posY || !posY.length) && elemento?.dataset?.conductoPosY){
+      const numeroY=Number(elemento.dataset.conductoPosY);
+      if(Number.isFinite(numeroY)){
+        posY=`${numeroY}px`;
+      }
+    }
+    return `translate3d(calc(${posX} - 50%), calc(${posY} - 50%), 0) scale(${escalaAplicar})`;
+  }
+
   function animarEmpujeVisualConducto(elemento, _deltaX, _deltaY, retraso){
     if(!elemento || typeof elemento.animate!=='function') return;
     const duracion=Math.max(CONDUCTO_EMPUJE_DURACION, 600);
@@ -4165,10 +4202,12 @@
     }catch(_error){
       escalaBase=1;
     }
+    const transformacionBase=obtenerTransformacionSphere(elemento, escalaBase);
+    const transformacionElevada=obtenerTransformacionSphere(elemento, escalaBase * 1.08);
     const frames=[
-      {transform: `translate(-50%, -50%) scale(${escalaBase})`, offset: 0, easing: 'ease-in-out'},
-      {transform: `translate(-50%, -50%) scale(${escalaBase * 1.08})`, offset: 0.52, easing: 'ease-in-out'},
-      {transform: `translate(-50%, -50%) scale(${escalaBase})`, offset: 1, easing: 'ease-in-out'}
+      {transform: transformacionBase, offset: 0, easing: 'ease-in-out'},
+      {transform: transformacionElevada, offset: 0.52, easing: 'ease-in-out'},
+      {transform: transformacionBase, offset: 1, easing: 'ease-in-out'}
     ];
     elemento.animate(frames, {
       duration: duracion,
@@ -4283,8 +4322,7 @@
     }
     sphere.ingresando=true;
     elemento.style.transition='none';
-    elemento.style.left=`${centro.left}px`;
-    elemento.style.top=`${centro.top}px`;
+    actualizarCoordenadasSphere(elemento, centro);
     elemento.classList.add('activa');
     elemento.classList.add('conducto-sphere--ingreso');
     elemento.classList.remove('conducto-sphere--pre');
@@ -4344,8 +4382,7 @@
       const normalizarEnCentro=()=>{
         elemento.style.setProperty('--conducto-scale-duration', `${CONDUCTO_NORMALIZACION_DURACION}ms`);
         requestAnimationFrame(()=>{
-          elemento.style.left=`${centro.left}px`;
-          elemento.style.top=`${centro.top}px`;
+          actualizarCoordenadasSphere(elemento, centro);
           elemento.style.setProperty('--conducto-ingreso-scale', '1.85');
         });
       };
@@ -4463,6 +4500,42 @@
     return {numero:valor, element:esfera, destino:null, recienCreada:true, pendiente:false};
   }
 
+  function actualizarCoordenadasSphere(elemento, posicion){
+    if(!elemento || !posicion) return;
+    const left=Number(posicion.left);
+    const top=Number(posicion.top);
+    if(Number.isFinite(left)){
+      const valorX=`${left}px`;
+      elemento.style.setProperty('--conducto-pos-x', valorX);
+      elemento.dataset.conductoPosX=String(left);
+    }
+    if(Number.isFinite(top)){
+      const valorY=`${top}px`;
+      elemento.style.setProperty('--conducto-pos-y', valorY);
+      elemento.dataset.conductoPosY=String(top);
+    }
+  }
+
+  function establecerPosicionSphere(elemento, posicion, animar=true){
+    if(!elemento || !posicion) return;
+    const ejecutar=()=>{
+      actualizarCoordenadasSphere(elemento, posicion);
+    };
+    if(!animar){
+      const transicionAnterior=elemento.style.transition;
+      elemento.style.transition='none';
+      ejecutar();
+      void elemento.offsetWidth;
+      if(transicionAnterior){
+        elemento.style.transition=transicionAnterior;
+      }else{
+        elemento.style.removeProperty('transition');
+      }
+      return;
+    }
+    ejecutar();
+  }
+
   function actualizarAspectoSphere(sphere, numero){
     if(!sphere || !sphere.element) return;
     const colores=obtenerColoresCanto(numero);
@@ -4536,16 +4609,12 @@
     }
     sphere.pendiente=false;
     const aplicarPosicion=()=>{
-      sphere.element.style.left=`${posicion.left}px`;
-      sphere.element.style.top=`${posicion.top}px`;
+      establecerPosicionSphere(sphere.element, posicion, true);
       sphere.element.classList.add('activa');
     };
     if(!animar){
-      const transicionAnterior=sphere.element.style.transition;
-      sphere.element.style.transition='none';
-      aplicarPosicion();
-      void sphere.element.offsetWidth;
-      sphere.element.style.transition=transicionAnterior || '';
+      establecerPosicionSphere(sphere.element, posicion, false);
+      sphere.element.classList.add('activa');
     }else{
       aplicarPosicion();
     }
