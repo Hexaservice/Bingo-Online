@@ -4936,8 +4936,9 @@
     lista.forEach(item=>{
       const idx=Number(item?.forma?.idx);
       if(!Number.isFinite(idx)) return;
-      const valor=obtenerCreditosForma(item.forma);
-      const cartonesGratisForma=obtenerCartonesGratisForma(item.forma);
+      const totalGanadoresForma=obtenerTotalGanadoresForma(item.forma, item?.totalGanadores);
+      const valor=obtenerCreditosPorGanador(item.forma,totalGanadoresForma);
+      const cartonesGratisForma=obtenerCartonesGratisPorGanador(item.forma,totalGanadoresForma);
       const registro=gananciasPorForma.get(idx) || {valor:0, cartonesGratis:0};
       if(Number.isFinite(valor) && valor>0){
         registro.valor+=valor;
@@ -5713,6 +5714,46 @@
     return 0;
   }
 
+  function normalizarCantidadGanadores(valor){
+    const numero=Number(valor);
+    if(!Number.isFinite(numero)) return null;
+    const entero=Math.floor(numero);
+    if(entero<=0) return null;
+    return entero;
+  }
+
+  function obtenerTotalGanadoresForma(forma, totalGanadoresAlterno){
+    const directo=normalizarCantidadGanadores(totalGanadoresAlterno);
+    if(directo) return directo;
+    const idx=Number(forma?.idx);
+    if(Number.isInteger(idx) && cartonesGanadoresPorForma instanceof Map){
+      const registro=cartonesGanadoresPorForma.get(idx);
+      if(registro){
+        const registrado=normalizarCantidadGanadores(registro?.totalGanadores);
+        if(registrado) return registrado;
+        const lista=registro?.cartones;
+        if(Array.isArray(lista) && lista.length>0){
+          return normalizarCantidadGanadores(lista.length) || 1;
+        }
+      }
+    }
+    return 1;
+  }
+
+  function obtenerCreditosPorGanador(forma,totalGanadores){
+    const totalForma=obtenerCreditosForma(forma);
+    if(totalForma<=0) return 0;
+    let ganadoresNumero=normalizarCantidadGanadores(totalGanadores);
+    if(!ganadoresNumero){
+      ganadoresNumero=obtenerTotalGanadoresForma(forma);
+    }
+    if(!ganadoresNumero || ganadoresNumero<=1){
+      return totalForma;
+    }
+    const dividido=Math.floor(totalForma/ganadoresNumero);
+    return dividido>0?dividido:totalForma;
+  }
+
   function normalizarCartonesGratisValor(valor){
     if(typeof valor==='number' && Number.isFinite(valor)){
       return Math.max(0, Math.round(valor));
@@ -6181,8 +6222,8 @@
         if(registro.has(idx)) return;
         registro.add(idx);
         const forma=item?.forma || formasActivas.find(f=>Number(f.idx)===idx) || {idx};
-        const creditos=obtenerCreditosForma(forma);
-        const totalGanadores=Math.max(1,(cartonesGanadoresPorForma.get(idx)?.cartones?.length)||0);
+        const totalGanadores=obtenerTotalGanadoresForma(forma, item?.totalGanadores);
+        const creditos=obtenerCreditosPorGanador(forma,totalGanadores);
         const cartonesGratis=obtenerCartonesGratisPorGanador(forma,totalGanadores);
         const nombre=(forma?.nombre||'').toString().trim();
         const color=obtenerColorParaForma(idx);
@@ -6376,7 +6417,7 @@
         const colorForma=obtenerColorParaForma(idx);
         const colorTexto=obtenerColorOscurecido(colorForma,0.75);
         const infoGanadores=cartonesGanadoresPorForma.get(idx) || {cartones:[]};
-        const totalGanadores=Array.isArray(infoGanadores.cartones)?infoGanadores.cartones.length:0;
+        const totalGanadores=normalizarCantidadGanadores(infoGanadores?.totalGanadores) ?? (Array.isArray(infoGanadores.cartones)?infoGanadores.cartones.length:0);
         const linea=document.createElement('div');
         linea.className='back-forma-line';
         linea.style.color=colorTexto;
@@ -6487,9 +6528,8 @@
         const numB=b.cartonNum ?? b.Ncarton ?? Number.MAX_SAFE_INTEGER;
         return numA-numB;
       });
-      const premioFormaTotal=obtenerCreditosForma(forma);
-      const totalGanadores=ordenados.length;
-      const premioIndividual=totalGanadores>0?Math.floor(premioFormaTotal/totalGanadores):0;
+      const totalGanadores=Math.max(1,ordenados.length);
+      const premioIndividual=obtenerCreditosPorGanador(forma,totalGanadores);
       const cartonesGratisTotales=obtenerCartonesGratisTotalEntregados(forma,totalGanadores);
       const cartonesGratisPorGanador=obtenerCartonesGratisPorGanador(forma,totalGanadores);
       ordenados.forEach(carton=>{
@@ -6716,10 +6756,11 @@
           ganadores.push(carton);
         }
       });
-      cartonesGanadoresPorForma.set(forma.idx,{forma,cartones:ganadores,paso:mejorPaso});
+      const totalGanadores=ganadores.length;
+      cartonesGanadoresPorForma.set(forma.idx,{forma,cartones:ganadores,paso:mejorPaso,totalGanadores});
       ganadores.forEach(carton=>{
         if(!formasPorCarton.has(carton.id)) formasPorCarton.set(carton.id,[]);
-        formasPorCarton.get(carton.id).push({forma,paso:mejorPaso});
+        formasPorCarton.get(carton.id).push({forma,paso:mejorPaso,totalGanadores});
       });
     });
     formasPorCarton.forEach(lista=>{
