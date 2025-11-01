@@ -792,16 +792,17 @@
         posiciones,
         actualizado:firebase.firestore.FieldValue.serverTimestamp()
       };
-      let savedId=editingId;
+      let mensaje='Forma guardada correctamente';
       if(editingId){
         await db.collection(FORMAS_COLLECTION).doc(editingId).set(payload,{merge:true});
+        formaEdicionPorTab[idx]=editingId;
+        mensaje='Forma actualizada correctamente';
       }else{
         payload.creado=firebase.firestore.FieldValue.serverTimestamp();
-        const ref=await db.collection(FORMAS_COLLECTION).add(payload);
-        savedId=ref.id;
+        await db.collection(FORMAS_COLLECTION).add(payload);
+        formaEdicionPorTab[idx]=null;
       }
-      formaEdicionPorTab[idx]=savedId;
-      alert('Forma guardada correctamente');
+      alert(mensaje);
       if(document.getElementById('formas-modal')?.classList.contains('visible') && modalFormaIdx===idx){
         await cargarFormasModal(idx);
       }
