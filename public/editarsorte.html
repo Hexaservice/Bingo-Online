@@ -40,6 +40,15 @@
       transform: scale(1.05);
       box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
     }
+    .action-btn{
+      font-family:'Bangers',cursive;
+      background:linear-gradient(#0a8800,#ffffff);
+      color:white;
+      border:3px solid #FFD700;
+      border-radius:8px;
+      text-shadow:2px 2px 4px #000;
+      cursor:pointer;
+    }
     .back-btn {
       position: fixed;
       top: 5px;
@@ -94,6 +103,13 @@
     .tab-content .premio-row,
     .tab-content .ver-imagen{width:calc(100% - 12px);margin:2px 6px;}
     .tab-content .imagen-wrapper{width:calc(100% - 12px);margin:2px 6px 0 6px;}
+    .forma-nombre-row{display:flex;align-items:center;gap:6px;width:calc(100% - 12px);margin:2px 6px;padding:2px 6px;background:rgba(255,255,255,0.7);border-radius:10px;box-sizing:border-box;}
+    .forma-nombre-row .nombre-forma{flex:1;min-width:0;}
+    .fx-button{font-family:'Bangers',cursive;font-size:0.9rem;letter-spacing:1px;padding:4px 10px;border-radius:10px;border:1px solid #888;background:linear-gradient(var(--fx-color,#4caf50),#ffffff);color:#fff;text-shadow:2px 2px 3px #000;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.2);min-width:56px;}
+    .fx-button:active{transform:scale(0.95);}
+    .guardar-forma-btn{width:38px;height:38px;border-radius:50%;border:2px solid #666;background:linear-gradient(#ffffff,#d9d9d9);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.2);font-size:1.3rem;text-shadow:1px 1px 2px #000;}
+    .guardar-forma-btn span{filter:drop-shadow(0 0 2px #000);}
+    .guardar-forma-btn:active{transform:scale(0.95);}
     .tab-buttons button.active[data-tab="forma1"], .forma-item1{--forma-color:#90ee90;background:linear-gradient(#90ee90,#ffffff);}
     .tab-buttons button.active[data-tab="forma2"], .forma-item2{--forma-color:#fffacd;background:linear-gradient(#fffacd,#ffffff);}
     .tab-buttons button.active[data-tab="forma3"], .forma-item3{--forma-color:#add8e6;background:linear-gradient(#add8e6,#ffffff);}
@@ -126,6 +142,31 @@
     .imagen-wrapper .ver-foto-btn{width:30px;height:30px;border:1px solid #ccc;border-radius:5px;display:flex;align-items:center;justify-content:center;background:#fff;}
     .imagen-wrapper .ver-foto-btn img{width:100%;height:100%;object-fit:contain;}
     .ver-imagen{display:none;margin-top:2px;font-size:0.9rem;color:#007bff;text-decoration:underline;cursor:pointer;}
+    #formas-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);align-items:center;justify-content:center;z-index:2000;padding:16px;box-sizing:border-box;}
+    #formas-modal.visible{display:flex;}
+    #formas-modal .formas-contenido{background:rgba(255,255,255,0.95);border-radius:18px;padding:clamp(16px,2vw,26px);width:min(1100px,95vw);max-height:90vh;display:flex;flex-direction:column;gap:12px;box-shadow:0 12px 32px rgba(0,0,0,0.45);position:relative;overflow:hidden;}
+    #formas-modal .formas-titulo{font-family:'Bangers',cursive;font-size:1.4rem;text-align:center;margin:0;color:#4b0082;text-shadow:0 0 6px #fff;}
+    #formas-modal .cerrar-formas{position:absolute;top:10px;right:12px;font-size:1.6rem;cursor:pointer;background:none;border:none;color:#4b0082;text-shadow:1px 1px 2px #fff;}
+    #formas-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;flex:1;overflow-y:auto;padding-right:4px;align-content:flex-start;}
+    .forma-miniatura{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px;border-radius:14px;background:linear-gradient(150deg,var(--forma-color,#90ee90),#ffffff);box-shadow:0 6px 16px rgba(0,0,0,0.25);cursor:pointer;transition:transform 0.2s,box-shadow 0.2s;}
+    .forma-miniatura:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(0,0,0,0.3);}
+    .forma-miniatura.selected{outline:3px solid #1e90ff;outline-offset:3px;}
+    .mini-tabla-wrapper{background:rgba(255,255,255,0.9);padding:6px;border-radius:10px;box-shadow:inset 0 0 6px rgba(0,0,0,0.18);}
+    .mini-forma{border-collapse:separate;border-spacing:1.5px;}
+    .mini-forma td,.mini-forma th{width:18px;height:18px;text-align:center;border:1px solid rgba(0,0,0,0.2);border-radius:4px;font-size:0.55rem;font-weight:bold;font-family:'Poppins',sans-serif;color:#333;background:rgba(255,255,255,0.95);}
+    .mini-forma th{font-size:0.65rem;color:#ff6600;background:radial-gradient(circle,#ffffff,#ffffff 60%,#00aa00);text-shadow:1px 1px 0 #000;}
+    .mini-forma td.star{background:var(--forma-color,#90ee90);color:#fff;text-shadow:0 0 4px #000;}
+    .mini-forma td.centro{background:#ffeb3b;color:#6b6b6b;}
+    .mini-forma .mini-star{display:inline-block;font-size:0.7rem;text-shadow:0 0 4px rgba(0,0,0,0.4);}
+    .mini-forma td.star .mini-star{color:#fff;}
+    .mini-forma td.centro .mini-star{color:#6b6b6b;text-shadow:0 0 3px rgba(0,0,0,0.3);}
+    .mini-nombre{font-size:0.6rem;font-family:'Poppins',sans-serif;text-transform:uppercase;text-align:center;color:#4b0082;letter-spacing:0.5px;}
+    .formas-modal-acciones{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:4px;}
+    .formas-modal-acciones .action-btn{font-size:1.1rem;padding:8px 18px;}
+    .formas-modal-acciones .editar-btn{background:linear-gradient(blue,#ffffff);}
+    .formas-modal-acciones .eliminar-btn{background:linear-gradient(brown,#ffffff);width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;}
+    .formas-empty{grid-column:1/-1;text-align:center;font-family:'Bangers',cursive;font-size:1.1rem;color:#4b0082;}
+    body.modal-open{overflow:hidden;}
     .input-wrapper{display:flex;align-items:center;}
     .label-left{font-weight:bold;font-size:0.8rem;margin-right:3px;text-shadow:0 0 3px #fff;}
     .label-right{font-weight:bold;font-size:0.8rem;margin-left:3px;text-shadow:0 0 3px #fff;}
@@ -194,6 +235,18 @@
   </div>
   <div id="forms-container"></div>
   <div id="image-modal" class="modal"><span id="close-modal">&times;</span><img id="modal-img" src="" alt="premio"></div>
+  <div id="formas-modal">
+    <div class="formas-contenido" id="formas-contenido">
+      <button type="button" class="cerrar-formas" id="cerrar-formas-modal">✖</button>
+      <h3 class="formas-titulo">Formas guardadas <span id="formas-modal-etiqueta"></span></h3>
+      <div id="formas-grid"></div>
+      <div class="formas-modal-acciones">
+        <button type="button" class="action-btn editar-btn" id="formas-editar-btn">EDITAR</button>
+        <button type="button" class="action-btn" id="formas-cargar-btn">CARGAR</button>
+        <button type="button" class="action-btn eliminar-btn" id="formas-borrar-btn" title="Eliminar forma">🗑️</button>
+      </div>
+    </div>
+  </div>
   <button id="actualizar-sorteo-btn">Actualizar Sorteo</button>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
@@ -214,6 +267,12 @@
   const LOGO_URL='https://i.imgur.com/twjhNtZ.png';
   const preloadLogo=new Image();
   preloadLogo.src=LOGO_URL;
+  const FORMA_COLORES={1:'#90ee90',2:'#fffacd',3:'#add8e6',4:'#d8b0ff',5:'#ffcc99'};
+  const FORMAS_COLLECTION='formas_guardadas';
+  const formaEdicionPorTab={};
+  let modalFormaIdx=null;
+  let formasModalDatos=[];
+  let formaSeleccionadaId=null;
 
   function setCookie(name,value){document.cookie=`${name}=${encodeURIComponent(value)};path=/;max-age=31536000`;}
   function getCookie(name){const m=document.cookie.match(new RegExp('(?:^|; )'+name+'=([^;]*)'));return m?decodeURIComponent(m[1]):null;}
@@ -482,6 +541,229 @@ firebase.auth().onAuthStateChanged(u=>{
     document.querySelectorAll('.cartones-total').forEach(span=>{span.textContent=totalCartones;});
   }
 
+  function obtenerColorForma(idx){
+    return FORMA_COLORES[idx]||'#90ee90';
+  }
+
+  function obtenerPosicionesDeTab(tab){
+    const posiciones=[];
+    tab.querySelectorAll('td.selected').forEach(td=>{
+      const r=parseInt(td.dataset.row,10);
+      const c=parseInt(td.dataset.col,10);
+      if(r===2&&c===2) return;
+      posiciones.push({r,c});
+    });
+    return posiciones;
+  }
+
+  function generarClavePosiciones(posiciones){
+    return posiciones
+      .map(p=>`${p.r}-${p.c}`)
+      .sort()
+      .join('|');
+  }
+
+  function crearMiniaturaForma(data){
+    const cont=document.createElement('div');
+    cont.className='forma-miniatura';
+    cont.dataset.id=data.id;
+    cont.dataset.indice=data.indice;
+    cont.style.setProperty('--forma-color',obtenerColorForma(data.indice));
+    const wrapper=document.createElement('div');
+    wrapper.className='mini-tabla-wrapper';
+    const table=document.createElement('table');
+    table.className='mini-forma';
+    const posicionesSet=new Set((data.posiciones||[]).map(p=>`${p.r}-${p.c}`));
+    for(let r=0;r<5;r++){
+      const tr=document.createElement('tr');
+      for(let c=0;c<5;c++){
+        const td=document.createElement('td');
+        if(r===2&&c===2){
+          td.classList.add('centro');
+          const span=document.createElement('span');
+          span.className='mini-star centro';
+          span.textContent='★';
+          td.appendChild(span);
+        }else if(posicionesSet.has(`${r}-${c}`)){
+          td.classList.add('star');
+          const span=document.createElement('span');
+          span.className='mini-star';
+          span.textContent='★';
+          td.appendChild(span);
+        }
+        tr.appendChild(td);
+      }
+      table.appendChild(tr);
+    }
+    wrapper.appendChild(table);
+    cont.appendChild(wrapper);
+    const nombre=document.createElement('span');
+    nombre.className='mini-nombre';
+    nombre.textContent=data.nombre||'Sin nombre';
+    cont.appendChild(nombre);
+    cont.addEventListener('click',()=>seleccionarFormaModal(cont,data.id));
+    return cont;
+  }
+
+  async function cargarFormasModal(idx){
+    const grid=document.getElementById('formas-grid');
+    if(!grid) return;
+    grid.innerHTML='<div class="formas-empty">Cargando...</div>';
+    formasModalDatos=[];
+    formaSeleccionadaId=null;
+    try{
+      const snap=await db.collection(FORMAS_COLLECTION).where('indice','==',idx).get();
+      if(snap.empty){
+        grid.innerHTML='<div class="formas-empty">No hay formas guardadas para esta pestaña.</div>';
+        return;
+      }
+      const frag=document.createDocumentFragment();
+      snap.forEach(doc=>{
+        const datos=doc.data()||{};
+        const info={
+          id:doc.id,
+          indice:idx,
+          nombre:datos.nombre||'',
+          posiciones:Array.isArray(datos.posiciones)?datos.posiciones.map(p=>({r:p.r,c:p.c})):[]
+        };
+        formasModalDatos.push(info);
+        const item=crearMiniaturaForma(info);
+        frag.appendChild(item);
+      });
+      grid.innerHTML='';
+      grid.appendChild(frag);
+    }catch(e){
+      console.error('cargarFormasModal',e);
+      grid.innerHTML='<div class="formas-empty">No se pudieron cargar las formas guardadas.</div>';
+    }
+  }
+
+  function abrirFormasModal(idx){
+    modalFormaIdx=idx;
+    const modal=document.getElementById('formas-modal');
+    const etiqueta=document.getElementById('formas-modal-etiqueta');
+    if(etiqueta) etiqueta.textContent=`F${idx}`;
+    if(modal){
+      modal.classList.add('visible');
+      document.body.classList.add('modal-open');
+    }
+    cargarFormasModal(idx);
+  }
+
+  function cerrarFormasModal(){
+    const modal=document.getElementById('formas-modal');
+    if(modal) modal.classList.remove('visible');
+    document.body.classList.remove('modal-open');
+    formasModalDatos=[];
+    formaSeleccionadaId=null;
+    modalFormaIdx=null;
+  }
+
+  function seleccionarFormaModal(element,id){
+    const grid=document.getElementById('formas-grid');
+    if(grid){
+      grid.querySelectorAll('.forma-miniatura').forEach(el=>el.classList.remove('selected'));
+    }
+    element.classList.add('selected');
+    formaSeleccionadaId=id;
+  }
+
+  function obtenerFormaSeleccionada(){
+    if(!formaSeleccionadaId) return null;
+    return formasModalDatos.find(f=>f.id===formaSeleccionadaId)||null;
+  }
+
+  function aplicarFormaATab(tab,datos,opciones={}){
+    if(!tab||!datos) return;
+    const nombreInput=tab.querySelector('.nombre-forma');
+    if(opciones.asignarNombre!==false && nombreInput){
+      nombreInput.value=datos.nombre||'';
+    }
+    const wrapper=tab.querySelector('.carton-wrapper');
+    tab.querySelectorAll('td').forEach(td=>{
+      const row=parseInt(td.dataset.row,10);
+      const col=parseInt(td.dataset.col,10);
+      td.innerHTML='';
+      if(row===2&&col===2){
+        td.classList.add('free','selected');
+        const img=document.createElement('img');
+        img.src=LOGO_URL;
+        img.alt='logo';
+        img.style.width='100%';
+        img.style.height='100%';
+        img.style.objectFit='contain';
+        td.appendChild(img);
+      }else{
+        td.classList.remove('selected');
+      }
+    });
+    (datos.posiciones||[]).forEach(p=>{
+      const td=tab.querySelector(`td[data-row="${p.r}"][data-col="${p.c}"]`);
+      if(td && !(p.r===2&&p.c===2)){
+        td.classList.add('selected');
+        td.innerHTML='<span class="star">★</span>';
+      }
+    });
+    if(wrapper){
+      updateCartonBack(wrapper);
+    }
+    saveState();
+  }
+
+  async function guardarFormaCatalogo(idx,tab){
+    const nombreInput=tab.querySelector('.nombre-forma');
+    const nombre=nombreInput?nombreInput.value.trim():'';
+    if(!nombre){
+      alert('Debes asignar un nombre a la forma para guadarla');
+      if(nombreInput) nombreInput.focus();
+      return;
+    }
+    const posiciones=obtenerPosicionesDeTab(tab);
+    if(posiciones.length===0){
+      alert('Debes elegir al menos una posición para la forma');
+      return;
+    }
+    const claveActual=generarClavePosiciones(posiciones);
+    const editingId=formaEdicionPorTab[idx]||null;
+    try{
+      const snap=await db.collection(FORMAS_COLLECTION).where('indice','==',idx).get();
+      let duplicado=null;
+      snap.forEach(doc=>{
+        const info=doc.data()||{};
+        const claveDoc=generarClavePosiciones((info.posiciones||[]).map(p=>({r:p.r,c:p.c})));
+        if(claveDoc===claveActual && doc.id!==editingId){
+          duplicado=doc;
+        }
+      });
+      if(duplicado){
+        alert(`Ya existe una forma con estas posiciones en Forma ${idx}, debes combinar diferente para poder guardar`);
+        return;
+      }
+      const payload={
+        indice:idx,
+        nombre,
+        posiciones,
+        actualizado:firebase.firestore.FieldValue.serverTimestamp()
+      };
+      let savedId=editingId;
+      if(editingId){
+        await db.collection(FORMAS_COLLECTION).doc(editingId).set(payload,{merge:true});
+      }else{
+        payload.creado=firebase.firestore.FieldValue.serverTimestamp();
+        const ref=await db.collection(FORMAS_COLLECTION).add(payload);
+        savedId=ref.id;
+      }
+      formaEdicionPorTab[idx]=savedId;
+      alert('Forma guardada correctamente');
+      if(document.getElementById('formas-modal')?.classList.contains('visible') && modalFormaIdx===idx){
+        await cargarFormasModal(idx);
+      }
+    }catch(e){
+      console.error('guardarFormaCatalogo',e);
+      alert('Ocurrió un error al guardar la forma');
+    }
+  }
+
   function crearFormas(){
     const cont=document.getElementById('forms-container');
     const tabs=document.createElement('div');
@@ -500,7 +782,7 @@ firebase.auth().onAuthStateChanged(u=>{
       const div=document.createElement('div');
       div.id=`forma${i}`;
       div.className=`tab-content forma-item${i}${i===1?' active':''}`;
-      div.innerHTML=`<div class=\"forma-label\">Forma ${i}</div><input class=\"nombre-forma\" placeholder=\"Nombre de forma\">\
+      div.innerHTML=`<div class=\"forma-label\">Forma ${i}</div><div class=\"forma-nombre-row\" data-idx=\"${i}\" style=\"--fx-color:${obtenerColorForma(i)}\"><button type=\"button\" class=\"fx-button\">F${i}</button><input class=\"nombre-forma\" placeholder=\"Nombre de forma\"><button type=\"button\" class=\"guardar-forma-btn\" title=\"Guardar forma\"><span>💾</span></button></div>\
       <div class=\"premio-row\"><input type=\"number\" class=\"porcentaje-forma\" placeholder=\"% Premio\">\
       <span class=\"porcentaje-restante\">100%<\/span>\
       <input type=\"number\" class=\"cartones-forma\" placeholder=\"Cartones Gratis\">\
@@ -516,6 +798,12 @@ firebase.auth().onAuthStateChanged(u=>{
       const wrapper=div.querySelector('.carton-wrapper');
       const table=wrapper.querySelector('table');
       crearTabla(table);
+      const nombreRow=div.querySelector('.forma-nombre-row');
+      const fxBtn=nombreRow.querySelector('.fx-button');
+      const guardarBtn=nombreRow.querySelector('.guardar-forma-btn');
+      fxBtn.addEventListener('click',()=>abrirFormasModal(i));
+      guardarBtn.addEventListener('click',()=>guardarFormaCatalogo(i,div));
+      formaEdicionPorTab[i]=null;
       wrapper.addEventListener('click',()=>{
         if(wrapper.classList.contains('flipped')) flipCard(wrapper);
       });
@@ -588,6 +876,54 @@ firebase.auth().onAuthStateChanged(u=>{
 
   crearFormas();
   actualizarTotales();
+
+  document.getElementById('cerrar-formas-modal').addEventListener('click',cerrarFormasModal);
+  document.getElementById('formas-modal').addEventListener('click',e=>{if(e.target.id==='formas-modal') cerrarFormasModal();});
+  document.getElementById('formas-contenido').addEventListener('click',e=>e.stopPropagation());
+  document.getElementById('formas-editar-btn').addEventListener('click',()=>{
+    const datos=obtenerFormaSeleccionada();
+    if(!datos){alert('Selecciona una forma guardada');return;}
+    const idx=modalFormaIdx;
+    if(!idx){cerrarFormasModal();return;}
+    const tab=document.getElementById(`forma${idx}`);
+    if(tab){
+      aplicarFormaATab(tab,datos,{asignarNombre:true});
+      formaEdicionPorTab[idx]=datos.id;
+    }
+    cerrarFormasModal();
+  });
+  document.getElementById('formas-cargar-btn').addEventListener('click',()=>{
+    const datos=obtenerFormaSeleccionada();
+    if(!datos){alert('Selecciona una forma guardada');return;}
+    const idx=modalFormaIdx;
+    if(!idx){cerrarFormasModal();return;}
+    const tab=document.getElementById(`forma${idx}`);
+    if(tab){
+      const confirmar=confirm('La forma actual sera reemplazada por esta. ¿Deseas proceder ?');
+      if(confirmar){
+        aplicarFormaATab(tab,datos,{asignarNombre:true});
+        formaEdicionPorTab[idx]=null;
+      }
+    }
+    cerrarFormasModal();
+  });
+  document.getElementById('formas-borrar-btn').addEventListener('click',async()=>{
+    const datos=obtenerFormaSeleccionada();
+    if(!datos){alert('Selecciona una forma guardada');return;}
+    const confirmar=confirm('¿Seguro que deseas borrar esta forma permanentemente?');
+    if(!confirmar) return;
+    try{
+      await db.collection(FORMAS_COLLECTION).doc(datos.id).delete();
+      if(datos.indice && formaEdicionPorTab[datos.indice]===datos.id){
+        formaEdicionPorTab[datos.indice]=null;
+      }
+      alert('Forma eliminada correctamente');
+      await cargarFormasModal(datos.indice);
+    }catch(e){
+      console.error('eliminarForma',e);
+      alert('No se pudo eliminar la forma seleccionada');
+    }
+  });
 
   document.getElementById('close-modal').addEventListener('click',()=>{
     document.getElementById('image-modal').style.display='none';
