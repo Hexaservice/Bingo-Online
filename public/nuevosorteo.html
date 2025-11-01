@@ -107,9 +107,9 @@
     .forma-nombre-row .nombre-forma{flex:1;min-width:0;}
     .fx-button{font-family:'Bangers',cursive;font-size:0.9rem;letter-spacing:1px;padding:4px 10px;border-radius:10px;border:1px solid #888;background:linear-gradient(var(--fx-color,#4caf50),#ffffff);color:#fff;text-shadow:2px 2px 3px #000;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.2);min-width:56px;}
     .fx-button:active{transform:scale(0.95);}
-    .guardar-forma-btn{width:38px;height:38px;border-radius:50%;border:2px solid #666;background:linear-gradient(#ffffff,#d9d9d9);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.2);font-size:1.3rem;text-shadow:1px 1px 2px #000;}
-    .guardar-forma-btn span{filter:drop-shadow(0 0 2px #000);}
-    .guardar-forma-btn:active{transform:scale(0.95);}
+    .guardar-forma-btn{border:none;background:none;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.4rem;color:#333;line-height:1;text-shadow:1px 1px 2px rgba(0,0,0,0.4);}
+    .guardar-forma-btn span{filter:none;}
+    .guardar-forma-btn:active{transform:scale(0.9);}
     .tab-buttons button.active[data-tab="forma1"], .forma-item1{--forma-color:#90ee90;background:linear-gradient(#90ee90,#ffffff);}
     .tab-buttons button.active[data-tab="forma2"], .forma-item2{--forma-color:#fffacd;background:linear-gradient(#fffacd,#ffffff);}
     .tab-buttons button.active[data-tab="forma3"], .forma-item3{--forma-color:#add8e6;background:linear-gradient(#add8e6,#ffffff);}
@@ -183,6 +183,14 @@
     .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);justify-content:center;align-items:center;}
     .modal img{max-width:90%;max-height:90%;}
     .modal span{position:absolute;top:10px;right:20px;font-size:2rem;color:#fff;cursor:pointer;}
+    #confirm-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;z-index:2500;padding:16px;box-sizing:border-box;}
+    #confirm-modal.visible{display:flex;}
+    #confirm-modal .confirm-dialog{background:#fff;border-radius:16px;padding:24px;max-width:320px;width:100%;box-shadow:0 10px 28px rgba(0,0,0,0.35);font-family:'Poppins',sans-serif;text-align:center;display:flex;flex-direction:column;gap:16px;}
+    #confirm-modal .confirm-dialog p{margin:0;color:#333;font-weight:600;font-size:1rem;}
+    #confirm-modal .confirm-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;}
+    #confirm-modal .confirm-actions button{min-width:110px;padding:8px 16px;border-radius:8px;border:2px solid #333;font-family:'Bangers',cursive;font-size:1rem;cursor:pointer;color:#fff;text-shadow:1px 1px 2px #000;}
+    #confirm-modal .confirm-actions .cancelar-btn{background:linear-gradient(#808080,#c0c0c0);}
+    #confirm-modal .confirm-actions .aceptar-btn{background:linear-gradient(#0a8800,#ffffff);color:#fff;}
     @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.1);}100%{transform:scale(1);}}
     @media (orientation:landscape){
       .row,.premio-row,.imagen-wrapper,.toggle-group,.tabs{width:90% !important;margin-left:auto;margin-right:auto;}
@@ -247,6 +255,15 @@
       </div>
     </div>
   </div>
+  <div id="confirm-modal">
+    <div class="confirm-dialog">
+      <p id="confirm-message"></p>
+      <div class="confirm-actions">
+        <button type="button" class="cancelar-btn" id="confirm-cancel-btn">Cancelar</button>
+        <button type="button" class="aceptar-btn" id="confirm-accept-btn">Aceptar</button>
+      </div>
+    </div>
+  </div>
   <button id="guardar-sorteo-btn">Guardar Sorteo</button>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
@@ -273,6 +290,56 @@
   let modalFormaIdx=null;
   let formasModalDatos=[];
   let formaSeleccionadaId=null;
+
+  function mostrarConfirmacion(mensaje){
+    const modal=document.getElementById('confirm-modal');
+    const mensajeEl=document.getElementById('confirm-message');
+    const aceptarBtn=document.getElementById('confirm-accept-btn');
+    const cancelarBtn=document.getElementById('confirm-cancel-btn');
+    if(!modal||!mensajeEl||!aceptarBtn||!cancelarBtn){
+      return Promise.resolve(window.confirm(mensaje));
+    }
+    return new Promise(resolve=>{
+      const wasOpen=document.body.classList.contains('modal-open');
+      mensajeEl.textContent=mensaje;
+      modal.classList.add('visible');
+      if(!wasOpen){
+        document.body.classList.add('modal-open');
+      }
+
+      const cerrar=resultado=>{
+        limpiar();
+        modal.classList.remove('visible');
+        if(!wasOpen){
+          if(!document.getElementById('formas-modal')?.classList.contains('visible')){
+            document.body.classList.remove('modal-open');
+          }else{
+            document.body.classList.add('modal-open');
+          }
+        }
+        resolve(resultado);
+      };
+
+      const onAceptar=()=>cerrar(true);
+      const onCancelar=()=>cerrar(false);
+      const onBackdrop=e=>{if(e.target===modal) cerrar(false);};
+      const onKey=e=>{
+        if(e.key==='Escape'){cerrar(false);}else if(e.key==='Enter' && document.activeElement===aceptarBtn){cerrar(true);} 
+      };
+      function limpiar(){
+        aceptarBtn.removeEventListener('click',onAceptar);
+        cancelarBtn.removeEventListener('click',onCancelar);
+        modal.removeEventListener('click',onBackdrop);
+        document.removeEventListener('keydown',onKey);
+      }
+
+      aceptarBtn.focus({preventScroll:true});
+      aceptarBtn.addEventListener('click',onAceptar);
+      cancelarBtn.addEventListener('click',onCancelar);
+      modal.addEventListener('click',onBackdrop);
+      document.addEventListener('keydown',onKey);
+    });
+  }
 
   function setCookie(name,value){document.cookie=`${name}=${encodeURIComponent(value)};path=/;max-age=31536000`;}
   function getCookie(name){const m=document.cookie.match(new RegExp('(?:^|; )'+name+'=([^;]*)'));return m?decodeURIComponent(m[1]):null;}
@@ -890,7 +957,7 @@
   document.getElementById('formas-borrar-btn').addEventListener('click',async()=>{
     const datos=obtenerFormaSeleccionada();
     if(!datos){alert('Selecciona una forma guardada');return;}
-    const confirmar=confirm('¿Seguro que deseas borrar esta forma permanentemente?');
+    const confirmar=await mostrarConfirmacion('¿Seguro que deseas borrar esta forma permanentemente?');
     if(!confirmar) return;
     try{
       await db.collection(FORMAS_COLLECTION).doc(datos.id).delete();
