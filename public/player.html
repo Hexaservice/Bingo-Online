@@ -26,10 +26,11 @@
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: center;
+          justify-content: flex-start;
           min-height: 100vh;
           text-align: center;
           margin: 0;
+          padding-top: clamp(20px, 6vh, 60px);
       }
 		
       @keyframes fondo-movimiento {
@@ -173,10 +174,9 @@
           margin-bottom: 15px;
       }
       #menu-logo {
-          width: 250px;
-          max-width: 80vw;
+          width: clamp(180px, 28vw, 280px);
           height: auto;
-          margin-bottom: 15px;
+          margin-bottom: clamp(6px, 2vh, 20px);
       }
       #login-footer {
           position: relative;
@@ -240,16 +240,57 @@
           width: 100%;
       }
       #menu-buttons {
-          margin-top: 80px;
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
+          margin: clamp(10px, 4vh, 40px) auto 0;
+          display: grid;
+          grid-template-columns: minmax(120px, 1fr) minmax(220px, 1.2fr) minmax(120px, 1fr);
           align-items: center;
+          justify-items: center;
+          gap: clamp(12px, 3vw, 36px);
+          width: min(95vw, 980px);
       }
       #menu-buttons h3 {
           margin: 0;
-          font-size: 1.5rem;
+          font-size: clamp(1.6rem, 2.4vw, 2.2rem);
           font-family: 'Bangers', cursive;
+          color: #0056ff;
+          text-shadow: 0 0 8px #ffd700, 0 0 16px rgba(255, 215, 0, 0.8);
+      }
+      #menu-logo, #menu-buttons h3 {
+          grid-column: 1 / -1;
+      }
+
+      .menu-imagen {
+          width: clamp(140px, 26vw, 220px);
+          height: auto;
+          cursor: pointer;
+          transition: transform 0.25s ease, filter 0.25s ease;
+          filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.35));
+      }
+      .menu-imagen:focus,
+      .menu-imagen:hover {
+          transform: scale(1.04);
+          filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.6));
+          outline: none;
+      }
+      #boton-sorteo {
+          grid-column: 2;
+          width: clamp(220px, 48vw, 420px);
+      }
+      #boton-jugar {
+          grid-column: 1;
+          grid-row: 3;
+      }
+      #boton-billetera {
+          grid-column: 3;
+          grid-row: 3;
+      }
+      #boton-perfil {
+          grid-column: 1;
+          grid-row: 4;
+      }
+      #boton-mensajes {
+          grid-column: 3;
+          grid-row: 4;
       }
 
       #carton-screen {
@@ -322,6 +363,91 @@
               font-size: 1.5rem;
           }
       }
+      @media (max-width: 900px) {
+          #menu-buttons {
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+          #boton-sorteo {
+              grid-column: 1 / -1;
+          }
+          #boton-billetera {
+              grid-column: 2;
+          }
+          #boton-mensajes {
+              grid-column: 2;
+          }
+      }
+      @media (max-width: 768px) {
+          #menu-buttons {
+              grid-template-columns: 1fr;
+          }
+          .menu-imagen,
+          #boton-sorteo {
+              width: clamp(200px, 70vw, 380px);
+          }
+          #boton-jugar,
+          #boton-billetera,
+          #boton-perfil,
+          #boton-mensajes {
+              grid-column: 1;
+          }
+      }
+      .modal-whatsapp {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.6);
+          display: none;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          z-index: 2000;
+      }
+      .modal-whatsapp.activa {
+          display: flex;
+      }
+      .modal-whatsapp .modal-contenido {
+          background: #ffffff;
+          border-radius: 18px;
+          padding: clamp(20px, 4vw, 36px);
+          max-width: 420px;
+          width: 100%;
+          box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+          text-align: center;
+          border: 4px solid #ffd700;
+      }
+      .modal-whatsapp .modal-contenido h2 {
+          font-family: 'Bangers', cursive;
+          font-size: clamp(1.4rem, 3vw, 2rem);
+          color: #0056ff;
+          margin-bottom: clamp(12px, 3vh, 24px);
+          text-shadow: 0 0 6px rgba(255, 215, 0, 0.9);
+      }
+      .modal-whatsapp .modal-mensaje {
+          font-size: clamp(0.95rem, 2.4vw, 1.2rem);
+          color: #333;
+          margin-bottom: clamp(16px, 3vh, 28px);
+      }
+      #modal-whatsapp-aceptar {
+          font-family: 'Bangers', cursive;
+          font-size: clamp(1rem, 2.2vw, 1.2rem);
+          background: linear-gradient(135deg, #0a8800, #51c94d);
+          color: #fff;
+          border: 3px solid #ffd700;
+          border-radius: 10px;
+          padding: 10px 24px;
+          cursor: pointer;
+          text-transform: uppercase;
+          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+      }
+      #modal-whatsapp-aceptar:hover,
+      #modal-whatsapp-aceptar:focus {
+          transform: scale(1.03);
+          outline: none;
+          box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+      }
   </style>
 </head>
 <body>
@@ -349,12 +475,13 @@
 
   <div id="main-menu" class="view">
     <div id="menu-buttons">
-      <img id="menu-logo" src="img/Logo-BingOnline-nuevo500p.png" />
+      <img id="menu-logo" src="img/Logo-BingOnline-nuevo500p.png" alt="Logo de BingOnline" />
       <h3>Menú Jugador</h3>
-      <button id="carton-btn" class="menu-btn" onclick="mostrarCarton()">Jugar Cartón</button>
-      <button id="jugando-btn" class="menu-btn">Sorteo en Vivo</button>
-      <button id="billetera-btn" class="menu-btn">Billetera</button>
-      <button id="perfil-btn" class="menu-btn">Perfil</button>
+      <img id="boton-jugar" class="menu-imagen" src="img/boton-jugar-carton-bingo-300p.png" alt="Ir a jugar cartón" role="button" tabindex="0" loading="lazy" />
+      <img id="boton-sorteo" class="menu-imagen" src="img/boton-sorteo-en-vivo400p.png" alt="Ir al sorteo en vivo" role="button" tabindex="0" />
+      <img id="boton-billetera" class="menu-imagen" src="img/boton-billetera300p.png" alt="Ir a la billetera" role="button" tabindex="0" loading="lazy" />
+      <img id="boton-perfil" class="menu-imagen" src="img/boton-perfiles300p.png" alt="Ir al perfil del jugador" role="button" tabindex="0" loading="lazy" />
+      <img id="boton-mensajes" class="menu-imagen" src="img/boton-mensajes300p.png" alt="Abrir el grupo de WhatsApp" role="button" tabindex="0" loading="lazy" />
     </div>
   </div>
 
@@ -369,6 +496,14 @@
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
+  <div id="modal-whatsapp" class="modal-whatsapp" role="dialog" aria-modal="true" aria-labelledby="modal-whatsapp-titulo" aria-hidden="true">
+    <div class="modal-contenido">
+      <h2 id="modal-whatsapp-titulo">GRUPO DE WHATSAPP NO DISPONIBLE</h2>
+      <p id="modal-whatsapp-mensaje" class="modal-mensaje">Aún no hay grupos disponibles de WhatsApp</p>
+      <button type="button" id="modal-whatsapp-aceptar">Aceptar</button>
+    </div>
+  </div>
+
   <script src="js/auth.js"></script>
   <script src="js/timezone.js"></script>
 <script>
@@ -376,10 +511,86 @@ ensureAuth();
 setupSuperadminExit('#salir-super-btn');
 initFechaHora('fecha-hora');
 
-document.getElementById("carton-btn").addEventListener("click",()=>{window.location.href="jugarcartones.html";});
-document.getElementById("jugando-btn").addEventListener("click",()=>{window.location.href="juegoactivo.html";});
-document.getElementById("billetera-btn").addEventListener("click",()=>{window.location.href="billetera.html";});
-document.getElementById("perfil-btn").addEventListener("click",()=>{window.location.href="perfil.html";});
+const db = firebase.firestore();
+let whatsappLinkValor = '';
+let whatsappLinkCargado = false;
+
+const whatsappModalEl = document.getElementById('modal-whatsapp');
+const whatsappModalMensajeEl = document.getElementById('modal-whatsapp-mensaje');
+const whatsappModalAceptarBtn = document.getElementById('modal-whatsapp-aceptar');
+
+function configurarAccionImagen(id, accion){
+  const elemento = document.getElementById(id);
+  if(!elemento) return;
+  const ejecutarAccion = ()=>accion();
+  elemento.addEventListener('click', ejecutarAccion);
+  elemento.addEventListener('keydown', evento=>{
+    if(evento.key === 'Enter' || evento.key === ' '){
+      evento.preventDefault();
+      ejecutarAccion();
+    }
+  });
+}
+
+function mostrarModalWhatsapp(texto){
+  if(!whatsappModalEl) return;
+  if(whatsappModalMensajeEl){
+    whatsappModalMensajeEl.textContent = texto || 'Aún no hay grupos disponibles de WhatsApp';
+  }
+  whatsappModalEl.classList.add('activa');
+  whatsappModalEl.setAttribute('aria-hidden','false');
+}
+
+function cerrarModalWhatsapp(){
+  if(!whatsappModalEl) return;
+  whatsappModalEl.classList.remove('activa');
+  whatsappModalEl.setAttribute('aria-hidden','true');
+}
+
+async function obtenerLinkWhatsapp(){
+  if(whatsappLinkCargado) return whatsappLinkValor;
+  try {
+    const doc = await db.collection('Variablesglobales').doc('Parametros').get();
+    const data = doc.exists ? (doc.data() || {}) : {};
+    const posibles = [data.linkwhatsapp, data.linkWhatsapp, data.link_whatsapp];
+    const enlace = posibles.find(valor => typeof valor === 'string' && valor.trim());
+    whatsappLinkValor = enlace ? enlace.trim() : '';
+  } catch (error) {
+    console.error('Error al obtener el enlace de WhatsApp:', error);
+    whatsappLinkValor = '';
+  }
+  whatsappLinkCargado = true;
+  return whatsappLinkValor;
+}
+
+async function manejarClickWhatsapp(){
+  const enlace = await obtenerLinkWhatsapp();
+  if(enlace){
+    const nuevaVentana = window.open(enlace, '_blank', 'noopener');
+    if(!nuevaVentana){
+      mostrarModalWhatsapp('No pudimos abrir el grupo de WhatsApp. Verifica que el navegador permita ventanas emergentes.');
+    }
+  } else {
+    mostrarModalWhatsapp('Aún no hay grupos disponibles de WhatsApp');
+  }
+}
+
+configurarAccionImagen('boton-jugar', ()=>{window.location.href = 'jugarcartones.html';});
+configurarAccionImagen('boton-sorteo', ()=>{window.location.href = 'juegoactivo.html';});
+configurarAccionImagen('boton-billetera', ()=>{window.location.href = 'billetera.html';});
+configurarAccionImagen('boton-perfil', ()=>{window.location.href = 'perfil.html';});
+configurarAccionImagen('boton-mensajes', manejarClickWhatsapp);
+
+if(whatsappModalAceptarBtn){
+  whatsappModalAceptarBtn.addEventListener('click', cerrarModalWhatsapp);
+}
+if(whatsappModalEl){
+  whatsappModalEl.addEventListener('click', evento=>{
+    if(evento.target === whatsappModalEl){
+      cerrarModalWhatsapp();
+    }
+  });
+}
 </script>
 </body>
 </html>
