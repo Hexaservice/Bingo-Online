@@ -179,13 +179,17 @@
     #stats-row{display:flex;justify-content:center;align-items:center;gap:20px;}
     .billete-icon{font-size:1.5rem;}
     .carton-icon{width:24px;height:24px;}
-    #premio-repartir{color:#001b60;font-family:'Bangers',cursive;font-size:clamp(2.1rem,6vw,2.9rem);text-shadow:0 0 12px rgba(0,27,96,0.4);position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;}
-    #premio-repartir .premio-repartir-principal{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;}
-    #premio-repartir .premio-repartir-principal span{display:inline-flex;align-items:center;}
+    #premio-repartir{font-family:'Bangers',cursive;font-size:clamp(2.1rem,6vw,3.1rem);position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;color:#ffffff;text-shadow:0 0 14px rgba(0,255,153,0.85),0 0 26px rgba(0,140,70,0.65);}
+    #premio-repartir .premio-repartir-principal{display:flex;align-items:baseline;gap:clamp(10px,2.4vw,18px);flex-wrap:wrap;justify-content:center;}
+    #premio-repartir .premio-repartir-principal span{display:inline-flex;align-items:baseline;}
+    #premio-label{color:#ffffff;text-shadow:inherit;font-size:clamp(1.6rem,4.8vw,2.6rem);letter-spacing:0.06em;}
+    #premio-valores{display:inline-flex;align-items:baseline;gap:0;}
+    #premio-valor{color:#ffffff;text-shadow:inherit;font-size:clamp(2rem,5.6vw,3.2rem);line-height:1;}
+    #premio-extra-plus,#premio-extra-valor{color:#001b60;text-shadow:0 0 12px rgba(0,27,96,0.5);font-size:clamp(1.55rem,4.4vw,2.6rem);line-height:1;}
     #premio-label{text-transform:uppercase;letter-spacing:1px;}
-    #premio-valor,#premio-extra-plus,#premio-extra-valor{font-size:inherit;color:#001b60;animation:zoomInOut 1.6s ease-in-out infinite;font-family:'Bangers',cursive;}
-    #premio-valor{font-weight:700;}
-    #premio-extra-plus{font-weight:700;padding:0 4px;}
+    #premio-valor{animation:zoomInOut 1.6s ease-in-out infinite;font-family:'Bangers',cursive;font-weight:700;}
+    #premio-extra-plus,#premio-extra-valor{animation:zoomInOut 1.6s ease-in-out infinite;font-family:'Bangers',cursive;}
+    #premio-extra-plus{font-weight:700;padding:0;}
     #premio-extra-valor{font-weight:700;}
     #premio-cartones-gratis{display:none !important;}
     #forma-nombre{font-family:'Bangers',cursive;color:#4B0082;font-size:1rem;text-shadow:0 0 5px #fff;text-align:center;visibility:hidden;min-height:8px;margin:0;}
@@ -346,9 +350,7 @@
       <div id="premio-repartir">
         <div class="premio-repartir-principal">
           <span id="premio-label">PREMIO A REPARTIR:</span>
-          <span id="premio-valor">0</span>
-          <span id="premio-extra-plus">+</span>
-          <span id="premio-extra-valor">0</span>
+          <span id="premio-valores"><span id="premio-valor">0</span><span id="premio-extra-plus">+</span><span id="premio-extra-valor">0</span></span>
         </div>
         <div id="premio-cartones-gratis" class="premio-cartones-gratis">
           Cartones gratis: <span id="premio-cartones-gratis-valor" class="premio-cartones-gratis-valor">0</span>
@@ -511,6 +513,8 @@
   const premioCartonesGratisValorEl=document.getElementById('premio-cartones-gratis-valor');
   const premioExtraPlusEl=document.getElementById('premio-extra-plus');
   const premioExtraValorEl=document.getElementById('premio-extra-valor');
+  const RESPLANDOR_PREMIO_REPARTIR='0 0 14px rgba(0,255,153,0.85),0 0 26px rgba(0,140,70,0.65)';
+  const COLOR_PREMIO_TEXTO='#ffffff';
 
 function obtenerColorCartonesGratisActual(){
   const limiteAlcanzado=maxCartonesGratis>0 && cartonesGratisJugadorActual>=maxCartonesGratis;
@@ -851,20 +855,20 @@ function resetForma(){
     th.style.textShadow='2px 2px 0 #000';
   });
   document.querySelectorAll('#bingo-board td').forEach(td=>{td.style.background='';});
-  document.getElementById('premio-label').textContent='PREMIO A REPARTIR:';
+  const premioLabelEl=document.getElementById('premio-label');
+  if(premioLabelEl){
+    premioLabelEl.textContent='PREMIO A REPARTIR:';
+    premioLabelEl.style.color=COLOR_PREMIO_TEXTO;
+    premioLabelEl.style.textShadow=RESPLANDOR_PREMIO_REPARTIR;
+  }
   const premioValorEl=document.getElementById('premio-valor');
   if(premioValorEl){
-    premioValorEl.style.textShadow='0 0 12px rgba(0,27,96,0.4)';
+    premioValorEl.style.color=COLOR_PREMIO_TEXTO;
+    premioValorEl.style.textShadow=RESPLANDOR_PREMIO_REPARTIR;
   }
   const pr=document.getElementById('premio-repartir');
   if(pr){
-    pr.style.textShadow='0 0 12px rgba(0,27,96,0.4)';
-  }
-  if(premioExtraPlusEl){
-    premioExtraPlusEl.style.textShadow='0 0 12px rgba(0,27,96,0.4)';
-  }
-  if(premioExtraValorEl){
-    premioExtraValorEl.style.textShadow='0 0 12px rgba(0,27,96,0.4)';
+    pr.style.textShadow=RESPLANDOR_PREMIO_REPARTIR;
   }
   document.getElementById('forma-nombre').style.visibility='hidden';
   actualizarIndicadorCartonesGratis();
@@ -891,14 +895,17 @@ function toggleForma(idx){
   const pl=document.getElementById('premio-label');
   const nombre=document.getElementById('forma-nombre');
   const porcentaje=parseFloat(forma.porcentaje)||0;
-  pl.textContent='PREMIO DE FORMA:';
-  pr.style.textShadow=`0 0 10px ${formGlows[idx-1]}`;
-  pv.style.textShadow=`0 0 10px ${formGlows[idx-1]}`;
-  if(premioExtraPlusEl){
-    premioExtraPlusEl.style.textShadow=`0 0 10px ${formGlows[idx-1]}`;
+  if(pl){
+    pl.textContent='PREMIO DE FORMA:';
+    pl.style.color=COLOR_PREMIO_TEXTO;
+    pl.style.textShadow=`0 0 10px ${formGlows[idx-1]}`;
   }
-  if(premioExtraValorEl){
-    premioExtraValorEl.style.textShadow=`0 0 10px ${formGlows[idx-1]}`;
+  if(pr){
+    pr.style.textShadow=`0 0 10px ${formGlows[idx-1]}`;
+  }
+  if(pv){
+    pv.style.color=COLOR_PREMIO_TEXTO;
+    pv.style.textShadow=`0 0 10px ${formGlows[idx-1]}`;
   }
   nombre.textContent=forma.nombre||'';
   nombre.style.textShadow=`0 0 5px ${formGlows[idx-1]}`;
