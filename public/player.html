@@ -641,108 +641,125 @@
   <script src="js/auth.js"></script>
   <script src="js/timezone.js"></script>
 <script>
-ensureAuth();
-setupSuperadminExit('#salir-super-btn');
-initFechaHora('fecha-hora');
+(function(){
+  const AVATAR_FALLBACK = 'img/avatar-generico.svg';
+  const whatsappModalEl = document.getElementById('modal-whatsapp');
+  const whatsappModalMensajeEl = document.getElementById('modal-whatsapp-mensaje');
+  const whatsappModalAceptarBtn = document.getElementById('modal-whatsapp-aceptar');
+  const salirPlayerBtn = document.getElementById('salir-player-btn');
+  const whatsappState = { enlace:'', cargado:false };
+  let firestoreRef = null;
 
-const db = firebase.firestore();
-let whatsappLinkValor = '';
-let whatsappLinkCargado = false;
-const AVATAR_FALLBACK = 'img/avatar-generico.svg';
-
-const whatsappModalEl = document.getElementById('modal-whatsapp');
-const whatsappModalMensajeEl = document.getElementById('modal-whatsapp-mensaje');
-const whatsappModalAceptarBtn = document.getElementById('modal-whatsapp-aceptar');
-const salirPlayerBtn = document.getElementById('salir-player-btn');
-
-function asignarFotoUsuario(elemento, url){
-  if(!elemento) return;
-  const aplicarFallback = ()=>{
-    elemento.src = AVATAR_FALLBACK;
-  };
-  elemento.addEventListener('error', aplicarFallback, { once: true });
-  const urlValida = typeof url === 'string' && url.trim().length > 0;
-  elemento.src = urlValida ? url : AVATAR_FALLBACK;
-  if(!urlValida){
-    elemento.removeEventListener('error', aplicarFallback);
-  }
-}
-
-function configurarAccionImagen(id, accion){
-  const elemento = document.getElementById(id);
-  if(!elemento) return;
-  const ejecutarAccion = ()=>accion();
-  elemento.addEventListener('click', ejecutarAccion);
-  elemento.addEventListener('keydown', evento=>{
-    if(evento.key === 'Enter' || evento.key === ' '){
-      evento.preventDefault();
-      ejecutarAccion();
+  function asignarFotoUsuario(elemento, url){
+    if(!elemento) return;
+    const aplicarFallback = ()=>{
+      elemento.src = AVATAR_FALLBACK;
+    };
+    elemento.addEventListener('error', aplicarFallback, { once: true });
+    const urlValida = typeof url === 'string' && url.trim().length > 0;
+    elemento.src = urlValida ? url : AVATAR_FALLBACK;
+    if(!urlValida){
+      elemento.removeEventListener('error', aplicarFallback);
     }
-  });
-}
-
-function mostrarModalWhatsapp(texto){
-  if(!whatsappModalEl) return;
-  if(whatsappModalMensajeEl){
-    whatsappModalMensajeEl.textContent = texto || 'Aún no hay grupos disponibles de WhatsApp';
   }
-  whatsappModalEl.classList.add('activa');
-  whatsappModalEl.setAttribute('aria-hidden','false');
-}
 
-function cerrarModalWhatsapp(){
-  if(!whatsappModalEl) return;
-  whatsappModalEl.classList.remove('activa');
-  whatsappModalEl.setAttribute('aria-hidden','true');
-}
+  window.asignarFotoUsuario = asignarFotoUsuario;
 
-async function obtenerLinkWhatsapp(){
-  if(whatsappLinkCargado) return whatsappLinkValor;
-  try {
-    const doc = await db.collection('Variablesglobales').doc('Parametros').get();
-    const data = doc.exists ? (doc.data() || {}) : {};
-    const posibles = [data.linkwhatsapp, data.linkWhatsapp, data.link_whatsapp];
-    const enlace = posibles.find(valor => typeof valor === 'string' && valor.trim());
-    whatsappLinkValor = enlace ? enlace.trim() : '';
-  } catch (error) {
-    console.error('Error al obtener el enlace de WhatsApp:', error);
-    whatsappLinkValor = '';
+  function configurarAccionImagen(id, accion){
+    const elemento = document.getElementById(id);
+    if(!elemento || typeof accion !== 'function') return;
+    const ejecutarAccion = ()=>accion();
+    elemento.addEventListener('click', ejecutarAccion);
+    elemento.addEventListener('keydown', evento=>{
+      if(evento.key === 'Enter' || evento.key === ' '){
+        evento.preventDefault();
+        ejecutarAccion();
+      }
+    });
   }
-  whatsappLinkCargado = true;
-  return whatsappLinkValor;
-}
 
-async function manejarClickWhatsapp(){
-  const enlace = await obtenerLinkWhatsapp();
-  if(enlace){
-    const nuevaVentana = window.open(enlace, '_blank', 'noopener');
-    if(!nuevaVentana){
-      mostrarModalWhatsapp('No pudimos abrir el grupo de WhatsApp. Verifica que el navegador permita ventanas emergentes.');
+  function mostrarModalWhatsapp(texto){
+    if(!whatsappModalEl) return;
+    if(whatsappModalMensajeEl){
+      whatsappModalMensajeEl.textContent = texto || 'Aún no hay grupos disponibles de WhatsApp';
     }
-  } else {
-    mostrarModalWhatsapp('Aún no hay grupos disponibles de WhatsApp');
+    whatsappModalEl.classList.add('activa');
+    whatsappModalEl.setAttribute('aria-hidden','false');
   }
-}
 
-configurarAccionImagen('boton-jugar', ()=>{window.location.href = 'jugarcartones.html';});
-configurarAccionImagen('boton-sorteo', ()=>{window.location.href = 'juegoactivo.html';});
-configurarAccionImagen('boton-billetera', ()=>{window.location.href = 'billetera.html';});
-configurarAccionImagen('boton-perfil', ()=>{window.location.href = 'perfil.html';});
-configurarAccionImagen('boton-mensajes', manejarClickWhatsapp);
+  function cerrarModalWhatsapp(){
+    if(!whatsappModalEl) return;
+    whatsappModalEl.classList.remove('activa');
+    whatsappModalEl.setAttribute('aria-hidden','true');
+  }
 
-if(whatsappModalAceptarBtn){
-  whatsappModalAceptarBtn.addEventListener('click', cerrarModalWhatsapp);
-}
-if(whatsappModalEl){
-  whatsappModalEl.addEventListener('click', evento=>{
-    if(evento.target === whatsappModalEl){
-      cerrarModalWhatsapp();
+  async function obtenerLinkWhatsapp(){
+    if(whatsappState.cargado) return whatsappState.enlace;
+    if(!firestoreRef) return '';
+    try {
+      const doc = await firestoreRef.collection('Variablesglobales').doc('Parametros').get();
+      const data = doc.exists ? (doc.data() || {}) : {};
+      const posibles = [data.linkwhatsapp, data.linkWhatsapp, data.link_whatsapp];
+      const enlace = posibles.find(valor => typeof valor === 'string' && valor.trim());
+      whatsappState.enlace = enlace ? enlace.trim() : '';
+    } catch (error) {
+      console.error('Error al obtener el enlace de WhatsApp:', error);
+      whatsappState.enlace = '';
     }
-  });
-}
-if(salirPlayerBtn){
-  salirPlayerBtn.addEventListener('click', ()=>{ window.location.href = 'accederusuario.html'; });
-}
+    whatsappState.cargado = true;
+    return whatsappState.enlace;
+  }
+
+  async function manejarClickWhatsapp(){
+    const enlace = await obtenerLinkWhatsapp();
+    if(enlace){
+      const nuevaVentana = window.open(enlace, '_blank', 'noopener');
+      if(!nuevaVentana){
+        mostrarModalWhatsapp('No pudimos abrir el grupo de WhatsApp. Verifica que el navegador permita ventanas emergentes.');
+      }
+    } else {
+      mostrarModalWhatsapp('Aún no hay grupos disponibles de WhatsApp');
+    }
+  }
+
+  async function inicializarVistaJugador(){
+    try {
+      await initFirebase();
+    } catch (error) {
+      console.error('No se pudo inicializar Firebase para la vista de jugador', error);
+      alert('No se pudo inicializar Firebase. Intenta nuevamente más tarde.');
+      return;
+    }
+
+    ensureAuth();
+    setupSuperadminExit('#salir-super-btn');
+    initFechaHora('fecha-hora');
+
+    firestoreRef = firebase.firestore();
+
+    configurarAccionImagen('boton-jugar', ()=>{ window.location.href = 'jugarcartones.html'; });
+    configurarAccionImagen('boton-sorteo', ()=>{ window.location.href = 'juegoactivo.html'; });
+    configurarAccionImagen('boton-billetera', ()=>{ window.location.href = 'billetera.html'; });
+    configurarAccionImagen('boton-perfil', ()=>{ window.location.href = 'perfil.html'; });
+    configurarAccionImagen('boton-mensajes', manejarClickWhatsapp);
+
+    if(whatsappModalAceptarBtn){
+      whatsappModalAceptarBtn.addEventListener('click', cerrarModalWhatsapp);
+    }
+    if(whatsappModalEl){
+      whatsappModalEl.addEventListener('click', evento => {
+        if(evento.target === whatsappModalEl){
+          cerrarModalWhatsapp();
+        }
+      });
+    }
+    if(salirPlayerBtn){
+      salirPlayerBtn.addEventListener('click', () => { window.location.href = 'accederusuario.html'; });
+    }
+  }
+
+  inicializarVistaJugador();
+})();
 </script>
 </body>
 </html>
