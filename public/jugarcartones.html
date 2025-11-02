@@ -170,11 +170,7 @@
     #sorteo-section{margin-bottom:5px;}
     .datos-sorteo div{font-weight:bold;font-size:1.2rem;}
     #valor-carton span,#cartones-jugando span{font-size:1.5rem;}
-    #valor-carton-valor,#premio-valor{animation:pulse 1s infinite;display:inline-block;}
-    #premio-valor{
-      font-family:'Poppins',sans-serif;
-      font-weight:600;
-    }
+    #valor-carton-valor,#premio-valor{display:inline-block;}
     #cartones-jugando-valor,#gratis-plus,#cartones-gratis-jugando{animation:wiggle 1s infinite;display:inline-block;}
     #cartones-gratis-jugando{color:#0b3d91;}
     #valor-carton{color:green;display:flex;align-items:center;gap:5px;}
@@ -183,10 +179,15 @@
     #stats-row{display:flex;justify-content:center;align-items:center;gap:20px;}
     .billete-icon{font-size:1.5rem;}
     .carton-icon{width:24px;height:24px;}
-    #premio-repartir{color:white;font-family:'Bangers',cursive;font-size:1.8rem;text-shadow:0 0 10px #004400;position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;}
-    #premio-repartir .premio-repartir-principal{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;}
-    #premio-repartir .premio-cartones-gratis{font-family:'Poppins',sans-serif;font-size:clamp(0.48rem,1.4vw,0.68rem);letter-spacing:0.6px;color:#001b60;text-transform:uppercase;text-shadow:0 0 6px rgba(255,255,255,0.6);animation:zoomInOut 2.4s ease-in-out infinite;display:flex;align-items:center;gap:4px;}
-    #premio-repartir .premio-cartones-gratis-valor{font-weight:700;animation:inherit;}
+    #premio-repartir{color:#001b60;font-family:'Bangers',cursive;font-size:clamp(2.1rem,6vw,2.9rem);text-shadow:0 0 12px rgba(0,27,96,0.4);position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;}
+    #premio-repartir .premio-repartir-principal{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;}
+    #premio-repartir .premio-repartir-principal span{display:inline-flex;align-items:center;}
+    #premio-label{text-transform:uppercase;letter-spacing:1px;}
+    #premio-valor,#premio-extra-plus,#premio-extra-valor{font-size:inherit;color:#001b60;animation:zoomInOut 1.6s ease-in-out infinite;font-family:'Bangers',cursive;}
+    #premio-valor{font-weight:700;}
+    #premio-extra-plus{font-weight:700;padding:0 4px;}
+    #premio-extra-valor{font-weight:700;}
+    #premio-cartones-gratis{display:none !important;}
     #forma-nombre{font-family:'Bangers',cursive;color:#4B0082;font-size:1rem;text-shadow:0 0 5px #fff;text-align:center;visibility:hidden;min-height:8px;margin:0;}
     .wallet-row{display:flex;align-items:center;gap:5px;margin:3px 0;font-size:1rem;font-weight:bold;}
     #gratis-label{
@@ -344,8 +345,10 @@
     <div class="datos-sorteo">
       <div id="premio-repartir">
         <div class="premio-repartir-principal">
-          <span id="premio-label">Premio a Repartir:</span>
+          <span id="premio-label">PREMIO A REPARTIR:</span>
           <span id="premio-valor">0</span>
+          <span id="premio-extra-plus">+</span>
+          <span id="premio-extra-valor">0</span>
         </div>
         <div id="premio-cartones-gratis" class="premio-cartones-gratis">
           Cartones gratis: <span id="premio-cartones-gratis-valor" class="premio-cartones-gratis-valor">0</span>
@@ -506,6 +509,8 @@
   let siguienteNumeroCarton=1;
   const premioCartonesGratisEl=document.getElementById('premio-cartones-gratis');
   const premioCartonesGratisValorEl=document.getElementById('premio-cartones-gratis-valor');
+  const premioExtraPlusEl=document.getElementById('premio-extra-plus');
+  const premioExtraValorEl=document.getElementById('premio-extra-valor');
 
 function obtenerColorCartonesGratisActual(){
   const limiteAlcanzado=maxCartonesGratis>0 && cartonesGratisJugadorActual>=maxCartonesGratis;
@@ -620,7 +625,7 @@ function obtenerTotalCartonesGratisFormas(){
 }
 
 function actualizarIndicadorCartonesGratis(){
-  if(!premioCartonesGratisEl || !premioCartonesGratisValorEl) return;
+  if(!premioCartonesGratisEl && !premioCartonesGratisValorEl && !premioExtraValorEl) return;
   let total=0;
   if(formaActiva>0){
     const activa=formasSorteo.find(f=>Number(f?.idx)===Number(formaActiva));
@@ -628,7 +633,16 @@ function actualizarIndicadorCartonesGratis(){
   }else{
     total=obtenerTotalCartonesGratisFormas();
   }
-  premioCartonesGratisValorEl.textContent=formatearEnteroEs(total);
+  const totalFormateado=formatearEnteroEs(total);
+  if(premioCartonesGratisValorEl){
+    premioCartonesGratisValorEl.textContent=totalFormateado;
+  }
+  if(premioExtraValorEl){
+    premioExtraValorEl.textContent=totalFormateado;
+  }
+  if(premioExtraPlusEl){
+    premioExtraPlusEl.style.visibility='visible';
+  }
 }
 
 function actualizarNumeroCartonLocal(ultimo){
@@ -837,10 +851,21 @@ function resetForma(){
     th.style.textShadow='2px 2px 0 #000';
   });
   document.querySelectorAll('#bingo-board td').forEach(td=>{td.style.background='';});
-  document.getElementById('premio-label').textContent='Premio a Repartir:';
-  document.getElementById('premio-valor').style.textShadow='0 0 10px #004400';
+  document.getElementById('premio-label').textContent='PREMIO A REPARTIR:';
+  const premioValorEl=document.getElementById('premio-valor');
+  if(premioValorEl){
+    premioValorEl.style.textShadow='0 0 12px rgba(0,27,96,0.4)';
+  }
   const pr=document.getElementById('premio-repartir');
-  pr.style.textShadow='0 0 10px #004400';
+  if(pr){
+    pr.style.textShadow='0 0 12px rgba(0,27,96,0.4)';
+  }
+  if(premioExtraPlusEl){
+    premioExtraPlusEl.style.textShadow='0 0 12px rgba(0,27,96,0.4)';
+  }
+  if(premioExtraValorEl){
+    premioExtraValorEl.style.textShadow='0 0 12px rgba(0,27,96,0.4)';
+  }
   document.getElementById('forma-nombre').style.visibility='hidden';
   actualizarIndicadorCartonesGratis();
   actualizarDatosSorteo();
@@ -869,6 +894,12 @@ function toggleForma(idx){
   pl.textContent='PREMIO DE FORMA:';
   pr.style.textShadow=`0 0 10px ${formGlows[idx-1]}`;
   pv.style.textShadow=`0 0 10px ${formGlows[idx-1]}`;
+  if(premioExtraPlusEl){
+    premioExtraPlusEl.style.textShadow=`0 0 10px ${formGlows[idx-1]}`;
+  }
+  if(premioExtraValorEl){
+    premioExtraValorEl.style.textShadow=`0 0 10px ${formGlows[idx-1]}`;
+  }
   nombre.textContent=forma.nombre||'';
   nombre.style.textShadow=`0 0 5px ${formGlows[idx-1]}`;
   const wrapper=document.getElementById('carton-wrapper');
