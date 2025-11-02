@@ -336,8 +336,9 @@ function ensureAuth(roleExpected){
           return;
         }
         window.currentRole = role;
+        const nombreVisible = (user.displayName && user.displayName.trim()) ? user.displayName : (user.email || '');
         const nameEl = document.getElementById('user-name');
-        if (nameEl) nameEl.textContent = user.displayName;
+        if (nameEl) nameEl.textContent = nombreVisible;
         const emailEl = document.getElementById('user-email');
         if (emailEl) emailEl.textContent = user.email;
         const picEl = document.getElementById('user-pic');
