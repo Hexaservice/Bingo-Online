@@ -241,12 +241,11 @@
       }
       #menu-buttons {
           margin: clamp(10px, 4vh, 40px) auto 0;
-          display: grid;
-          grid-template-columns: minmax(120px, 1fr) minmax(220px, 1.2fr) minmax(120px, 1fr);
-          align-items: center;
-          justify-items: center;
-          gap: clamp(12px, 3vw, 36px);
           width: min(95vw, 980px);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: clamp(12px, 3vh, 36px);
       }
       #menu-buttons h3 {
           margin: 0;
@@ -254,17 +253,69 @@
           font-family: 'Bangers', cursive;
           color: #0056ff;
           text-shadow: 0 0 8px #ffd700, 0 0 16px rgba(255, 215, 0, 0.8);
+          text-align: center;
       }
-      #menu-logo, #menu-buttons h3 {
-          grid-column: 1 / -1;
+
+      #menu-tabla-wrapper {
+          width: 100%;
+          padding: 20px;
+          box-sizing: border-box;
+          display: flex;
+          justify-content: center;
+      }
+
+      .menu-tabla {
+          width: 100%;
+          max-width: 620px;
+          border-collapse: separate;
+          border-spacing: clamp(10px, 2.5vw, 24px);
+          margin: 0 auto;
+          background: transparent;
+          border: none;
+          border-radius: 0;
+          box-shadow: none;
+          padding: 0;
+          table-layout: fixed;
+          aspect-ratio: 3 / 2;
+      }
+
+      .menu-tabla col.col-30 {
+          width: 30%;
+      }
+
+      .menu-tabla col.col-40 {
+          width: 40%;
+      }
+
+      .menu-tabla tr:first-child {
+          height: 60%;
+      }
+
+      .menu-tabla tr:last-child {
+          height: 40%;
+      }
+
+      .menu-tabla td {
+          border: none;
+          padding: clamp(4px, 1.5vw, 12px);
+          text-align: center;
+          vertical-align: middle;
+          width: auto;
+          height: auto;
+      }
+
+      .menu-tabla td.celda-vacia {
+          pointer-events: none;
       }
 
       .menu-imagen {
-          width: clamp(140px, 26vw, 220px);
-          height: auto;
+          width: 100%;
+          height: 100%;
+          max-height: 100%;
           cursor: pointer;
           transition: transform 0.25s ease, filter 0.25s ease;
           filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.35));
+          object-fit: contain;
       }
       .menu-imagen:focus,
       .menu-imagen:hover {
@@ -273,24 +324,7 @@
           outline: none;
       }
       #boton-sorteo {
-          grid-column: 2;
-          width: clamp(220px, 48vw, 420px);
-      }
-      #boton-jugar {
-          grid-column: 1;
-          grid-row: 3;
-      }
-      #boton-billetera {
-          grid-column: 3;
-          grid-row: 3;
-      }
-      #boton-perfil {
-          grid-column: 1;
-          grid-row: 4;
-      }
-      #boton-mensajes {
-          grid-column: 3;
-          grid-row: 4;
+          width: 100%;
       }
 
       #carton-screen {
@@ -363,33 +397,18 @@
               font-size: 1.5rem;
           }
       }
-      @media (max-width: 900px) {
-          #menu-buttons {
-              grid-template-columns: repeat(2, minmax(0, 1fr));
+      @media (max-width: 768px) {
+          #menu-tabla-wrapper {
+              padding-inline: clamp(18px, 6vw, 32px);
           }
-          #boton-sorteo {
-              grid-column: 1 / -1;
-          }
-          #boton-billetera {
-              grid-column: 2;
-          }
-          #boton-mensajes {
-              grid-column: 2;
+          .menu-tabla {
+              max-width: 540px;
           }
       }
-      @media (max-width: 768px) {
-          #menu-buttons {
-              grid-template-columns: 1fr;
-          }
-          .menu-imagen,
-          #boton-sorteo {
-              width: clamp(200px, 70vw, 380px);
-          }
-          #boton-jugar,
-          #boton-billetera,
-          #boton-perfil,
-          #boton-mensajes {
-              grid-column: 1;
+
+      @media (orientation: landscape) and (max-width: 1024px) {
+          #menu-tabla-wrapper {
+              padding-inline: clamp(40px, 16vw, 160px);
           }
       }
       .modal-whatsapp {
@@ -477,11 +496,37 @@
     <div id="menu-buttons">
       <img id="menu-logo" src="img/Logo-BingOnline-nuevo500p.png" alt="Logo de BingOnline" />
       <h3>Menú Jugador</h3>
-      <img id="boton-jugar" class="menu-imagen" src="img/boton-jugar-carton-bingo-300p.png" alt="Ir a jugar cartón" role="button" tabindex="0" loading="lazy" />
-      <img id="boton-sorteo" class="menu-imagen" src="img/boton-sorteo-en-vivo400p.png" alt="Ir al sorteo en vivo" role="button" tabindex="0" />
-      <img id="boton-billetera" class="menu-imagen" src="img/boton-billetera300p.png" alt="Ir a la billetera" role="button" tabindex="0" loading="lazy" />
-      <img id="boton-perfil" class="menu-imagen" src="img/boton-perfiles300p.png" alt="Ir al perfil del jugador" role="button" tabindex="0" loading="lazy" />
-      <img id="boton-mensajes" class="menu-imagen" src="img/boton-mensajes300p.png" alt="Abrir el grupo de WhatsApp" role="button" tabindex="0" loading="lazy" />
+      <div id="menu-tabla-wrapper">
+        <table class="menu-tabla" aria-label="Accesos del menú principal">
+          <colgroup>
+            <col class="col-30" />
+            <col class="col-40" />
+            <col class="col-30" />
+          </colgroup>
+          <tbody>
+            <tr>
+              <td>
+                <img id="boton-jugar" class="menu-imagen" src="img/boton-jugar-carton-bingo-300p.png" alt="Ir a jugar cartón" role="button" tabindex="0" loading="lazy" />
+              </td>
+              <td>
+                <img id="boton-sorteo" class="menu-imagen" src="img/boton-sorteo-en-vivo400p.png" alt="Ir al sorteo en vivo" role="button" tabindex="0" />
+              </td>
+              <td>
+                <img id="boton-billetera" class="menu-imagen" src="img/boton-billetera300p.png" alt="Ir a la billetera" role="button" tabindex="0" loading="lazy" />
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <img id="boton-perfil" class="menu-imagen" src="img/boton-perfiles300p.png" alt="Ir al perfil del jugador" role="button" tabindex="0" loading="lazy" />
+              </td>
+              <td class="celda-vacia" aria-hidden="true"></td>
+              <td>
+                <img id="boton-mensajes" class="menu-imagen" src="img/boton-mensajes300p.png" alt="Abrir el grupo de WhatsApp" role="button" tabindex="0" loading="lazy" />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
