@@ -231,7 +231,7 @@
     .carton td{cursor:pointer;font-size:1.8rem;text-shadow:0 0 3px green;}
     .carton td.free{background:#ffeb3b;display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:#4B0082;box-shadow:inset 0 0 6px rgba(0,0,0,0.18);}
     .carton-center-info{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1;font-weight:bold;text-transform:none;}
-    #carton-num-max{font-size:1.4rem;color:#006400;text-shadow:0 0 4px #fff,0 0 6px rgba(0,0,0,0.2);font-family:'Poppins',sans-serif;display:block;animation:wiggle 1s infinite;}
+    #carton-num-max{font-size:1.2rem;color:#006400;text-shadow:0 0 4px #fff,0 0 6px rgba(0,0,0,0.2);font-family:'Poppins',sans-serif;display:block;animation:wiggle 1s infinite;}
     .carton td.error{border:2px solid red;}
     .carton-back{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:10px;backface-visibility:hidden;transform:rotateY(180deg);background:linear-gradient(white,gray);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:5px;overflow:hidden;}
     .carton-back img{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;height:auto;opacity:0.15;object-fit:contain;pointer-events:none;z-index:0;}
@@ -479,6 +479,7 @@ let premioActual=0;
 let maxCartonesGratis=0;
 let cartonesJugando=0;
 let cartonesGratisJugando=0;
+let cartonesGratisJugadorActual=0;
 const formColors=['#90ee90','#fffacd','#add8e6','#d8b0ff','#ffcc99'];
 const formGlows=['#006400','#b8860b','#00008b','#4b0082','#8b4513'];
 const COLOR_CARTONES_GRATIS_DISPONIBLE='#0b3d91';
@@ -493,14 +494,14 @@ let ultimoNumeroCartonAsignado=0;
 let siguienteNumeroCarton=1;
 
 function obtenerColorCartonesGratisActual(){
-  const limiteAlcanzado=maxCartonesGratis>0 && cartonesGratisJugando>=maxCartonesGratis;
+  const limiteAlcanzado=maxCartonesGratis>0 && cartonesGratisJugadorActual>=maxCartonesGratis;
   return limiteAlcanzado?COLOR_CARTONES_GRATIS_LIMITE:COLOR_CARTONES_GRATIS_DISPONIBLE;
 }
 
 function actualizarEstadoCartonesGratis(){
   const gratisLabel=document.getElementById('gratis-label');
   if(!gratisLabel) return;
-  const limiteAlcanzado=maxCartonesGratis>0 && cartonesGratisJugando>=maxCartonesGratis;
+  const limiteAlcanzado=maxCartonesGratis>0 && cartonesGratisJugadorActual>=maxCartonesGratis;
   const colorActual=obtenerColorCartonesGratisActual();
   gratisLabel.style.color=colorActual;
   const gratisJugandoEl=document.getElementById('cartones-gratis-jugando');
@@ -996,8 +997,10 @@ function toggleForma(idx){
     const elGratis=document.getElementById('jugados-gratis-count');
     const user=auth.currentUser;
     if(!user||!currentSorteo){
+      cartonesGratisJugadorActual=0;
       if(elPag){elPag.textContent='0';elPag.style.display='none';}
       if(elGratis){elGratis.textContent='0';elGratis.style.display='none';}
+      actualizarEstadoCartonesGratis();
       return;
     }
     const snap=await db.collection('CartonJugado').where('userId','==',user.uid).where('sorteoId','==',currentSorteo).get();
@@ -1005,6 +1008,8 @@ function toggleForma(idx){
     snap.forEach(doc=>{ const t=doc.data().tipocarton; if(t==='gratis') gratis++; else pagados++; });
     if(elPag){elPag.textContent=pagados;elPag.style.display=pagados>0?'flex':'none';}
     if(elGratis){elGratis.textContent=gratis;elGratis.style.display=gratis>0?'flex':'none';}
+    cartonesGratisJugadorActual=gratis;
+    actualizarEstadoCartonesGratis();
   }
 
   function iniciarIntervalo(){
@@ -1100,11 +1105,14 @@ function toggleForma(idx){
     currentSorteoNombre=s.nombre;
     currentSorteoTipo=s.tipo;
     currentSorteoEstado=s.estado||'';
+    cartonesGratisJugadorActual=0;
+    actualizarEstadoCartonesGratis();
     escucharConsecutivoCarton(currentSorteo);
     refrescarNumeroCartonVisual();
     ocultarMensajeSellado();
     const btn=document.getElementById('sorteo-btn');
     btn.textContent=s.nombre;
+    btn.style.fontWeight='700';
     btn.classList.remove('diario','especial');
     if(s.tipo==='Sorteo Diario'){ btn.classList.add('diario'); }
     else if(s.tipo==='Sorteo Especial'){ btn.classList.add('especial'); }
