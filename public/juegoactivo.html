@@ -1023,6 +1023,31 @@
       #carton-destacado.activo {
           display: flex;
       }
+      #carton-destacado-premio {
+          display: none;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          margin: 4px auto 0;
+          font-family: 'Bangers', cursive;
+          font-size: clamp(0.6rem, 1.6vw, 0.78rem);
+          letter-spacing: 0.8px;
+          text-transform: uppercase;
+          color: var(--carton-premio-color, #1f1f1f);
+          text-shadow: 0 0 6px rgba(255,255,255,0.85);
+      }
+      #carton-destacado-premio.visible {
+          display: inline-flex;
+      }
+      #carton-destacado-premio .carton-destacado-premio__valor {
+          font-family: 'Poppins', sans-serif;
+          font-weight: 700;
+          animation: premioZoom 2s ease-in-out infinite;
+          text-shadow: 0 0 6px rgba(255,255,255,0.95), 0 0 12px rgba(255,255,255,0.5);
+      }
+      #carton-destacado-premio[hidden] {
+          display: none !important;
+      }
       #carton-destacado .carton-tabla thead th {
           cursor: default;
       }
@@ -1977,6 +2002,29 @@
           gap: 12px;
           box-sizing: border-box;
       }
+      .modal-premio-forma {
+          display: none;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          margin-bottom: 6px;
+          font-family: 'Bangers', cursive;
+          font-size: clamp(1rem, 2.8vw, 1.35rem);
+          color: var(--modal-premio-color, #1f1f1f);
+          text-transform: uppercase;
+      }
+      .modal-premio-forma.visible {
+          display: inline-flex;
+      }
+      .modal-premio-forma__label {
+          letter-spacing: 1px;
+      }
+      .modal-premio-forma__valor {
+          font-family: 'Poppins', sans-serif;
+          font-weight: 700;
+          animation: premioZoom 2s ease-in-out infinite;
+          text-shadow: 0 0 8px rgba(255,255,255,0.85);
+      }
       .modal-whatsapp .modal-contenido {
           max-width: min(360px, calc(100vw - 40px));
           width: min(360px, calc(100vw - 40px));
@@ -2029,6 +2077,14 @@
       #modal-whatsapp-aceptar:active {
           transform: translateY(1px) scale(0.98);
           box-shadow: 0 4px 12px rgba(56,142,60,0.4);
+      }
+      @keyframes premioZoom {
+          0%, 100% {
+              transform: scale(1);
+          }
+          50% {
+              transform: scale(1.12);
+          }
       }
       .modal-cerrar {
           align-self: flex-end;
@@ -3083,6 +3139,10 @@
       <div id="panel-columna-derecha">
         <div class="panel-columna-derecha__rejilla panel-columna-derecha__destacado">
           <aside id="carton-destacado" aria-live="polite"></aside>
+          <div id="carton-destacado-premio" class="carton-destacado-premio" hidden aria-hidden="true">
+            <span id="carton-destacado-premio-label" class="carton-destacado-premio__label">PREMIO A REPARTIR:</span>
+            <span id="carton-destacado-premio-valor" class="carton-destacado-premio__valor">0</span>
+          </div>
           <div id="sin-cartones-activos" class="sin-cartones-activos" hidden aria-hidden="true">
             <p class="sin-cartones-activos__mensaje">No jugaste cartones en este sorteo, puedes jugar en otro sorteo que esté activo.</p>
             <button id="jugar-otro-sorteo-btn" type="button" class="sin-cartones-activos__boton">JUGAR CARTÓN EN OTRO SORTEO</button>
@@ -3108,6 +3168,10 @@
   <div id="modal-ganadores" class="modal">
     <div class="modal-contenido">
       <button class="modal-cerrar" id="modal-cerrar">✖</button>
+      <div id="modal-premio-forma" class="modal-premio-forma" hidden aria-hidden="true">
+        <span id="modal-premio-forma-label" class="modal-premio-forma__label">PREMIO A REPARTIR:</span>
+        <span id="modal-premio-forma-valor" class="modal-premio-forma__valor">0</span>
+      </div>
       <h2 id="modal-titulo">Ganadores</h2>
       <div id="modal-subtitulo" class="mensaje"></div>
       <div id="modal-ganadores-lista"></div>
@@ -3204,12 +3268,18 @@
   const cartonesMensajeEl = document.getElementById('cartones-mensaje');
   const cartonDestacadoEl = document.getElementById('carton-destacado');
   const panelDestacadoWrapperEl = document.querySelector('.panel-columna-derecha__destacado');
+  const cartonDestacadoPremioEl = document.getElementById('carton-destacado-premio');
+  const cartonDestacadoPremioValorEl = document.getElementById('carton-destacado-premio-valor');
+  const cartonDestacadoPremioLabelEl = document.getElementById('carton-destacado-premio-label');
   const modalGanadores = document.getElementById('modal-ganadores');
   const modalCerrarBtn = document.getElementById('modal-cerrar');
   const modalTituloEl = document.getElementById('modal-titulo');
   const modalSubtituloEl = document.getElementById('modal-subtitulo');
   const modalListaEl = document.getElementById('modal-ganadores-lista');
   const modalSinGanadoresEl = document.getElementById('modal-sin-ganadores');
+  const modalPremioFormaEl = document.getElementById('modal-premio-forma');
+  const modalPremioFormaValorEl = document.getElementById('modal-premio-forma-valor');
+  const modalPremioFormaLabelEl = document.getElementById('modal-premio-forma-label');
   const modalSorteosFinalizadosEl = document.getElementById('modal-sorteos-finalizados');
   const modalSorteosFinalizadosListaEl = document.getElementById('modal-sorteos-finalizados-lista');
   const modalSorteosFinalizadosMensajeEl = document.getElementById('modal-sorteos-finalizados-mensaje');
@@ -4800,11 +4870,57 @@
     return `${reducir(rgb.r)},${reducir(rgb.g)},${reducir(rgb.b)}`;
   }
 
+  function actualizarPremioFormaDestacada(forma, colorHex){
+    if(!cartonDestacadoPremioEl || !cartonDestacadoPremioValorEl) return;
+    if(!forma){
+      cartonDestacadoPremioEl.classList.remove('visible');
+      cartonDestacadoPremioEl.setAttribute('hidden','');
+      cartonDestacadoPremioEl.setAttribute('aria-hidden','true');
+      return;
+    }
+    const totalForma = Math.max(0, Math.round(obtenerCreditosForma(forma) || 0));
+    const baseColor = colorHex || obtenerColorParaForma(forma.idx || 1);
+    const colorOscuro = obtenerColorOscurecido(baseColor, 0.55);
+    cartonDestacadoPremioEl.style.setProperty('--carton-premio-color', colorOscuro);
+    cartonDestacadoPremioEl.style.color = colorOscuro;
+    if(cartonDestacadoPremioLabelEl){
+      cartonDestacadoPremioLabelEl.style.color = colorOscuro;
+    }
+    cartonDestacadoPremioValorEl.textContent = formatearCreditos(totalForma);
+    cartonDestacadoPremioValorEl.style.color = colorOscuro;
+    cartonDestacadoPremioEl.classList.add('visible');
+    cartonDestacadoPremioEl.removeAttribute('hidden');
+    cartonDestacadoPremioEl.setAttribute('aria-hidden','false');
+  }
+
+  function actualizarModalPremioForma(forma){
+    if(!modalPremioFormaEl || !modalPremioFormaValorEl) return;
+    if(!forma){
+      modalPremioFormaEl.classList.remove('visible');
+      modalPremioFormaEl.setAttribute('hidden','');
+      modalPremioFormaEl.setAttribute('aria-hidden','true');
+      return;
+    }
+    const totalForma = Math.max(0, Math.round(obtenerCreditosForma(forma) || 0));
+    const colorBase = obtenerColorParaForma(forma.idx || 1);
+    const colorOscuro = obtenerColorOscurecido(colorBase, 0.55);
+    modalPremioFormaEl.style.setProperty('--modal-premio-color', colorOscuro);
+    if(modalPremioFormaLabelEl){
+      modalPremioFormaLabelEl.style.color = colorOscuro;
+    }
+    modalPremioFormaValorEl.textContent = formatearCreditos(totalForma);
+    modalPremioFormaValorEl.style.color = colorOscuro;
+    modalPremioFormaEl.classList.add('visible');
+    modalPremioFormaEl.removeAttribute('hidden');
+    modalPremioFormaEl.setAttribute('aria-hidden','false');
+  }
+
   function actualizarEncabezadoForma(info, indice, colorHex){
     if(!info || !Array.isArray(info.letras)) return;
     const indiceNormalizado=Number(indice);
     const idxActivo=Number.isInteger(indiceNormalizado)?indiceNormalizado:null;
     const esPrincipal=info?.contenedor?.classList?.contains('carton-visual--principal');
+    let formaActiva=null;
     info.letras.forEach((span, idx)=>{
       if(!span) return;
       const letraBase=BINGO_LETRAS[idx] || '';
@@ -4826,9 +4942,15 @@
           th.style.removeProperty('--forma-rgb-vivo');
         }
       }
+      if(activo){
+        formaActiva = formasActivas.find(f=>Number(f.idx)===idxActivo) || null;
+      }
     });
     if(esPrincipal && !Number.isInteger(idxActivo)){
       info.contenedor.classList.remove('forma-manual-activa');
+      actualizarPremioFormaDestacada(null);
+    }else if(esPrincipal){
+      actualizarPremioFormaDestacada(formaActiva, colorHex);
     }
   }
 
@@ -6084,6 +6206,7 @@
       sinCartonesActivosEl.removeAttribute('hidden');
       sinCartonesActivosEl.setAttribute('aria-hidden','false');
       cartonDestacadoEl.setAttribute('hidden','');
+      actualizarPremioFormaDestacada(null);
       requestAnimationFrame(()=>{
         actualizarDimensionSinCartones();
       });
@@ -6517,6 +6640,7 @@
     const info=cartonesGanadoresPorForma.get(forma.idx);
     const ganadores=info&&Array.isArray(info.cartones)?info.cartones:[];
     modalTituloEl.textContent=`Ganadores Forma ${String(forma.idx).padStart(2,'0')}`;
+    actualizarModalPremioForma(forma);
     const nombreBase=forma.nombre?forma.nombre:'';
     if(modalSubtituloEl){
       modalSubtituloEl.textContent=nombreBase;
@@ -6608,6 +6732,7 @@
 
   function cerrarModal(){
     modalGanadores.classList.remove('activa');
+    actualizarModalPremioForma(null);
   }
 
   if(modalCerrarBtn){

@@ -794,6 +794,29 @@
       gap: 12px;
       box-sizing: border-box;
     }
+    .modal-premio-forma {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 6px;
+      font-family: 'Bangers', cursive;
+      font-size: clamp(1rem, 2.6vw, 1.28rem);
+      color: var(--modal-premio-color, #1f1f1f);
+      text-transform: uppercase;
+    }
+    .modal-premio-forma.visible {
+      display: inline-flex;
+    }
+    .modal-premio-forma__label {
+      letter-spacing: 1px;
+    }
+    .modal-premio-forma__valor {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 700;
+      animation: premioZoom 2s ease-in-out infinite;
+      text-shadow: 0 0 8px rgba(255,255,255,0.85);
+    }
     .modal-nuevos-ganadores .modal-contenido {
       background: linear-gradient(160deg, rgba(24,24,24,0.94), rgba(96,24,24,0.94));
       border-radius: 20px;
@@ -839,6 +862,10 @@
       color: #fff;
       text-shadow: 0 0 14px rgba(255,140,0,0.9);
       margin-left: 6px;
+    }
+    @keyframes premioZoom {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.12); }
     }
     #nuevos-ganadores-aceptar {
       font-family: 'Bangers', cursive;
@@ -1641,6 +1668,10 @@
   <div id="modal-ganadores" class="modal modal-ganadores" role="dialog" aria-modal="true" aria-labelledby="modal-ganadores-titulo" aria-hidden="true">
     <div class="modal-contenido">
       <button id="modal-ganadores-cerrar" class="modal-cerrar" type="button" aria-label="Cerrar">✖</button>
+      <div id="modal-premio-forma" class="modal-premio-forma" hidden aria-hidden="true">
+        <span id="modal-premio-forma-label" class="modal-premio-forma__label">PREMIO A REPARTIR:</span>
+        <span id="modal-premio-forma-valor" class="modal-premio-forma__valor">0</span>
+      </div>
       <h2 id="modal-ganadores-titulo">Ganadores</h2>
       <div id="modal-ganadores-subtitulo" class="mensaje"></div>
       <div id="modal-ganadores-lista"></div>
@@ -1768,6 +1799,9 @@
   const modalGanadoresSubtituloEl = document.getElementById('modal-ganadores-subtitulo');
   const modalGanadoresListaEl = document.getElementById('modal-ganadores-lista');
   const modalGanadoresSinEl = document.getElementById('modal-ganadores-sin');
+  const modalPremioFormaEl = document.getElementById('modal-premio-forma');
+  const modalPremioFormaValorEl = document.getElementById('modal-premio-forma-valor');
+  const modalPremioFormaLabelEl = document.getElementById('modal-premio-forma-label');
   const nuevosGanadoresModalEl = document.getElementById('nuevos-ganadores-modal');
   const nuevosGanadoresListaEl = document.getElementById('nuevos-ganadores-lista');
   const nuevosGanadoresAceptarBtn = document.getElementById('nuevos-ganadores-aceptar');
@@ -3382,6 +3416,28 @@
     return 0;
   }
 
+  function actualizarModalPremioForma(forma){
+    if(!modalPremioFormaEl || !modalPremioFormaValorEl) return;
+    if(!forma){
+      modalPremioFormaEl.classList.remove('visible');
+      modalPremioFormaEl.setAttribute('hidden','');
+      modalPremioFormaEl.setAttribute('aria-hidden','true');
+      return;
+    }
+    const total = Math.max(0, Math.round(obtenerCreditosForma(forma) || 0));
+    const colorBase = obtenerColorParaForma(forma?.idx || 1);
+    const colorOscuro = obtenerColorOscurecido(colorBase, 0.55);
+    modalPremioFormaEl.style.setProperty('--modal-premio-color', colorOscuro);
+    if(modalPremioFormaLabelEl){
+      modalPremioFormaLabelEl.style.color = colorOscuro;
+    }
+    modalPremioFormaValorEl.textContent = formatearNumero(total);
+    modalPremioFormaValorEl.style.color = colorOscuro;
+    modalPremioFormaEl.classList.add('visible');
+    modalPremioFormaEl.removeAttribute('hidden');
+    modalPremioFormaEl.setAttribute('aria-hidden','false');
+  }
+
   function obtenerCartonesGratisForma(forma){
     if(!forma) return 0;
     const candidatos = [
@@ -3910,6 +3966,7 @@
     const nombreForma = forma?.nombre ? forma.nombre : '';
     modalGanadoresTituloEl.textContent = `Ganadores Forma ${String(idxNumero).padStart(2,'0')}`;
     modalGanadoresSubtituloEl.textContent = nombreForma;
+    actualizarModalPremioForma(forma);
     modalGanadoresListaEl.innerHTML = '';
     modalGanadoresSinEl.textContent = '';
     const ganadores = registro?.cartones ? [...registro.cartones] : [];
@@ -3940,6 +3997,7 @@
     if(!modalGanadoresEl) return;
     modalGanadoresEl.classList.remove('activa');
     modalGanadoresEl.setAttribute('aria-hidden', 'true');
+    actualizarModalPremioForma(null);
   }
 
   function manejarClickModalGanadores(event){
