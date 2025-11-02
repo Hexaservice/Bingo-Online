@@ -183,7 +183,10 @@
     #stats-row{display:flex;justify-content:center;align-items:center;gap:20px;}
     .billete-icon{font-size:1.5rem;}
     .carton-icon{width:24px;height:24px;}
-    #premio-repartir{color:white;font-family:'Bangers',cursive;font-size:1.8rem;text-shadow:0 0 10px #004400;position:relative;}
+    #premio-repartir{color:white;font-family:'Bangers',cursive;font-size:1.8rem;text-shadow:0 0 10px #004400;position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;}
+    #premio-repartir .premio-repartir-principal{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;}
+    #premio-repartir .premio-cartones-gratis{font-family:'Poppins',sans-serif;font-size:clamp(0.48rem,1.4vw,0.68rem);letter-spacing:0.6px;color:#001b60;text-transform:uppercase;text-shadow:0 0 6px rgba(255,255,255,0.6);animation:zoomInOut 2.4s ease-in-out infinite;display:flex;align-items:center;gap:4px;}
+    #premio-repartir .premio-cartones-gratis-valor{font-weight:700;animation:inherit;}
     #forma-nombre{font-family:'Bangers',cursive;color:#4B0082;font-size:1rem;text-shadow:0 0 5px #fff;text-align:center;visibility:hidden;min-height:8px;margin:0;}
     .wallet-row{display:flex;align-items:center;gap:5px;margin:3px 0;font-size:1rem;font-weight:bold;}
     #gratis-label{
@@ -339,7 +342,15 @@
       </div>
     </div>
     <div class="datos-sorteo">
-      <div id="premio-repartir"><span id="premio-label">Premio a Repartir:</span> <span id="premio-valor">0</span></div>
+      <div id="premio-repartir">
+        <div class="premio-repartir-principal">
+          <span id="premio-label">Premio a Repartir:</span>
+          <span id="premio-valor">0</span>
+        </div>
+        <div id="premio-cartones-gratis" class="premio-cartones-gratis">
+          Cartones gratis: <span id="premio-cartones-gratis-valor" class="premio-cartones-gratis-valor">0</span>
+        </div>
+      </div>
       <div id="stats-row">
         <div id="valor-carton"><span class="billete-icon">💵</span> Cartón: <span id="valor-carton-valor">0</span></div>
         <div id="cartones-jugando"><img src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" class="carton-icon" alt="Cartón"> Jugando: <span id="cartones-jugando-valor">0</span> <span id="gratis-plus">+</span> <span id="cartones-gratis-jugando">0</span></div>
@@ -458,40 +469,43 @@
   iniciarControlSorteos();
 
   const ranges=[[1,15],[16,30],[31,45],[46,60],[61,75]];
-const board=document.getElementById('bingo-board');
-let currentCell=null;
-let sorteoInterval=null;
-let currentSorteo=null;
-let currentSorteoNombre='';
-let currentSorteoTipo='';
-let currentSorteoEstado='';
-let cartonesGuardados={};
-let sorteosActivos=[];
-let seleccionadoJugado=null;
-let seleccionadoGuardado=null;
-let consultando=false;
-let cookieKey='';
-let sorteoCookieKey='';
-let fechaActualInterval=null;
-let formasSorteo=[];
-let formaActiva=0;
-let premioActual=0;
-let maxCartonesGratis=0;
-let cartonesJugando=0;
-let cartonesGratisJugando=0;
-let cartonesGratisJugadorActual=0;
-const formColors=['#90ee90','#fffacd','#add8e6','#d8b0ff','#ffcc99'];
-const formGlows=['#006400','#b8860b','#00008b','#4b0082','#8b4513'];
-const COLOR_CARTONES_GRATIS_DISPONIBLE='#0b3d91';
-const COLOR_CARTONES_GRATIS_LIMITE='#c62828';
-let editandoTipo=null;
-let editandoId=null;
-const selladoOverlay=document.getElementById('sellado-overlay');
-const selladoCerrarBtn=document.getElementById('sellado-cerrar-btn');
-const CONSECUTIVOS_COLLECTION='ConsecutivosCarton';
-let unsubscribeConsecutivoCarton=null;
-let ultimoNumeroCartonAsignado=0;
-let siguienteNumeroCarton=1;
+  const board=document.getElementById('bingo-board');
+  let currentCell=null;
+  let sorteoInterval=null;
+  let currentSorteo=null;
+  let currentSorteoNombre='';
+  let currentSorteoTipo='';
+  let currentSorteoEstado='';
+  let cartonesGuardados={};
+  let sorteosActivos=[];
+  let seleccionadoJugado=null;
+  let seleccionadoGuardado=null;
+  let consultando=false;
+  let cookieKey='';
+  let sorteoCookieKey='';
+  let fechaActualInterval=null;
+  let formasSorteo=[];
+  let formaActiva=0;
+  let premioActual=0;
+  let maxCartonesGratis=0;
+  let cartonesJugando=0;
+  let cartonesGratisJugando=0;
+  let cartonesGratisJugadorActual=0;
+  const formColors=['#90ee90','#fffacd','#add8e6','#d8b0ff','#ffcc99'];
+  const formGlows=['#006400','#b8860b','#00008b','#4b0082','#8b4513'];
+  const COLOR_CARTONES_GRATIS_DISPONIBLE='#0b3d91';
+  const COLOR_CARTONES_GRATIS_LIMITE='#c62828';
+  const COLOR_CARTONES_GRATIS_MODAL='#001b60';
+  let editandoTipo=null;
+  let editandoId=null;
+  const selladoOverlay=document.getElementById('sellado-overlay');
+  const selladoCerrarBtn=document.getElementById('sellado-cerrar-btn');
+  const CONSECUTIVOS_COLLECTION='ConsecutivosCarton';
+  let unsubscribeConsecutivoCarton=null;
+  let ultimoNumeroCartonAsignado=0;
+  let siguienteNumeroCarton=1;
+  const premioCartonesGratisEl=document.getElementById('premio-cartones-gratis');
+  const premioCartonesGratisValorEl=document.getElementById('premio-cartones-gratis-valor');
 
 function obtenerColorCartonesGratisActual(){
   const limiteAlcanzado=maxCartonesGratis>0 && cartonesGratisJugadorActual>=maxCartonesGratis;
@@ -573,6 +587,48 @@ function toNumberSafe(value,fallback=0){
     return Number.isFinite(num)?num:fallback;
   }
   return fallback;
+}
+
+function formatearEnteroEs(valor){
+  const numero=Number(valor);
+  if(!Number.isFinite(numero)) return '0';
+  return Math.max(0,Math.round(numero)).toLocaleString('es-ES',{maximumFractionDigits:0});
+}
+
+function obtenerCartonesGratisForma(forma){
+  if(!forma) return 0;
+  const candidatos=[
+    forma?.cartonesGratis,
+    forma?.cartonesgratis,
+    forma?.cartones_gratis,
+    forma?.premioCartonesGratis,
+    forma?.premioCartonesgratis,
+    forma?.cartones
+  ];
+  for(const candidato of candidatos){
+    const numero=toNumberSafe(candidato,Number.NaN);
+    if(Number.isFinite(numero)){
+      return Math.max(0,Math.round(numero));
+    }
+  }
+  return 0;
+}
+
+function obtenerTotalCartonesGratisFormas(){
+  if(!Array.isArray(formasSorteo) || !formasSorteo.length) return 0;
+  return formasSorteo.reduce((total,forma)=>total+obtenerCartonesGratisForma(forma),0);
+}
+
+function actualizarIndicadorCartonesGratis(){
+  if(!premioCartonesGratisEl || !premioCartonesGratisValorEl) return;
+  let total=0;
+  if(formaActiva>0){
+    const activa=formasSorteo.find(f=>Number(f?.idx)===Number(formaActiva));
+    total=obtenerCartonesGratisForma(activa);
+  }else{
+    total=obtenerTotalCartonesGratisFormas();
+  }
+  premioCartonesGratisValorEl.textContent=formatearEnteroEs(total);
 }
 
 function actualizarNumeroCartonLocal(ultimo){
@@ -770,6 +826,7 @@ async function cargarFormasSorteo(){
     const snap=await db.collection('formas').where('sorteoId','==',currentSorteo).get();
     snap.forEach(doc=>formasSorteo.push(doc.data()));
   }catch(e){console.warn('No se pudieron cargar las formas');}
+  actualizarIndicadorCartonesGratis();
 }
 
 function resetForma(){
@@ -785,6 +842,7 @@ function resetForma(){
   const pr=document.getElementById('premio-repartir');
   pr.style.textShadow='0 0 10px #004400';
   document.getElementById('forma-nombre').style.visibility='hidden';
+  actualizarIndicadorCartonesGratis();
   actualizarDatosSorteo();
 }
 
@@ -816,6 +874,7 @@ function toggleForma(idx){
   const wrapper=document.getElementById('carton-wrapper');
   nombre.style.visibility=wrapper.classList.contains('flipped')?'hidden':'visible';
   pv.textContent=Math.round(premioActual*porcentaje/100);
+  actualizarIndicadorCartonesGratis();
 }
 
   function flipCard(){
@@ -988,6 +1047,7 @@ function toggleForma(idx){
   }else{
     pv.textContent=Math.round(premioActual);
   }
+  actualizarIndicadorCartonesGratis();
   refrescarNumeroCartonVisual();
   renderPremios('back-premios');
   }
@@ -1681,9 +1741,8 @@ function toggleForma(idx){
     infoNombre.style.color=currentSorteoTipo==='Sorteo Diario'?'green':'orange';
     const cj=document.getElementById('info-cartones-jugando');
     cj.innerHTML=`Cartones jugando: <strong style="color:purple;">${cartonesJugando}</strong>`;
-    const cg=document.getElementById('info-cartones-gratis');
-    const colorGratis=obtenerColorCartonesGratisActual();
-    cg.innerHTML=`Cartones Gratis jugando: <strong style="color:${colorGratis};">${cartonesGratisJugando}</strong>`;
+  const cg=document.getElementById('info-cartones-gratis');
+  cg.innerHTML=`Cartones Gratis jugando: <strong style="color:${COLOR_CARTONES_GRATIS_MODAL};">${formatearEnteroEs(cartonesGratisJugando)}</strong>`;
     document.getElementById('info-cartones-modal').style.display='flex';
   }
 

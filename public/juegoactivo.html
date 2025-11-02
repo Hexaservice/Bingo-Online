@@ -1027,14 +1027,18 @@
           display: none;
           align-items: center;
           justify-content: center;
+          flex-wrap: wrap;
           gap: 6px;
           margin: 4px auto 0;
           font-family: 'Bangers', cursive;
           font-size: clamp(0.6rem, 1.6vw, 0.78rem);
           letter-spacing: 0.8px;
           text-transform: uppercase;
-          color: var(--carton-premio-color, #1f1f1f);
-          text-shadow: 0 0 6px rgba(255,255,255,0.85);
+          color: #ffffff;
+          text-shadow:
+              0 0 6px rgba(0,0,0,0.92),
+              0 0 12px rgba(0,0,0,0.75),
+              0 0 14px var(--carton-premio-destello, rgba(255,255,255,0.45));
       }
       #carton-destacado-premio.visible {
           display: inline-flex;
@@ -1043,7 +1047,27 @@
           font-family: 'Poppins', sans-serif;
           font-weight: 700;
           animation: premioZoom 2s ease-in-out infinite;
-          text-shadow: 0 0 6px rgba(255,255,255,0.95), 0 0 12px rgba(255,255,255,0.5);
+          color: inherit;
+          text-shadow: inherit;
+      }
+      #carton-destacado-premio .carton-destacado-premio__label {
+          color: inherit;
+          text-shadow: inherit;
+      }
+      .carton-destacado-premio__gratis {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          font-family: 'Poppins', sans-serif;
+          font-size: clamp(0.48rem, 1.35vw, 0.68rem);
+          letter-spacing: 0.6px;
+          text-transform: uppercase;
+          color: #ffffff;
+          text-shadow: 0 0 5px rgba(0,0,0,0.95);
+      }
+      .carton-destacado-premio__gratis-valor {
+          font-weight: 700;
+          animation: premioZoom 2s ease-in-out infinite;
       }
       #carton-destacado-premio[hidden] {
           display: none !important;
@@ -2006,10 +2030,10 @@
           display: none;
           align-items: center;
           justify-content: center;
-          gap: 10px;
+          gap: 12px;
           margin-bottom: 6px;
           font-family: 'Bangers', cursive;
-          font-size: clamp(1rem, 2.8vw, 1.35rem);
+          font-size: clamp(1.3rem, 3.6vw, 1.6rem);
           color: var(--modal-premio-color, #1f1f1f);
           text-transform: uppercase;
       }
@@ -2022,6 +2046,7 @@
       .modal-premio-forma__valor {
           font-family: 'Poppins', sans-serif;
           font-weight: 700;
+          font-size: 1.1em;
           animation: premioZoom 2s ease-in-out infinite;
           text-shadow: 0 0 8px rgba(255,255,255,0.85);
       }
@@ -3142,6 +3167,9 @@
           <div id="carton-destacado-premio" class="carton-destacado-premio" hidden aria-hidden="true">
             <span id="carton-destacado-premio-label" class="carton-destacado-premio__label">PREMIO A REPARTIR:</span>
             <span id="carton-destacado-premio-valor" class="carton-destacado-premio__valor">0</span>
+            <span id="carton-destacado-premio-gratis" class="carton-destacado-premio__gratis" hidden aria-hidden="true">
+              CARTONES GRATIS: <span id="carton-destacado-premio-gratis-valor" class="carton-destacado-premio__gratis-valor">0</span>
+            </span>
           </div>
           <div id="sin-cartones-activos" class="sin-cartones-activos" hidden aria-hidden="true">
             <p class="sin-cartones-activos__mensaje">No jugaste cartones en este sorteo, puedes jugar en otro sorteo que esté activo.</p>
@@ -3271,6 +3299,8 @@
   const cartonDestacadoPremioEl = document.getElementById('carton-destacado-premio');
   const cartonDestacadoPremioValorEl = document.getElementById('carton-destacado-premio-valor');
   const cartonDestacadoPremioLabelEl = document.getElementById('carton-destacado-premio-label');
+  const cartonDestacadoPremioGratisEl = document.getElementById('carton-destacado-premio-gratis');
+  const cartonDestacadoPremioGratisValorEl = document.getElementById('carton-destacado-premio-gratis-valor');
   const modalGanadores = document.getElementById('modal-ganadores');
   const modalCerrarBtn = document.getElementById('modal-cerrar');
   const modalTituloEl = document.getElementById('modal-titulo');
@@ -4876,18 +4906,34 @@
       cartonDestacadoPremioEl.classList.remove('visible');
       cartonDestacadoPremioEl.setAttribute('hidden','');
       cartonDestacadoPremioEl.setAttribute('aria-hidden','true');
+      cartonDestacadoPremioEl.style.removeProperty('--carton-premio-destello');
+      if(cartonDestacadoPremioGratisEl){
+        cartonDestacadoPremioGratisEl.setAttribute('hidden','');
+        cartonDestacadoPremioGratisEl.setAttribute('aria-hidden','true');
+      }
       return;
     }
     const totalForma = Math.max(0, Math.round(obtenerCreditosForma(forma) || 0));
     const baseColor = colorHex || obtenerColorParaForma(forma.idx || 1);
     const colorOscuro = obtenerColorOscurecido(baseColor, 0.55);
-    cartonDestacadoPremioEl.style.setProperty('--carton-premio-color', colorOscuro);
-    cartonDestacadoPremioEl.style.color = colorOscuro;
+    cartonDestacadoPremioEl.style.color = '';
+    const colorDestello = colorOscuro || baseColor;
+    if(colorDestello){
+      cartonDestacadoPremioEl.style.setProperty('--carton-premio-destello', colorDestello);
+    }else{
+      cartonDestacadoPremioEl.style.removeProperty('--carton-premio-destello');
+    }
     if(cartonDestacadoPremioLabelEl){
-      cartonDestacadoPremioLabelEl.style.color = colorOscuro;
+      cartonDestacadoPremioLabelEl.style.color = '';
     }
     cartonDestacadoPremioValorEl.textContent = formatearCreditos(totalForma);
-    cartonDestacadoPremioValorEl.style.color = colorOscuro;
+    cartonDestacadoPremioValorEl.style.color = '';
+    if(cartonDestacadoPremioGratisEl && cartonDestacadoPremioGratisValorEl){
+      const cartonesGratisTotal = Math.max(0, Math.round(obtenerCartonesGratisForma(forma) || 0));
+      cartonDestacadoPremioGratisValorEl.textContent = formatearCreditos(cartonesGratisTotal);
+      cartonDestacadoPremioGratisEl.removeAttribute('hidden');
+      cartonDestacadoPremioGratisEl.setAttribute('aria-hidden','false');
+    }
     cartonDestacadoPremioEl.classList.add('visible');
     cartonDestacadoPremioEl.removeAttribute('hidden');
     cartonDestacadoPremioEl.setAttribute('aria-hidden','false');
