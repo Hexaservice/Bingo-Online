@@ -341,7 +341,13 @@ function ensureAuth(roleExpected){
         const emailEl = document.getElementById('user-email');
         if (emailEl) emailEl.textContent = user.email;
         const picEl = document.getElementById('user-pic');
-        if (picEl) picEl.src = user.photoURL;
+        if (picEl) {
+          if (typeof asignarFotoUsuario === 'function') {
+            asignarFotoUsuario(picEl, user.photoURL || '');
+          } else {
+            picEl.src = user.photoURL || picEl.src;
+          }
+        }
         const infoEl = document.getElementById('session-info');
         if (infoEl) infoEl.style.display = 'flex';
         const logoutEl = document.getElementById('logout-link');
