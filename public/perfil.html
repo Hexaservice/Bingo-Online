@@ -47,9 +47,16 @@
           justify-content:center;
           gap:5px;
       }
-      input, select {font-size:1rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:250px;display:block;margin:5px auto;}
-      .menu-btn { width:120px; }
-      #login-footer { margin-top:20px; }
+      main#perfil-contenido {
+          width: min(420px, 90vw);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 10px;
+          margin-top: clamp(70px, 14vh, 130px);
+      }
+      input, select {font-size:1rem;padding:8px;text-align:center;border-radius:8px;border:1px solid #ccc;width:100%;box-sizing:border-box;display:block;}
+      .menu-btn { width:140px; }
       h3, h4 { margin:5px 0; }
       #session-info {
           position: fixed;
@@ -74,16 +81,33 @@
       #perfil-nombre, #perfil-apellido, #perfil-alias {font-weight:bold;}
       #perfil-nombre, #perfil-apellido {color:#00008B;}
       #perfil-alias {color:#FF8C00;}
+      #perfil-titulo {
+          font-family: 'Bangers', cursive;
+          font-size: clamp(2rem, 5vw, 2.6rem);
+          color: #ffffff;
+          text-shadow: 0 0 14px rgba(0, 26, 95, 0.8);
+          letter-spacing: 1px;
+      }
+      #perfil-subtitulo {
+          font-family: 'Poppins', sans-serif;
+          color: #0b1b4d;
+          margin-bottom: 4px;
+      }
       #guardar-perfil-btn {
           font-family: 'Bangers', cursive;
           font-size: 1.2rem;
-          background: #0a8800;
+          background: linear-gradient(135deg, #0a8800, #48c752);
           color: white;
           border: 3px solid #FFD700;
-          border-radius: 8px;
+          border-radius: 10px;
           text-shadow: 2px 2px 4px #000;
-          width: 200px;
+          width: 220px;
           cursor: pointer;
+          transition: background 0.3s ease, box-shadow 0.3s ease;
+      }
+      #guardar-perfil-btn.modo-edicion {
+          background: linear-gradient(135deg, #083cbe, #3aa2ff);
+          box-shadow: 0 0 14px rgba(8, 60, 190, 0.45);
       }
       #jugar-carton-btn{
           font-family:'Bangers',cursive;
@@ -97,8 +121,9 @@
           cursor:pointer;
           margin-top:10px;
       }
-      #fecha-hora, #derechos { font-size:0.7rem; text-align:center; color:#000; }
-      #derechos { font-size:0.6rem; }
+      #fecha-hora, #derechos { font-size:0.7rem; text-align:center; color:#000; margin:0; }
+      #fecha-hora { margin-top:auto; padding-top:12px; }
+      #derechos { font-size:0.6rem; padding-bottom:12px; }
   </style>
 </head>
 <body>
@@ -107,18 +132,18 @@
     <a href="#" id="logout-link">Cerrar sesión</a>
   </div>
   <button id="volver-btn" class="menu-btn back-btn" data-compact-back="true">&#9664; Volver</button>
-  <h3>Perfil del Jugador</h3>
-  <h4>Tus Datos Personales</h4>
-  <input type="text" id="perfil-nombre" placeholder="Nombre" />
-  <input type="text" id="perfil-apellido" placeholder="Apellido" />
-  <input type="text" id="perfil-alias" placeholder="Alias" />
-  <button id="guardar-perfil-btn" class="menu-btn">Guardar</button>
-  <button id="jugar-carton-btn" class="menu-btn" onclick="window.location.href='jugarcartones.html'">Jugar Cartón</button>
+  <main id="perfil-contenido">
+    <h3 id="perfil-titulo">Perfil del Jugador</h3>
+    <h4 id="perfil-subtitulo">Tus Datos Personales</h4>
+    <input type="text" id="perfil-nombre" placeholder="Nombre" />
+    <input type="text" id="perfil-apellido" placeholder="Apellido" />
+    <input type="text" id="perfil-alias" placeholder="Alias" />
+    <button id="guardar-perfil-btn" class="menu-btn" data-modo="guardar">Guardar</button>
+    <button id="jugar-carton-btn" class="menu-btn" onclick="window.location.href='jugarcartones.html'">Jugar Cartón</button>
+  </main>
 
-  <div id="login-footer">
-    <div id="fecha-hora"></div>
-    <div id="derechos">Todos los derechos reservados ® Hexaservice 2025</div>
-  </div>
+  <div id="fecha-hora"></div>
+  <div id="derechos">Todos los derechos reservados ® Hexaservice 2025</div>
 
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
@@ -129,32 +154,118 @@
   ensureAuth();
   initFechaHora('fecha-hora');
 
+  const nombreInput=document.getElementById('perfil-nombre');
+  const apellidoInput=document.getElementById('perfil-apellido');
+  const aliasInput=document.getElementById('perfil-alias');
+  const guardarBtn=document.getElementById('guardar-perfil-btn');
+
+  let valoresOriginales={name:'',apellido:'',alias:''};
+  let tieneDatosGuardados=false;
+
   document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='player.html';});
-  document.getElementById('guardar-perfil-btn').addEventListener('click',guardarPerfil);
+  guardarBtn.addEventListener('click',guardarPerfil);
+
+  [nombreInput,apellidoInput,aliasInput].forEach(input=>{
+    input.addEventListener('input',evaluarCambios);
+  });
+
+  function obtenerValoresPerfil(){
+    return {
+      name:nombreInput.value.trim(),
+      apellido:apellidoInput.value.trim(),
+      alias:aliasInput.value.trim()
+    };
+  }
+
+  function establecerEstadoBoton(modo){
+    if(modo==='editar'){
+      guardarBtn.textContent='Editar';
+      guardarBtn.dataset.modo='editar';
+      guardarBtn.classList.add('modo-edicion');
+    }else{
+      guardarBtn.textContent='Guardar';
+      guardarBtn.dataset.modo='guardar';
+      guardarBtn.classList.remove('modo-edicion');
+    }
+  }
+
+  function evaluarCambios(){
+    const actuales=obtenerValoresPerfil();
+    const hayCambios=['name','apellido','alias'].some(campo=>actuales[campo]!==valoresOriginales[campo]);
+    if(tieneDatosGuardados && hayCambios){
+      establecerEstadoBoton('editar');
+    }else{
+      establecerEstadoBoton('guardar');
+    }
+  }
 
   async function guardarPerfil(){
     const user = auth.currentUser;
-    const data = {
-      name: document.getElementById('perfil-nombre').value.trim(),
-      apellido: document.getElementById('perfil-apellido').value.trim(),
-      alias: document.getElementById('perfil-alias').value.trim(),
-      email: user.email,
-      photoURL: user.photoURL,
-      role: 'Jugador'
+    if(!user) return;
+    const modo=(guardarBtn.dataset.modo||'guardar')==='editar'?'editar':'guardar';
+    const confirmar=window.confirm(modo==='editar'?'¿Deseas EDITAR los datos?':'¿Deseas GUARDAR los datos?');
+    if(!confirmar) return;
+    const valores=obtenerValoresPerfil();
+    const baseDatos={
+      email:user.email,
+      photoURL:user.photoURL||'',
+      role:'Jugador'
     };
-    await db.collection('users').doc(user.email).set(data,{merge:true});
-    alert('Datos guardados correctamente');
+    try{
+      if(modo==='editar'){
+        const cambios={};
+        ['name','apellido','alias'].forEach(campo=>{
+          if(valores[campo]!==valoresOriginales[campo]){
+            cambios[campo]=valores[campo];
+          }
+        });
+        if(Object.keys(cambios).length===0){
+          alert('No se detectaron cambios para editar.');
+          evaluarCambios();
+          return;
+        }
+        await db.collection('users').doc(user.email).set({...baseDatos,...cambios},{merge:true});
+        alert('Datos editados correctamente');
+        tieneDatosGuardados=Object.values(valores).some(valor=>valor.length>0);
+      }else{
+        await db.collection('users').doc(user.email).set({...baseDatos,...valores},{merge:true});
+        alert('Datos guardados correctamente');
+        tieneDatosGuardados=Object.values(valores).some(valor=>valor.length>0);
+      }
+      valoresOriginales=valores;
+      evaluarCambios();
+    }catch(error){
+      console.error('No se pudieron guardar los datos del perfil',error);
+      alert('Ocurrió un error al guardar los datos. Intenta nuevamente.');
+    }
   }
 
   auth.onAuthStateChanged(async user=>{
     if(user){
-      const doc=await db.collection('users').doc(user.email).get();
-      if(doc.exists){
-        const d=doc.data();
-        document.getElementById('perfil-nombre').value=d.name||user.displayName||'';
-        document.getElementById('perfil-apellido').value=d.apellido||'';
-        document.getElementById('perfil-alias').value=d.alias||'';
+      try{
+        const doc=await db.collection('users').doc(user.email).get();
+        if(doc.exists){
+          const d=doc.data()||{};
+          valoresOriginales={
+            name:(d.name||'').trim(),
+            apellido:(d.apellido||'').trim(),
+            alias:(d.alias||'').trim()
+          };
+          nombreInput.value=valoresOriginales.name;
+          apellidoInput.value=valoresOriginales.apellido;
+          aliasInput.value=valoresOriginales.alias;
+          tieneDatosGuardados=Object.values(valoresOriginales).some(valor=>valor.length>0);
+        }else{
+          valoresOriginales={name:'',apellido:'',alias:''};
+          nombreInput.value='';
+          apellidoInput.value='';
+          aliasInput.value='';
+          tieneDatosGuardados=false;
+        }
+      }catch(error){
+        console.error('No se pudo cargar la información del perfil',error);
       }
+      evaluarCambios();
     } else { window.location.href='index.html'; }
   });
   </script>

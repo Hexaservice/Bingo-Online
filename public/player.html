@@ -178,16 +178,6 @@
           height: auto;
           margin-bottom: clamp(0px, 1vh, 8px);
       }
-      #login-footer {
-          position: relative;
-          margin-top: auto;
-          text-align: center;
-          color: #000000;
-          text-shadow: none;
-          background: rgba(255, 255, 255, 0.6);
-          padding: 6px 10px;
-          border-radius: 8px;
-      }
       #login-btn {
           width: 220px;
           height: 80px;
@@ -412,18 +402,21 @@
           right: 10px;
           display: flex;
           align-items: center;
-          gap: 6px;
+          justify-content: center;
+          gap: 10px;
           font-size: 0.8rem;
           z-index: 1000;
-          padding: 6px 9px;
-          border-radius: 12px;
+          padding: 6px 10px;
+          border-radius: 14px;
           background: rgba(0, 0, 0, 0.55);
           box-shadow: 0 0 12px rgba(0, 0, 0, 0.35);
+          flex-wrap: nowrap;
       }
       #user-data {
           display: flex;
           flex-direction: column;
           align-items: flex-end;
+          text-align: right;
           gap: 2px;
       }
       #user-name, #user-email {
@@ -431,28 +424,36 @@
           text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
           font-family: Calibri, Arial, sans-serif;
           font-size: 0.7rem;
+          max-width: 170px;
+          word-break: break-word;
       }
       #user-pic {
-          width: 46px !important;
-          height: 46px !important;
+          width: 40px !important;
+          height: 40px !important;
           border-radius: 50%;
           border: 2px solid #ffd700;
-          box-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
+          box-shadow: 0 0 9px rgba(255, 215, 0, 0.55);
       }
       #session-avatar {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 3px;
+          gap: 4px;
       }
       #fecha-hora, #derechos {
           font-size: 0.7rem;
           text-align: center;
           color: #000000;
           text-shadow: none;
+          margin: 0;
+      }
+      #fecha-hora {
+          margin-top: auto;
+          padding-top: 10px;
       }
       #derechos {
           font-size: 0.6rem;
+          padding-bottom: 10px;
       }
       @media (max-width: 600px) {
           table {
@@ -480,6 +481,17 @@
               padding-inline: clamp(40px, 16vw, 160px);
           }
       }
+      @media (max-width: 480px) {
+          #session-info {
+              flex-wrap: wrap;
+              justify-content: flex-end;
+              row-gap: 6px;
+          }
+          #user-data {
+              align-items: flex-end;
+              text-align: right;
+          }
+      }
       .modal-whatsapp {
           position: fixed;
           top: 0;
@@ -500,11 +512,12 @@
           background: #ffffff;
           border-radius: 18px;
           padding: clamp(20px, 4vw, 36px);
-          max-width: 420px;
-          width: 100%;
+          width: min(420px, 92vw);
+          max-height: min(80vh, 520px);
           box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
           text-align: center;
           border: 4px solid #ffd700;
+          overflow: auto;
       }
       .modal-whatsapp .modal-contenido h2 {
           font-family: 'Bangers', cursive;
@@ -552,13 +565,13 @@
   </div>
 
   <div id="session-info" style="display:none;">
-      <div id="session-avatar">
-        <img id="user-pic" referrerpolicy="no-referrer" crossorigin="anonymous" src="" alt="Foto del jugador">
-        <a id="logout-link" href="#">Cerrar sesión</a>
-      </div>
       <div id="user-data">
         <div id="user-name"></div>
         <div id="user-email"></div>
+      </div>
+      <div id="session-avatar">
+        <img id="user-pic" referrerpolicy="no-referrer" crossorigin="anonymous" src="" alt="Foto del jugador">
+        <a id="logout-link" href="#">Cerrar sesión</a>
       </div>
   </div>
   <button id="salir-super-btn" class="menu-btn back-btn" style="display:none;">Salir</button>
@@ -618,10 +631,8 @@
 
 
 
-  <div id="login-footer">
-    <div id="fecha-hora"></div>
-    <div id="derechos">Todos los derechos reservados ® Hexaservice 2025</div>
-  </div>
+  <div id="fecha-hora"></div>
+  <div id="derechos">Todos los derechos reservados ® Hexaservice 2025</div>
 
   <!-- Importar el SDK de Firebase (compatibilidad para evitar problemas de CORS al abrir el archivo localmente) -->
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
