@@ -3429,13 +3429,31 @@
     whatsappModalEl.setAttribute('aria-hidden','true');
   }
 
+  function normalizarEnlaceWhatsapp(link){
+    if(typeof link !== 'string') return '';
+    const valor = link.trim();
+    if(!valor) return '';
+    if(/^https?:\/\//i.test(valor) || /^whatsapp:\/\//i.test(valor)){
+      return valor;
+    }
+    if(valor.startsWith('wa.me/') || valor.startsWith('chat.whatsapp.com/')){
+      return `https://${valor}`;
+    }
+    return `https://${valor}`;
+  }
+
   function abrirWhatsappConLink(){
     if(!whatsappLinkValor){
       mostrarModalWhatsapp(MENSAJE_WHATSAPP_NO_DISPONIBLE);
       return;
     }
     try{
-      window.open(whatsappLinkValor, '_blank');
+      const enlaceNormalizado = normalizarEnlaceWhatsapp(whatsappLinkValor);
+      if(!enlaceNormalizado){
+        mostrarModalWhatsapp(MENSAJE_WHATSAPP_NO_DISPONIBLE);
+        return;
+      }
+      window.location.href = enlaceNormalizado;
     }catch(e){
       console.error('No se pudo abrir el enlace de WhatsApp', e);
       mostrarModalWhatsapp(MENSAJE_WHATSAPP_NO_DISPONIBLE);
