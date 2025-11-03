@@ -1034,7 +1034,7 @@
           font-size: clamp(0.92rem, 2.6vw, 1.4rem);
           font-weight: 600;
           letter-spacing: 0.05em;
-          text-transform: uppercase;
+          text-transform: none;
           color: #ffffff;
           text-shadow:
               0 0 6px rgba(0,0,0,0.82),
@@ -1057,6 +1057,8 @@
       }
       #carton-destacado-premio .carton-destacado-premio__badge {
           font-weight: 700;
+          font-size: clamp(0.78rem, 2.1vw, 1.1rem);
+          color: #fefefe;
       }
       #carton-destacado-premio .carton-destacado-premio__valor {
           font-size: clamp(1.3rem, 3.2vw, 1.9rem);
@@ -1064,24 +1066,15 @@
           color: #19d46b;
           animation: premioZoom 2s ease-in-out infinite;
       }
-      .carton-destacado-premio__gratis {
-          display: inline-flex;
-          align-items: baseline;
-          gap: clamp(4px, 1.2vw, 10px);
-          font-family: 'Poppins', sans-serif;
-          font-size: clamp(0.92rem, 2.6vw, 1.4rem);
-          letter-spacing: 0.05em;
-          text-transform: uppercase;
-          color: #ffffff;
-          text-shadow: inherit;
-      }
-      .carton-destacado-premio__gratis-label {
+      #carton-destacado-premio .carton-destacado-premio__plus {
           font-weight: 700;
-          color: #6a1b9a;
+          color: #000000;
+          font-size: clamp(1.1rem, 3vw, 1.6rem);
+          line-height: 1;
       }
       .carton-destacado-premio__gratis-valor {
           font-weight: 700;
-          color: #6a1b9a;
+          color: #0b1d64;
           font-size: clamp(1.3rem, 3.2vw, 1.9rem);
           animation: premioZoom 2s ease-in-out infinite;
       }
@@ -1550,6 +1543,13 @@
       #mis-cartones-section h2 {
           text-align: center;
           margin: 0;
+      }
+      .mis-cartones-total {
+          font-family: 'Poppins', sans-serif;
+          font-weight: 600;
+          color: #0b1d64;
+          margin-left: 6px;
+          font-size: 0.9em;
       }
       #mis-cartones-grid {
           display: grid;
@@ -3181,12 +3181,10 @@
         <div class="panel-columna-derecha__rejilla panel-columna-derecha__destacado">
           <aside id="carton-destacado" aria-live="polite"></aside>
           <div id="carton-destacado-premio" class="carton-destacado-premio" hidden aria-hidden="true">
-            <span id="carton-destacado-premio-label" class="carton-destacado-premio__badge">A REPARTIR:</span>
+            <span id="carton-destacado-premio-label" class="carton-destacado-premio__badge">Premios:</span>
             <span id="carton-destacado-premio-valor" class="carton-destacado-premio__valor">0</span>
-            <span id="carton-destacado-premio-gratis" class="carton-destacado-premio__gratis" hidden aria-hidden="true">
-              <span class="carton-destacado-premio__gratis-label">CARTONES</span>
-              <span id="carton-destacado-premio-gratis-valor" class="carton-destacado-premio__gratis-valor">0</span>
-            </span>
+            <span id="carton-destacado-premio-plus" class="carton-destacado-premio__plus" hidden aria-hidden="true">+</span>
+            <span id="carton-destacado-premio-gratis-valor" class="carton-destacado-premio__gratis-valor" hidden aria-hidden="true">0</span>
           </div>
           <div id="sin-cartones-activos" class="sin-cartones-activos" hidden aria-hidden="true">
             <p class="sin-cartones-activos__mensaje">No jugaste cartones en este sorteo, puedes jugar en otro sorteo que esté activo.</p>
@@ -3199,7 +3197,7 @@
       </div>
     </section>
     <section id="mis-cartones-section">
-      <h2>MIS CARTONES EN EL SORTEO</h2>
+      <h2>MIS CARTONES EN EL SORTEO <span id="mis-cartones-total" class="mis-cartones-total">(0)</span></h2>
       <div id="cartones-mensaje" class="mensaje"></div>
       <div id="mis-cartones-grid" aria-live="polite"></div>
     </section>
@@ -3214,7 +3212,7 @@
     <div class="modal-contenido">
       <button class="modal-cerrar" id="modal-cerrar">✖</button>
       <div id="modal-premio-forma" class="modal-premio-forma" hidden aria-hidden="true">
-        <span id="modal-premio-forma-label" class="modal-premio-forma__label">A REPARTIR:</span>
+        <span id="modal-premio-forma-label" class="modal-premio-forma__label">Premios:</span>
         <span id="modal-premio-forma-valor" class="modal-premio-forma__valor">0</span>
       </div>
       <h2 id="modal-titulo">Ganadores</h2>
@@ -3316,7 +3314,7 @@
   const cartonDestacadoPremioEl = document.getElementById('carton-destacado-premio');
   const cartonDestacadoPremioValorEl = document.getElementById('carton-destacado-premio-valor');
   const cartonDestacadoPremioLabelEl = document.getElementById('carton-destacado-premio-label');
-  const cartonDestacadoPremioGratisEl = document.getElementById('carton-destacado-premio-gratis');
+  const cartonDestacadoPremioPlusEl = document.getElementById('carton-destacado-premio-plus');
   const cartonDestacadoPremioGratisValorEl = document.getElementById('carton-destacado-premio-gratis-valor');
   const modalGanadores = document.getElementById('modal-ganadores');
   const modalCerrarBtn = document.getElementById('modal-cerrar');
@@ -3327,6 +3325,7 @@
   const modalPremioFormaEl = document.getElementById('modal-premio-forma');
   const modalPremioFormaValorEl = document.getElementById('modal-premio-forma-valor');
   const modalPremioFormaLabelEl = document.getElementById('modal-premio-forma-label');
+  const misCartonesTotalEl = document.getElementById('mis-cartones-total');
   const modalSorteosFinalizadosEl = document.getElementById('modal-sorteos-finalizados');
   const modalSorteosFinalizadosListaEl = document.getElementById('modal-sorteos-finalizados-lista');
   const modalSorteosFinalizadosMensajeEl = document.getElementById('modal-sorteos-finalizados-mensaje');
@@ -4924,12 +4923,16 @@
       cartonDestacadoPremioEl.setAttribute('hidden','');
       cartonDestacadoPremioEl.setAttribute('aria-hidden','true');
       cartonDestacadoPremioEl.style.removeProperty('--carton-premio-destello');
-      if(cartonDestacadoPremioGratisEl){
-        cartonDestacadoPremioGratisEl.setAttribute('hidden','');
-        cartonDestacadoPremioGratisEl.setAttribute('aria-hidden','true');
+      if(cartonDestacadoPremioPlusEl){
+        cartonDestacadoPremioPlusEl.setAttribute('hidden','');
+        cartonDestacadoPremioPlusEl.setAttribute('aria-hidden','true');
+      }
+      if(cartonDestacadoPremioGratisValorEl){
+        cartonDestacadoPremioGratisValorEl.setAttribute('hidden','');
+        cartonDestacadoPremioGratisValorEl.setAttribute('aria-hidden','true');
       }
       if(cartonDestacadoPremioLabelEl){
-        cartonDestacadoPremioLabelEl.textContent = 'A REPARTIR:';
+        cartonDestacadoPremioLabelEl.textContent = 'Premios:';
       }
       return;
     }
@@ -4945,15 +4948,29 @@
     }
     if(cartonDestacadoPremioLabelEl){
       cartonDestacadoPremioLabelEl.style.color = '';
-      cartonDestacadoPremioLabelEl.textContent = 'A REPARTIR:';
+      cartonDestacadoPremioLabelEl.textContent = 'Premios:';
     }
     cartonDestacadoPremioValorEl.textContent = formatearCreditos(totalForma);
     cartonDestacadoPremioValorEl.style.color = '';
-    if(cartonDestacadoPremioGratisEl && cartonDestacadoPremioGratisValorEl){
+    if(cartonDestacadoPremioGratisValorEl){
       const cartonesGratisTotal = Math.max(0, Math.round(obtenerCartonesGratisForma(forma) || 0));
-      cartonDestacadoPremioGratisValorEl.textContent = formatearCreditos(cartonesGratisTotal);
-      cartonDestacadoPremioGratisEl.removeAttribute('hidden');
-      cartonDestacadoPremioGratisEl.setAttribute('aria-hidden','false');
+      if(cartonesGratisTotal > 0){
+        cartonDestacadoPremioGratisValorEl.textContent = formatearCreditos(cartonesGratisTotal);
+        cartonDestacadoPremioGratisValorEl.removeAttribute('hidden');
+        cartonDestacadoPremioGratisValorEl.setAttribute('aria-hidden','false');
+        if(cartonDestacadoPremioPlusEl){
+          cartonDestacadoPremioPlusEl.removeAttribute('hidden');
+          cartonDestacadoPremioPlusEl.setAttribute('aria-hidden','false');
+        }
+      }else{
+        cartonDestacadoPremioGratisValorEl.textContent = '0';
+        cartonDestacadoPremioGratisValorEl.setAttribute('hidden','');
+        cartonDestacadoPremioGratisValorEl.setAttribute('aria-hidden','true');
+        if(cartonDestacadoPremioPlusEl){
+          cartonDestacadoPremioPlusEl.setAttribute('hidden','');
+          cartonDestacadoPremioPlusEl.setAttribute('aria-hidden','true');
+        }
+      }
     }
     cartonDestacadoPremioEl.classList.add('visible');
     cartonDestacadoPremioEl.removeAttribute('hidden');
@@ -4967,7 +4984,7 @@
       modalPremioFormaEl.setAttribute('hidden','');
       modalPremioFormaEl.setAttribute('aria-hidden','true');
       if(modalPremioFormaLabelEl){
-        modalPremioFormaLabelEl.textContent = 'A REPARTIR:';
+        modalPremioFormaLabelEl.textContent = 'Premios:';
       }
       return;
     }
@@ -4977,7 +4994,7 @@
     modalPremioFormaEl.style.setProperty('--modal-premio-color', colorOscuro);
     if(modalPremioFormaLabelEl){
       modalPremioFormaLabelEl.style.color = colorOscuro;
-      modalPremioFormaLabelEl.textContent = 'PREMIO DE FORMA:';
+      modalPremioFormaLabelEl.textContent = 'Premios:';
     }
     modalPremioFormaValorEl.textContent = formatearCreditos(totalForma);
     modalPremioFormaValorEl.style.color = colorOscuro;
@@ -6037,6 +6054,13 @@
     return porGanador*ganadoresNumero;
   }
 
+  function actualizarTotalCartonesSorteo(total){
+    if(!misCartonesTotalEl) return;
+    const numero = Number(total);
+    const seguro = Number.isFinite(numero) && numero >= 0 ? Math.floor(numero) : 0;
+    misCartonesTotalEl.textContent = `(${seguro})`;
+  }
+
   function actualizarHeader(){
     const mostrarManual = !haySorteoJugando && !!(activeSorteo && sorteoManualSeleccionadoId);
     if(!haySorteoJugando && !mostrarManual){
@@ -6462,6 +6486,7 @@
     mostrarMensajeSinCartonesJugador(false);
     jugadorSinCartonesEnSorteo = false;
     const lista=Array.from(cartonesSorteo.values()).filter(c=>c.userId===(usuarioActual?usuarioActual.uid:null));
+    actualizarTotalCartonesSorteo(lista.length);
     const idsActuales=new Set(lista.map(carton=>carton.id).filter(Boolean));
     Array.from(formasCelebradasPorCarton.keys()).forEach(id=>{
       if(!idsActuales.has(id)){
@@ -6500,6 +6525,7 @@
       const total=Number(carton?.resumenGanancias?.total)||0;
       return acum+total;
     },0);
+    actualizarTotalCartonesSorteo(decorados.length);
     actualizarGananciasTotales();
     decorados.sort((a,b)=>{
       const aGan=a.formasGanadas.length>0;
