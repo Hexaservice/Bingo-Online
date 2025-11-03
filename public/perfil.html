@@ -53,7 +53,7 @@
           flex-direction: column;
           align-items: center;
           gap: 10px;
-          margin-top: clamp(70px, 14vh, 130px);
+          margin-top: clamp(50px, 12vh, 110px);
       }
       input, select {font-size:1rem;padding:8px;text-align:center;border-radius:8px;border:1px solid #ccc;width:100%;box-sizing:border-box;display:block;}
       .menu-btn { width:140px; }
@@ -106,7 +106,7 @@
           transition: background 0.3s ease, box-shadow 0.3s ease;
       }
       #guardar-perfil-btn.modo-edicion {
-          background: linear-gradient(135deg, #083cbe, #3aa2ff);
+          background: linear-gradient(135deg, #083cbe, #ffffff);
           box-shadow: 0 0 14px rgba(8, 60, 190, 0.45);
       }
       #jugar-carton-btn{
@@ -159,6 +159,10 @@
   const aliasInput=document.getElementById('perfil-alias');
   const guardarBtn=document.getElementById('guardar-perfil-btn');
 
+  nombreInput.placeholder='Nombre';
+  apellidoInput.placeholder='Apellido';
+  aliasInput.placeholder='Alias';
+
   let valoresOriginales={name:'',apellido:'',alias:''};
   let tieneDatosGuardados=false;
 
@@ -203,7 +207,7 @@
     const user = auth.currentUser;
     if(!user) return;
     const modo=(guardarBtn.dataset.modo||'guardar')==='editar'?'editar':'guardar';
-    const confirmar=window.confirm(modo==='editar'?'¿Deseas EDITAR los datos?':'¿Deseas GUARDAR los datos?');
+    const confirmar=await window.confirm(modo==='editar'?'¿Deseas EDITAR los datos?':'¿Deseas GUARDAR los datos de tu perfil?');
     if(!confirmar) return;
     const valores=obtenerValoresPerfil();
     const baseDatos={
@@ -225,11 +229,11 @@
           return;
         }
         await db.collection('users').doc(user.email).set({...baseDatos,...cambios},{merge:true});
-        alert('Datos editados correctamente');
+        alert('Datos editados correctamente.');
         tieneDatosGuardados=Object.values(valores).some(valor=>valor.length>0);
       }else{
         await db.collection('users').doc(user.email).set({...baseDatos,...valores},{merge:true});
-        alert('Datos guardados correctamente');
+        alert('Datos guardados correctamente.');
         tieneDatosGuardados=Object.values(valores).some(valor=>valor.length>0);
       }
       valoresOriginales=valores;

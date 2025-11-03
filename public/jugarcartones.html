@@ -184,11 +184,12 @@
     #premio-label{color:#ffffff;text-shadow:inherit;font-size:clamp(1.6rem,4.8vw,2.6rem);letter-spacing:0.06em;}
     #premio-valores{display:inline-flex;align-items:baseline;gap:clamp(10px,2vw,18px);}
     #premio-valor{color:#ffffff;text-shadow:inherit;font-size:clamp(2rem,5.6vw,3.2rem);line-height:1;}
-    #premio-extra-plus,#premio-extra-valor{color:#ffffff;text-shadow:inherit;font-size:clamp(2rem,5.6vw,3.2rem);line-height:1;}
+    #premio-extra-valor{color:#ffffff;text-shadow:inherit;font-size:clamp(2rem,5.6vw,3.2rem);line-height:1;}
     #premio-label{text-transform:uppercase;letter-spacing:1px;}
     #premio-valor{animation:zoomInOut 1.6s ease-in-out infinite;font-family:'Bangers',cursive;font-weight:700;}
     #premio-extra-plus,#premio-extra-valor{animation:zoomInOut 1.6s ease-in-out infinite;font-family:'Bangers',cursive;}
-    #premio-extra-plus{font-weight:700;padding:0;}
+    #premio-extra-plus{font-weight:700;padding:0;color:#000;text-shadow:0 0 6px rgba(0,0,0,0.35);}
+    #premio-cartones-gratis-valor{color:#0b1b4d;font-weight:700;}
     #premio-extra-valor{font-weight:700;}
     #premio-cartones-gratis{display:none !important;}
     #forma-nombre{font-family:'Bangers',cursive;color:#4B0082;font-size:1rem;text-shadow:0 0 5px #fff;text-align:center;visibility:hidden;min-height:8px;margin:0;}
@@ -276,8 +277,9 @@
     #player-container{position:relative;border:2px solid green;border-radius:10px;background:linear-gradient(135deg,#d3d3d3,#ffffff);padding:10px;margin:10px auto 0;width:100%;max-width:320px;box-sizing:border-box;transition:background 0.3s ease,border-color 0.3s ease;}
     #alias-row{display:flex;align-items:center;justify-content:center;gap:5px;}
     #alias-jugador{font-size:1.2rem;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;width:220px;color:orange;}
-    #editar-alias{background:none;border:none;color:#4B0082;font-size:1.5rem;cursor:pointer;border-radius:5px;text-shadow:0 0 4px #fff,0 0 8px #fff;padding:2px;display:flex;align-items:center;justify-content:center;}
+    #editar-alias{background:none;border:none;color:#4B0082;font-size:1.5rem;cursor:pointer;border-radius:5px;text-shadow:0 0 4px #fff,0 0 8px #fff;padding:2px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1px;}
     #editar-alias img{width:26px;height:26px;display:block;}
+    #editar-alias .perfil-btn-label{font-family:'Poppins',sans-serif;font-size:0.45rem;font-weight:600;color:#1a1a1a;letter-spacing:0.04em;}
     #guardar-carton-btn{background:none;border:none;font-size:1.4rem;cursor:pointer;margin-left:5px;display:none;}
     #nombre-carton{display:none;padding:5px;border-radius:5px;border:1px solid #ccc;}
     .guardar-row{justify-content:center;}
@@ -371,7 +373,7 @@
     <div id="player-container">
       <div id="alias-row">
         <input type="text" id="alias-jugador" readonly placeholder="Alias">
-        <button id="editar-alias" onclick="window.location.href='perfil.html'"><img src="img/boton-perfiles300p.png" alt="Editar perfil"></button>
+        <button id="editar-alias" onclick="window.location.href='perfil.html'"><img src="img/boton-perfiles300p.png" alt="Editar perfil"><span class="perfil-btn-label">PERFIL</span></button>
       </div>
         <div class="wallet-row"><strong><span class="credit-icon">$</span> Créditos:</strong> <span id="creditos-label">0</span></div>
         <div class="wallet-row"><strong><img src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" class="carton-icon" alt="Cartón"> gratis:</strong> <span id="gratis-label">0</span></div>
@@ -809,9 +811,15 @@ async function restaurarSorteoSeleccionado(){
         tipo:d?.tipo||'',
         estado:d?.estado||''
       };
-      sorteosActivos.push(encontrado);
-      await seleccionarSorteo(encontrado);
-      return true;
+      const estadoLower=(encontrado.estado||'').toString().toLowerCase();
+      if(['activo','sellado','jugando'].includes(estadoLower)){
+        sorteosActivos.push(encontrado);
+        await seleccionarSorteo(encontrado);
+        return true;
+      }
+      alert('El sorteo seleccionado ya no está disponible para jugar.');
+      deleteCookie(sorteoCookieKey);
+      return false;
     }
     deleteCookie(sorteoCookieKey);
   }catch(e){
@@ -1202,6 +1210,22 @@ function toggleForma(idx){
 
   async function seleccionarSorteo(s){
     resetForma();
+    const estadoNormalizado=(s.estado||'').toString().toLowerCase();
+    const btn=document.getElementById('sorteo-btn');
+    if(estadoNormalizado==='finalizado'){
+      currentSorteo=null;
+      currentSorteoNombre='';
+      currentSorteoTipo='';
+      currentSorteoEstado='';
+      if(btn){
+        btn.textContent='Selecciona Sorteo';
+        btn.style.fontWeight='400';
+        btn.classList.remove('diario','especial');
+        btn.style.fontSize='1.1rem';
+      }
+      alert('Este sorteo ya está FINALIZADO. Selecciona otro sorteo disponible.');
+      return;
+    }
     currentSorteo=s.id;
     currentSorteoNombre=s.nombre;
     currentSorteoTipo=s.tipo;
@@ -1211,7 +1235,6 @@ function toggleForma(idx){
     escucharConsecutivoCarton(currentSorteo);
     refrescarNumeroCartonVisual();
     ocultarMensajeSellado();
-    const btn=document.getElementById('sorteo-btn');
     btn.textContent=s.nombre;
     btn.style.fontWeight='700';
     btn.classList.remove('diario','especial');
@@ -1223,9 +1246,14 @@ function toggleForma(idx){
     document.getElementById('hora-sorteo').innerHTML=horaTexto?`<span class="clock-icon">⏰</span> ${horaTexto}`:'';
     actualizarFechaHoraActual();
     const jugarBtn=document.getElementById('jugar-carton-btn');
-    if(s.estado==='Sellado' || s.estado==='Jugando') jugarBtn.disabled=true; else jugarBtn.disabled=false;
-    if(s.estado==='Sellado'){
+    const estadoBloqueado=['sellado','jugando','finalizado'].includes(estadoNormalizado);
+    jugarBtn.disabled=estadoBloqueado;
+    if(estadoNormalizado==='sellado'){
       mostrarMensajeSellado(s.nombre||'este sorteo');
+    }
+    if(estadoNormalizado==='finalizado'){
+      alert('Este sorteo ya está FINALIZADO. Selecciona otro sorteo disponible.');
+      return;
     }
     actualizarFondoCarton();
     guardarSorteoSeleccionado(s);
@@ -1238,10 +1266,21 @@ function toggleForma(idx){
   function abrirSorteosModal(){
     const list=document.getElementById('sorteos-list');
     list.innerHTML='';
-    sorteosActivos.forEach((s,i)=>{
+    const disponibles=sorteosActivos.filter(s=>{
+      const estado=(s.estado||'').toString().toLowerCase();
+      return ['activo','sellado','jugando'].includes(estado);
+    });
+    if(disponibles.length===0){
+      const vacio=document.createElement('div');
+      vacio.className='no-cartones';
+      vacio.textContent='En este momento no hay sorteos disponibles para jugar';
+      list.appendChild(vacio);
+    }
+    disponibles.forEach((s,i)=>{
       const div=document.createElement('div');
-      div.className = s.estado==='Sellado' ? 'sorteo-sellado'
-                    : s.estado==='Jugando' ? 'sorteo-jugando'
+      const estadoLower=(s.estado||'').toString().toLowerCase();
+      div.className = estadoLower==='sellado' ? 'sorteo-sellado'
+                    : estadoLower==='jugando' ? 'sorteo-jugando'
                     : (s.tipo==='Sorteo Diario' ? 'sorteo-diario' : 'sorteo-especial');
       const indexSpan=document.createElement('span');
       indexSpan.className='sorteo-index';
@@ -1259,7 +1298,7 @@ function toggleForma(idx){
       detalle.innerHTML=`<span class=\"cal-icon\">📅</span><span>${formatearFecha(s.fecha)}</span>${cierreHtml}${inicioHtml}`;
       div.appendChild(detalle);
       div.addEventListener('click',()=>{
-        if(s.estado==='Jugando') window.location.href='juegoactivo.html';
+        if(estadoLower==='jugando') window.location.href='juegoactivo.html';
         else { seleccionarSorteo(s); document.getElementById('sorteos-modal').style.display='none'; }
       });
       list.appendChild(div);
@@ -1274,7 +1313,11 @@ function toggleForma(idx){
       const snap=await db.collection('sorteos').where('estado','in',['Activo','Sellado','Jugando']).get();
       snap.forEach(doc=>{
         const d=doc.data();
-        sorteosActivos.push({id:doc.id,nombre:d.nombre,fecha:d.fecha,hora:d.hora,horacierre:obtenerHoraCierre(d),tipo:d.tipo,estado:d.estado});
+        const estado=(d?.estado||'').toString();
+        const estadoLower=estado.toLowerCase();
+        if(['activo','sellado','jugando'].includes(estadoLower)){
+          sorteosActivos.push({id:doc.id,nombre:d.nombre,fecha:d.fecha,hora:d.hora,horacierre:obtenerHoraCierre(d),tipo:d.tipo,estado:estado});
+        }
       });
     }catch(e){ console.warn('No se pudieron cargar sorteos'); }
   }
@@ -1303,8 +1346,15 @@ function toggleForma(idx){
       return;
     }
     const sorteoData=sorteoDoc.data();
-    currentSorteoEstado=sorteoData?.estado||currentSorteoEstado;
-    if(currentSorteoEstado==='Sellado'){
+    const estadoSorteo=(sorteoData?.estado||currentSorteoEstado||'').toString();
+    currentSorteoEstado=estadoSorteo;
+    const estadoSorteoLower=estadoSorteo.toLowerCase();
+    if(estadoSorteoLower==='finalizado'){
+      alert('Ya no se pueden jugar cartones en este sorteo porque está FINALIZADO.');
+      await cargarSorteosActivos();
+      return;
+    }
+    if(estadoSorteoLower==='sellado'){
       mostrarMensajeSellado(currentSorteoNombre||sorteoData?.nombre||'este sorteo');
       return;
     }
@@ -1383,6 +1433,9 @@ function toggleForma(idx){
         const estadoActual=(sorteoSnap.data()?.estado||'').toLowerCase();
         if(estadoActual==='sellado'){
           throw new Error('SORTEO_SELLADO');
+        }
+        if(estadoActual==='finalizado'){
+          throw new Error('SORTEO_FINALIZADO');
         }
         const valorCartonActual=toNumberSafe(sorteoSnap.data()?.valorCarton,valor);
         const maxGratisActual=Math.max(0,toNumberSafe(sorteoSnap.data()?.maxcartongratis,0));
@@ -1481,6 +1534,9 @@ function toggleForma(idx){
       }else if(error?.message==='SORTEO_SELLADO'){
         mostrarAlerta=false;
         mostrarMensajeSellado(currentSorteoNombre||sorteoData?.nombre||'este sorteo');
+      }else if(error?.message==='SORTEO_FINALIZADO'){
+        mensaje='Ya no se pueden jugar cartones en este sorteo porque está FINALIZADO.';
+        await cargarSorteosActivos();
       }else if(error?.message==='SORTEO_NO_ENCONTRADO'){
         mensaje='No se encontró la información actual del sorteo seleccionado.';
       }else if(error?.message==='BILLETERA_NO_ENCONTRADA'){
@@ -1519,8 +1575,15 @@ function toggleForma(idx){
     const gratis=toNumberSafe(billeteraDoc.data()?.CartonesGratis,0);
     const sorteoDoc=await db.collection('sorteos').doc(currentSorteo).get();
     const sorteoData=sorteoDoc.data();
-    currentSorteoEstado=sorteoData?.estado||currentSorteoEstado;
-    if(currentSorteoEstado==='Sellado'){
+    const estadoActual=(sorteoData?.estado||currentSorteoEstado||'').toString();
+    currentSorteoEstado=estadoActual;
+    const estadoActualLower=estadoActual.toLowerCase();
+    if(estadoActualLower==='finalizado'){
+      alert('Este sorteo ya está FINALIZADO. Selecciona otro sorteo disponible.');
+      await cargarSorteosActivos();
+      return;
+    }
+    if(estadoActualLower==='sellado'){
       mostrarMensajeSellado(currentSorteoNombre||sorteoData?.nombre||'este sorteo');
       return;
     }
