@@ -704,6 +704,19 @@
     whatsappModalEl.setAttribute('aria-hidden','true');
   }
 
+  function normalizarEnlaceWhatsapp(valor){
+    if(typeof valor !== 'string') return '';
+    const enlace = valor.trim();
+    if(!enlace) return '';
+    if(/^https?:\/\//i.test(enlace) || /^whatsapp:\/\//i.test(enlace)){
+      return enlace;
+    }
+    if(enlace.startsWith('wa.me/') || enlace.startsWith('chat.whatsapp.com/')){
+      return `https://${enlace}`;
+    }
+    return `https://${enlace}`;
+  }
+
   async function obtenerLinkWhatsapp(){
     if(whatsappState.cargado) return whatsappState.enlace;
     if(!firestoreRef) return '';
@@ -724,9 +737,16 @@
   async function manejarClickWhatsapp(){
     const enlace = await obtenerLinkWhatsapp();
     if(enlace){
-      const nuevaVentana = window.open(enlace, '_blank', 'noopener');
-      if(!nuevaVentana){
-        mostrarModalWhatsapp('No pudimos abrir el grupo de WhatsApp. Verifica que el navegador permita ventanas emergentes.');
+      try {
+        const enlaceNormalizado = normalizarEnlaceWhatsapp(enlace);
+        if(!enlaceNormalizado){
+          mostrarModalWhatsapp('Aún no hay grupos disponibles de WhatsApp');
+          return;
+        }
+        window.location.href = enlaceNormalizado;
+      } catch (error) {
+        console.error('No se pudo abrir el enlace de WhatsApp:', error);
+        mostrarModalWhatsapp('No pudimos abrir el grupo de WhatsApp. Intenta nuevamente más tarde.');
       }
     } else {
       mostrarModalWhatsapp('Aún no hay grupos disponibles de WhatsApp');
