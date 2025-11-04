@@ -678,6 +678,7 @@
     const pagosAdminActivos = [];
     const pagosAdminArchivados = [];
     const pagosColaboradoresActivos = [];
+    const indicadorPagosCache = new Map();
     const premiosMapa = new Map();
     const premiosArchivoMapa = new Map();
     const pagosAdminMapa = new Map();
@@ -1593,6 +1594,15 @@
       };
       operaciones.push(resumenRef.set(resumenPayload, { merge: true }));
 
+      const indicadorPagosPayload = {
+        pagosCentroAprobados: false,
+        pagosCentroActualizadosEn: timestamp
+      };
+      operaciones.push(ctx.db.collection('sorteos').doc(ctx.sorteoId).set(indicadorPagosPayload, { merge: true }));
+      operaciones.push(ctx.db.collection('cantarsorteos').doc(ctx.sorteoId).set(indicadorPagosPayload, { merge: true }).catch(err=>{
+        console.warn('No se pudo marcar el indicador en cantarsorteos para', ctx.sorteoId, err);
+      }));
+
       await Promise.all(operaciones);
     }
 
@@ -1720,6 +1730,34 @@
       const texto = (valor || '').toString().trim().toUpperCase();
       if(texto === 'APROBADO' || texto === 'PENDIENTE' || texto === 'ARCHIVADO') return texto;
       return 'PENDIENTE';
+    }
+
+    async function actualizarIndicadorPagosSorteo(sorteoId){
+      if(!sorteoId) return;
+      try {
+        await ensureFirebaseListo();
+        const db = dbRef();
+        const [premiosSnap, pagosSnap] = await Promise.all([
+          db.collection('PremiosSorteos').where('sorteoId', '==', sorteoId).get(),
+          db.collection('PagosAdministracion').where('sorteoId', '==', sorteoId).get()
+        ]);
+        const hayPremiosPendientes = premiosSnap.docs.some(doc=>normalizarEstado(doc.data()?.estado) !== 'APROBADO');
+        const hayPagosPendientes = pagosSnap.docs.some(doc=>normalizarEstado(doc.data()?.estado) !== 'APROBADO');
+        const indicadorCompletado = !hayPremiosPendientes && !hayPagosPendientes;
+        const payload = {
+          pagosCentroAprobados: indicadorCompletado,
+          pagosCentroActualizadosEn: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        const actualizaciones = [
+          db.collection('sorteos').doc(sorteoId).set(payload, { merge: true }),
+          db.collection('cantarsorteos').doc(sorteoId).set(payload, { merge: true }).catch(err=>{
+            console.warn('No se pudo actualizar el indicador en cantarsorteos', sorteoId, err);
+          })
+        ];
+        await Promise.all(actualizaciones);
+      } catch (error) {
+        console.error('Error actualizando el indicador de pagos del sorteo', sorteoId, error);
+      }
     }
 
     function prepararPremio(id, data = {}){
@@ -2017,6 +2055,7 @@
       renderTabla(lista, 'tabla-premios', { mostrarArchivo: mostrarPremiosArchivo, tipo: 'premios' });
       actualizarBadge('premios', premiosActivos.filter(item=>item.estado === 'PENDIENTE').length);
       actualizarEstadoBotones();
+      reconciliarIndicadorPagos().catch(err=>console.warn('No se pudo actualizar el indicador tras renderizar premios', err));
     }
 
     function renderPagos(){
@@ -2024,6 +2063,7 @@
       renderTabla(lista, 'tabla-pagos', { mostrarArchivo: mostrarPagosArchivo, tipo: 'pagos' });
       actualizarBadge('pagos', pagosAdminActivos.filter(item=>item.estado === 'PENDIENTE').length);
       actualizarEstadoBotones();
+      reconciliarIndicadorPagos().catch(err=>console.warn('No se pudo actualizar el indicador tras renderizar pagos', err));
     }
 
     function actualizarColaboradoresDesdeBase(){
@@ -2080,6 +2120,51 @@
       document.getElementById('pagos-ver-archivo').classList.toggle('archivo-activo', mostrarPagosArchivo);
       const colabAprobar = document.getElementById('colaboradores-aprobar');
       if(colabAprobar) colabAprobar.disabled = false;
+    }
+
+    async function reconciliarIndicadorPagos(){
+      try {
+        const estadoPorSorteo = new Map();
+        premiosActivos.forEach(registro => {
+          if(!registro.sorteoId) return;
+          const info = estadoPorSorteo.get(registro.sorteoId) || { pendientesPremios: 0, pendientesPagos: 0 };
+          if(registro.estado !== 'APROBADO'){ info.pendientesPremios = (info.pendientesPremios || 0) + 1; }
+          estadoPorSorteo.set(registro.sorteoId, info);
+        });
+        pagosAdminActivos.forEach(registro => {
+          if(!registro.sorteoId) return;
+          const info = estadoPorSorteo.get(registro.sorteoId) || { pendientesPremios: 0, pendientesPagos: 0 };
+          if(registro.estado !== 'APROBADO'){ info.pendientesPagos = (info.pendientesPagos || 0) + 1; }
+          estadoPorSorteo.set(registro.sorteoId, info);
+        });
+        premiosArchivados.forEach(registro => {
+          if(!registro.sorteoId) return;
+          if(!estadoPorSorteo.has(registro.sorteoId)){
+            estadoPorSorteo.set(registro.sorteoId, { pendientesPremios: 0, pendientesPagos: 0 });
+          }
+        });
+        pagosAdminArchivados.forEach(registro => {
+          if(!registro.sorteoId) return;
+          if(!estadoPorSorteo.has(registro.sorteoId)){
+            estadoPorSorteo.set(registro.sorteoId, { pendientesPremios: 0, pendientesPagos: 0 });
+          }
+        });
+        if(!estadoPorSorteo.size) return;
+        const tareas = [];
+        estadoPorSorteo.forEach((info, sorteoId)=>{
+          const sinPendientes = (info.pendientesPremios || 0) === 0 && (info.pendientesPagos || 0) === 0;
+          const previo = indicadorPagosCache.get(sorteoId);
+          indicadorPagosCache.set(sorteoId, sinPendientes);
+          if(sinPendientes && previo !== true){
+            tareas.push(actualizarIndicadorPagosSorteo(sorteoId));
+          }
+        });
+        if(tareas.length){
+          await Promise.all(tareas);
+        }
+      } catch (err) {
+        console.warn('No se pudo reconciliar el indicador de pagos', err);
+      }
     }
 
     async function registrarTransaccionPremio(enRegistro){
@@ -2178,6 +2263,7 @@
       if(!ids.length) return;
       const db = dbRef();
       await initServerTime();
+      const sorteosActualizados = new Set();
       for(const id of ids){
         const registro = premiosMapa.get(id);
         if(!registro){ console.warn('Premio no encontrado', id); continue; }
@@ -2199,10 +2285,20 @@
             });
           });
           await acreditarPremio(registro);
+          if(registro.sorteoId){
+            sorteosActualizados.add(registro.sorteoId);
+          }
         } catch (err) {
           console.error('Error aprobando premio', err);
           alert('Ocurrió un error al aprobar un premio. Revisa la consola para más detalles.');
           break;
+        }
+      }
+      if(sorteosActualizados.size){
+        try {
+          await Promise.all(Array.from(sorteosActualizados).map(actualizarIndicadorPagosSorteo));
+        } catch (errIndicador) {
+          console.warn('No se pudo actualizar el indicador de pagos tras aprobar premios', errIndicador);
         }
       }
     }
@@ -2211,6 +2307,7 @@
       if(!ids.length) return;
       const db = dbRef();
       await initServerTime();
+      const sorteosActualizados = new Set();
       for(const id of ids){
         const registro = pagosAdminMapa.get(id);
         if(!registro){ console.warn('Pago no encontrado', id); continue; }
@@ -2232,10 +2329,20 @@
             });
           });
           await acreditarPago({ ...registro, tipotrans: 'pago', origen: 'pagos_administracion' });
+          if(registro.sorteoId){
+            sorteosActualizados.add(registro.sorteoId);
+          }
         } catch (err) {
           console.error('Error aprobando pago', err);
           alert('Ocurrió un error al aprobar un pago. Revisa la consola para más detalles.');
           break;
+        }
+      }
+      if(sorteosActualizados.size){
+        try {
+          await Promise.all(Array.from(sorteosActualizados).map(actualizarIndicadorPagosSorteo));
+        } catch (errIndicador) {
+          console.warn('No se pudo actualizar el indicador de pagos tras aprobar pagos', errIndicador);
         }
       }
     }

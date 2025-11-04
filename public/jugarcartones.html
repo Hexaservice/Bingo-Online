@@ -100,6 +100,70 @@
       z-index:1200;
     }
     .sellado-overlay.visible{display:flex;}
+    .perfil-pendiente-modal{
+      position:fixed;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+      background:rgba(0,0,0,0.65);
+      z-index:1650;
+    }
+    .perfil-pendiente-modal.visible{display:flex;}
+    .perfil-pendiente-card{
+      width:min(420px,90%);
+      background:linear-gradient(165deg,#b71c1c 0%,#ff8a80 55%,#ffffff 100%);
+      border:4px solid #ffeb3b;
+      border-radius:18px;
+      box-shadow:0 20px 40px rgba(0,0,0,0.45);
+      padding:clamp(22px,5vw,34px);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:clamp(12px,3vw,20px);
+      text-align:center;
+      color:#4a0a0a;
+      position:relative;
+    }
+    .perfil-pendiente-icono{
+      font-size:clamp(2.4rem,6vw,3.2rem);
+      color:#ffffff;
+      text-shadow:0 0 16px rgba(183,28,28,0.8);
+    }
+    .perfil-pendiente-titulo{
+      font-family:'Bangers',cursive;
+      font-size:clamp(1.4rem,4.6vw,1.8rem);
+      margin:0;
+      letter-spacing:1px;
+      color:#4a0a0a;
+    }
+    .perfil-pendiente-mensaje{
+      font-size:clamp(1rem,3.4vw,1.2rem);
+      margin:0;
+      line-height:1.5;
+      font-weight:600;
+    }
+    .perfil-pendiente-boton{
+      font-family:'Bangers',cursive;
+      font-size:clamp(1rem,3.2vw,1.3rem);
+      padding:10px 26px;
+      border-radius:12px;
+      border:3px solid #ffd700;
+      background:linear-gradient(135deg,#ff7043,#ffeb3b);
+      color:#4a0a0a;
+      cursor:pointer;
+      text-transform:uppercase;
+      letter-spacing:1px;
+      box-shadow:0 12px 26px rgba(183,28,28,0.4);
+      transition:transform 0.25s ease,box-shadow 0.25s ease;
+    }
+    .perfil-pendiente-boton:hover,
+    .perfil-pendiente-boton:focus{
+      transform:scale(1.05);
+      box-shadow:0 16px 30px rgba(183,28,28,0.5);
+      outline:none;
+    }
     body.sellado-modal-activo{overflow:hidden;}
     .sellado-modal-card{
       width:min(420px,90%);
@@ -467,6 +531,14 @@
           <button id="sellado-cerrar-btn" type="button" class="sellado-cerrar-btn">Aceptar</button>
       </div>
   </div>
+  <div id="perfil-pendiente-modal" class="perfil-pendiente-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="perfil-pendiente-titulo">
+      <div class="perfil-pendiente-card" role="document">
+          <span class="perfil-pendiente-icono" aria-hidden="true">⚠️</span>
+          <h2 id="perfil-pendiente-titulo" class="perfil-pendiente-titulo">DATOS DE PERFIL REQUERIDOS</h2>
+          <p class="perfil-pendiente-mensaje">Para poder realizar jugadas debes primero guardar tus datos de perfil.</p>
+          <button type="button" id="perfil-pendiente-ir" class="perfil-pendiente-boton">Ir PERFIL</button>
+      </div>
+  </div>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
@@ -518,6 +590,61 @@
   const premioCartonesGratisValorEl=document.getElementById('premio-cartones-gratis-valor');
   const premioExtraPlusEl=document.getElementById('premio-extra-plus');
   const premioExtraValorEl=document.getElementById('premio-extra-valor');
+  const aliasJugadorInput=document.getElementById('alias-jugador');
+  let perfilDatosCompletos=false;
+  const perfilPendienteModal=document.getElementById('perfil-pendiente-modal');
+  const perfilPendienteIrBtn=document.getElementById('perfil-pendiente-ir');
+
+  function normalizarAliasPerfil(valor){
+    return (valor||'').toString().trim().slice(0,20);
+  }
+
+  function normalizarCelularPerfil(valor){
+    const texto=(valor||'').toString();
+    let limpio=texto.replace(/[^0-9+]/g,'');
+    if(!limpio) return '';
+    if(limpio.startsWith('+')){
+      limpio='+'+limpio.slice(1).replace(/\+/g,'');
+    }else{
+      limpio=limpio.replace(/\+/g,'');
+    }
+    return limpio;
+  }
+
+  function esCelularPerfilValido(valor){
+    const normalizado=normalizarCelularPerfil(valor);
+    if(!normalizado) return false;
+    const sinSigno=normalizado.startsWith('+')?normalizado.slice(1):normalizado;
+    return sinSigno.length>0;
+  }
+
+  function mostrarModalPerfilPendiente(){
+    if(!perfilPendienteModal) return;
+    perfilPendienteModal.classList.add('visible');
+    perfilPendienteModal.setAttribute('aria-hidden','false');
+    if(perfilPendienteIrBtn){
+      perfilPendienteIrBtn.focus();
+    }
+  }
+
+  function cerrarModalPerfilPendiente(){
+    if(!perfilPendienteModal) return;
+    perfilPendienteModal.classList.remove('visible');
+    perfilPendienteModal.setAttribute('aria-hidden','true');
+  }
+  if(perfilPendienteIrBtn){
+    perfilPendienteIrBtn.addEventListener('click',()=>{
+      cerrarModalPerfilPendiente();
+      window.location.href='perfil.html';
+    });
+  }
+  if(perfilPendienteModal){
+    perfilPendienteModal.addEventListener('click',evento=>{
+      if(evento.target===perfilPendienteModal){
+        cerrarModalPerfilPendiente();
+      }
+    });
+  }
   const RESPLANDOR_PREMIO_REPARTIR='0 0 16px rgba(85,107,47,0.85),0 0 30px rgba(60,80,30,0.7)';
   const COLOR_PREMIO_TEXTO='#ffffff';
 
@@ -1629,6 +1756,10 @@ function toggleForma(idx){
   }
 
   async function guardarCarton(){
+    if(!perfilDatosCompletos){
+      mostrarModalPerfilPendiente();
+      return;
+    }
     const check=document.getElementById('guardar-check');
     const nombre=document.getElementById('nombre-carton').value.trim();
     if(!check.checked || nombre===''){
@@ -2187,8 +2318,21 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
       auth.onAuthStateChanged(async user=>{
         if(user){
           const doc=await db.collection('users').doc(user.email).get();
+          let aliasMostrado=user.displayName||user.email;
+          perfilDatosCompletos=false;
           if(doc.exists){
-            document.getElementById('alias-jugador').value=doc.data().alias||user.displayName||user.email;
+            const datosPerfil=doc.data()||{};
+            const nombrePerfil=(datosPerfil.name||'').toString().trim();
+            const apellidoPerfil=(datosPerfil.apellido||'').toString().trim();
+            const aliasPerfil=normalizarAliasPerfil(datosPerfil.alias||'');
+            const celularPerfil=normalizarCelularPerfil(datosPerfil.celular||datosPerfil.telefono||datosPerfil.Telefono||datosPerfil.whatsapp||'');
+            if(aliasPerfil){
+              aliasMostrado=aliasPerfil;
+            }
+            perfilDatosCompletos=Boolean(nombrePerfil&&apellidoPerfil&&aliasPerfil&&esCelularPerfilValido(celularPerfil));
+          }
+          if(aliasJugadorInput){
+            aliasJugadorInput.value=aliasMostrado||'';
           }
           const billeteraRef=db.collection('Billetera').doc(user.email);
           const billeteraDoc=await billeteraRef.get();

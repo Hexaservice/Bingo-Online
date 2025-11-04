@@ -53,9 +53,9 @@
           flex-direction: column;
           align-items: center;
           gap: 10px;
-          margin-top: clamp(50px, 12vh, 110px);
+          margin-top: clamp(30px, 8vh, 90px);
       }
-      input, select {font-size:1rem;padding:8px;text-align:center;border-radius:8px;border:1px solid #ccc;width:100%;box-sizing:border-box;display:block;}
+      input, select {font-size:1rem;padding:8px;text-align:center;border-radius:8px;border:1px solid #ccc;width:100%;box-sizing:border-box;display:block;transition:border-color 0.2s ease, box-shadow 0.2s ease;}
       .menu-btn { width:140px; }
       h3, h4 { margin:5px 0; }
       #session-info {
@@ -87,11 +87,66 @@
           color: #ffffff;
           text-shadow: 0 0 14px rgba(0, 26, 95, 0.8);
           letter-spacing: 1px;
+          margin-bottom: 4px;
       }
       #perfil-subtitulo {
           font-family: 'Poppins', sans-serif;
           color: #0b1b4d;
           margin-bottom: 4px;
+      }
+      .nombre-apellido-row {
+          display: flex;
+          gap: 10px;
+          width: 100%;
+          flex-wrap: wrap;
+      }
+      .campo-wrap {
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
+          width: 100%;
+      }
+      .nombre-apellido-row .campo-wrap {
+          flex: 1 1 150px;
+          min-width: 0;
+      }
+      .campo-wrap.campo-completo {
+          margin-top: 8px;
+      }
+      .nota-campos {
+          font-size: 0.65rem;
+          margin: 0;
+          color: #000;
+          text-align: center;
+      }
+      .nota-campos strong {
+          color: #b71c1c;
+      }
+      .nota-celular {
+          font-size: 0.65rem;
+          margin: 4px 0 0 0;
+          color: #000;
+          text-align: center;
+      }
+      .nota-celular strong {
+          color: #d50000;
+      }
+      .mensaje-validacion {
+          font-size: 0.7rem;
+          color: #b71c1c;
+          min-height: 16px;
+      }
+      .campo-error {
+          border-color: #d50000 !important;
+          box-shadow: 0 0 6px rgba(213,0,0,0.35);
+      }
+      .campo-wrap.campo-error {
+          outline: 2px solid rgba(213,0,0,0.45);
+          border-radius: 10px;
+      }
+      .campo-wrap.campo-error input {
+          border-color: #d50000 !important;
+          box-shadow: 0 0 6px rgba(213,0,0,0.35);
       }
       #guardar-perfil-btn {
           font-family: 'Bangers', cursive;
@@ -201,9 +256,23 @@
   <main id="perfil-contenido">
     <h3 id="perfil-titulo">Perfil del Jugador</h3>
     <h4 id="perfil-subtitulo">Tus Datos Personales</h4>
-    <input type="text" id="perfil-nombre" placeholder="Nombre" />
-    <input type="text" id="perfil-apellido" placeholder="Apellido" />
-    <input type="text" id="perfil-alias" placeholder="Alias" />
+    <div class="nombre-apellido-row">
+      <div class="campo-wrap">
+        <input type="text" id="perfil-nombre" placeholder="Nombre" autocomplete="given-name" required />
+      </div>
+      <div class="campo-wrap">
+        <input type="text" id="perfil-apellido" placeholder="Apellido" autocomplete="family-name" required />
+      </div>
+    </div>
+    <p class="nota-campos">Nota: Tu Nombre y Apellido no serán visibles para ningún otro jugador, sólo será visible tu Alias.</p>
+    <div class="campo-wrap campo-completo">
+      <input type="text" id="perfil-alias" placeholder="Alias" maxlength="20" autocomplete="nickname" required />
+    </div>
+    <div class="campo-wrap campo-completo">
+      <input type="tel" id="perfil-celular" placeholder="Número Celular" autocomplete="tel" inputmode="tel" maxlength="20" pattern="\+?[0-9]+" title="Ingresa un número válido (solo dígitos y un signo + inicial)" required />
+    </div>
+    <p class="nota-celular"><strong>IMPORTANTE:</strong> Tu número celular no será visible para ningún otro jugador, sin embargo, este número debe ser el mismo que usaras al entrar en los Grupos de WhatsApp, de lo contrario tu acceso al sistema será restringido.</p>
+    <div id="perfil-mensaje" class="mensaje-validacion" role="alert" aria-live="polite"></div>
     <button id="guardar-perfil-btn" class="menu-btn" data-modo="guardar">Guardar</button>
     <button id="jugar-carton-btn" class="menu-btn" onclick="window.location.href='jugarcartones.html'">Jugar Cartón</button>
   </main>
@@ -233,23 +302,84 @@
   const nombreInput=document.getElementById('perfil-nombre');
   const apellidoInput=document.getElementById('perfil-apellido');
   const aliasInput=document.getElementById('perfil-alias');
+  const celularInput=document.getElementById('perfil-celular');
   const guardarBtn=document.getElementById('guardar-perfil-btn');
   const whatsappModalEl=document.getElementById('modal-whatsapp');
   const whatsappModalMensajeEl=document.getElementById('modal-whatsapp-mensaje');
   const whatsappModalAceptarBtn=document.getElementById('modal-whatsapp-aceptar');
+  const mensajeValidacionEl=document.getElementById('perfil-mensaje');
 
   nombreInput.placeholder='Nombre';
   apellidoInput.placeholder='Apellido';
   aliasInput.placeholder='Alias';
+  if(celularInput){
+    celularInput.placeholder='Número Celular';
+  }
 
-  let valoresOriginales={name:'',apellido:'',alias:''};
+  let valoresOriginales={name:'',apellido:'',alias:'',celular:''};
   let tieneDatosGuardados=false;
+
+  const camposObligatorios=[nombreInput,apellidoInput,aliasInput,celularInput].filter(Boolean);
+
+  function normalizarAlias(valor){
+    return (valor||'').toString().trim().slice(0,20);
+  }
+
+  function normalizarCelular(valor){
+    const texto=(valor||'').toString();
+    let limpio=texto.replace(/[^0-9+]/g,'');
+    if(!limpio) return '';
+    if(limpio.startsWith('+')){
+      limpio='+'+limpio.slice(1).replace(/\+/g,'');
+    }else{
+      limpio=limpio.replace(/\+/g,'');
+    }
+    return limpio;
+  }
+
+  function esCelularValido(valor){
+    const normalizado=normalizarCelular(valor);
+    if(!normalizado) return false;
+    const sinSigno=normalizado.startsWith('+')?normalizado.slice(1):normalizado;
+    return sinSigno.length>0;
+  }
+
+  function actualizarEstadoErrorCampo(campo,conError){
+    if(!campo) return;
+    const contenedor=campo.closest('.campo-wrap');
+    const elementos=new Set([campo]);
+    if(contenedor){
+      elementos.add(contenedor);
+    }
+    elementos.forEach(elemento=>{
+      if(conError){
+        elemento.classList.add('campo-error');
+      }else{
+        elemento.classList.remove('campo-error');
+      }
+    });
+  }
 
   document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='player.html';});
   guardarBtn.addEventListener('click',guardarPerfil);
 
-  [nombreInput,apellidoInput,aliasInput].forEach(input=>{
-    input.addEventListener('input',evaluarCambios);
+  camposObligatorios.forEach(input=>{
+    input.addEventListener('input',()=>{
+      if(input===aliasInput){
+        const valorNormalizado=normalizarAlias(aliasInput.value);
+        if(aliasInput.value!==valorNormalizado){
+          aliasInput.value=valorNormalizado;
+        }
+      }
+      if(input===celularInput){
+        const limpio=normalizarCelular(celularInput.value);
+        if(celularInput.value!==limpio){
+          celularInput.value=limpio;
+        }
+      }
+      actualizarEstadoCamposObligatorios();
+      evaluarCambios();
+    });
   });
 
   function mostrarModalWhatsapp(mensaje){
@@ -284,11 +414,87 @@
   window.mostrarModalWhatsapp=mostrarModalWhatsapp;
   window.cerrarModalWhatsapp=cerrarModalWhatsapp;
 
+  function mostrarMensajeValidacion(texto){
+    if(!mensajeValidacionEl) return;
+    mensajeValidacionEl.textContent=texto;
+  }
+
+  function limpiarMensajeValidacion(){
+    mostrarMensajeValidacion('');
+  }
+
+  function actualizarEstadoCamposObligatorios(){
+    let existeVacio=false;
+    camposObligatorios.forEach(campo=>{
+      if(!campo) return;
+      let tieneValor=campo.value.trim().length>0;
+      if(campo===aliasInput){
+        tieneValor=normalizarAlias(campo.value).length>0;
+      }
+      if(campo===celularInput){
+        tieneValor=esCelularValido(campo.value);
+      }
+      if(tieneValor){
+        actualizarEstadoErrorCampo(campo,false);
+      }else{
+        existeVacio=true;
+      }
+    });
+    if(!existeVacio){
+      limpiarMensajeValidacion();
+    }
+  }
+
+  function camposObligatoriosCompletos(valores){
+    return ['name','apellido','alias'].every(campo=>(valores[campo]||'').trim().length>0) && esCelularValido(valores.celular);
+  }
+
+  function validarCamposObligatorios(){
+    let esValido=true;
+    camposObligatorios.forEach(campo=>{
+      if(!campo) return;
+      let valido=campo.value.trim().length>0;
+      if(campo===aliasInput){
+        const aliasNormalizado=normalizarAlias(campo.value);
+        if(aliasInput.value!==aliasNormalizado){
+          aliasInput.value=aliasNormalizado;
+        }
+        valido=aliasNormalizado.length>0;
+      }
+      if(campo===celularInput){
+        const limpio=normalizarCelular(campo.value);
+        if(celularInput.value!==limpio){
+          celularInput.value=limpio;
+        }
+        valido=esCelularValido(limpio);
+      }
+      actualizarEstadoErrorCampo(campo,!valido);
+      if(!valido){
+        esValido=false;
+      }
+    });
+    if(!esValido){
+      mostrarMensajeValidacion('Todos los campos son obligatorios');
+    }else{
+      limpiarMensajeValidacion();
+    }
+    return esValido;
+  }
+
   function obtenerValoresPerfil(){
+    const aliasValor=normalizarAlias(aliasInput.value);
+    if(aliasInput.value!==aliasValor){
+      aliasInput.value=aliasValor;
+    }
+    const celularValor=normalizarCelular(celularInput.value);
+    if(celularInput.value!==celularValor){
+      celularInput.value=celularValor;
+    }
     return {
       name:nombreInput.value.trim(),
       apellido:apellidoInput.value.trim(),
-      alias:aliasInput.value.trim()
+      alias:aliasValor,
+      celular:celularValor
     };
   }
 
@@ -306,7 +512,7 @@
 
   function evaluarCambios(){
     const actuales=obtenerValoresPerfil();
-    const hayCambios=['name','apellido','alias'].some(campo=>actuales[campo]!==valoresOriginales[campo]);
+    const hayCambios=['name','apellido','alias','celular'].some(campo=>actuales[campo]!==valoresOriginales[campo]);
     if(tieneDatosGuardados && hayCambios){
       establecerEstadoBoton('editar');
     }else{
@@ -318,18 +524,22 @@
     const user = auth.currentUser;
     if(!user) return;
     const modo=(guardarBtn.dataset.modo||'guardar')==='editar'?'editar':'guardar';
+    const valores=obtenerValoresPerfil();
+    if(!validarCamposObligatorios()){
+      return;
+    }
     const confirmar=await window.confirm(modo==='editar'?'¿Deseas EDITAR los datos?':'¿Deseas GUARDAR los datos de tu perfil?');
     if(!confirmar) return;
-    const valores=obtenerValoresPerfil();
     const baseDatos={
       email:user.email,
       photoURL:user.photoURL||'',
-      role:'Jugador'
+      role:'Jugador',
+      celular:valores.celular
     };
     try{
       if(modo==='editar'){
         const cambios={};
-        ['name','apellido','alias'].forEach(campo=>{
+        ['name','apellido','alias','celular'].forEach(campo=>{
           if(valores[campo]!==valoresOriginales[campo]){
             cambios[campo]=valores[campo];
           }
@@ -341,11 +551,11 @@
         }
         await db.collection('users').doc(user.email).set({...baseDatos,...cambios},{merge:true});
         alert('Datos editados correctamente.');
-        tieneDatosGuardados=Object.values(valores).some(valor=>valor.length>0);
+        tieneDatosGuardados=camposObligatoriosCompletos(valores);
       }else{
         await db.collection('users').doc(user.email).set({...baseDatos,...valores},{merge:true});
         alert('Datos guardados correctamente.');
-        tieneDatosGuardados=Object.values(valores).some(valor=>valor.length>0);
+        tieneDatosGuardados=camposObligatoriosCompletos(valores);
       }
       valoresOriginales=valores;
       evaluarCambios();
@@ -362,24 +572,32 @@
         if(doc.exists){
           const d=doc.data()||{};
           valoresOriginales={
-            name:(d.name||'').trim(),
-            apellido:(d.apellido||'').trim(),
-            alias:(d.alias||'').trim()
+            name:(d.name||'').toString().trim(),
+            apellido:(d.apellido||'').toString().trim(),
+            alias:normalizarAlias(d.alias||''),
+            celular:normalizarCelular(d.celular||d.telefono||d.Telefono||d.whatsapp||'')
           };
           nombreInput.value=valoresOriginales.name;
           apellidoInput.value=valoresOriginales.apellido;
           aliasInput.value=valoresOriginales.alias;
-          tieneDatosGuardados=Object.values(valoresOriginales).some(valor=>valor.length>0);
+          if(celularInput){
+            celularInput.value=valoresOriginales.celular;
+          }
+          tieneDatosGuardados=camposObligatoriosCompletos(valoresOriginales);
         }else{
-          valoresOriginales={name:'',apellido:'',alias:''};
+          valoresOriginales={name:'',apellido:'',alias:'',celular:''};
           nombreInput.value='';
           apellidoInput.value='';
           aliasInput.value='';
+          if(celularInput){
+            celularInput.value='';
+          }
           tieneDatosGuardados=false;
         }
       }catch(error){
         console.error('No se pudo cargar la información del perfil',error);
       }
+      actualizarEstadoCamposObligatorios();
       evaluarCambios();
     } else { window.location.href='index.html'; }
   });
