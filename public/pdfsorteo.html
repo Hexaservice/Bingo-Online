@@ -1723,6 +1723,31 @@
     };
   }
 
+  const MAX_CONCURRENT_CAPTURES = 3;
+
+  async function capturarElementosEnLotes(elementos, opciones, limite = MAX_CONCURRENT_CAPTURES){
+    if(!Array.isArray(elementos) || !elementos.length){
+      return [];
+    }
+    const total = elementos.length;
+    const resultados = new Array(total);
+    let indiceCompartido = 0;
+    const trabajadores = Array.from({ length: Math.min(limite, total) }, ()=>{
+      return (async ()=>{
+        while(true){
+          const indiceActual = indiceCompartido;
+          indiceCompartido++;
+          if(indiceActual >= total){
+            break;
+          }
+          resultados[indiceActual] = await window.html2canvas(elementos[indiceActual], { ...opciones });
+        }
+      })();
+    });
+    await Promise.all(trabajadores);
+    return resultados;
+  }
+
   async function cargarDatosBasicos(){
     mostrarLoading('Cargando información del sorteo, por favor espera');
     try {
@@ -1846,7 +1871,7 @@
       restaurarFormas = ajustarFormasParaPdf();
       await new Promise(resolve=>requestAnimationFrame(resolve));
 
-      const pdf = new jsPDFLib('landscape', 'pt', 'a4');
+      const pdf = new jsPDFLib({ orientation: 'landscape', unit: 'pt', format: 'a4', compress: true });
       if(typeof pdf.setCompression === 'function'){
         pdf.setCompression(true);
       }
@@ -1855,13 +1880,15 @@
       const marginX = 18;
       const marginY = 18;
 
-      const canvasScale = Math.min(2.8, Math.max(2, window.devicePixelRatio || 2.2));
+      const canvasScale = Math.min(2.2, Math.max(1.8, window.devicePixelRatio || 2));
       const canvasOptions = {
         scale: canvasScale,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff'
       };
+      const calidadResumen = 0.8;
+      const calidadCarton = 0.78;
 
       const primeraPaginaCanvas = await window.html2canvas(primeraPaginaEl, canvasOptions);
       const availableWidth = pageWidth - marginX * 2;
@@ -1873,7 +1900,8 @@
       const resumenHeight = primeraPaginaCanvas.height * resumenRatio;
       const resumenX = marginX + (availableWidth - resumenWidth) / 2;
       const resumenY = marginY + (availableHeight - resumenHeight) / 2;
-      pdf.addImage(primeraPaginaCanvas.toDataURL('image/jpeg', 0.85), 'JPEG', resumenX, resumenY, resumenWidth, resumenHeight);
+      const dataUrlResumen = primeraPaginaCanvas.toDataURL('image/jpeg', calidadResumen);
+      pdf.addImage(dataUrlResumen, 'JPEG', resumenX, resumenY, resumenWidth, resumenHeight);
 
       const cartonElements = Array.from(document.querySelectorAll('.pdf-carton'))
         .sort((a,b)=>{
@@ -1930,15 +1958,18 @@
 
         let indiceEnPagina = 0;
 
+        let capturasCartones = [];
         try {
-          for(const elemento of cartonElements){
+          capturasCartones = await capturarElementosEnLotes(cartonElements, canvasOptions);
+          for(let indice = 0; indice < cartonElements.length; indice++){
+            const canvas = capturasCartones[indice];
+            if(!canvas){ continue; }
             if(indiceEnPagina === 0){
               if(typeof pdf.addPage === 'function'){
                 pdf.addPage('a4', 'landscape');
               }
             }
 
-            const canvas = await window.html2canvas(elemento, { ...canvasOptions });
             const escala = Math.min(
               anchoCelda / canvas.width,
               altoCelda / canvas.height
@@ -1953,7 +1984,8 @@
             const posX = baseX + (anchoCelda - renderWidth) / 2;
             const posY = baseY + (altoCelda - renderHeight) / 2;
 
-            pdf.addImage(canvas.toDataURL('image/jpeg', 0.82), 'JPEG', posX, posY, renderWidth, renderHeight);
+            const dataUrlCarton = canvas.toDataURL('image/jpeg', calidadCarton);
+            pdf.addImage(dataUrlCarton, 'JPEG', posX, posY, renderWidth, renderHeight);
 
             indiceEnPagina++;
             if(indiceEnPagina >= totalPorPagina){
