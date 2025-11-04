@@ -1978,6 +1978,15 @@
     };
     operaciones.push(resumenRef.set(resumenPayload, { merge: true }));
 
+    const indicadorPagosPayload = {
+      pagosCentroAprobados: false,
+      pagosCentroActualizadosEn: timestamp
+    };
+    operaciones.push(db.collection('sorteos').doc(sorteoId).set(indicadorPagosPayload, { merge: true }));
+    operaciones.push(db.collection('cantarsorteos').doc(sorteoId).set(indicadorPagosPayload, { merge: true }).catch(err=>{
+      console.warn('No se pudo actualizar el indicador de pagos en cantarsorteos', sorteoId, err);
+    }));
+
     await Promise.all(operaciones);
   }
 

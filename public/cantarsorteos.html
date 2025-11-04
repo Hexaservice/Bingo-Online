@@ -4705,6 +4705,26 @@
     return 0;
   }
 
+  function pagosCentroAprobados(data){
+    if(!data) return false;
+    const valor=data.pagosCentroAprobados;
+    if(typeof valor==='boolean') return valor;
+    if(typeof valor==='number') return valor>0;
+    if(typeof valor==='string'){
+      const texto=valor.trim().toLowerCase();
+      if(['true','si','1','aprobado','completo','completado'].includes(texto)) return true;
+      return false;
+    }
+    return false;
+  }
+
+  function debeAnimarCentroPagos(data){
+    if(!data) return false;
+    const pdfResultadoEstado=(data.pdfresul||'').toString().trim().toLowerCase();
+    if(pdfResultadoEstado!=='si') return false;
+    return !pagosCentroAprobados(data);
+  }
+
   function actualizarAnimaciones(){
     [sellarBtn, pdfBtn, jugarBtn, finalizarBtn, resultadoBtn].forEach(btn=>{ if(btn) btn.classList.remove('attention'); });
     actualizarBotones();
@@ -4769,7 +4789,7 @@
       resultadoBtn.classList.toggle('pdf-disponible', pdfResultadoEstado === 'si');
     }
     if(centroPagosBtn){
-      const animarPagos = pdfResultadoEstado === 'si';
+      const animarPagos = debeAnimarCentroPagos(currentSorteoData);
       centroPagosBtn.classList.toggle('animacion-pagos', animarPagos);
     }
     forzarVisibilidadResultado(esFinalizado);
@@ -4830,7 +4850,7 @@
     sincronizarFormasBase(data.formas || []);
     btnSorteo.textContent = data.nombre || 'Sorteo';
     if(centroPagosBtn){
-      const animarPagos = (data.pdfresul || '').toString().trim().toLowerCase() === 'si';
+      const animarPagos = debeAnimarCentroPagos(data);
       centroPagosBtn.classList.toggle('animacion-pagos', animarPagos);
     }
     btnSorteo.classList.remove('diario','especial','jugando','finalizado');
@@ -5046,6 +5066,7 @@
           const condicionRaw = (d?.condicion || '').toString().trim().toUpperCase();
           if(condicionRaw === 'ARCHIVADO') return;
           const registro = { id: doc.id, ...d, pdf: d.pdf || 'no', cantos: [], formas: [] };
+          registro.pagosCentroAprobados = d.pagosCentroAprobados;
           registro.condicion = condicionRaw || 'VISIBLE';
           registro.nombre = registro.nombre || 'Sorteo';
           registro.estado = registro.estado || 'Activo';
