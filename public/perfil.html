@@ -298,7 +298,6 @@
   <script src="js/auth.js"></script>
   <script src="js/timezone.js"></script>
   <script>
-  ensureAuth();
   initFechaHora('fecha-hora');
 
   const nombreInput=document.getElementById('perfil-nombre');
@@ -573,43 +572,52 @@
     }
   }
 
-  auth.onAuthStateChanged(async user=>{
-    if(user){
-      try{
-        const doc=await db.collection('users').doc(user.email).get();
-        if(doc.exists){
-          const d=doc.data()||{};
-          valoresOriginales={
-            name:(d.name||'').toString().trim(),
-            apellido:(d.apellido||'').toString().trim(),
-            alias:normalizarAlias(d.alias||''),
-            celular:normalizarCelular(d.celular||d.numerocel||d.telefono||d.Telefono||d.whatsapp||''),
-            numerocel:normalizarCelular(d.numerocel||d.celular||d.telefono||d.Telefono||d.whatsapp||'')
-          };
-          nombreInput.value=valoresOriginales.name;
-          apellidoInput.value=valoresOriginales.apellido;
-          aliasInput.value=valoresOriginales.alias;
-          if(celularInput){
-            celularInput.value=valoresOriginales.celular;
+  initFirebase()
+    .then(()=>{
+      ensureAuth();
+      auth.onAuthStateChanged(async user=>{
+        if(user){
+          try{
+            const doc=await db.collection('users').doc(user.email).get();
+            if(doc.exists){
+              const d=doc.data()||{};
+              valoresOriginales={
+                name:(d.name||'').toString().trim(),
+                apellido:(d.apellido||'').toString().trim(),
+                alias:normalizarAlias(d.alias||''),
+                celular:normalizarCelular(d.celular||d.numerocel||d.telefono||d.Telefono||d.whatsapp||''),
+                numerocel:normalizarCelular(d.numerocel||d.celular||d.telefono||d.Telefono||d.whatsapp||'')
+              };
+              nombreInput.value=valoresOriginales.name;
+              apellidoInput.value=valoresOriginales.apellido;
+              aliasInput.value=valoresOriginales.alias;
+              if(celularInput){
+                celularInput.value=valoresOriginales.celular;
+              }
+              tieneDatosGuardados=camposObligatoriosCompletos(valoresOriginales);
+            }else{
+              valoresOriginales={name:'',apellido:'',alias:'',celular:'',numerocel:''};
+              nombreInput.value='';
+              apellidoInput.value='';
+              aliasInput.value='';
+              if(celularInput){
+                celularInput.value='';
+              }
+              tieneDatosGuardados=false;
+            }
+          }catch(error){
+            console.error('No se pudo cargar la información del perfil',error);
+            mostrarMensajeValidacion('No se pudieron cargar los datos del perfil. Intenta nuevamente.');
           }
-          tieneDatosGuardados=camposObligatoriosCompletos(valoresOriginales);
-        }else{
-          valoresOriginales={name:'',apellido:'',alias:'',celular:'',numerocel:''};
-          nombreInput.value='';
-          apellidoInput.value='';
-          aliasInput.value='';
-          if(celularInput){
-            celularInput.value='';
-          }
-          tieneDatosGuardados=false;
-        }
-      }catch(error){
-        console.error('No se pudo cargar la información del perfil',error);
-      }
-      actualizarEstadoCamposObligatorios();
-      evaluarCambios();
-    } else { window.location.href='index.html'; }
-  });
+          actualizarEstadoCamposObligatorios();
+          evaluarCambios();
+        } else { window.location.href='index.html'; }
+      });
+    })
+    .catch(error=>{
+      console.error('No se pudo inicializar Firebase en perfil',error);
+      mostrarMensajeValidacion('Error al conectar con el servicio. Recarga la página e inténtalo otra vez.');
+    });
   </script>
   <script src="js/backNavigation.js"></script>
 </body>
