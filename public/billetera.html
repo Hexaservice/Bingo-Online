@@ -889,8 +889,28 @@
       }
       toggle.addEventListener('change',actualizarVisibilidad);
       toggleT.addEventListener('change',visTrans);
+      let debeAbrirDatos=false;
+      try{
+        if(sessionStorage.getItem('abrirDatosBancarios')==='1'){
+          debeAbrirDatos=true;
+          sessionStorage.removeItem('abrirDatosBancarios');
+        }
+      }catch(error){
+        console.warn('No se pudo verificar la instrucción para abrir los datos bancarios',error);
+      }
+      if(debeAbrirDatos){
+        toggle.checked=true;
+      }
       actualizarVisibilidad();
       visTrans();
+      if(debeAbrirDatos){
+        setTimeout(()=>{
+          const primerCampo=document.getElementById('banco');
+          if(primerCampo){
+            primerCampo.focus();
+          }
+        },0);
+      }
     });
   </script>
   <script src="js/backNavigation.js"></script>
