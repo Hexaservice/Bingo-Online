@@ -102,11 +102,36 @@
   <script src="js/auth.js"></script>
   <script src="js/timezone.js"></script>
   <script>
-    ensureAuth();
-    auth.onAuthStateChanged(user=>{
-      if(!user) return;
-      document.getElementById('email').textContent = user.email;
-    });
+    (async()=>{
+      try{
+        await initFirebase();
+      }catch(err){
+        console.error('No se pudo inicializar Firebase en registrarse.html', err);
+        alert('No se pudo preparar el registro. Intenta nuevamente.');
+        window.location.href='index.html';
+        return;
+      }
+      auth.onAuthStateChanged(async user=>{
+        if(!user){
+          window.location.href='index.html';
+          return;
+        }
+        document.getElementById('email').textContent = user.email || '';
+        try{
+          const doc = await db.collection('users').doc(user.email).get();
+          if(doc.exists){
+            const data = doc.data() || {};
+            if(data.name) document.getElementById('nombre').value = data.name;
+            if(data.apellido) document.getElementById('apellido').value = data.apellido;
+            if(data.alias) document.getElementById('alias').value = data.alias;
+            const celularGuardado = data.celular || data.numerocel;
+            if(celularGuardado) document.getElementById('celular').value = celularGuardado;
+          }
+        }catch(loadErr){
+          console.error('No se pudieron cargar datos previos del usuario', loadErr);
+        }
+      });
+    })();
     function validarTexto(txt,max){
       return txt && txt.length<=max && /^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]+$/.test(txt);
     }
@@ -127,6 +152,11 @@
         return;
       }
       const user = auth.currentUser;
+      if(!user){
+        alert('Tu sesión ha expirado. Vuelve a iniciar sesión con Google para registrarte.');
+        window.location.href='index.html';
+        return;
+      }
       await db.collection('users').doc(user.email).set({
         name:nombre,
         apellido:apellido,
