@@ -164,6 +164,71 @@
       box-shadow:0 16px 30px rgba(183,28,28,0.5);
       outline:none;
     }
+    .datos-bancarios-modal{
+      position:fixed;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+      background:rgba(0,0,0,0.65);
+      z-index:1700;
+    }
+    .datos-bancarios-modal.visible{display:flex;}
+    .datos-bancarios-card{
+      width:min(420px,90%);
+      background:linear-gradient(160deg,#004aad 0%,#4facfe 55%,#ffffff 100%);
+      border:4px solid #ffe082;
+      border-radius:18px;
+      box-shadow:0 20px 40px rgba(0,0,0,0.45);
+      padding:clamp(22px,5vw,34px);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:clamp(12px,3vw,20px);
+      text-align:center;
+      color:#0b1b4d;
+      position:relative;
+    }
+    .datos-bancarios-icono{
+      font-size:clamp(2.4rem,6vw,3.2rem);
+      color:#ffffff;
+      text-shadow:0 0 16px rgba(0,74,173,0.8);
+    }
+    .datos-bancarios-titulo{
+      font-family:'Bangers',cursive;
+      font-size:clamp(1.4rem,4.6vw,1.8rem);
+      margin:0;
+      letter-spacing:1px;
+      color:#0b1b4d;
+    }
+    .datos-bancarios-mensaje{
+      font-size:clamp(1rem,3.4vw,1.2rem);
+      margin:0;
+      line-height:1.5;
+      font-weight:600;
+      color:#00204a;
+    }
+    .datos-bancarios-boton{
+      font-family:'Bangers',cursive;
+      font-size:clamp(1rem,3.2vw,1.3rem);
+      padding:10px 26px;
+      border-radius:12px;
+      border:3px solid #ffd700;
+      background:linear-gradient(135deg,#00c853,#a7ff83);
+      color:#0b1b4d;
+      cursor:pointer;
+      text-transform:uppercase;
+      letter-spacing:1px;
+      box-shadow:0 12px 26px rgba(0,74,173,0.35);
+      transition:transform 0.25s ease,box-shadow 0.25s ease;
+    }
+    .datos-bancarios-boton:hover,
+    .datos-bancarios-boton:focus{
+      transform:scale(1.05);
+      box-shadow:0 16px 32px rgba(0,74,173,0.45);
+      outline:none;
+    }
     body.sellado-modal-activo{overflow:hidden;}
     .sellado-modal-card{
       width:min(420px,90%);
@@ -539,6 +604,14 @@
           <button type="button" id="perfil-pendiente-ir" class="perfil-pendiente-boton">Ir PERFIL</button>
       </div>
   </div>
+  <div id="datos-bancarios-modal" class="datos-bancarios-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="datos-bancarios-titulo">
+      <div class="datos-bancarios-card" role="document">
+          <span class="datos-bancarios-icono" aria-hidden="true">💳</span>
+          <h2 id="datos-bancarios-titulo" class="datos-bancarios-titulo">DATOS BANCARIOS REQUERIDOS</h2>
+          <p class="datos-bancarios-mensaje">Antes de poder solicitar JUGAR CARTÓN o solicitud de depósitos debes guardar tus datos bancarios.</p>
+          <button type="button" id="datos-bancarios-ir" class="datos-bancarios-boton">GUARDAR DATOS BANCARIOS</button>
+      </div>
+  </div>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
@@ -594,6 +667,11 @@
   let perfilDatosCompletos=false;
   const perfilPendienteModal=document.getElementById('perfil-pendiente-modal');
   const perfilPendienteIrBtn=document.getElementById('perfil-pendiente-ir');
+  let datosBancariosCompletos=false;
+  let billeteraDatosCache=null;
+  let billeteraDatosExiste=false;
+  const datosBancariosModal=document.getElementById('datos-bancarios-modal');
+  const datosBancariosIrBtn=document.getElementById('datos-bancarios-ir');
 
   function normalizarAliasPerfil(valor){
     return (valor||'').toString().trim().slice(0,20);
@@ -616,6 +694,29 @@
     if(!normalizado) return false;
     const sinSigno=normalizado.startsWith('+')?normalizado.slice(1):normalizado;
     return sinSigno.length>0;
+  }
+
+  function datosBancariosEstanCompletos(data){
+    if(!data) return false;
+    const campos=['banco','cuenta','cedula','pagomovil','tipoCuenta'];
+    return campos.every(campo=>{
+      const valor=(data[campo]??'').toString().trim();
+      return valor.length>0;
+    });
+  }
+
+  async function cargarDatosBilleteraUsuario(force=false){
+    const user=auth.currentUser;
+    if(!user) return {data:{},exists:false};
+    if(!force && billeteraDatosCache!==null){
+      return {data:billeteraDatosCache,exists:billeteraDatosExiste};
+    }
+    const billeteraRef=db.collection('Billetera').doc(user.email);
+    const billeteraDoc=await billeteraRef.get();
+    billeteraDatosExiste=billeteraDoc.exists;
+    billeteraDatosCache=billeteraDoc.exists?(billeteraDoc.data()||{}):{};
+    datosBancariosCompletos=datosBancariosEstanCompletos(billeteraDatosCache);
+    return {data:billeteraDatosCache,exists:billeteraDatosExiste};
   }
 
   function mostrarModalPerfilPendiente(){
@@ -642,6 +743,38 @@
     perfilPendienteModal.addEventListener('click',evento=>{
       if(evento.target===perfilPendienteModal){
         cerrarModalPerfilPendiente();
+      }
+    });
+  }
+  function mostrarModalDatosBancarios(){
+    if(!datosBancariosModal) return;
+    datosBancariosModal.classList.add('visible');
+    datosBancariosModal.setAttribute('aria-hidden','false');
+    if(datosBancariosIrBtn){
+      datosBancariosIrBtn.focus();
+    }
+  }
+
+  function cerrarModalDatosBancarios(){
+    if(!datosBancariosModal) return;
+    datosBancariosModal.classList.remove('visible');
+    datosBancariosModal.setAttribute('aria-hidden','true');
+  }
+
+  if(datosBancariosIrBtn){
+    datosBancariosIrBtn.addEventListener('click',()=>{
+      try{
+        sessionStorage.setItem('abrirDatosBancarios','1');
+      }catch(error){
+        console.warn('No se pudo establecer la indicación para abrir datos bancarios',error);
+      }
+      window.location.href='billetera.html';
+    });
+  }
+  if(datosBancariosModal){
+    datosBancariosModal.addEventListener('click',evento=>{
+      if(evento.target===datosBancariosModal){
+        cerrarModalDatosBancarios();
       }
     });
   }
@@ -1697,9 +1830,14 @@ function toggleForma(idx){
       abrirSorteosModal();
       return;
     }
-    const billeteraDoc=await db.collection('Billetera').doc(user.email).get();
-    const creditos=toNumberSafe(billeteraDoc.data()?.creditos,0);
-    const gratis=toNumberSafe(billeteraDoc.data()?.CartonesGratis,0);
+    const billeteraInfo=await cargarDatosBilleteraUsuario(true);
+    if(!datosBancariosCompletos){
+      mostrarModalDatosBancarios();
+      return;
+    }
+    const billeteraData=billeteraInfo.data||{};
+    const creditos=toNumberSafe(billeteraData.creditos,0);
+    const gratis=toNumberSafe(billeteraData.CartonesGratis,0);
     const sorteoDoc=await db.collection('sorteos').doc(currentSorteo).get();
     const sorteoData=sorteoDoc.data();
     const estadoActual=(sorteoData?.estado||currentSorteoEstado||'').toString();
@@ -2337,12 +2475,18 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
           const billeteraRef=db.collection('Billetera').doc(user.email);
           const billeteraDoc=await billeteraRef.get();
           if(billeteraDoc.exists){
-            document.getElementById('creditos-label').textContent=toNumberSafe(billeteraDoc.data().creditos,0);
-            document.getElementById('gratis-label').textContent=toNumberSafe(billeteraDoc.data().CartonesGratis,0);
+            billeteraDatosCache=billeteraDoc.data()||{};
+            billeteraDatosExiste=true;
+            datosBancariosCompletos=datosBancariosEstanCompletos(billeteraDatosCache);
+            document.getElementById('creditos-label').textContent=toNumberSafe(billeteraDatosCache.creditos,0);
+            document.getElementById('gratis-label').textContent=toNumberSafe(billeteraDatosCache.CartonesGratis,0);
           }else{
             await billeteraRef.set({creditos:0,CartonesGratis:0});
             document.getElementById('creditos-label').textContent='0';
             document.getElementById('gratis-label').textContent='0';
+            billeteraDatosCache={creditos:0,CartonesGratis:0};
+            billeteraDatosExiste=true;
+            datosBancariosCompletos=false;
           }
           actualizarEstadoCartonesGratis();
           cookieKey='jugarcarton_'+user.email.replace(/[^\w]/g,'_');

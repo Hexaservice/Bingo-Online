@@ -318,7 +318,7 @@
     celularInput.placeholder='Número Celular';
   }
 
-  let valoresOriginales={name:'',apellido:'',alias:'',celular:''};
+  let valoresOriginales={name:'',apellido:'',alias:'',celular:'',numerocel:''};
   let tieneDatosGuardados=false;
 
   const camposObligatorios=[nombreInput,apellidoInput,aliasInput,celularInput].filter(Boolean);
@@ -448,7 +448,8 @@
   }
 
   function camposObligatoriosCompletos(valores){
-    return ['name','apellido','alias'].every(campo=>(valores[campo]||'').trim().length>0) && esCelularValido(valores.celular);
+    const celularReferencia=valores.celular||valores.numerocel||'';
+    return ['name','apellido','alias'].every(campo=>(valores[campo]||'').trim().length>0) && esCelularValido(celularReferencia);
   }
 
   function validarCamposObligatorios(){
@@ -496,7 +497,8 @@
       name:nombreInput.value.trim(),
       apellido:apellidoInput.value.trim(),
       alias:aliasValor,
-      celular:celularValor
+      celular:celularValor,
+      numerocel:celularValor
     };
   }
 
@@ -536,7 +538,8 @@
       email:user.email,
       photoURL:user.photoURL||'',
       role:'Jugador',
-      celular:valores.celular
+      celular:valores.celular,
+      numerocel:valores.celular
     };
     try{
       if(modo==='editar'){
@@ -546,6 +549,9 @@
             cambios[campo]=valores[campo];
           }
         });
+        if('celular' in cambios){
+          cambios.numerocel=valores.celular;
+        }
         if(Object.keys(cambios).length===0){
           alert('No se detectaron cambios para editar.');
           evaluarCambios();
@@ -559,7 +565,7 @@
         alert('Datos guardados correctamente.');
         tieneDatosGuardados=camposObligatoriosCompletos(valores);
       }
-      valoresOriginales=valores;
+      valoresOriginales={...valores};
       evaluarCambios();
     }catch(error){
       console.error('No se pudieron guardar los datos del perfil',error);
@@ -577,7 +583,8 @@
             name:(d.name||'').toString().trim(),
             apellido:(d.apellido||'').toString().trim(),
             alias:normalizarAlias(d.alias||''),
-            celular:normalizarCelular(d.celular||d.telefono||d.Telefono||d.whatsapp||'')
+            celular:normalizarCelular(d.celular||d.numerocel||d.telefono||d.Telefono||d.whatsapp||''),
+            numerocel:normalizarCelular(d.numerocel||d.celular||d.telefono||d.Telefono||d.whatsapp||'')
           };
           nombreInput.value=valoresOriginales.name;
           apellidoInput.value=valoresOriginales.apellido;
@@ -587,7 +594,7 @@
           }
           tieneDatosGuardados=camposObligatoriosCompletos(valoresOriginales);
         }else{
-          valoresOriginales={name:'',apellido:'',alias:'',celular:''};
+          valoresOriginales={name:'',apellido:'',alias:'',celular:'',numerocel:''};
           nombreInput.value='';
           apellidoInput.value='';
           aliasInput.value='';

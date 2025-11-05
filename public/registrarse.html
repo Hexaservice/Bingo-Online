@@ -74,6 +74,8 @@
   <input type="text" id="nombre" placeholder="Nombre">
   <input type="text" id="apellido" placeholder="Apellido">
   <input type="text" id="alias" placeholder="Alias">
+  <input type="tel" id="celular" placeholder="Número Celular">
+  <p style="font-size:0.75rem;color:#000;margin:4px 0 10px;max-width:260px;">Nota: Sólo tu Alias será visible para los otros Jugadores, Tu nombre, Apellido, Número celular o Gmail serán confidenciales.</p>
   <div id="email"></div>
   <div id="terms-container"><input type="checkbox" id="accept-terms"> <label for="accept-terms">Acepto <a href="terminos.html" target="_blank">términos y condiciones</a></label></div>
   <button id="registrar" class="action-btn">Registrarse</button>
@@ -98,21 +100,28 @@
       return txt && txt.length<=max && /^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]+$/.test(txt);
     }
     document.getElementById('registrar').addEventListener('click', async ()=>{
+      const nombre = document.getElementById('nombre').value.trim();
+      if(!nombre){ alert('Debes llenar el campo nombre'); document.getElementById('nombre').focus(); return; }
+      if(!validarTexto(nombre,40)){ alert('Nombre inválido'); document.getElementById('nombre').focus(); return; }
+      const apellido = document.getElementById('apellido').value.trim();
+      if(!apellido){ alert('Debes llenar el campo Apellido'); document.getElementById('apellido').focus(); return; }
+      if(!validarTexto(apellido,40)){ alert('Apellido inválido'); document.getElementById('apellido').focus(); return; }
+      const alias = document.getElementById('alias').value.trim();
+      if(!alias){ alert('Debes llenar el campo Alias'); document.getElementById('alias').focus(); return; }
+      if(alias.length>60){ alert('Alias inválido'); document.getElementById('alias').focus(); return; }
+      const celular = document.getElementById('celular').value.trim();
+      if(!celular){ alert('Debes agregar tu número celular'); document.getElementById('celular').focus(); return; }
       if(!document.getElementById('accept-terms').checked){
         alert('Para poder registrarte debes aceptar nuestros terminos y condiciones');
         return;
       }
-      const nombre = document.getElementById('nombre').value.trim();
-      if(!validarTexto(nombre,40)){ alert('Nombre inválido'); document.getElementById('nombre').focus(); return; }
-      const apellido = document.getElementById('apellido').value.trim();
-      if(!validarTexto(apellido,40)){ alert('Apellido inválido'); document.getElementById('apellido').focus(); return; }
-      const alias = document.getElementById('alias').value.trim();
-      if(!alias || alias.length>60){ alert('Alias inválido'); document.getElementById('alias').focus(); return; }
       const user = auth.currentUser;
       await db.collection('users').doc(user.email).set({
         name:nombre,
         apellido:apellido,
         alias:alias,
+        celular:celular,
+        numerocel:celular,
         email:user.email,
         photoURL:user.photoURL,
         role:'Jugador'
