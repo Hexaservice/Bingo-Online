@@ -165,7 +165,7 @@
     #mis-datos input, #mis-datos select {
       width:260px;
     }
-    #banco,#cuenta,#cedula,#pagomovil{font-weight:bold;}
+    #banco,#cuenta,#cedula,#pagomovil{font-weight:bold;background:#fff !important;}
     #banco{color:#00008B;width:100%;box-sizing:border-box;}
     #cuenta{color:#006400;width:100%;box-sizing:border-box;}
     #cedula{color:#4B0082;}
@@ -299,7 +299,7 @@
         </select>
       </div>
       <div class="campo">
-        <input type="text" id="cuenta" placeholder="N° Cuenta Bancaria">
+        <input type="text" id="cuenta" placeholder="N° Cuenta Bancaria" inputmode="numeric">
       </div>
       <div id="tipo-cuenta">
         <label><input type="radio" name="tipo-cuenta" value="Ahorro"> Ahorro</label>
@@ -307,10 +307,10 @@
       </div>
       <div id="datos-pm">
         <div class="campo">
-          <input type="text" id="cedula" placeholder="Cédula">
+          <input type="text" id="cedula" placeholder="Cédula" inputmode="numeric">
         </div>
         <div class="campo">
-          <input type="text" id="pagomovil" placeholder="Número Pago móvil">
+          <input type="text" id="pagomovil" placeholder="Número Pago móvil" inputmode="tel">
         </div>
       </div>
       <button id="guardar-datos">Guardar Datos</button>
@@ -438,6 +438,36 @@
     });
     }
 
+    function normalizarSoloNumeros(valor){
+      return (valor||'').toString().replace(/\D+/g,'');
+    }
+
+    function normalizarPagoMovil(valor){
+      let limpio=(valor||'').toString().replace(/\s+/g,'');
+      const tieneMas=limpio.startsWith('+');
+      limpio=limpio.replace(/\+/g,'');
+      limpio=limpio.replace(/\D+/g,'');
+      return (tieneMas?'+':'')+limpio;
+    }
+
+    function limitarSoloNumeros(input){
+      if(!input) return;
+      const sanitizar=()=>{
+        input.value=normalizarSoloNumeros(input.value);
+      };
+      sanitizar();
+      input.addEventListener('input',sanitizar);
+    }
+
+    function limitarPagoMovil(input){
+      if(!input) return;
+      const sanitizar=()=>{
+        input.value=normalizarPagoMovil(input.value);
+      };
+      sanitizar();
+      input.addEventListener('input',sanitizar);
+    }
+
     document.querySelectorAll('.tab-buttons button').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tab-buttons button').forEach(b => b.classList.remove('active'));
@@ -446,6 +476,10 @@
         document.getElementById(btn.dataset.tab).classList.add('active');
       });
     });
+
+    limitarSoloNumeros(document.getElementById('cuenta'));
+    limitarSoloNumeros(document.getElementById('cedula'));
+    limitarPagoMovil(document.getElementById('pagomovil'));
 
     function actualizarOpcionPagoFiltro(rol){
       const filtroTipoSelect = document.getElementById('filtro-tipo');
@@ -502,10 +536,13 @@
           valorEl.textContent=data.creditos||0;
           valorEl.className=data.creditos>0?'verde':'rojo';
           document.getElementById('cartones-valor').textContent = data.CartonesGratis || 0;
-          document.getElementById('cedula').value = data.cedula || '';
-          document.getElementById('pagomovil').value = data.pagomovil || '';
+          const cedulaEl=document.getElementById('cedula');
+          cedulaEl.value=normalizarSoloNumeros(data.cedula);
+          const pagomovilEl=document.getElementById('pagomovil');
+          pagomovilEl.value=normalizarPagoMovil(data.pagomovil);
           document.getElementById('banco').value = data.banco || '';
-          document.getElementById('cuenta').value = data.cuenta || '';
+          const cuentaEl=document.getElementById('cuenta');
+          cuentaEl.value=normalizarSoloNumeros(data.cuenta);
           if(data.tipoCuenta){
             const r=document.querySelector(`input[name='tipo-cuenta'][value='${data.tipoCuenta}']`);
             if(r) r.checked=true;
@@ -524,21 +561,31 @@
 
     document.getElementById('guardar-datos').addEventListener('click', async () => {
       const user = auth.currentUser;
+      const bancoSelect=document.getElementById('banco');
+      const cuentaInput=document.getElementById('cuenta');
+      const cedulaInput=document.getElementById('cedula');
+      const pagoMovilInput=document.getElementById('pagomovil');
+      const tipoCuentaSeleccionada=document.querySelector('input[name="tipo-cuenta"]:checked');
       const data = {
-        cedula: document.getElementById('cedula').value.trim(),
-        pagomovil: document.getElementById('pagomovil').value.trim(),
-        banco: document.getElementById('banco').value,
-        cuenta: document.getElementById('cuenta').value.trim(),
-        tipoCuenta: document.querySelector('input[name="tipo-cuenta"]:checked')?.value || ''
+        cedula: cedulaInput.value.trim(),
+        pagomovil: pagoMovilInput.value.trim(),
+        banco: bancoSelect.value,
+        cuenta: cuentaInput.value.trim(),
+        tipoCuenta: tipoCuentaSeleccionada?.value || ''
       };
-      if(!data.cedula){ alert('Ingrese su cédula'); document.getElementById('cedula').focus(); return; }
-      if(!/^\d+$/.test(data.cedula)){ alert('La cédula solo debe contener números'); document.getElementById('cedula').focus(); return; }
-      if(!data.pagomovil){ alert('Ingrese su número de pago móvil'); document.getElementById('pagomovil').focus(); return; }
-      if(!/^\d+$/.test(data.pagomovil)){ alert('El pago móvil solo debe contener números'); document.getElementById('pagomovil').focus(); return; }
-      if(!data.banco){ alert('Seleccione su banco'); document.getElementById('banco').focus(); return; }
-      if(!data.cuenta){ alert('Ingrese su número de cuenta'); document.getElementById('cuenta').focus(); return; }
-      if(!/^\d+$/.test(data.cuenta)){ alert('La cuenta solo debe contener números'); document.getElementById('cuenta').focus(); return; }
-      if(!data.tipoCuenta){ alert('Seleccione el tipo de cuenta'); return; }
+      if(!data.banco){ alert('Seleccione su banco'); bancoSelect.focus(); return; }
+      if(!data.cuenta){ alert('Ingrese su número de cuenta'); cuentaInput.focus(); return; }
+      if(!/^\d+$/.test(data.cuenta)){ alert('La cuenta solo debe contener números'); cuentaInput.focus();return; }
+      if(!data.tipoCuenta){
+        alert('Seleccione el tipo de cuenta');
+        const primerTipo=document.querySelector('input[name="tipo-cuenta"]');
+        if(primerTipo){ primerTipo.focus(); }
+        return;
+      }
+      if(!data.cedula){ alert('Ingrese su cédula'); cedulaInput.focus(); return; }
+      if(!/^\d+$/.test(data.cedula)){ alert('La cédula solo debe contener números'); cedulaInput.focus();return; }
+      if(!data.pagomovil){ alert('Ingrese su número de pago móvil'); pagoMovilInput.focus(); return; }
+      if(!/^\+?\d+$/.test(data.pagomovil)){ alert('El pago móvil solo debe contener números y puede iniciar con +'); pagoMovilInput.focus(); return; }
       data.CartonesGratis=parseInt(document.getElementById('cartones-valor').textContent)||0;
       await db.collection('Billetera').doc(user.email).set(data, {merge:true});
       alert('Datos guardados');
