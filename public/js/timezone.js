@@ -16,6 +16,7 @@ const IANA_OVERRIDES = {
   Venezuela: 'America/Caracas',
   Colombia: 'America/Bogota',
   Mexico: 'America/Mexico_City',
+  México: 'America/Mexico_City',
   España: 'Europe/Madrid',
   Argentina: 'America/Argentina/Buenos_Aires'
 };
@@ -191,11 +192,17 @@ async function initServerTime() {
   }
 }
 
+function quitarDiacriticos(valor = '') {
+  if (typeof valor !== 'string') return valor;
+  return valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 function aplicarParametrosZona(Pais = 'Venezuela', ZonaHoraria = 'UTC-04:00') {
   const locales = {
     Venezuela: 'es-VE',
     España: 'es-ES',
     Mexico: 'es-MX',
+    México: 'es-MX',
     Colombia: 'es-CO',
     Argentina: 'es-AR'
   };
@@ -204,7 +211,8 @@ function aplicarParametrosZona(Pais = 'Venezuela', ZonaHoraria = 'UTC-04:00') {
   serverTime.locale = locales[paisNormalizado] || 'es-ES';
 
   const zona = typeof ZonaHoraria === 'string' && ZonaHoraria.trim() ? ZonaHoraria : 'UTC-04:00';
-  const override = IANA_OVERRIDES[paisNormalizado];
+  const paisSinDiacriticos = quitarDiacriticos(paisNormalizado);
+  const override = IANA_OVERRIDES[paisNormalizado] || IANA_OVERRIDES[paisSinDiacriticos];
   const zonaNormalizada = override || parseZona(zona);
   serverTime.zonaIana = typeof zonaNormalizada === 'string' && zonaNormalizada ? zonaNormalizada : override || 'America/Caracas';
 
@@ -266,18 +274,18 @@ async function initFechaHora(idElemento = "fecha-hora") {
       if (serverTime.Pais) {
         const paisSpan = document.createElement('span');
         paisSpan.className = 'pais-actual';
-        paisSpan.textContent = `${serverTime.Pais} |`;
+        paisSpan.textContent = `País: ${serverTime.Pais}`;
         el.appendChild(paisSpan);
-        el.appendChild(document.createTextNode(' '));
+        el.appendChild(document.createTextNode(' · '));
       }
       const fechaSpan = document.createElement('span');
       fechaSpan.className = 'fecha-actual-icono';
-      fechaSpan.textContent = fechaStr;
+      fechaSpan.textContent = `Fecha: ${fechaStr}`;
       el.appendChild(fechaSpan);
-      el.appendChild(document.createTextNode(' '));
+      el.appendChild(document.createTextNode(' · '));
       const horaSpan = document.createElement('span');
       horaSpan.className = 'hora-actual-icono';
-      horaSpan.textContent = horaStr;
+      horaSpan.textContent = `Hora: ${horaStr}`;
       el.appendChild(horaSpan);
     } catch (err) {
       console.error('Error formateando fecha/hora', err);

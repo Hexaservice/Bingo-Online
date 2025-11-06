@@ -131,7 +131,23 @@
       await handleRedirect();
       initFechaHora('fecha-hora');
       const registerContainer=document.getElementById('register-container');
-      document.getElementById('login-btn').addEventListener('click', () => {
+      document.getElementById('login-btn').addEventListener('click', async () => {
+        const user = auth.currentUser;
+        if(user){
+          try{
+            const { role, exists } = await getUserRole(user, { createIfMissing: false });
+            if(!exists && role === 'Jugador'){
+              window.location.href='registrarse.html';
+              return;
+            }
+            redirectByRole(role);
+            return;
+          }catch(err){
+            console.error('No se pudo validar el estado de registro del usuario al iniciar sesión', err);
+            alert('No se pudo validar tu cuenta. Intenta nuevamente.');
+            return;
+          }
+        }
         loginGoogle();
       });
       document.getElementById('register-link').addEventListener('click', e => {
