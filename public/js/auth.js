@@ -228,7 +228,11 @@ async function handleRedirect(){
   try {
     const result = await auth.getRedirectResult();
     if(result.user){
-      const role = await getUserRole(result.user);
+      const { role, exists } = await getUserRole(result.user, { createIfMissing: false });
+      if(!exists && role === 'Jugador'){
+        window.location.href = 'registrarse.html';
+        return;
+      }
       redirectByRole(role);
     }
   } catch(err){
@@ -239,7 +243,8 @@ async function handleRedirect(){
   }
 }
 
-async function getUserRole(user){
+async function getUserRole(user, options = {}){
+  const { createIfMissing = true } = options;
   try{
     await initFirebase();
   }catch(e){
@@ -260,15 +265,21 @@ async function getUserRole(user){
   const doc = await ref.get();
   if(!doc.exists){
     const role = persistentRole || 'Jugador';
-    await ref.set({ email:user.email, alias:user.displayName||user.email, role });
-    return role;
+    let recordExists = false;
+    if(createIfMissing || role !== 'Jugador'){
+      await ref.set({ email:user.email, alias:user.displayName||user.email, role });
+      recordExists = true;
+    }
+    return { role, exists: recordExists };
   }
-  const dataRole = doc.data().role || 'Jugador';
+  const data = doc.data() || {};
+  const dataRole = data.role || 'Jugador';
+  let finalRole = persistentRole || dataRole;
   if(persistentRole && dataRole !== persistentRole){
     await ref.update({ role: persistentRole });
-    return persistentRole;
+    finalRole = persistentRole;
   }
-  return persistentRole || dataRole;
+  return { role: finalRole, exists: true };
 }
 
 function redirectByRole(role){
@@ -306,7 +317,7 @@ function setupSuperadminExit(buttonSelector = '#salir-super-btn', redirect = 'su
           return;
         }
         try{
-          const role = await getUserRole(user);
+          const { role } = await getUserRole(user);
           if(role === 'Superadmin'){
             bindRedirect();
             button.style.display = 'flex';
@@ -330,7 +341,11 @@ function ensureAuth(roleExpected){
     .then(() => {
       auth.onAuthStateChanged(async user => {
         if(!user){ window.location.href='index.html'; return; }
-        const role = await getUserRole(user);
+        const { role, exists } = await getUserRole(user, { createIfMissing: false });
+        if(!exists && role === 'Jugador'){
+          window.location.href = 'registrarse.html';
+          return;
+        }
         if(roleExpected && role !== roleExpected && role !== 'Superadmin'){
           redirectByRole(role);
           return;
