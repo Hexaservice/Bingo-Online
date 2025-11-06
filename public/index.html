@@ -12,6 +12,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login - Bingo Online</title>
   <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
     body {
       background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)),
@@ -24,15 +25,17 @@
       justify-content: center;
       min-height: 100vh;
       text-align: center;
-      margin:0;
+      margin: 0;
     }
     #login-container {
-      position: relative;
-      min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      flex: 1;
+      width: 100%;
+      padding: 20px 0 10px;
+      box-sizing: border-box;
     }
     #logo-bingo {
       width: 250px;
@@ -59,12 +62,16 @@
       box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
     }
     #login-footer {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      font-size: 0.7rem;
+      margin-top: auto;
+      margin-bottom: 10px;
       text-align: center;
+    }
+    #fecha-hora, #derechos {
+      font-size: 0.7rem;
+      color: #000;
+    }
+    #derechos {
+      font-size: 0.6rem;
     }
     .back-btn {
       position: fixed;
@@ -85,6 +92,13 @@
       justify-content:center;
       gap:5px;
     }
+    #terms-container,
+    #register-container,
+    #terms-container label,
+    #terms-container a,
+    #register-container a {
+      font-family: 'Poppins', sans-serif;
+    }
   </style>
 </head>
 <body>
@@ -93,10 +107,10 @@
     <button id="login-btn">Iniciar Sesión</button>
     <div id="terms-container"><input type="checkbox" id="accept-terms"> <label for="accept-terms">Acepto los <a href="#" id="terms-link">términos y condiciones</a></label></div>
     <div id="register-container" style="margin-top:10px;font-size:1rem;">¿Aún no tienes cuenta? <a href="#" id="register-link">Regístrate</a></div>
-    <div id="login-footer">
-      <div id="fecha-hora"></div>
-      <div id="derechos">Todos los derechos reservados ® Hexaservice 2025</div>
-    </div>
+  </div>
+  <div id="login-footer">
+    <div id="fecha-hora"></div>
+    <div id="derechos">Todos los derechos reservados ® Hexaservice 2025</div>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
@@ -153,14 +167,13 @@
               registerContainer.style.display='none';
               let role = doc.data().role;
               if(!role){
-                const info = await getUserRole(user);
+                const info = await getUserRole(user, { createIfMissing: false });
                 role = info.role;
               }
               redirectByRole(role);
             }else{
               termsContainer.style.display='block';
               registerContainer.style.display='block';
-              alert('Usuario no registrado, para poder jugar al Bingo debes registrarte con tu cuenta de Google y aceptando los Terminos y condiciones');
               window.location.href='registrarse.html';
             }
           }catch(err){

@@ -244,7 +244,10 @@ async function handleRedirect(){
 }
 
 async function getUserRole(user, options = {}){
-  const { createIfMissing = true } = options;
+  const {
+    createIfMissing = false,
+    autoCreateRoles = ['Colaborador', 'Administrador', 'Superadmin']
+  } = options;
   try{
     await initFirebase();
   }catch(e){
@@ -266,8 +269,12 @@ async function getUserRole(user, options = {}){
   if(!doc.exists){
     const role = persistentRole || 'Jugador';
     let recordExists = false;
-    if(createIfMissing || role !== 'Jugador'){
-      await ref.set({ email:user.email, alias:user.displayName||user.email, role });
+    if(role !== 'Jugador' && (createIfMissing || autoCreateRoles.includes(role))){
+      const baseData = { email: user.email, role };
+      if(user.photoURL){
+        baseData.photoURL = user.photoURL;
+      }
+      await ref.set(baseData, { merge: true });
       recordExists = true;
     }
     return { role, exists: recordExists };
@@ -317,7 +324,7 @@ function setupSuperadminExit(buttonSelector = '#salir-super-btn', redirect = 'su
           return;
         }
         try{
-          const { role } = await getUserRole(user);
+          const { role } = await getUserRole(user, { createIfMissing: false });
           if(role === 'Superadmin'){
             bindRedirect();
             button.style.display = 'flex';
