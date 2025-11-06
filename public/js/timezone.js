@@ -8,7 +8,8 @@ const serverTime = {
   baseEpochMs: null,
   baseMonotonicMs: null,
   ultimaSync: null,
-  origen: 'desconocido'
+  origen: 'desconocido',
+  intervaloSync: null
 };
 
 const IANA_OVERRIDES = {
@@ -179,23 +180,46 @@ async function initServerTime() {
     const doc = await database.collection('Variablesglobales').doc('Parametros').get();
     if (!doc.exists) throw new Error('Documento Parametros no existe');
     const { Pais = '', ZonaHoraria = '' } = doc.data();
-    serverTime.Pais = Pais;
-    const locales = {
-      Venezuela: 'es-VE',
-      España: 'es-ES',
-      Mexico: 'es-MX',
-      Colombia: 'es-CO',
-      Argentina: 'es-AR'
-    };
-    serverTime.locale = locales[Pais] || 'es-ES';
-    serverTime.offsetMinutos = obtenerOffsetMinutos(ZonaHoraria);
-    const override = IANA_OVERRIDES[Pais];
-    const zonaNormalizada = override || parseZona(ZonaHoraria);
-    serverTime.zonaIana = typeof zonaNormalizada === 'string' ? zonaNormalizada : '';
-    await sincronizarHora();
-    setInterval(sincronizarHora, 300000);
+    aplicarParametrosZona(Pais, ZonaHoraria);
   } catch (e) {
     console.error('Error obteniendo parámetros', e);
+    aplicarParametrosZona();
+  }
+  await sincronizarHora();
+  if (!serverTime.intervaloSync) {
+    serverTime.intervaloSync = setInterval(sincronizarHora, 300000);
+  }
+}
+
+function aplicarParametrosZona(Pais = 'Venezuela', ZonaHoraria = 'UTC-04:00') {
+  const locales = {
+    Venezuela: 'es-VE',
+    España: 'es-ES',
+    Mexico: 'es-MX',
+    Colombia: 'es-CO',
+    Argentina: 'es-AR'
+  };
+  const paisNormalizado = typeof Pais === 'string' && Pais.trim() ? Pais : 'Venezuela';
+  serverTime.Pais = paisNormalizado;
+  serverTime.locale = locales[paisNormalizado] || 'es-ES';
+
+  const zona = typeof ZonaHoraria === 'string' && ZonaHoraria.trim() ? ZonaHoraria : 'UTC-04:00';
+  const override = IANA_OVERRIDES[paisNormalizado];
+  const zonaNormalizada = override || parseZona(zona);
+  serverTime.zonaIana = typeof zonaNormalizada === 'string' && zonaNormalizada ? zonaNormalizada : override || 'America/Caracas';
+
+  const offset = obtenerOffsetMinutos(zona);
+  if (typeof offset === 'number' && !Number.isNaN(offset)) {
+    serverTime.offsetMinutos = offset;
+  } else if (serverTime.zonaIana) {
+    const offsetZona = obtenerOffsetDesdeIana(serverTime.zonaIana);
+    if (offsetZona !== null) {
+      serverTime.offsetMinutos = offsetZona;
+    }
+  }
+
+  if (serverTime.offsetMinutos === null) {
+    serverTime.offsetMinutos = obtenerOffsetMinutos('UTC-04:00');
   }
 }
 
