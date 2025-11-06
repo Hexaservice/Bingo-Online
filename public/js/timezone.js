@@ -261,32 +261,71 @@ function obtenerHora() {
   return limpiarMeridiano(hora);
 }
 
-async function initFechaHora(idElemento = "fecha-hora") {
+async function initFechaHora(idElemento = "fecha-hora", opciones = {}) {
+  let config = opciones;
+  let elementoObjetivo = idElemento;
+
+  const idEsElemento = typeof HTMLElement !== 'undefined' && idElemento instanceof HTMLElement;
+
+  if (idEsElemento) {
+    elementoObjetivo = idElemento;
+  } else if (typeof idElemento === 'object' && idElemento !== null) {
+    config = idElemento;
+    elementoObjetivo = idElemento?.idElemento || idElemento?.elemento || "fecha-hora";
+  }
+
+  if (!config || typeof config !== 'object') {
+    config = {};
+  }
+
   await initServerTime();
-  const el = document.getElementById(idElemento);
+  const el = typeof elementoObjetivo === 'string'
+    ? document.getElementById(elementoObjetivo)
+    : (typeof HTMLElement !== 'undefined' && elementoObjetivo instanceof HTMLElement)
+      ? elementoObjetivo
+      : null;
   if (!el) return;
+
+  const ocultarHora = typeof config.ocultarHora === 'boolean'
+    ? config.ocultarHora
+    : el.dataset?.ocultarHora === 'true';
+
+  const ocultarFecha = typeof config.ocultarFecha === 'boolean'
+    ? config.ocultarFecha
+    : el.dataset?.ocultarFecha === 'true';
 
   function mostrar() {
     try {
-      const fechaStr = obtenerFecha();
-      const horaStr = obtenerHora();
-      el.textContent = '';
+      const partes = [];
+
       if (serverTime.Pais) {
         const paisSpan = document.createElement('span');
         paisSpan.className = 'pais-actual';
         paisSpan.textContent = `País: ${serverTime.Pais}`;
-        el.appendChild(paisSpan);
-        el.appendChild(document.createTextNode(' · '));
+        partes.push(paisSpan);
       }
-      const fechaSpan = document.createElement('span');
-      fechaSpan.className = 'fecha-actual-icono';
-      fechaSpan.textContent = `Fecha: ${fechaStr}`;
-      el.appendChild(fechaSpan);
-      el.appendChild(document.createTextNode(' · '));
-      const horaSpan = document.createElement('span');
-      horaSpan.className = 'hora-actual-icono';
-      horaSpan.textContent = `Hora: ${horaStr}`;
-      el.appendChild(horaSpan);
+
+      if (!ocultarFecha) {
+        const fechaSpan = document.createElement('span');
+        fechaSpan.className = 'fecha-actual-icono';
+        fechaSpan.textContent = `Fecha: ${obtenerFecha()}`;
+        partes.push(fechaSpan);
+      }
+
+      if (!ocultarHora) {
+        const horaSpan = document.createElement('span');
+        horaSpan.className = 'hora-actual-icono';
+        horaSpan.textContent = `Hora: ${obtenerHora()}`;
+        partes.push(horaSpan);
+      }
+
+      el.textContent = '';
+      partes.forEach((nodo, indice) => {
+        if (indice > 0) {
+          el.appendChild(document.createTextNode(' · '));
+        }
+        el.appendChild(nodo);
+      });
     } catch (err) {
       console.error('Error formateando fecha/hora', err);
       el.textContent = '';
