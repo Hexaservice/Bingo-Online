@@ -307,6 +307,10 @@
       text-transform:uppercase;
       transition:transform 0.2s ease,box-shadow 0.2s ease,filter 0.2s ease;
       min-width:140px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
     }
     .carton-modal-btn:focus-visible{outline:3px solid #ffd54f;outline-offset:3px;}
     .carton-modal-btn--primary{
@@ -331,7 +335,7 @@
     }
     .carton-modal-btn--wallet:hover{transform:translateY(-2px);}
 
-    .carton-processing-overlay{
+    .carton-processing-overlay{ 
       position:fixed;
       inset:0;
       display:none;
@@ -373,6 +377,29 @@
     }
     .carton-processing-overlay.success .carton-processing-spinner{display:none;}
     .carton-processing-overlay.success .carton-processing-text{font-weight:700;color:#c8ffdf;}
+
+    .carton-toast{
+      position:fixed;
+      bottom:28px;
+      left:50%;
+      transform:translateX(-50%) translateY(120%);
+      background:rgba(7,53,23,0.95);
+      color:#c8ffdf;
+      padding:14px 24px;
+      border-radius:18px;
+      font-family:'Poppins',sans-serif;
+      font-size:1rem;
+      box-shadow:0 18px 32px rgba(0,0,0,0.35);
+      opacity:0;
+      transition:transform 0.3s ease,opacity 0.3s ease;
+      z-index:3000;
+      pointer-events:none;
+    }
+    .carton-toast.visible{
+      transform:translateX(-50%) translateY(0);
+      opacity:1;
+      pointer-events:auto;
+    }
 
     body.carton-blur > *:not(.carton-processing-overlay):not(.carton-modal-overlay){
       filter:blur(4px);
@@ -523,6 +550,10 @@
       border-radius:8px;
       text-shadow:2px 2px 4px #000;
       cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
     }
     #jugados-btn-container{position:absolute;bottom:5px;right:50px;}
     #ver-jugados-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:linear-gradient(purple,#ffffff);border:3px solid #FFD700;border-radius:8px;cursor:pointer;position:relative;}
@@ -805,9 +836,10 @@
   <div id="carton-processing-overlay" class="carton-processing-overlay" aria-hidden="true" role="dialog" aria-modal="true">
       <div class="carton-processing-card" role="document">
           <div class="carton-processing-spinner" aria-hidden="true"></div>
-          <p id="carton-processing-text" class="carton-processing-text">Jugando Cartón... Por favor espera</p>
+          <p id="carton-processing-text" class="carton-processing-text">Guardando Jugada de cartón... Por favor espera</p>
       </div>
   </div>
+  <div id="carton-toast" class="carton-toast" role="status" aria-live="polite" aria-hidden="true"></div>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
@@ -878,6 +910,8 @@
   const cartonModalWallet=document.getElementById('carton-modal-wallet');
   const cartonProcessingOverlay=document.getElementById('carton-processing-overlay');
   const cartonProcessingText=document.getElementById('carton-processing-text');
+  const cartonProcessingSpinner=cartonProcessingOverlay?cartonProcessingOverlay.querySelector('.carton-processing-spinner'):null;
+  const cartonToast=document.getElementById('carton-toast');
 
   function normalizarAliasPerfil(valor){
     return (valor||'').toString().trim().slice(0,20);
@@ -936,7 +970,8 @@
   let cartonModalAcceptHandler=null;
   let cartonModalCancelHandler=null;
   let cartonModalWalletHandler=null;
-  let cartonSuccessTimeout=null;
+  let cartonRegistroEnProceso=false;
+  let cartonToastTimeout=null;
 
   function crearIconoCarton(tipo){
     const span=document.createElement('span');
@@ -1023,39 +1058,53 @@
     });
   }
 
+  function ocultarCartonToast(){
+    if(!cartonToast) return;
+    cartonToast.classList.remove('visible');
+    cartonToast.setAttribute('aria-hidden','true');
+    clearTimeout(cartonToastTimeout);
+    cartonToastTimeout=null;
+  }
+
+  function mostrarCartonToast(mensaje){
+    if(!cartonToast) return;
+    cartonToast.textContent=mensaje;
+    cartonToast.classList.add('visible');
+    cartonToast.setAttribute('aria-hidden','false');
+    clearTimeout(cartonToastTimeout);
+    cartonToastTimeout=setTimeout(()=>{
+      ocultarCartonToast();
+    },2000);
+  }
+
   function mostrarProcesandoCarton(){
     if(!cartonProcessingOverlay) return;
-    clearTimeout(cartonSuccessTimeout);
+    ocultarCartonToast();
     cartonProcessingOverlay.classList.remove('success');
+    if(cartonProcessingSpinner){
+      cartonProcessingSpinner.style.display='block';
+    }
     cartonProcessingOverlay.classList.add('visible');
     cartonProcessingOverlay.setAttribute('aria-hidden','false');
     if(cartonProcessingText){
-      cartonProcessingText.textContent='Jugando Cartón... Por favor espera';
+      cartonProcessingText.textContent='Guardando Jugada de cartón... Por favor espera';
     }
     document.body.classList.add('carton-blur');
   }
 
   function mostrarExitoCarton(){
-    if(!cartonProcessingOverlay) return;
-    cartonProcessingOverlay.classList.add('success');
-    if(cartonProcessingText){
-      cartonProcessingText.textContent='Cartón jugado correctamente';
-    }
-    cartonProcessingOverlay.classList.add('visible');
-    cartonProcessingOverlay.setAttribute('aria-hidden','false');
-    document.body.classList.add('carton-blur');
-    clearTimeout(cartonSuccessTimeout);
-    cartonSuccessTimeout=setTimeout(()=>{
-      ocultarProcesandoCarton();
-    },2000);
+    ocultarProcesandoCarton();
+    mostrarCartonToast('Cartón jugado correctamente');
   }
 
   function ocultarProcesandoCarton(){
     if(!cartonProcessingOverlay) return;
-    clearTimeout(cartonSuccessTimeout);
     cartonProcessingOverlay.classList.remove('visible');
     cartonProcessingOverlay.classList.remove('success');
     cartonProcessingOverlay.setAttribute('aria-hidden','true');
+    if(cartonProcessingSpinner){
+      cartonProcessingSpinner.style.display='block';
+    }
     document.body.classList.remove('carton-blur');
   }
 
@@ -1104,9 +1153,14 @@
     }
   });
   if(cartonProcessingOverlay){
-    cartonProcessingOverlay.addEventListener('click',()=>{
-      if(cartonProcessingOverlay.classList.contains('success')){
-        ocultarProcesandoCarton();
+    cartonProcessingOverlay.addEventListener('click',event=>{
+      event.stopPropagation();
+    });
+  }
+  if(cartonToast){
+    document.addEventListener('pointerdown',()=>{
+      if(cartonToast.classList.contains('visible')){
+        ocultarCartonToast();
       }
     });
   }
@@ -2226,6 +2280,14 @@ function toggleForma(idx){
       mostrarCartonAviso('Debes seleccionar primero un sorteo');
       return;
     }
+    const aliasActual=normalizarAliasPerfil(aliasJugadorInput?.value??'');
+    if(aliasActual===''){
+      mostrarCartonAviso('Por favor, ingresa tu Alias antes de jugar.');
+      if(aliasJugadorInput){
+        aliasJugadorInput.focus();
+      }
+      return;
+    }
     const billeteraInfo=await cargarDatosBilleteraUsuario(true);
     if(!datosBancariosCompletos){
       mostrarModalDatosBancarios();
@@ -2299,28 +2361,34 @@ function toggleForma(idx){
       return;
     }
 
+    const ejecutarRegistroCarton=async()=>{
+      if(cartonRegistroEnProceso) return;
+      cartonRegistroEnProceso=true;
+      try{
+        mostrarProcesandoCarton();
+        await enviarDatos();
+        mostrarExitoCarton();
+      }catch(error){
+        ocultarProcesandoCarton();
+        if(error?.message==='SORTEO_SELLADO'){
+          mostrarMensajeSellado(currentSorteoNombre||sorteoData?.nombre||'este sorteo');
+          return;
+        }
+        if(error?.message){
+          mostrarCartonAviso(error.message);
+        }else{
+          mostrarCartonAviso('No se pudo registrar tu cartón. Inténtalo nuevamente.');
+        }
+      }finally{
+        cartonRegistroEnProceso=false;
+      }
+    };
+
     mostrarModalCarton({
       caseType:casoModal,
       message:mensajeModal,
       showCancel:true,
-      onAccept:async()=>{
-        try{
-          mostrarProcesandoCarton();
-          await enviarDatos();
-          mostrarExitoCarton();
-        }catch(error){
-          ocultarProcesandoCarton();
-          if(error?.message==='SORTEO_SELLADO'){
-            mostrarMensajeSellado(currentSorteoNombre||sorteoData?.nombre||'este sorteo');
-            return;
-          }
-          if(error?.message){
-            mostrarCartonAviso(error.message);
-          }else{
-            mostrarCartonAviso('No se pudo registrar tu cartón. Inténtalo nuevamente.');
-          }
-        }
-      }
+      onAccept:ejecutarRegistroCarton
     });
   }
 
