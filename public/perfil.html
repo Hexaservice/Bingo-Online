@@ -228,12 +228,6 @@
       .notificaciones-contenido.oculto{
           display:none;
       }
-      .notificaciones-descripcion{
-          font-size:0.85rem;
-          color:#333;
-          margin:0;
-          text-align:left;
-      }
       .notificaciones-lista{
           display:flex;
           flex-direction:column;
@@ -431,7 +425,6 @@
             <span class="slider"></span>
           </label>
         </div>
-        <p id="notificaciones-descripcion" class="notificaciones-descripcion">Activa "Notificarme de todo" para gestionar tus notificaciones.</p>
         <div id="notificaciones-lista" class="notificaciones-lista"></div>
       </div>
     </section>
@@ -471,7 +464,6 @@
   const notificacionesPanel=document.getElementById('notificaciones-panel');
   const notificacionesGlobalInput=document.getElementById('notificaciones-global');
   const notificacionesContenido=document.getElementById('notificaciones-contenido');
-  const notificacionesDescripcion=document.getElementById('notificaciones-descripcion');
   const notificacionesLista=document.getElementById('notificaciones-lista');
   const notificacionesTodoInput=document.getElementById('notificaciones-todo');
   let desuscribirNotificaciones=null;
@@ -508,27 +500,21 @@
       try{
         const configuracionActual=window.notificationCenter.obtenerConfiguracion();
         const globalYaActivo=Boolean(configuracionActual && configuracionActual.global);
-        if(activar){
-          if(!globalYaActivo){
-            const resultado=await window.notificationCenter.actualizarGlobal(true);
-            if(resultado!=='granted'){
-              notificacionesTodoInput.checked=false;
-              return;
-            }
-            if(notificacionesGlobalInput){
-              notificacionesGlobalInput.checked=true;
-              notificacionesGlobalInput.dataset.manual='false';
-            }
+        if(activar && !globalYaActivo){
+          const resultado=await window.notificationCenter.actualizarGlobal(true);
+          if(resultado!=='granted'){
+            notificacionesTodoInput.checked=false;
+            return;
           }
-          const configuracionPosterior=window.notificationCenter.obtenerConfiguracion();
-          if(!estanTodasLasPreferenciasActivas(configuracionPosterior,gruposNotificacionesDisponibles)){
-            await actualizarPreferenciasMasivas(true,configuracionPosterior);
+          if(notificacionesGlobalInput){
+            notificacionesGlobalInput.checked=true;
+            notificacionesGlobalInput.dataset.manual='false';
           }
-        }else{
-          await window.notificationCenter.actualizarGlobal(false);
         }
+        const configuracionPosterior=window.notificationCenter.obtenerConfiguracion();
+        await actualizarPreferenciasMasivas(activar,configuracionPosterior);
       }catch(err){
-        console.error('No se pudo actualizar las notificaciones generales',err);
+        console.error('No se pudo actualizar las preferencias de notificaciones',err);
         notificacionesTodoInput.checked=!activar;
       }finally{
         notificacionesTodoInput.disabled=false;
@@ -679,11 +665,6 @@
         notificacionesGlobalInput.checked=false;
         notificacionesGlobalInput.dataset.manual='false';
       }
-    }
-    if(notificacionesDescripcion){
-      notificacionesDescripcion.textContent=globalActivo?
-        'Configura las notificaciones disponibles para tu perfil.':
-        'Activa "Notificarme de todo" para habilitar las notificaciones o personaliza tus preferencias individuales.';
     }
     if(notificacionesTodoInput){
       const clavesDisponibles=obtenerClavesNotificacionesDisponibles(grupos);
