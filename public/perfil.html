@@ -209,6 +209,22 @@
           gap:14px;
           box-shadow:inset 0 0 8px rgba(0,0,0,0.08);
       }
+      .notificaciones-todo-control{
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:12px;
+      }
+      .notificaciones-todo-texto{
+          font-weight:600;
+          color:#0b1b4d;
+          font-size:0.95rem;
+          text-align:left;
+          flex:1;
+      }
+      .notificaciones-todo-control .switch{
+          flex-shrink:0;
+      }
       .notificaciones-contenido.oculto{
           display:none;
       }
@@ -408,7 +424,14 @@
         </label>
       </div>
       <div id="notificaciones-contenido" class="notificaciones-contenido oculto" aria-hidden="true">
-        <p id="notificaciones-descripcion" class="notificaciones-descripcion">Activa el interruptor para gestionar tus notificaciones.</p>
+        <div id="notificaciones-todo-control" class="notificaciones-todo-control">
+          <span class="notificaciones-todo-texto">Notificarme de todo</span>
+          <label class="switch" aria-label="Notificarme de todo">
+            <input type="checkbox" id="notificaciones-todo">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <p id="notificaciones-descripcion" class="notificaciones-descripcion">Activa "Notificarme de todo" para gestionar tus notificaciones.</p>
         <div id="notificaciones-lista" class="notificaciones-lista"></div>
       </div>
     </section>
@@ -450,8 +473,10 @@
   const notificacionesContenido=document.getElementById('notificaciones-contenido');
   const notificacionesDescripcion=document.getElementById('notificaciones-descripcion');
   const notificacionesLista=document.getElementById('notificaciones-lista');
+  const notificacionesTodoInput=document.getElementById('notificaciones-todo');
   let desuscribirNotificaciones=null;
   let gruposNotificacionesDisponibles=[];
+  let notificacionesGlobalInicializado=false;
 
   nombreInput.placeholder='Nombre';
   apellidoInput.placeholder='Apellido';
@@ -466,28 +491,53 @@
   const camposObligatorios=[nombreInput,apellidoInput,aliasInput,celularInput].filter(Boolean);
 
   if(notificacionesGlobalInput){
-    notificacionesGlobalInput.addEventListener('change',async()=>{
+    notificacionesGlobalInput.addEventListener('change',()=>{
+      notificacionesGlobalInput.dataset.manual='true';
+      actualizarVisibilidadNotificaciones();
+    });
+  }
+
+  if(notificacionesTodoInput){
+    notificacionesTodoInput.addEventListener('change',async()=>{
       if(!window.notificationCenter){
-        notificacionesGlobalInput.checked=false;
+        notificacionesTodoInput.checked=false;
         return;
       }
-      const activo=notificacionesGlobalInput.checked;
-      notificacionesGlobalInput.disabled=true;
+      const activar=notificacionesTodoInput.checked;
+      notificacionesTodoInput.disabled=true;
       try{
-        const resultado=await window.notificationCenter.actualizarGlobal(activo);
-        const configuracion=window.notificationCenter.obtenerConfiguracion();
-        actualizarPanelNotificaciones(configuracion,gruposNotificacionesDisponibles);
-        if(activo && resultado!=='granted'){
-          notificacionesGlobalInput.checked=configuracion.global;
+        const configuracionActual=window.notificationCenter.obtenerConfiguracion();
+        const globalYaActivo=Boolean(configuracionActual && configuracionActual.global);
+        if(activar){
+          if(!globalYaActivo){
+            const resultado=await window.notificationCenter.actualizarGlobal(true);
+            if(resultado!=='granted'){
+              notificacionesTodoInput.checked=false;
+              return;
+            }
+            if(notificacionesGlobalInput){
+              notificacionesGlobalInput.checked=true;
+              notificacionesGlobalInput.dataset.manual='false';
+            }
+          }
+          const configuracionPosterior=window.notificationCenter.obtenerConfiguracion();
+          if(!estanTodasLasPreferenciasActivas(configuracionPosterior,gruposNotificacionesDisponibles)){
+            await actualizarPreferenciasMasivas(true,configuracionPosterior);
+          }
+        }else{
+          await window.notificationCenter.actualizarGlobal(false);
         }
       }catch(err){
-        console.error('No se pudo actualizar la preferencia global de notificaciones',err);
-        notificacionesGlobalInput.checked=!activo;
+        console.error('No se pudo actualizar las notificaciones generales',err);
+        notificacionesTodoInput.checked=!activar;
       }finally{
-        notificacionesGlobalInput.disabled=false;
+        notificacionesTodoInput.disabled=false;
+        actualizarVisibilidadNotificaciones();
       }
     });
   }
+
+  actualizarVisibilidadNotificaciones();
 
   if(typeof hasWindow==='function' && hasWindow() && typeof window.addEventListener==='function'){
     window.addEventListener('beforeunload',()=>{
@@ -497,6 +547,52 @@
         desuscribirNotificaciones=null;
       }
     });
+  }
+
+  function obtenerClavesNotificacionesDisponibles(grupos){
+    const claves=new Set();
+    if(!Array.isArray(grupos)) return [];
+    grupos.forEach(grupo=>{
+      if(!grupo || !Array.isArray(grupo.items)) return;
+      grupo.items.forEach(item=>{
+        if(item && item.clave){
+          claves.add(item.clave);
+        }
+      });
+    });
+    return Array.from(claves);
+  }
+
+  function estanTodasLasPreferenciasActivas(config,grupos){
+    if(!config || !config.preferencias) return false;
+    if(!config.global) return false;
+    const claves=obtenerClavesNotificacionesDisponibles(grupos);
+    if(!claves.length) return false;
+    return claves.every(clave=>Boolean(config.preferencias[clave]));
+  }
+
+  function obtenerClavesPreferencias(config,grupos){
+    const clavesGrupos=obtenerClavesNotificacionesDisponibles(grupos);
+    if(clavesGrupos.length) return clavesGrupos;
+    if(config && config.preferencias){
+      const clavesConfiguracion=Object.keys(config.preferencias);
+      if(clavesConfiguracion.length) return clavesConfiguracion;
+    }
+    return [];
+  }
+
+  async function actualizarPreferenciasMasivas(valor,config){
+    if(!window.notificationCenter) return;
+    const claves=obtenerClavesPreferencias(config,gruposNotificacionesDisponibles);
+    if(!claves.length) return;
+    await Promise.all(claves.map(clave=>window.notificationCenter.actualizarPreferencia(clave,valor)));
+  }
+
+  function actualizarVisibilidadNotificaciones(){
+    if(!notificacionesContenido) return;
+    const visible=!notificacionesGlobalInput || notificacionesGlobalInput.checked;
+    notificacionesContenido.classList.toggle('oculto',!visible);
+    notificacionesContenido.setAttribute('aria-hidden',visible?'false':'true');
   }
 
   function renderizarOpcionesNotificaciones(config,grupos){
@@ -573,17 +669,29 @@
     notificacionesPanel.style.display='block';
     const globalActivo=Boolean(config.global);
     if(notificacionesGlobalInput){
-      notificacionesGlobalInput.checked=globalActivo;
-    }
-    if(notificacionesContenido){
-      notificacionesContenido.classList.toggle('oculto',!globalActivo);
-      notificacionesContenido.setAttribute('aria-hidden',globalActivo?'false':'true');
+      const fueInicializado=notificacionesGlobalInicializado;
+      const esManual=notificacionesGlobalInput.dataset.manual==='true';
+      if(!fueInicializado || !esManual){
+        notificacionesGlobalInput.checked=globalActivo;
+        notificacionesGlobalInput.dataset.manual='false';
+        notificacionesGlobalInicializado=true;
+      }else if(!globalActivo && notificacionesGlobalInput.checked){
+        notificacionesGlobalInput.checked=false;
+        notificacionesGlobalInput.dataset.manual='false';
+      }
     }
     if(notificacionesDescripcion){
       notificacionesDescripcion.textContent=globalActivo?
         'Configura las notificaciones disponibles para tu perfil.':
-        'Activa el interruptor para gestionar tus notificaciones.';
+        'Activa "Notificarme de todo" para habilitar las notificaciones o personaliza tus preferencias individuales.';
     }
+    if(notificacionesTodoInput){
+      const clavesDisponibles=obtenerClavesNotificacionesDisponibles(grupos);
+      const todasActivas=estanTodasLasPreferenciasActivas(config,grupos);
+      notificacionesTodoInput.checked=todasActivas;
+      notificacionesTodoInput.disabled=!clavesDisponibles.length;
+    }
+    actualizarVisibilidadNotificaciones();
     renderizarOpcionesNotificaciones(config,grupos);
   }
 
