@@ -270,7 +270,7 @@ async function getUserRole(user, options = {}){
     const role = persistentRole || 'Jugador';
     let recordExists = false;
     if(role !== 'Jugador' && (createIfMissing || autoCreateRoles.includes(role))){
-      const baseData = { email: user.email, role };
+      const baseData = { email: user.email, role, aceptoNotificaciones: 'NO' };
       if(user.photoURL){
         baseData.photoURL = user.photoURL;
       }

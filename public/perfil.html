@@ -451,6 +451,7 @@
   const notificacionesDescripcion=document.getElementById('notificaciones-descripcion');
   const notificacionesLista=document.getElementById('notificaciones-lista');
   let desuscribirNotificaciones=null;
+  let gruposNotificacionesDisponibles=[];
 
   nombreInput.placeholder='Nombre';
   apellidoInput.placeholder='Apellido';
@@ -473,7 +474,12 @@
       const activo=notificacionesGlobalInput.checked;
       notificacionesGlobalInput.disabled=true;
       try{
-        await window.notificationCenter.actualizarGlobal(activo);
+        const resultado=await window.notificationCenter.actualizarGlobal(activo);
+        const configuracion=window.notificationCenter.obtenerConfiguracion();
+        actualizarPanelNotificaciones(configuracion,gruposNotificacionesDisponibles);
+        if(activo && resultado!=='granted'){
+          notificacionesGlobalInput.checked=configuracion.global;
+        }
       }catch(err){
         console.error('No se pudo actualizar la preferencia global de notificaciones',err);
         notificacionesGlobalInput.checked=!activo;
@@ -589,6 +595,7 @@
     }
     notificacionesPanel.style.display='block';
     const grupos=window.notificationCenter.obtenerGruposUI(role||'Jugador');
+    gruposNotificacionesDisponibles=Array.isArray(grupos)?grupos.slice():[];
     if(!Array.isArray(grupos) || !grupos.length){
       notificacionesPanel.style.display='none';
       return;
@@ -599,13 +606,13 @@
       console.error('No se pudo preparar la sección de notificaciones',err);
     }
     const configuracion=window.notificationCenter.obtenerConfiguracion();
-    actualizarPanelNotificaciones(configuracion,grupos);
+    actualizarPanelNotificaciones(configuracion,gruposNotificacionesDisponibles);
     if(desuscribirNotificaciones){
       try{ desuscribirNotificaciones(); }catch(e){ console.error('No se pudo cancelar la suscripción de notificaciones',e); }
       desuscribirNotificaciones=null;
     }
     desuscribirNotificaciones=window.notificationCenter.onChange(cfg=>{
-      actualizarPanelNotificaciones(cfg,grupos);
+      actualizarPanelNotificaciones(cfg,gruposNotificacionesDisponibles);
     });
   }
 

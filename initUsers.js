@@ -21,6 +21,7 @@ async function createUser(email, role) {
       email,
       alias: email.split('@')[0],
       role,
+      aceptoNotificaciones: 'NO',
     });
     console.log(`Created user ${email} with role ${role}`);
   } else {
