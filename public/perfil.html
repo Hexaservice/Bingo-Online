@@ -190,12 +190,43 @@
           flex-direction:column;
           gap:12px;
       }
-      .notificaciones-titulo{
+      .notificaciones-encabezado{
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:12px;
+      }
+      .notificaciones-global-texto{
+          display:flex;
+          flex-direction:column;
+          gap:2px;
+          cursor:pointer;
+          text-align:left;
+          text-decoration:none;
+      }
+      .notificaciones-global-texto .notificaciones-titulo-texto{
           font-family:'Bangers',cursive;
           font-size:1.3rem;
           color:#0b1b4d;
           margin:0;
-          text-align:left;
+      }
+      .notificaciones-global-texto .notificaciones-global-descripcion{
+          font-family:Calibri, Arial, sans-serif;
+          font-size:0.85rem;
+          color:#0b1b4d;
+          font-weight:600;
+      }
+      .notificaciones-preferencias{
+          display:flex;
+          flex-direction:column;
+          gap:12px;
+      }
+      .notificaciones-preferencias.deshabilitado .notificaciones-opcion:not(.notificaciones-opcion-todo),
+      .notificaciones-preferencias.deshabilitado .notificaciones-grupo-titulo{
+          opacity:0.55;
+      }
+      .notificaciones-preferencias.deshabilitado .notificaciones-opcion:not(.notificaciones-opcion-todo){
+          cursor:not-allowed;
       }
       .notificaciones-opcion{
           display:flex;
@@ -208,17 +239,6 @@
           box-shadow:inset 0 0 8px rgba(0,0,0,0.08);
           font-family:Calibri, Arial, sans-serif;
           cursor:pointer;
-      }
-      .notificaciones-opcion.notificaciones-opcion-global{
-          align-self:stretch;
-      }
-      .notificaciones-preferencias{
-          display:flex;
-          flex-direction:column;
-          gap:12px;
-      }
-      .notificaciones-preferencias.oculto{
-          display:none;
       }
       .notificaciones-opcion-texto{
           font-weight:600;
@@ -388,24 +408,26 @@
     <div id="perfil-mensaje" class="mensaje-validacion" role="alert" aria-live="polite"></div>
     <button id="guardar-perfil-btn" class="menu-btn" data-modo="guardar">Guardar</button>
     <button id="jugar-carton-btn" class="menu-btn" onclick="window.location.href='jugarcartones.html'">Jugar Cartón</button>
-    <section id="notificaciones-panel" class="notificaciones-panel">
-      <h4 class="notificaciones-titulo">Notificaciones</h4>
-      <div class="notificaciones-opcion notificaciones-opcion-global">
-        <label class="notificaciones-opcion-texto" for="notificaciones-global">Activar notificaciones</label>
-        <label class="switch" aria-label="Activar notificaciones">
+    <section id="notificaciones-panel" class="notificaciones-panel" aria-labelledby="notificaciones-titulo">
+      <div class="notificaciones-encabezado">
+        <label class="notificaciones-global-texto" for="notificaciones-global" id="notificaciones-titulo">
+          <span class="notificaciones-titulo-texto">Notificaciones</span>
+          <span class="notificaciones-global-descripcion">Activa la recepción general para gestionar tus alertas.</span>
+        </label>
+        <label class="switch" aria-labelledby="notificaciones-titulo">
           <input type="checkbox" id="notificaciones-global">
           <span class="slider"></span>
         </label>
       </div>
-      <section id="notificaciones-preferencias" class="notificaciones-preferencias oculto" aria-hidden="true">
-        <div class="notificaciones-opcion">
+      <div id="notificaciones-preferencias" class="notificaciones-preferencias" aria-disabled="true">
+        <div class="notificaciones-opcion notificaciones-opcion-todo">
           <label class="notificaciones-opcion-texto" for="notificaciones-todo">Notificarme de todo</label>
           <label class="switch" aria-label="Notificarme de todo">
             <input type="checkbox" id="notificaciones-todo">
             <span class="slider"></span>
           </label>
         </div>
-      </section>
+      </div>
     </section>
   </main>
 
@@ -444,7 +466,6 @@
   const notificacionesGlobalInput=document.getElementById('notificaciones-global');
   const notificacionesPreferencias=document.getElementById('notificaciones-preferencias');
   const notificacionesTodoInput=document.getElementById('notificaciones-todo');
-  configurarContenedorNotificaciones(document.querySelector('.notificaciones-opcion-global'));
   configurarContenedorNotificaciones(notificacionesPreferencias ? notificacionesPreferencias.querySelector('.notificaciones-opcion') : null);
   let desuscribirNotificaciones=null;
   let gruposNotificacionesDisponibles=[];
@@ -465,14 +486,14 @@
   if(notificacionesGlobalInput){
     notificacionesGlobalInput.addEventListener('change',()=>{
       notificacionesGlobalInput.dataset.manual='true';
-      actualizarVisibilidadNotificaciones();
+      actualizarEstadoPreferencias();
       if(notificacionesPreferencias){
         const habilitado=notificacionesGlobalInput.checked;
         const dinamicos=notificacionesPreferencias.querySelectorAll('.notificaciones-opcion[data-clave] input[type="checkbox"]');
         dinamicos.forEach(input=>{ input.disabled=!habilitado; });
         if(notificacionesTodoInput){
           const clavesDisponibles=notificacionesPreferencias.querySelectorAll('.notificaciones-opcion[data-clave]').length;
-          notificacionesTodoInput.disabled=!habilitado || !clavesDisponibles;
+          notificacionesTodoInput.disabled=!clavesDisponibles;
         }
       }
     });
@@ -509,13 +530,16 @@
         const configuracionFinal=window.notificationCenter ? window.notificationCenter.obtenerConfiguracion() : null;
         const clavesDisponibles=obtenerClavesPreferencias(configuracionFinal,gruposNotificacionesDisponibles);
         const globalHabilitado=Boolean(configuracionFinal && configuracionFinal.global);
-        notificacionesTodoInput.disabled=!globalHabilitado || !clavesDisponibles.length;
-        actualizarVisibilidadNotificaciones();
+        notificacionesTodoInput.disabled=!clavesDisponibles.length;
+        if(!globalHabilitado && notificacionesTodoInput.checked){
+          notificacionesTodoInput.checked=false;
+        }
+        actualizarEstadoPreferencias();
       }
     });
   }
 
-  actualizarVisibilidadNotificaciones();
+  actualizarEstadoPreferencias();
 
   if(typeof hasWindow==='function' && hasWindow() && typeof window.addEventListener==='function'){
     window.addEventListener('beforeunload',()=>{
@@ -566,11 +590,11 @@
     await Promise.all(claves.map(clave=>window.notificationCenter.actualizarPreferencia(clave,valor)));
   }
 
-  function actualizarVisibilidadNotificaciones(){
+  function actualizarEstadoPreferencias(){
     if(!notificacionesPreferencias) return;
-    const visible=!notificacionesGlobalInput || notificacionesGlobalInput.checked;
-    notificacionesPreferencias.classList.toggle('oculto',!visible);
-    notificacionesPreferencias.setAttribute('aria-hidden',visible?'false':'true');
+    const habilitado=!notificacionesGlobalInput || notificacionesGlobalInput.checked;
+    notificacionesPreferencias.classList.toggle('deshabilitado',!habilitado);
+    notificacionesPreferencias.setAttribute('aria-disabled',habilitado?'false':'true');
   }
 
   function generarIdSwitch(sufijo){
@@ -596,6 +620,7 @@
         const etiquetaTexto=objetivo.closest('.notificaciones-opcion-texto');
         if(etiquetaTexto && etiquetaTexto.getAttribute('for')===input.id) return;
       }
+      if(input.disabled) return;
       evento.preventDefault();
       input.click();
     });
@@ -705,10 +730,13 @@
       const clavesDisponibles=obtenerClavesNotificacionesDisponibles(grupos);
       const todasActivas=estanTodasLasPreferenciasActivas(config,grupos);
       notificacionesTodoInput.checked=todasActivas;
-      notificacionesTodoInput.disabled=!globalActivo || !clavesDisponibles.length;
+      notificacionesTodoInput.disabled=!clavesDisponibles.length;
+      if(!globalActivo && notificacionesTodoInput.checked){
+        notificacionesTodoInput.checked=false;
+      }
     }
     renderizarOpcionesNotificaciones(config,grupos,globalActivo);
-    actualizarVisibilidadNotificaciones();
+    actualizarEstadoPreferencias();
   }
 
   async function inicializarNotificacionesPerfil(role){
