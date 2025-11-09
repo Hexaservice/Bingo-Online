@@ -146,6 +146,8 @@
     document.body.appendChild(overlay);
   }
 
+  const CAMPO_CONSENTIMIENTO = 'aceptoNotificaciones';
+
   class CentroNotificaciones {
     constructor(){
       this.usuario = null;
@@ -155,7 +157,8 @@
         ultimaRespuesta: '',
         preferencias: {},
         historial: historialVacio(),
-        fechaUltimoPrompt: null
+        fechaUltimoPrompt: null,
+        consentimiento: 'NO'
       };
       this.listeners = new Set();
       this.desuscriptores = [];
@@ -227,7 +230,7 @@
         }
         const doc = await db.collection('users').doc(user.email).get();
         const data = doc.exists ? (doc.data() || {}) : {};
-        await this.cargarConfiguracion(data.notificationSettings || {});
+        await this.cargarConfiguracion(data);
         await this.verificarSolicitudInicial();
         this.iniciarMonitoreos();
       }catch(err){
@@ -247,7 +250,8 @@
         ultimaRespuesta: '',
         preferencias: {},
         historial: historialVacio(),
-        fechaUltimoPrompt: null
+        fechaUltimoPrompt: null,
+        consentimiento: 'NO'
       };
       this.cancelarMonitoreos();
       this.rolesActivos.clear();
@@ -282,7 +286,8 @@
       }
     }
 
-    async cargarConfiguracion(raw){
+    async cargarConfiguracion(rawUsuario){
+      const raw = rawUsuario && rawUsuario.notificationSettings ? rawUsuario.notificationSettings : {};
       const claves = clavesPorRol(this.rol);
       const preferencias = {};
       const origenPreferencias = raw.preferencias || {};
@@ -300,7 +305,8 @@
         ultimaRespuesta: raw.ultimaRespuesta || raw.lastChoice || '',
         preferencias,
         historial: historialVacio(),
-        fechaUltimoPrompt: raw.fechaUltimoPrompt || raw.lastPromptAt || null
+        fechaUltimoPrompt: raw.fechaUltimoPrompt || raw.lastPromptAt || null,
+        consentimiento: 'NO'
       };
       const origenHistorial = raw.historial || raw.history || {};
       Object.keys(this.config.historial).forEach(clave => {
@@ -308,6 +314,17 @@
           this.config.historial[clave] = { ...this.config.historial[clave], ...origenHistorial[clave] };
         }
       });
+      const consentimientoRaw = rawUsuario && typeof rawUsuario[CAMPO_CONSENTIMIENTO] === 'string'
+        ? rawUsuario[CAMPO_CONSENTIMIENTO].toUpperCase()
+        : null;
+      if(consentimientoRaw === 'SI'){
+        this.config.consentimiento = 'SI';
+      }else{
+        this.config.consentimiento = 'NO';
+        if(!consentimientoRaw){
+          requiereGuardado = true;
+        }
+      }
       if(requiereGuardado){
         await this.guardarPreferencias();
       }
@@ -315,28 +332,46 @@
 
     async verificarSolicitudInicial(){
       if(!this.usuario) return;
-      if(!hasWindow()) return;
-      if(this.config.global) return;
+      const hayVentana = typeof hasWindow === 'function' ? hasWindow() : (typeof window !== 'undefined');
+      if(!hayVentana) return;
+      if(this.config.global || this.config.consentimiento === 'SI'){
+        if(this.config.global){
+          const resultadoPermiso = await this.solicitarPermisoNavegador();
+          if(resultadoPermiso !== 'granted'){
+            this.config.global = false;
+            this.config.consentimiento = 'NO';
+            if(this.config.ultimaRespuesta !== 'no_mostrar'){
+              this.config.ultimaRespuesta = 'no';
+            }
+            this.establecerPreferenciasIniciales(false);
+            this.config.fechaUltimoPrompt = Date.now();
+            await this.guardarPreferencias();
+            this.notificarCambios();
+          }
+        }
+        return;
+      }
       if(this.config.ultimaRespuesta === 'no_mostrar') return;
       await new Promise(resolve => {
         crearModalPermiso({
           titulo: '¿Deseas recibir notificaciones?',
           mensaje: 'Activa las notificaciones para estar informado en tiempo real.',
           onSi: async ()=>{
-            this.config.global = true;
-            this.config.ultimaRespuesta = 'si';
             this.config.fechaUltimoPrompt = Date.now();
-            this.establecerPreferenciasIniciales(true);
-            await this.guardarPreferencias();
-            await this.solicitarPermisoNavegador();
+            const resultado = await this.actualizarGlobal(true);
+            if(resultado !== 'granted'){
+              this.config.ultimaRespuesta = 'no';
+            }else{
+              this.config.ultimaRespuesta = 'si';
+            }
             resolve();
-            this.notificarCambios();
           },
           onNo: async ()=>{
             this.config.global = false;
             this.config.ultimaRespuesta = 'no';
             this.config.fechaUltimoPrompt = Date.now();
             this.establecerPreferenciasIniciales(false);
+            this.config.consentimiento = 'NO';
             await this.guardarPreferencias();
             resolve();
             this.notificarCambios();
@@ -346,6 +381,7 @@
             this.config.ultimaRespuesta = 'no_mostrar';
             this.config.fechaUltimoPrompt = Date.now();
             this.establecerPreferenciasIniciales(false);
+            this.config.consentimiento = 'NO';
             await this.guardarPreferencias();
             resolve();
             this.notificarCambios();
@@ -361,13 +397,15 @@
     }
 
     async solicitarPermisoNavegador(){
-      if(typeof Notification === 'undefined') return;
+      if(typeof Notification === 'undefined') return 'unsupported';
       try{
-        if(Notification.permission !== 'granted'){
-          await Notification.requestPermission();
-        }
+        if(Notification.permission === 'granted') return 'granted';
+        if(Notification.permission === 'denied') return 'denied';
+        const resultado = await Notification.requestPermission();
+        return resultado;
       }catch(err){
         console.warn('No se pudo solicitar el permiso de notificaciones del navegador', err);
+        return 'error';
       }
     }
 
@@ -381,7 +419,8 @@
           preferencias: this.config.preferencias,
           historial: this.config.historial,
           fechaUltimoPrompt: this.config.fechaUltimoPrompt || Date.now()
-        }
+        },
+        [CAMPO_CONSENTIMIENTO]: this.config.consentimiento === 'SI' ? 'SI' : 'NO'
       };
       try{
         await db.collection('users').doc(this.usuario.email).set(payload, { merge: true });
@@ -410,15 +449,47 @@
     }
 
     async actualizarGlobal(valor){
-      this.config.global = Boolean(valor);
-      if(!this.config.global && this.config.ultimaRespuesta !== 'no_mostrar'){
+      const activar = Boolean(valor);
+      if(activar){
+        const resultado = await this.solicitarPermisoNavegador();
+        if(resultado === 'granted'){
+          this.config.global = true;
+          this.config.consentimiento = 'SI';
+          this.config.ultimaRespuesta = 'si';
+          this.establecerPreferenciasIniciales(true);
+        }else{
+          this.config.global = false;
+          this.config.consentimiento = 'NO';
+          if(this.config.ultimaRespuesta !== 'no_mostrar'){
+            this.config.ultimaRespuesta = 'no';
+          }
+          this.establecerPreferenciasIniciales(false);
+          const puedeAlertar = (typeof hasWindow === 'function' ? hasWindow() : (typeof window !== 'undefined')) && typeof alert === 'function';
+          if(puedeAlertar){
+            if(resultado === 'denied'){
+              alert('No fue posible habilitar las notificaciones porque el permiso fue denegado en el navegador.');
+            }else if(resultado === 'unsupported'){
+              alert('Tu navegador no soporta notificaciones push.');
+            }else if(resultado === 'error'){
+              alert('Ocurrió un problema al solicitar el permiso de notificaciones.');
+            }
+          }
+        }
+        this.config.fechaUltimoPrompt = Date.now();
+        await this.guardarPreferencias();
+        this.notificarCambios();
+        return resultado;
+      }
+      this.config.global = false;
+      this.config.consentimiento = 'NO';
+      if(this.config.ultimaRespuesta !== 'no_mostrar'){
         this.config.ultimaRespuesta = 'no';
       }
+      this.establecerPreferenciasIniciales(false);
+      this.config.fechaUltimoPrompt = Date.now();
       await this.guardarPreferencias();
       this.notificarCambios();
-      if(this.config.global){
-        await this.solicitarPermisoNavegador();
-      }
+      return 'desactivado';
     }
 
     async actualizarPreferencia(clave, valor){
