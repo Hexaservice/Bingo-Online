@@ -197,17 +197,6 @@
           margin:0;
           text-align:left;
       }
-      .notificaciones-panel > .switch{
-          align-self:flex-start;
-      }
-      .notificaciones-preferencias{
-          display:flex;
-          flex-direction:column;
-          gap:12px;
-      }
-      .notificaciones-preferencias.oculto{
-          display:none;
-      }
       .notificaciones-opcion{
           display:flex;
           align-items:center;
@@ -220,6 +209,17 @@
           font-family:Calibri, Arial, sans-serif;
           cursor:pointer;
       }
+      .notificaciones-opcion.notificaciones-opcion-global{
+          align-self:stretch;
+      }
+      .notificaciones-preferencias{
+          display:flex;
+          flex-direction:column;
+          gap:12px;
+      }
+      .notificaciones-preferencias.oculto{
+          display:none;
+      }
       .notificaciones-opcion-texto{
           font-weight:600;
           color:#0b1b4d;
@@ -229,6 +229,7 @@
           display:flex;
           flex-direction:column;
           gap:4px;
+          cursor:pointer;
       }
       .notificaciones-opcion small{
           display:block;
@@ -389,18 +390,21 @@
     <button id="jugar-carton-btn" class="menu-btn" onclick="window.location.href='jugarcartones.html'">Jugar Cartón</button>
     <section id="notificaciones-panel" class="notificaciones-panel">
       <h4 class="notificaciones-titulo">Notificaciones</h4>
-      <label class="switch" aria-label="Activar notificaciones">
-        <input type="checkbox" id="notificaciones-global">
-        <span class="slider"></span>
-      </label>
+      <div class="notificaciones-opcion notificaciones-opcion-global">
+        <label class="notificaciones-opcion-texto" for="notificaciones-global">Activar notificaciones</label>
+        <label class="switch" aria-label="Activar notificaciones">
+          <input type="checkbox" id="notificaciones-global">
+          <span class="slider"></span>
+        </label>
+      </div>
       <section id="notificaciones-preferencias" class="notificaciones-preferencias oculto" aria-hidden="true">
-        <label class="notificaciones-opcion" for="notificaciones-todo">
-          <span class="notificaciones-opcion-texto">Notificarme de todo</span>
-          <span class="switch" aria-label="Notificarme de todo">
+        <div class="notificaciones-opcion">
+          <label class="notificaciones-opcion-texto" for="notificaciones-todo">Notificarme de todo</label>
+          <label class="switch" aria-label="Notificarme de todo">
             <input type="checkbox" id="notificaciones-todo">
             <span class="slider"></span>
-          </span>
-        </label>
+          </label>
+        </div>
       </section>
     </section>
   </main>
@@ -440,6 +444,8 @@
   const notificacionesGlobalInput=document.getElementById('notificaciones-global');
   const notificacionesPreferencias=document.getElementById('notificaciones-preferencias');
   const notificacionesTodoInput=document.getElementById('notificaciones-todo');
+  configurarContenedorNotificaciones(document.querySelector('.notificaciones-opcion-global'));
+  configurarContenedorNotificaciones(notificacionesPreferencias ? notificacionesPreferencias.querySelector('.notificaciones-opcion') : null);
   let desuscribirNotificaciones=null;
   let gruposNotificacionesDisponibles=[];
   let notificacionesGlobalInicializado=false;
@@ -567,6 +573,34 @@
     notificacionesPreferencias.setAttribute('aria-hidden',visible?'false':'true');
   }
 
+  function generarIdSwitch(sufijo){
+    const base=String(sufijo||'opcion').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'opcion';
+    let id=`notificaciones-${base}`;
+    let contador=0;
+    while(document.getElementById(id)){
+      contador+=1;
+      id=`notificaciones-${base}-${contador}`;
+    }
+    return id;
+  }
+
+  function configurarContenedorNotificaciones(contenedor){
+    if(!contenedor) return;
+    const input=contenedor.querySelector('input[type="checkbox"]');
+    if(!input) return;
+    contenedor.addEventListener('click',evento=>{
+      const objetivo=evento.target;
+      if(objetivo===input) return;
+      if(objetivo instanceof Element){
+        if(objetivo.closest('label.switch')) return;
+        const etiquetaTexto=objetivo.closest('.notificaciones-opcion-texto');
+        if(etiquetaTexto && etiquetaTexto.getAttribute('for')===input.id) return;
+      }
+      evento.preventDefault();
+      input.click();
+    });
+  }
+
   function limpiarOpcionesNotificaciones(){
     if(!notificacionesPreferencias) return;
     notificacionesPreferencias.querySelectorAll('.notificaciones-opcion[data-clave], .notificaciones-grupo-titulo').forEach(elemento=>{
@@ -592,22 +626,26 @@
       }
       grupo.items.forEach(item=>{
         if(!item || !item.clave) return;
-        const opcion=document.createElement('label');
+        const opcion=document.createElement('div');
         opcion.className='notificaciones-opcion';
         opcion.dataset.clave=item.clave;
-        const texto=document.createElement('span');
+        const inputId=generarIdSwitch(item.clave);
+        const texto=document.createElement('label');
         texto.className='notificaciones-opcion-texto';
+        texto.setAttribute('for',inputId);
         texto.textContent=item.titulo||item.clave;
         if(item.descripcion){
           const descripcion=document.createElement('small');
           descripcion.textContent=item.descripcion;
           texto.appendChild(descripcion);
         }
-        const control=document.createElement('span');
+        const control=document.createElement('label');
         control.className='switch';
         control.setAttribute('aria-label',item.titulo||item.clave);
+        control.setAttribute('for',inputId);
         const input=document.createElement('input');
         input.type='checkbox';
+        input.id=inputId;
         input.checked=Boolean(preferencias[item.clave]);
         input.disabled=!globalActivo;
         input.addEventListener('change',async()=>{
@@ -632,6 +670,7 @@
         control.appendChild(slider);
         opcion.appendChild(texto);
         opcion.appendChild(control);
+        configurarContenedorNotificaciones(opcion);
         fragmento.appendChild(opcion);
       });
     });
