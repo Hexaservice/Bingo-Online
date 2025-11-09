@@ -347,7 +347,14 @@ function ensureAuth(roleExpected){
   initFirebase()
     .then(() => {
       auth.onAuthStateChanged(async user => {
-        if(!user){ window.location.href='index.html'; return; }
+        if(!user){
+          if(window.notificationCenter && typeof window.notificationCenter.desvincularUsuario === 'function'){
+            try{ window.notificationCenter.desvincularUsuario(); }
+            catch(err){ console.error('No se pudo desvincular el centro de notificaciones', err); }
+          }
+          window.location.href='index.html';
+          return;
+        }
         const { role, exists } = await getUserRole(user, { createIfMissing: false });
         if(!exists && role === 'Jugador'){
           window.location.href = 'registrarse.html';
@@ -381,6 +388,10 @@ function ensureAuth(roleExpected){
           });
         }
         startUserStatusWatcher();
+        if(window.notificationCenter && typeof window.notificationCenter.vincularUsuario === 'function'){
+          try{ window.notificationCenter.vincularUsuario(user, role); }
+          catch(err){ console.error('No se pudo vincular el centro de notificaciones', err); }
+        }
       });
     })
     .catch(err => {

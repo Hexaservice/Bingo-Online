@@ -178,6 +178,128 @@
           cursor:pointer;
           margin-top:10px;
       }
+      .notificaciones-panel{
+          width:100%;
+          margin-top:16px;
+          background:rgba(255,255,255,0.88);
+          border-radius:14px;
+          padding:14px;
+          box-shadow:0 10px 26px rgba(0,0,0,0.18);
+          box-sizing:border-box;
+      }
+      .notificaciones-cabecera{
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:12px;
+      }
+      .notificaciones-titulo{
+          font-family:'Bangers',cursive;
+          font-size:1.3rem;
+          color:#0b1b4d;
+          margin:0;
+      }
+      .notificaciones-contenido{
+          margin-top:12px;
+          background:rgba(250,250,250,0.94);
+          border-radius:12px;
+          padding:12px;
+          display:flex;
+          flex-direction:column;
+          gap:14px;
+          box-shadow:inset 0 0 8px rgba(0,0,0,0.08);
+      }
+      .notificaciones-contenido.oculto{
+          display:none;
+      }
+      .notificaciones-descripcion{
+          font-size:0.85rem;
+          color:#333;
+          margin:0;
+          text-align:left;
+      }
+      .notificaciones-lista{
+          display:flex;
+          flex-direction:column;
+          gap:14px;
+      }
+      .notificaciones-grupo{
+          display:flex;
+          flex-direction:column;
+          gap:10px;
+          padding-bottom:6px;
+          border-bottom:1px solid rgba(11,27,77,0.1);
+      }
+      .notificaciones-grupo:last-child{
+          border-bottom:none;
+          padding-bottom:0;
+      }
+      .notificaciones-grupo-titulo{
+          font-weight:600;
+          color:#0b1b4d;
+          margin:0;
+          text-align:left;
+      }
+      .notificacion-item{
+          display:flex;
+          align-items:flex-start;
+          justify-content:space-between;
+          gap:12px;
+      }
+      .notificacion-item h5{
+          margin:0;
+          font-size:1rem;
+          color:#1a237e;
+      }
+      .notificacion-item p{
+          margin:4px 0 0;
+          font-size:0.78rem;
+          color:#444;
+      }
+      .notificacion-info{
+          flex:1;
+          text-align:left;
+      }
+      .switch{
+          position:relative;
+          display:inline-block;
+          width:48px;
+          height:26px;
+      }
+      .switch input{display:none;}
+      .slider{
+          position:absolute;
+          cursor:pointer;
+          inset:0;
+          background:#b0bec5;
+          transition:0.3s;
+          border-radius:26px;
+      }
+      .slider:before{
+          position:absolute;
+          content:"";
+          height:20px;
+          width:20px;
+          left:3px;
+          bottom:3px;
+          background-color:white;
+          transition:0.3s;
+          border-radius:50%;
+          box-shadow:0 2px 6px rgba(0,0,0,0.25);
+      }
+      .switch input:checked + .slider{
+          background:#0a8800;
+      }
+      .switch input:checked + .slider:before{
+          transform:translateX(22px);
+      }
+      .switch input:disabled + .slider{
+          background:#cfd8dc;
+          cursor:not-allowed;
+      }
+      .switch input:disabled + .slider:before{
+          box-shadow:none;
+      }
       #fecha-hora, #derechos { font-size:0.7rem; text-align:center; color:#000; margin:0; }
       #fecha-hora { margin-top:auto; padding-top:12px; }
       #derechos { font-size:0.6rem; padding-bottom:12px; }
@@ -277,6 +399,19 @@
     <div id="perfil-mensaje" class="mensaje-validacion" role="alert" aria-live="polite"></div>
     <button id="guardar-perfil-btn" class="menu-btn" data-modo="guardar">Guardar</button>
     <button id="jugar-carton-btn" class="menu-btn" onclick="window.location.href='jugarcartones.html'">Jugar Cartón</button>
+    <section id="notificaciones-panel" class="notificaciones-panel">
+      <div class="notificaciones-cabecera">
+        <h4 class="notificaciones-titulo">Notificaciones</h4>
+        <label class="switch" aria-label="Activar notificaciones">
+          <input type="checkbox" id="notificaciones-global">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div id="notificaciones-contenido" class="notificaciones-contenido oculto" aria-hidden="true">
+        <p id="notificaciones-descripcion" class="notificaciones-descripcion">Activa el interruptor para gestionar tus notificaciones.</p>
+        <div id="notificaciones-lista" class="notificaciones-lista"></div>
+      </div>
+    </section>
   </main>
 
   <div id="modal-whatsapp" class="modal-whatsapp" role="dialog" aria-modal="true" aria-labelledby="modal-whatsapp-titulo" aria-hidden="true">
@@ -296,6 +431,7 @@
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/notificationCenter.js"></script>
   <script src="js/timezone.js"></script>
   <script>
   initFechaHora('fecha-hora');
@@ -309,6 +445,12 @@
   const whatsappModalMensajeEl=document.getElementById('modal-whatsapp-mensaje');
   const whatsappModalAceptarBtn=document.getElementById('modal-whatsapp-aceptar');
   const mensajeValidacionEl=document.getElementById('perfil-mensaje');
+  const notificacionesPanel=document.getElementById('notificaciones-panel');
+  const notificacionesGlobalInput=document.getElementById('notificaciones-global');
+  const notificacionesContenido=document.getElementById('notificaciones-contenido');
+  const notificacionesDescripcion=document.getElementById('notificaciones-descripcion');
+  const notificacionesLista=document.getElementById('notificaciones-lista');
+  let desuscribirNotificaciones=null;
 
   nombreInput.placeholder='Nombre';
   apellidoInput.placeholder='Apellido';
@@ -321,6 +463,151 @@
   let tieneDatosGuardados=false;
 
   const camposObligatorios=[nombreInput,apellidoInput,aliasInput,celularInput].filter(Boolean);
+
+  if(notificacionesGlobalInput){
+    notificacionesGlobalInput.addEventListener('change',async()=>{
+      if(!window.notificationCenter){
+        notificacionesGlobalInput.checked=false;
+        return;
+      }
+      const activo=notificacionesGlobalInput.checked;
+      notificacionesGlobalInput.disabled=true;
+      try{
+        await window.notificationCenter.actualizarGlobal(activo);
+      }catch(err){
+        console.error('No se pudo actualizar la preferencia global de notificaciones',err);
+        notificacionesGlobalInput.checked=!activo;
+      }finally{
+        notificacionesGlobalInput.disabled=false;
+      }
+    });
+  }
+
+  if(typeof hasWindow==='function' && hasWindow() && typeof window.addEventListener==='function'){
+    window.addEventListener('beforeunload',()=>{
+      if(desuscribirNotificaciones){
+        try{ desuscribirNotificaciones(); }
+        catch(err){ console.error('No se pudo cancelar la suscripción de notificaciones al salir',err); }
+        desuscribirNotificaciones=null;
+      }
+    });
+  }
+
+  function renderizarOpcionesNotificaciones(config,grupos){
+    if(!notificacionesLista) return;
+    notificacionesLista.innerHTML='';
+    if(!Array.isArray(grupos) || !grupos.length){
+      return;
+    }
+    grupos.forEach(grupo=>{
+      if(!grupo || !Array.isArray(grupo.items) || !grupo.items.length) return;
+      const grupoEl=document.createElement('div');
+      grupoEl.className='notificaciones-grupo';
+      if(grupo.etiqueta){
+        const titulo=document.createElement('h5');
+        titulo.className='notificaciones-grupo-titulo';
+        titulo.textContent=grupo.etiqueta;
+        grupoEl.appendChild(titulo);
+      }
+      grupo.items.forEach(item=>{
+        const itemEl=document.createElement('div');
+        itemEl.className='notificacion-item';
+        const infoEl=document.createElement('div');
+        infoEl.className='notificacion-info';
+        const titulo=document.createElement('h5');
+        titulo.textContent=item.titulo;
+        const descripcion=document.createElement('p');
+        descripcion.textContent=item.descripcion||'';
+        infoEl.appendChild(titulo);
+        infoEl.appendChild(descripcion);
+        const control=document.createElement('label');
+        control.className='switch';
+        control.setAttribute('aria-label',item.titulo);
+        const input=document.createElement('input');
+        input.type='checkbox';
+        input.dataset.clave=item.clave;
+        const estadoPreferencia=config && config.preferencias ? config.preferencias[item.clave] : false;
+        input.checked=Boolean(estadoPreferencia);
+        input.disabled=!(config && config.global);
+        input.addEventListener('change',async()=>{
+          if(!window.notificationCenter) return;
+          const valor=input.checked;
+          input.disabled=true;
+          try{
+            await window.notificationCenter.actualizarPreferencia(item.clave,valor);
+          }catch(err){
+            console.error('No se pudo actualizar la preferencia de notificación',err);
+            input.checked=!valor;
+          }finally{
+            input.disabled=false;
+          }
+        });
+        const slider=document.createElement('span');
+        slider.className='slider';
+        control.appendChild(input);
+        control.appendChild(slider);
+        itemEl.appendChild(infoEl);
+        itemEl.appendChild(control);
+        grupoEl.appendChild(itemEl);
+      });
+      notificacionesLista.appendChild(grupoEl);
+    });
+  }
+
+  function actualizarPanelNotificaciones(config,grupos){
+    if(!notificacionesPanel) return;
+    if(!config){
+      notificacionesPanel.style.display='none';
+      return;
+    }
+    if(!Array.isArray(grupos) || !grupos.length){
+      notificacionesPanel.style.display='none';
+      return;
+    }
+    notificacionesPanel.style.display='block';
+    const globalActivo=Boolean(config.global);
+    if(notificacionesGlobalInput){
+      notificacionesGlobalInput.checked=globalActivo;
+    }
+    if(notificacionesContenido){
+      notificacionesContenido.classList.toggle('oculto',!globalActivo);
+      notificacionesContenido.setAttribute('aria-hidden',globalActivo?'false':'true');
+    }
+    if(notificacionesDescripcion){
+      notificacionesDescripcion.textContent=globalActivo?
+        'Configura las notificaciones disponibles para tu perfil.':
+        'Activa el interruptor para gestionar tus notificaciones.';
+    }
+    renderizarOpcionesNotificaciones(config,grupos);
+  }
+
+  async function inicializarNotificacionesPerfil(role){
+    if(!notificacionesPanel) return;
+    if(!window.notificationCenter){
+      notificacionesPanel.style.display='none';
+      return;
+    }
+    notificacionesPanel.style.display='block';
+    const grupos=window.notificationCenter.obtenerGruposUI(role||'Jugador');
+    if(!Array.isArray(grupos) || !grupos.length){
+      notificacionesPanel.style.display='none';
+      return;
+    }
+    try{
+      await window.notificationCenter.cuandoListo();
+    }catch(err){
+      console.error('No se pudo preparar la sección de notificaciones',err);
+    }
+    const configuracion=window.notificationCenter.obtenerConfiguracion();
+    actualizarPanelNotificaciones(configuracion,grupos);
+    if(desuscribirNotificaciones){
+      try{ desuscribirNotificaciones(); }catch(e){ console.error('No se pudo cancelar la suscripción de notificaciones',e); }
+      desuscribirNotificaciones=null;
+    }
+    desuscribirNotificaciones=window.notificationCenter.onChange(cfg=>{
+      actualizarPanelNotificaciones(cfg,grupos);
+    });
+  }
 
   function normalizarAlias(valor){
     return (valor||'').toString().trim().slice(0,20);
@@ -577,10 +864,12 @@
       ensureAuth();
       auth.onAuthStateChanged(async user=>{
         if(user){
+          let datosPerfil=null;
           try{
             const doc=await db.collection('users').doc(user.email).get();
             if(doc.exists){
               const d=doc.data()||{};
+              datosPerfil=d;
               valoresOriginales={
                 name:(d.name||'').toString().trim(),
                 apellido:(d.apellido||'').toString().trim(),
@@ -609,9 +898,18 @@
             console.error('No se pudo cargar la información del perfil',error);
             mostrarMensajeValidacion('No se pudieron cargar los datos del perfil. Intenta nuevamente.');
           }
+          const rolNotificaciones=(datosPerfil && (datosPerfil.role||datosPerfil.rol||datosPerfil.rolinterno))||window.currentRole||'Jugador';
+          inicializarNotificacionesPerfil(rolNotificaciones);
           actualizarEstadoCamposObligatorios();
           evaluarCambios();
-        } else { window.location.href='index.html'; }
+        } else {
+          if(desuscribirNotificaciones){
+            try{ desuscribirNotificaciones(); }
+            catch(err){ console.error('No se pudo limpiar la suscripción de notificaciones',err); }
+            desuscribirNotificaciones=null;
+          }
+          window.location.href='index.html';
+        }
       });
     })
     .catch(error=>{
