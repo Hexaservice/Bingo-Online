@@ -183,127 +183,134 @@
           margin-top:16px;
           background:rgba(255,255,255,0.88);
           border-radius:14px;
-          padding:14px;
+          padding:16px;
           box-shadow:0 10px 26px rgba(0,0,0,0.18);
           box-sizing:border-box;
-          display:grid;
-          grid-template-columns:minmax(0,1fr) auto;
-          column-gap:12px;
-          row-gap:12px;
+          display:flex;
+          flex-direction:column;
+          gap:14px;
+      }
+      .notificaciones-fila{
+          display:flex;
           align-items:center;
+          justify-content:space-between;
+          gap:12px;
+          width:100%;
       }
-      .notificaciones-panel label.switch{
-          justify-self:end;
-      }
-      .notificaciones-panel > .notificaciones-global-descripcion,
-      .notificaciones-panel > .notificaciones-grupo-titulo{
-          grid-column:1 / -1;
-      }
-      .notificaciones-panel > .notificaciones-opcion,
-      .notificaciones-panel > label.switch{
-          align-self:stretch;
-      }
-        .notificaciones-titulo-texto{
-            font-family:'Bangers',cursive;
-            font-size:1.3rem;
-            color:#0b1b4d;
-            margin:0;
-            cursor:pointer;
-        }
-      .notificaciones-global-descripcion{
-          font-family:Calibri, Arial, sans-serif;
-          font-size:0.85rem;
-          color:#0b1b4d;
-          font-weight:600;
+      .notificaciones-fila .notificaciones-titulo-texto{
           margin:0;
+          flex:1;
           text-align:left;
-          cursor:pointer;
       }
-      .notificaciones-titulo-texto:focus,
-      .notificaciones-global-descripcion:focus{
-          outline:2px solid #0a8800;
-          outline-offset:2px;
+      .notificaciones-contenido{
+          display:flex;
+          flex-direction:column;
+          gap:12px;
       }
-      .notificaciones-panel.deshabilitado .notificaciones-opcion:not(.notificaciones-opcion-todo),
-      .notificaciones-panel.deshabilitado .notificaciones-grupo-titulo{
-          opacity:0.55;
-      }
-      .notificaciones-panel.deshabilitado .notificaciones-opcion:not(.notificaciones-opcion-todo){
-          cursor:not-allowed;
+      .notificaciones-contenido[aria-hidden="true"]{
+          display:none;
       }
       .notificaciones-opcion{
           display:flex;
-          flex-direction:column;
-          gap:4px;
-          padding:10px 12px;
-          border-radius:12px;
-          background:rgba(250,250,250,0.94);
-          box-shadow:inset 0 0 8px rgba(0,0,0,0.08);
+          align-items:flex-start;
+          justify-content:space-between;
+          gap:12px;
+          width:100%;
           font-family:Calibri, Arial, sans-serif;
+          font-size:0.95rem;
           font-weight:600;
           color:#0b1b4d;
-          font-size:0.95rem;
-          text-align:left;
+          cursor:pointer;
+      }
+      .notificaciones-fila-titulo{
           cursor:pointer;
       }
       .notificaciones-opcion-titulo{
-          display:block;
+          flex:1;
+          text-align:left;
+          display:flex;
+          flex-direction:column;
+          align-items:flex-start;
+          gap:4px;
+          margin:0;
       }
-      .notificaciones-opcion small{
-          display:block;
+      .notificaciones-opcion-titulo small{
           font-weight:400;
           font-size:0.78rem;
           color:#444;
-          margin-top:4px;
       }
       .notificaciones-grupo-titulo{
-          margin:2px 4px 0;
-          font-weight:600;
-          color:#0b1b4d;
+          margin:8px 0 0;
+          font-weight:700;
+          font-size:0.95rem;
           text-align:left;
           font-family:Calibri, Arial, sans-serif;
-          font-size:0.9rem;
-          grid-column:1 / -1;
+      }
+      .notificaciones-grupo-titulo.colaborador{
+          color:#1b5e20;
+      }
+      .notificaciones-grupo-titulo.jugador{
+          color:#FF8C00;
+      }
+      .notificaciones-grupo-titulo.administrador{
+          color:#1565c0;
+      }
+      .notificaciones-titulo-texto{
+          font-family:'Bangers',cursive;
+          font-size:1.3rem;
+          color:#0b1b4d;
+          margin:0;
+          cursor:pointer;
+      }
+      .notificaciones-titulo-texto:focus{
+          outline:2px solid #0a8800;
+          outline-offset:2px;
+      }
+      .notificaciones-todo-etiqueta{
+          color:#000000;
+          font-weight:700;
       }
       .switch{
           position:relative;
-          display:inline-block;
-          width:48px;
-          height:26px;
-      }
-      .switch input{display:none;}
-      .slider{
-          position:absolute;
+          display:inline-flex;
+          width:74px;
+          height:34px;
+          border-radius:10px;
           cursor:pointer;
-          inset:0;
-          background:#b0bec5;
-          transition:0.3s;
-          border-radius:26px;
+          user-select:none;
       }
-      .slider:before{
-          position:absolute;
-          content:"";
-          height:20px;
-          width:20px;
-          left:3px;
-          bottom:3px;
-          background-color:white;
-          transition:0.3s;
-          border-radius:50%;
-          box-shadow:0 2px 6px rgba(0,0,0,0.25);
+      .switch input{
+          display:none;
+      }
+      .switch .slider{
+          flex:1;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          border-radius:8px;
+          background:#c62828;
+          color:#ffffff;
+          font-weight:700;
+          font-size:0.8rem;
+          letter-spacing:0.5px;
+          text-transform:uppercase;
+          transition:background 0.3s ease, transform 0.3s ease;
+      }
+      .switch .slider::before{
+          content:attr(data-off);
       }
       .switch input:checked + .slider{
-          background:#0a8800;
+          background:#1b5e20;
       }
-      .switch input:checked + .slider:before{
-          transform:translateX(22px);
+      .switch input:checked + .slider::before{
+          content:attr(data-on);
       }
-      .switch input:disabled + .slider{
-          background:#cfd8dc;
-          cursor:not-allowed;
+      .switch input:focus + .slider{
+          outline:2px solid #0a8800;
+          outline-offset:2px;
       }
-      .switch input:disabled + .slider:before{
-          box-shadow:none;
+      .notificaciones-opcion > .switch{
+          margin-left:auto;
       }
       #fecha-hora, #derechos { font-size:0.7rem; text-align:center; color:#000; margin:0; }
       #fecha-hora { margin-top:auto; padding-top:12px; }
@@ -405,19 +412,22 @@
     <button id="guardar-perfil-btn" class="menu-btn" data-modo="guardar">Guardar</button>
     <button id="jugar-carton-btn" class="menu-btn" onclick="window.location.href='jugarcartones.html'">Jugar Cartón</button>
     <section id="notificaciones-panel" class="notificaciones-panel" aria-labelledby="notificaciones-titulo">
-      <span id="notificaciones-titulo" class="notificaciones-titulo-texto" data-switch="notificaciones-global">Notificaciones</span>
-      <label class="switch" aria-labelledby="notificaciones-titulo">
-        <input type="checkbox" id="notificaciones-global">
-        <span class="slider"></span>
-      </label>
-      <p class="notificaciones-global-descripcion">Activa la recepción general para gestionar tus alertas.</p>
-      <span class="notificaciones-opcion notificaciones-opcion-todo" data-switch="notificaciones-todo" data-base-opcion="true">
-        <span class="notificaciones-opcion-titulo">Notificarme de todo</span>
-      </span>
-      <label class="switch" aria-label="Notificarme de todo" data-base-switch="true">
-        <input type="checkbox" id="notificaciones-todo">
-        <span class="slider"></span>
-      </label>
+      <div class="notificaciones-fila notificaciones-fila-titulo" data-switch="notificaciones-global">
+        <span id="notificaciones-titulo" class="notificaciones-titulo-texto" data-switch="notificaciones-global">Notificaciones</span>
+        <label class="switch" aria-labelledby="notificaciones-titulo">
+          <input type="checkbox" id="notificaciones-global">
+          <span class="slider" data-on="SI" data-off="NO"></span>
+        </label>
+      </div>
+      <div id="notificaciones-contenido" class="notificaciones-contenido" aria-hidden="true">
+        <div class="notificaciones-opcion notificaciones-opcion-todo notificaciones-fila" data-switch="notificaciones-todo" data-base-opcion="true">
+          <span class="notificaciones-opcion-titulo notificaciones-todo-etiqueta">Notificarme de todo</span>
+          <label class="switch" aria-label="Notificarme de todo" data-base-switch="true">
+            <input type="checkbox" id="notificaciones-todo">
+            <span class="slider" data-on="SI" data-off="NO"></span>
+          </label>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -454,17 +464,16 @@
   const mensajeValidacionEl=document.getElementById('perfil-mensaje');
   const notificacionesPanel=document.getElementById('notificaciones-panel');
   const notificacionesGlobalInput=document.getElementById('notificaciones-global');
-  const notificacionesPreferencias=notificacionesPanel;
+  const notificacionesPreferencias=document.getElementById('notificaciones-contenido');
   const notificacionesTodoInput=document.getElementById('notificaciones-todo');
   const notificacionesTitulo=document.getElementById('notificaciones-titulo');
-  const notificacionesDescripcion=document.querySelector('#notificaciones-panel .notificaciones-global-descripcion');
+  const notificacionesEncabezado=document.querySelector('#notificaciones-panel .notificaciones-fila-titulo');
   if(notificacionesTitulo){
     notificacionesTitulo.setAttribute('role','button');
     notificacionesTitulo.setAttribute('tabindex','0');
-  }
-  if(notificacionesDescripcion){
-    notificacionesDescripcion.setAttribute('role','button');
-    notificacionesDescripcion.setAttribute('tabindex','0');
+    if(notificacionesPreferencias){
+      notificacionesTitulo.setAttribute('aria-controls',notificacionesPreferencias.id);
+    }
   }
   function alternarNotificacionesGlobal(){
     if(!notificacionesGlobalInput || notificacionesGlobalInput.disabled) return;
@@ -475,9 +484,7 @@
     const estado=notificacionesGlobalInput.checked?'true':'false';
     if(notificacionesTitulo){
       notificacionesTitulo.setAttribute('aria-pressed',estado);
-    }
-    if(notificacionesDescripcion){
-      notificacionesDescripcion.setAttribute('aria-pressed',estado);
+      notificacionesTitulo.setAttribute('aria-expanded',estado);
     }
   }
   if(notificacionesGlobalInput){
@@ -493,14 +500,11 @@
       }
     });
   }
-  if(notificacionesDescripcion){
-    notificacionesDescripcion.addEventListener('click',alternarNotificacionesGlobal);
-    notificacionesDescripcion.addEventListener('keydown',evento=>{
-      if(evento.key==='Enter'||evento.key===' '){
-        evento.preventDefault();
-        alternarNotificacionesGlobal();
-      }
-    });
+  if(notificacionesEncabezado){
+    configurarContenedorNotificaciones(notificacionesEncabezado,notificacionesGlobalInput);
+    if(notificacionesPreferencias){
+      notificacionesEncabezado.setAttribute('aria-controls',notificacionesPreferencias.id);
+    }
   }
   if(notificacionesPreferencias){
     const opcionBase=notificacionesPreferencias.querySelector('.notificaciones-opcion[data-base-opcion="true"]');
@@ -527,15 +531,6 @@
     notificacionesGlobalInput.addEventListener('change',()=>{
       notificacionesGlobalInput.dataset.manual='true';
       actualizarEstadoPreferencias();
-      if(notificacionesPreferencias){
-        const habilitado=notificacionesGlobalInput.checked;
-        const dinamicos=notificacionesPreferencias.querySelectorAll('label[data-switch-clave] input[type="checkbox"]');
-        dinamicos.forEach(input=>{ input.disabled=!habilitado; });
-        if(notificacionesTodoInput){
-          const clavesDisponibles=notificacionesPreferencias.querySelectorAll('.notificaciones-opcion[data-clave]').length;
-          notificacionesTodoInput.disabled=!clavesDisponibles;
-        }
-      }
     });
   }
 
@@ -632,9 +627,14 @@
 
   function actualizarEstadoPreferencias(){
     if(!notificacionesPreferencias) return;
-    const habilitado=!notificacionesGlobalInput || notificacionesGlobalInput.checked;
-    notificacionesPreferencias.classList.toggle('deshabilitado',!habilitado);
-    notificacionesPreferencias.setAttribute('aria-disabled',habilitado?'false':'true');
+    const abierto=!notificacionesGlobalInput || notificacionesGlobalInput.checked;
+    notificacionesPreferencias.setAttribute('aria-hidden',abierto?'false':'true');
+    if(notificacionesTitulo){
+      notificacionesTitulo.setAttribute('aria-expanded',abierto?'true':'false');
+    }
+    if(notificacionesEncabezado){
+      notificacionesEncabezado.setAttribute('aria-expanded',abierto?'true':'false');
+    }
   }
 
   function generarIdSwitch(sufijo){
@@ -714,12 +714,25 @@
 
   function limpiarOpcionesNotificaciones(){
     if(!notificacionesPreferencias) return;
-    notificacionesPreferencias.querySelectorAll('.notificaciones-opcion[data-clave], label.switch[data-switch-clave], .notificaciones-grupo-titulo').forEach(elemento=>{
+    notificacionesPreferencias.querySelectorAll('.notificaciones-opcion[data-clave], .notificaciones-grupo-titulo').forEach(elemento=>{
       elemento.remove();
     });
   }
 
-  function renderizarOpcionesNotificaciones(config,grupos,globalActivo){
+  function aplicarClaseRol(elemento,etiqueta){
+    if(!elemento || !etiqueta) return;
+    const normalizado=String(etiqueta).trim().toLowerCase();
+    elemento.classList.remove('colaborador','jugador','administrador');
+    if(normalizado==='colaborador'){
+      elemento.classList.add('colaborador');
+    }else if(normalizado==='jugador'){
+      elemento.classList.add('jugador');
+    }else if(normalizado==='administrador'){
+      elemento.classList.add('administrador');
+    }
+  }
+
+  function renderizarOpcionesNotificaciones(config,grupos){
     if(!notificacionesPreferencias) return;
     limpiarOpcionesNotificaciones();
     if(!Array.isArray(grupos) || !grupos.length){
@@ -732,35 +745,33 @@
       if(grupo.etiqueta){
         const titulo=document.createElement('p');
         titulo.className='notificaciones-grupo-titulo';
+        aplicarClaseRol(titulo,grupo.etiqueta);
         titulo.textContent=grupo.etiqueta;
         fragmento.appendChild(titulo);
       }
       grupo.items.forEach(item=>{
         if(!item || !item.clave) return;
-        const opcion=document.createElement('span');
-        opcion.className='notificaciones-opcion';
-        opcion.dataset.clave=item.clave;
+        const fila=document.createElement('div');
+        fila.className='notificaciones-opcion notificaciones-fila';
+        fila.dataset.clave=item.clave;
         const inputId=generarIdSwitch(item.clave);
-        opcion.dataset.switch=inputId;
+        fila.dataset.switch=inputId;
         const titulo=document.createElement('span');
         titulo.className='notificaciones-opcion-titulo';
         titulo.textContent=item.titulo||item.clave;
-        opcion.appendChild(titulo);
         if(item.descripcion){
           const descripcion=document.createElement('small');
           descripcion.textContent=item.descripcion;
-          opcion.appendChild(descripcion);
+          titulo.appendChild(descripcion);
         }
+        fila.appendChild(titulo);
         const control=document.createElement('label');
         control.className='switch';
-        control.dataset.switchClave=item.clave;
         control.setAttribute('aria-label',item.titulo||item.clave);
-        control.setAttribute('for',inputId);
         const input=document.createElement('input');
         input.type='checkbox';
         input.id=inputId;
         input.checked=Boolean(preferencias[item.clave]);
-        input.disabled=!globalActivo;
         input.addEventListener('change',async()=>{
           if(!window.notificationCenter) return;
           const valor=input.checked;
@@ -772,18 +783,19 @@
             input.checked=!valor;
           }finally{
             if(document.body.contains(input)){
-              const globalHabilitado=Boolean(notificacionesGlobalInput && notificacionesGlobalInput.checked);
-              input.disabled=!globalHabilitado;
+              input.disabled=false;
             }
           }
         });
         const slider=document.createElement('span');
         slider.className='slider';
+        slider.dataset.on='SI';
+        slider.dataset.off='NO';
         control.appendChild(input);
         control.appendChild(slider);
-        configurarContenedorNotificaciones(opcion,input);
-        fragmento.appendChild(opcion);
-        fragmento.appendChild(control);
+        fila.appendChild(control);
+        configurarContenedorNotificaciones(fila,input);
+        fragmento.appendChild(fila);
       });
     });
     notificacionesPreferencias.appendChild(fragmento);
@@ -818,11 +830,8 @@
       const todasActivas=estanTodasLasPreferenciasActivas(config,grupos);
       notificacionesTodoInput.checked=todasActivas;
       notificacionesTodoInput.disabled=!clavesDisponibles.length;
-      if(!globalActivo && notificacionesTodoInput.checked){
-        notificacionesTodoInput.checked=false;
-      }
     }
-    renderizarOpcionesNotificaciones(config,grupos,globalActivo);
+    renderizarOpcionesNotificaciones(config,grupos);
     actualizarEstadoPreferencias();
   }
 
