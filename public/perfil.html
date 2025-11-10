@@ -195,26 +195,28 @@
           align-items:center;
           justify-content:space-between;
           gap:12px;
-      }
-      .notificaciones-global-texto{
-          display:flex;
-          flex-direction:column;
-          gap:2px;
-          cursor:pointer;
           text-align:left;
-          text-decoration:none;
       }
-      .notificaciones-global-texto .notificaciones-titulo-texto{
+      .notificaciones-titulo-texto{
           font-family:'Bangers',cursive;
           font-size:1.3rem;
           color:#0b1b4d;
           margin:0;
+          cursor:pointer;
       }
-      .notificaciones-global-texto .notificaciones-global-descripcion{
+      .notificaciones-global-descripcion{
           font-family:Calibri, Arial, sans-serif;
           font-size:0.85rem;
           color:#0b1b4d;
           font-weight:600;
+          margin:0;
+          text-align:left;
+          cursor:pointer;
+      }
+      .notificaciones-titulo-texto:focus,
+      .notificaciones-global-descripcion:focus{
+          outline:2px solid #0a8800;
+          outline-offset:2px;
       }
       .notificaciones-preferencias{
           display:flex;
@@ -251,7 +253,10 @@
           gap:4px;
           cursor:pointer;
       }
-      .notificaciones-opcion small{
+      .notificaciones-opcion-titulo{
+          display:block;
+      }
+      .notificaciones-opcion-texto small{
           display:block;
           font-weight:400;
           font-size:0.78rem;
@@ -410,18 +415,18 @@
     <button id="jugar-carton-btn" class="menu-btn" onclick="window.location.href='jugarcartones.html'">Jugar Cartón</button>
     <section id="notificaciones-panel" class="notificaciones-panel" aria-labelledby="notificaciones-titulo">
       <div class="notificaciones-encabezado">
-        <label class="notificaciones-global-texto" for="notificaciones-global" id="notificaciones-titulo">
-          <span class="notificaciones-titulo-texto">Notificaciones</span>
-          <span class="notificaciones-global-descripcion">Activa la recepción general para gestionar tus alertas.</span>
-        </label>
+        <span id="notificaciones-titulo" class="notificaciones-titulo-texto">Notificaciones</span>
         <label class="switch" aria-labelledby="notificaciones-titulo">
           <input type="checkbox" id="notificaciones-global">
           <span class="slider"></span>
         </label>
       </div>
+      <p class="notificaciones-global-descripcion">Activa la recepción general para gestionar tus alertas.</p>
       <div id="notificaciones-preferencias" class="notificaciones-preferencias" aria-disabled="true">
         <div class="notificaciones-opcion notificaciones-opcion-todo">
-          <label class="notificaciones-opcion-texto" for="notificaciones-todo">Notificarme de todo</label>
+          <div class="notificaciones-opcion-texto">
+            <span class="notificaciones-opcion-titulo">Notificarme de todo</span>
+          </div>
           <label class="switch" aria-label="Notificarme de todo">
             <input type="checkbox" id="notificaciones-todo">
             <span class="slider"></span>
@@ -466,6 +471,52 @@
   const notificacionesGlobalInput=document.getElementById('notificaciones-global');
   const notificacionesPreferencias=document.getElementById('notificaciones-preferencias');
   const notificacionesTodoInput=document.getElementById('notificaciones-todo');
+  const notificacionesTitulo=document.getElementById('notificaciones-titulo');
+  const notificacionesDescripcion=document.querySelector('#notificaciones-panel .notificaciones-global-descripcion');
+  if(notificacionesTitulo){
+    notificacionesTitulo.setAttribute('role','button');
+    notificacionesTitulo.setAttribute('tabindex','0');
+  }
+  if(notificacionesDescripcion){
+    notificacionesDescripcion.setAttribute('role','button');
+    notificacionesDescripcion.setAttribute('tabindex','0');
+  }
+  function alternarNotificacionesGlobal(){
+    if(!notificacionesGlobalInput || notificacionesGlobalInput.disabled) return;
+    notificacionesGlobalInput.click();
+  }
+  function actualizarIndicadoresNotificaciones(){
+    if(!notificacionesGlobalInput) return;
+    const estado=notificacionesGlobalInput.checked?'true':'false';
+    if(notificacionesTitulo){
+      notificacionesTitulo.setAttribute('aria-pressed',estado);
+    }
+    if(notificacionesDescripcion){
+      notificacionesDescripcion.setAttribute('aria-pressed',estado);
+    }
+  }
+  if(notificacionesGlobalInput){
+    actualizarIndicadoresNotificaciones();
+    notificacionesGlobalInput.addEventListener('change',actualizarIndicadoresNotificaciones);
+  }
+  if(notificacionesTitulo){
+    notificacionesTitulo.addEventListener('click',alternarNotificacionesGlobal);
+    notificacionesTitulo.addEventListener('keydown',evento=>{
+      if(evento.key==='Enter'||evento.key===' '){
+        evento.preventDefault();
+        alternarNotificacionesGlobal();
+      }
+    });
+  }
+  if(notificacionesDescripcion){
+    notificacionesDescripcion.addEventListener('click',alternarNotificacionesGlobal);
+    notificacionesDescripcion.addEventListener('keydown',evento=>{
+      if(evento.key==='Enter'||evento.key===' '){
+        evento.preventDefault();
+        alternarNotificacionesGlobal();
+      }
+    });
+  }
   configurarContenedorNotificaciones(notificacionesPreferencias ? notificacionesPreferencias.querySelector('.notificaciones-opcion') : null);
   let desuscribirNotificaciones=null;
   let gruposNotificacionesDisponibles=[];
@@ -612,17 +663,34 @@
     if(!contenedor) return;
     const input=contenedor.querySelector('input[type="checkbox"]');
     if(!input) return;
+    if(!contenedor.hasAttribute('tabindex')){
+      contenedor.tabIndex=0;
+    }
+    if(!contenedor.hasAttribute('role')){
+      contenedor.setAttribute('role','button');
+    }
+    const actualizarAria=()=>{
+      contenedor.setAttribute('aria-pressed',input.checked?'true':'false');
+    };
+    actualizarAria();
+    input.addEventListener('change',actualizarAria);
     contenedor.addEventListener('click',evento=>{
       const objetivo=evento.target;
       if(objetivo===input) return;
       if(objetivo instanceof Element){
         if(objetivo.closest('label.switch')) return;
-        const etiquetaTexto=objetivo.closest('.notificaciones-opcion-texto');
-        if(etiquetaTexto && etiquetaTexto.getAttribute('for')===input.id) return;
+        if(objetivo.closest('input, button, a')) return;
       }
       if(input.disabled) return;
       evento.preventDefault();
       input.click();
+    });
+    contenedor.addEventListener('keydown',evento=>{
+      if(evento.key==='Enter'||evento.key===' '){
+        if(input.disabled) return;
+        evento.preventDefault();
+        input.click();
+      }
     });
   }
 
@@ -655,10 +723,12 @@
         opcion.className='notificaciones-opcion';
         opcion.dataset.clave=item.clave;
         const inputId=generarIdSwitch(item.clave);
-        const texto=document.createElement('label');
+        const texto=document.createElement('div');
         texto.className='notificaciones-opcion-texto';
-        texto.setAttribute('for',inputId);
-        texto.textContent=item.titulo||item.clave;
+        const titulo=document.createElement('span');
+        titulo.className='notificaciones-opcion-titulo';
+        titulo.textContent=item.titulo||item.clave;
+        texto.appendChild(titulo);
         if(item.descripcion){
           const descripcion=document.createElement('small');
           descripcion.textContent=item.descripcion;
