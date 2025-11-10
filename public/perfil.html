@@ -272,17 +272,55 @@
       }
       .switch{
           position:relative;
-          display:inline-flex;
-          width:74px;
-          height:34px;
-          border-radius:10px;
+          display:inline-block;
           cursor:pointer;
           user-select:none;
       }
       .switch input{
           display:none;
       }
-      .switch .slider{
+      .switch-base{
+          width:48px;
+          height:26px;
+      }
+      .switch-base .slider{
+          position:absolute;
+          inset:0;
+          background:#cccccc;
+          border-radius:26px;
+          transition:background 0.3s ease;
+      }
+      .switch-base .slider::before{
+          content:"";
+          position:absolute;
+          width:22px;
+          height:22px;
+          left:2px;
+          top:2px;
+          background:#ffffff;
+          border-radius:50%;
+          box-shadow:0 2px 4px rgba(0,0,0,0.25);
+          transition:transform 0.3s ease;
+      }
+      .switch-base input:checked + .slider{
+          background:#4caf50;
+      }
+      .switch-base input:checked + .slider::before{
+          transform:translateX(22px);
+      }
+      .switch-base input:focus + .slider{
+          outline:2px solid #0a8800;
+          outline-offset:2px;
+      }
+      .switch-toggle{
+          display:inline-flex;
+          align-items:center;
+          justify-content:center;
+          width:74px;
+          height:34px;
+          border-radius:10px;
+      }
+      .switch-toggle .slider{
           flex:1;
           display:flex;
           align-items:center;
@@ -296,16 +334,16 @@
           text-transform:uppercase;
           transition:background 0.3s ease, transform 0.3s ease;
       }
-      .switch .slider::before{
+      .switch-toggle .slider::before{
           content:attr(data-off);
       }
-      .switch input:checked + .slider{
+      .switch-toggle input:checked + .slider{
           background:#1b5e20;
       }
-      .switch input:checked + .slider::before{
+      .switch-toggle input:checked + .slider::before{
           content:attr(data-on);
       }
-      .switch input:focus + .slider{
+      .switch-toggle input:focus + .slider{
           outline:2px solid #0a8800;
           outline-offset:2px;
       }
@@ -414,17 +452,17 @@
     <section id="notificaciones-panel" class="notificaciones-panel" aria-labelledby="notificaciones-titulo">
       <div class="notificaciones-fila notificaciones-fila-titulo" data-switch="notificaciones-global">
         <span id="notificaciones-titulo" class="notificaciones-titulo-texto" data-switch="notificaciones-global">Notificaciones</span>
-        <label class="switch" aria-labelledby="notificaciones-titulo">
+        <label class="switch switch-base" aria-labelledby="notificaciones-titulo">
           <input type="checkbox" id="notificaciones-global">
-          <span class="slider" data-on="SI" data-off="NO"></span>
+          <span class="slider" aria-hidden="true"></span>
         </label>
       </div>
       <div id="notificaciones-contenido" class="notificaciones-contenido" aria-hidden="true">
         <div class="notificaciones-opcion notificaciones-opcion-todo notificaciones-fila" data-switch="notificaciones-todo" data-base-opcion="true">
           <span class="notificaciones-opcion-titulo notificaciones-todo-etiqueta">Notificarme de todo</span>
-          <label class="switch" aria-label="Notificarme de todo" data-base-switch="true">
+          <label class="switch switch-base" aria-label="Notificarme de todo" data-base-switch="true">
             <input type="checkbox" id="notificaciones-todo">
-            <span class="slider" data-on="SI" data-off="NO"></span>
+            <span class="slider" aria-hidden="true"></span>
           </label>
         </div>
       </div>
@@ -766,7 +804,7 @@
         }
         fila.appendChild(titulo);
         const control=document.createElement('label');
-        control.className='switch';
+        control.className='switch switch-toggle';
         control.setAttribute('aria-label',item.titulo||item.clave);
         const input=document.createElement('input');
         input.type='checkbox';
