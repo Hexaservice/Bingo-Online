@@ -192,12 +192,16 @@
           row-gap:12px;
           align-items:center;
       }
-      .notificaciones-panel > label.switch{
+      .notificaciones-panel label.switch{
           justify-self:end;
       }
       .notificaciones-panel > .notificaciones-global-descripcion,
-      .notificaciones-panel > .notificaciones-preferencias{
+      .notificaciones-panel > .notificaciones-grupo-titulo{
           grid-column:1 / -1;
+      }
+      .notificaciones-panel > .notificaciones-opcion,
+      .notificaciones-panel > label.switch{
+          align-self:stretch;
       }
         .notificaciones-titulo-texto{
             font-family:'Bangers',cursive;
@@ -220,21 +224,11 @@
           outline:2px solid #0a8800;
           outline-offset:2px;
       }
-      .notificaciones-preferencias{
-          display:grid;
-          grid-template-columns:minmax(0,1fr) auto;
-          column-gap:12px;
-          row-gap:12px;
-          align-items:center;
-      }
-      #notificaciones-preferencias > label.switch{
-          justify-self:end;
-      }
-      .notificaciones-preferencias.deshabilitado .notificaciones-opcion:not(.notificaciones-opcion-todo),
-      .notificaciones-preferencias.deshabilitado .notificaciones-grupo-titulo{
+      .notificaciones-panel.deshabilitado .notificaciones-opcion:not(.notificaciones-opcion-todo),
+      .notificaciones-panel.deshabilitado .notificaciones-grupo-titulo{
           opacity:0.55;
       }
-      .notificaciones-preferencias.deshabilitado .notificaciones-opcion:not(.notificaciones-opcion-todo){
+      .notificaciones-panel.deshabilitado .notificaciones-opcion:not(.notificaciones-opcion-todo){
           cursor:not-allowed;
       }
       .notificaciones-opcion{
@@ -417,15 +411,13 @@
         <span class="slider"></span>
       </label>
       <p class="notificaciones-global-descripcion">Activa la recepción general para gestionar tus alertas.</p>
-      <div id="notificaciones-preferencias" class="notificaciones-preferencias" aria-disabled="true">
-        <span class="notificaciones-opcion notificaciones-opcion-todo" data-switch="notificaciones-todo">
-          <span class="notificaciones-opcion-titulo">Notificarme de todo</span>
-        </span>
-        <label class="switch" aria-label="Notificarme de todo">
-          <input type="checkbox" id="notificaciones-todo">
-          <span class="slider"></span>
-        </label>
-      </div>
+      <span class="notificaciones-opcion notificaciones-opcion-todo" data-switch="notificaciones-todo" data-base-opcion="true">
+        <span class="notificaciones-opcion-titulo">Notificarme de todo</span>
+      </span>
+      <label class="switch" aria-label="Notificarme de todo" data-base-switch="true">
+        <input type="checkbox" id="notificaciones-todo">
+        <span class="slider"></span>
+      </label>
     </section>
   </main>
 
@@ -462,7 +454,7 @@
   const mensajeValidacionEl=document.getElementById('perfil-mensaje');
   const notificacionesPanel=document.getElementById('notificaciones-panel');
   const notificacionesGlobalInput=document.getElementById('notificaciones-global');
-  const notificacionesPreferencias=document.getElementById('notificaciones-preferencias');
+  const notificacionesPreferencias=notificacionesPanel;
   const notificacionesTodoInput=document.getElementById('notificaciones-todo');
   const notificacionesTitulo=document.getElementById('notificaciones-titulo');
   const notificacionesDescripcion=document.querySelector('#notificaciones-panel .notificaciones-global-descripcion');
@@ -511,7 +503,7 @@
     });
   }
   if(notificacionesPreferencias){
-    const opcionBase=notificacionesPreferencias.querySelector('.notificaciones-opcion');
+    const opcionBase=notificacionesPreferencias.querySelector('.notificaciones-opcion[data-base-opcion="true"]');
     const inputBase=opcionBase ? buscarSwitchAsociado(opcionBase) : null;
     configurarContenedorNotificaciones(opcionBase,inputBase);
   }
