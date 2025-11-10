@@ -223,12 +223,8 @@
           flex-direction:column;
           gap:12px;
       }
-      .notificaciones-preferencias.deshabilitado .notificaciones-opcion:not(.notificaciones-opcion-todo),
-      .notificaciones-preferencias.deshabilitado .notificaciones-grupo-titulo{
-          opacity:0.55;
-      }
-      .notificaciones-preferencias.deshabilitado .notificaciones-opcion:not(.notificaciones-opcion-todo){
-          cursor:not-allowed;
+      .notificaciones-preferencias.oculta{
+          display:none;
       }
       .notificaciones-opcion{
           display:flex;
@@ -422,17 +418,7 @@
         </label>
       </div>
       <p class="notificaciones-global-descripcion">Activa la recepción general para gestionar tus alertas.</p>
-      <div id="notificaciones-preferencias" class="notificaciones-preferencias" aria-disabled="true">
-        <div class="notificaciones-opcion notificaciones-opcion-todo">
-          <div class="notificaciones-opcion-texto">
-            <span class="notificaciones-opcion-titulo">Notificarme de todo</span>
-          </div>
-          <label class="switch" aria-label="Notificarme de todo">
-            <input type="checkbox" id="notificaciones-todo">
-            <span class="slider"></span>
-          </label>
-        </div>
-      </div>
+      <div id="notificaciones-preferencias" class="notificaciones-preferencias oculta" aria-hidden="true"></div>
     </section>
   </main>
 
@@ -470,7 +456,6 @@
   const notificacionesPanel=document.getElementById('notificaciones-panel');
   const notificacionesGlobalInput=document.getElementById('notificaciones-global');
   const notificacionesPreferencias=document.getElementById('notificaciones-preferencias');
-  const notificacionesTodoInput=document.getElementById('notificaciones-todo');
   const notificacionesTitulo=document.getElementById('notificaciones-titulo');
   const notificacionesDescripcion=document.querySelector('#notificaciones-panel .notificaciones-global-descripcion');
   if(notificacionesTitulo){
@@ -496,8 +481,14 @@
     }
   }
   if(notificacionesGlobalInput){
-    actualizarIndicadoresNotificaciones();
-    notificacionesGlobalInput.addEventListener('change',actualizarIndicadoresNotificaciones);
+    const actualizarCambioGlobal=()=>{
+      actualizarIndicadoresNotificaciones();
+      actualizarVisibilidadPreferencias();
+    };
+    actualizarCambioGlobal();
+    notificacionesGlobalInput.addEventListener('change',actualizarCambioGlobal);
+  }else{
+    actualizarVisibilidadPreferencias();
   }
   if(notificacionesTitulo){
     notificacionesTitulo.addEventListener('click',alternarNotificacionesGlobal);
@@ -520,7 +511,6 @@
   configurarContenedorNotificaciones(notificacionesPreferencias ? notificacionesPreferencias.querySelector('.notificaciones-opcion') : null);
   let desuscribirNotificaciones=null;
   let gruposNotificacionesDisponibles=[];
-  let notificacionesGlobalInicializado=false;
 
   nombreInput.placeholder='Nombre';
   apellidoInput.placeholder='Apellido';
@@ -534,63 +524,7 @@
 
   const camposObligatorios=[nombreInput,apellidoInput,aliasInput,celularInput].filter(Boolean);
 
-  if(notificacionesGlobalInput){
-    notificacionesGlobalInput.addEventListener('change',()=>{
-      notificacionesGlobalInput.dataset.manual='true';
-      actualizarEstadoPreferencias();
-      if(notificacionesPreferencias){
-        const habilitado=notificacionesGlobalInput.checked;
-        const dinamicos=notificacionesPreferencias.querySelectorAll('.notificaciones-opcion[data-clave] input[type="checkbox"]');
-        dinamicos.forEach(input=>{ input.disabled=!habilitado; });
-        if(notificacionesTodoInput){
-          const clavesDisponibles=notificacionesPreferencias.querySelectorAll('.notificaciones-opcion[data-clave]').length;
-          notificacionesTodoInput.disabled=!clavesDisponibles;
-        }
-      }
-    });
-  }
-
-  if(notificacionesTodoInput){
-    notificacionesTodoInput.addEventListener('change',async()=>{
-      if(!window.notificationCenter){
-        notificacionesTodoInput.checked=false;
-        return;
-      }
-      const activar=notificacionesTodoInput.checked;
-      notificacionesTodoInput.disabled=true;
-      try{
-        const configuracionActual=window.notificationCenter.obtenerConfiguracion();
-        const globalYaActivo=Boolean(configuracionActual && configuracionActual.global);
-        if(activar && !globalYaActivo){
-          const resultado=await window.notificationCenter.actualizarGlobal(true);
-          if(resultado!=='granted'){
-            notificacionesTodoInput.checked=false;
-            return;
-          }
-          if(notificacionesGlobalInput){
-            notificacionesGlobalInput.checked=true;
-            notificacionesGlobalInput.dataset.manual='false';
-          }
-        }
-        const configuracionPosterior=window.notificationCenter.obtenerConfiguracion();
-        await actualizarPreferenciasMasivas(activar,configuracionPosterior);
-      }catch(err){
-        console.error('No se pudo actualizar las preferencias de notificaciones',err);
-        notificacionesTodoInput.checked=!activar;
-      }finally{
-        const configuracionFinal=window.notificationCenter ? window.notificationCenter.obtenerConfiguracion() : null;
-        const clavesDisponibles=obtenerClavesPreferencias(configuracionFinal,gruposNotificacionesDisponibles);
-        const globalHabilitado=Boolean(configuracionFinal && configuracionFinal.global);
-        notificacionesTodoInput.disabled=!clavesDisponibles.length;
-        if(!globalHabilitado && notificacionesTodoInput.checked){
-          notificacionesTodoInput.checked=false;
-        }
-        actualizarEstadoPreferencias();
-      }
-    });
-  }
-
-  actualizarEstadoPreferencias();
+  actualizarVisibilidadPreferencias();
 
   if(typeof hasWindow==='function' && hasWindow() && typeof window.addEventListener==='function'){
     window.addEventListener('beforeunload',()=>{
@@ -616,36 +550,11 @@
     return Array.from(claves);
   }
 
-  function estanTodasLasPreferenciasActivas(config,grupos){
-    if(!config || !config.preferencias) return false;
-    if(!config.global) return false;
-    const claves=obtenerClavesNotificacionesDisponibles(grupos);
-    if(!claves.length) return false;
-    return claves.every(clave=>Boolean(config.preferencias[clave]));
-  }
-
-  function obtenerClavesPreferencias(config,grupos){
-    const clavesGrupos=obtenerClavesNotificacionesDisponibles(grupos);
-    if(clavesGrupos.length) return clavesGrupos;
-    if(config && config.preferencias){
-      const clavesConfiguracion=Object.keys(config.preferencias);
-      if(clavesConfiguracion.length) return clavesConfiguracion;
-    }
-    return [];
-  }
-
-  async function actualizarPreferenciasMasivas(valor,config){
-    if(!window.notificationCenter) return;
-    const claves=obtenerClavesPreferencias(config,gruposNotificacionesDisponibles);
-    if(!claves.length) return;
-    await Promise.all(claves.map(clave=>window.notificationCenter.actualizarPreferencia(clave,valor)));
-  }
-
-  function actualizarEstadoPreferencias(){
+  function actualizarVisibilidadPreferencias(){
     if(!notificacionesPreferencias) return;
-    const habilitado=!notificacionesGlobalInput || notificacionesGlobalInput.checked;
-    notificacionesPreferencias.classList.toggle('deshabilitado',!habilitado);
-    notificacionesPreferencias.setAttribute('aria-disabled',habilitado?'false':'true');
+    const visible=!notificacionesGlobalInput || notificacionesGlobalInput.checked;
+    notificacionesPreferencias.classList.toggle('oculta',!visible);
+    notificacionesPreferencias.setAttribute('aria-hidden',visible?'false':'true');
   }
 
   function generarIdSwitch(sufijo){
@@ -701,7 +610,7 @@
     });
   }
 
-  function renderizarOpcionesNotificaciones(config,grupos,globalActivo){
+  function renderizarOpcionesNotificaciones(config,grupos){
     if(!notificacionesPreferencias) return;
     limpiarOpcionesNotificaciones();
     if(!Array.isArray(grupos) || !grupos.length){
@@ -742,7 +651,6 @@
         input.type='checkbox';
         input.id=inputId;
         input.checked=Boolean(preferencias[item.clave]);
-        input.disabled=!globalActivo;
         input.addEventListener('change',async()=>{
           if(!window.notificationCenter) return;
           const valor=input.checked;
@@ -754,8 +662,7 @@
             input.checked=!valor;
           }finally{
             if(document.body.contains(input)){
-              const globalHabilitado=Boolean(notificacionesGlobalInput && notificacionesGlobalInput.checked);
-              input.disabled=!globalHabilitado;
+              input.disabled=false;
             }
           }
         });
@@ -783,30 +690,8 @@
       return;
     }
     notificacionesPanel.style.display='block';
-    const globalActivo=Boolean(config.global);
-    if(notificacionesGlobalInput){
-      const fueInicializado=notificacionesGlobalInicializado;
-      const esManual=notificacionesGlobalInput.dataset.manual==='true';
-      if(!fueInicializado || !esManual){
-        notificacionesGlobalInput.checked=globalActivo;
-        notificacionesGlobalInput.dataset.manual='false';
-        notificacionesGlobalInicializado=true;
-      }else if(!globalActivo && notificacionesGlobalInput.checked){
-        notificacionesGlobalInput.checked=false;
-        notificacionesGlobalInput.dataset.manual='false';
-      }
-    }
-    if(notificacionesTodoInput){
-      const clavesDisponibles=obtenerClavesNotificacionesDisponibles(grupos);
-      const todasActivas=estanTodasLasPreferenciasActivas(config,grupos);
-      notificacionesTodoInput.checked=todasActivas;
-      notificacionesTodoInput.disabled=!clavesDisponibles.length;
-      if(!globalActivo && notificacionesTodoInput.checked){
-        notificacionesTodoInput.checked=false;
-      }
-    }
-    renderizarOpcionesNotificaciones(config,grupos,globalActivo);
-    actualizarEstadoPreferencias();
+    renderizarOpcionesNotificaciones(config,grupos);
+    actualizarVisibilidadPreferencias();
   }
 
   async function inicializarNotificacionesPerfil(role){
