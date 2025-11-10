@@ -184,10 +184,15 @@
       this.resetReady();
     }
 
-    resetReady(){
-      this.readyPromise = new Promise(resolve => {
-        this.readyResolver = resolve;
-      });
+    resetReady(pendiente = false){
+      if(pendiente){
+        this.readyPromise = new Promise(resolve => {
+          this.readyResolver = resolve;
+        });
+      }else{
+        this.readyPromise = Promise.resolve();
+        this.readyResolver = ()=>{};
+      }
     }
 
     cuandoListo(){
@@ -221,7 +226,7 @@
       const mismo = this.usuario && this.usuario.email === user.email && this.rol === role;
       if(mismo) return this.cuandoListo();
       this.desvincularUsuario();
-      this.resetReady();
+      this.resetReady(true);
       this.usuario = user;
       this.rol = role;
       try{
