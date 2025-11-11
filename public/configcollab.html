@@ -263,7 +263,67 @@
   <script src="js/notificationPanelSetup.js"></script>
   <script>
     ensureAuth('Colaborador');
-    const panelNotificacionesColaborador = setupNotificationPanel({ rol: 'Colaborador' });
+    let panelNotificacionesColaborador=null;
+    let rolNotificacionesActual=null;
+    function configurarPanelNotificaciones(rolDestino){
+      if(typeof setupNotificationPanel!=='function') return;
+      const rolNormalizado=(rolDestino||'Colaborador').toString();
+      if(rolNotificacionesActual===rolNormalizado && panelNotificacionesColaborador){
+        return;
+      }
+      if(panelNotificacionesColaborador && typeof panelNotificacionesColaborador.cleanup==='function'){
+        try{ panelNotificacionesColaborador.cleanup(); }
+        catch(error){ console.error('No se pudo limpiar el panel de notificaciones previo',error); }
+      }
+      panelNotificacionesColaborador=setupNotificationPanel({rol:rolNormalizado});
+      rolNotificacionesActual=rolNormalizado;
+    }
+    const botonVolver=document.getElementById('volver-btn');
+    if(botonVolver){
+      botonVolver.addEventListener('click',()=>{window.location.href='collab.html';});
+    }
+    function vincularEventosAuthCollab(){
+      if(!auth || typeof auth.onAuthStateChanged!=='function'){
+        return false;
+      }
+      auth.onAuthStateChanged(async user=>{
+        if(user){
+          const foto=document.getElementById('user-pic');
+          if(foto){
+            foto.src=user.photoURL;
+          }
+          const enlaceSalir=document.getElementById('logout-link');
+          if(enlaceSalir && !enlaceSalir.dataset.logoutBound){
+            enlaceSalir.addEventListener('click',e=>{e.preventDefault(); logout();});
+            enlaceSalir.dataset.logoutBound='true';
+          }
+          let rolActual=window.currentRole;
+          if(!rolActual){
+            try{
+              const infoRol=await getUserRole(user,{createIfMissing:false});
+              rolActual=infoRol?.role;
+            }catch(error){
+              console.error('No se pudo determinar el rol del usuario para notificaciones',error);
+            }
+          }
+          configurarPanelNotificaciones(rolActual||'Colaborador');
+        }else{
+          rolNotificacionesActual=null;
+          if(panelNotificacionesColaborador && typeof panelNotificacionesColaborador.cleanup==='function'){
+            try{ panelNotificacionesColaborador.cleanup(); }
+            catch(error){ console.error('No se pudo limpiar el panel de notificaciones',error); }
+          }
+          panelNotificacionesColaborador=null;
+        }
+      });
+      return true;
+    }
+    if(!vincularEventosAuthCollab()){
+      initFirebase()
+        .then(()=>{ vincularEventosAuthCollab(); })
+        .catch(error=>{ console.error('No se pudo vincular los eventos de autenticación en configcollab',error); });
+    }
   </script>
+  <script src="js/backNavigation.js"></script>
 </body>
 </html>
