@@ -585,6 +585,144 @@
       #tabla-asignacion col:nth-child(4) { width: calc(18% - 4px); }
       #tabla-asignacion col:nth-child(5) { width: calc(18% - 4px); }
     }
+
+    .notificaciones-panel {
+      width: 100%;
+      margin-top: 16px;
+      background: rgba(255,255,255,0.88);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 10px 26px rgba(0,0,0,0.18);
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .notificaciones-fila {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      width: 100%;
+    }
+    .notificaciones-fila .notificaciones-titulo-texto {
+      margin: 0;
+      flex: 1;
+      text-align: left;
+    }
+    .notificaciones-contenido {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .notificaciones-contenido[aria-hidden="true"] {
+      display: none;
+    }
+    .notificaciones-opcion {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      width: 100%;
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #0b1b4d;
+      cursor: pointer;
+    }
+    .notificaciones-opcion-todo {
+      margin-top: 25px;
+    }
+    .notificaciones-fila-titulo {
+      cursor: pointer;
+    }
+    .notificaciones-opcion-titulo {
+      flex: 1;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+      margin: 0;
+      padding-right: 12px;
+    }
+    .notificaciones-opcion-titulo small {
+      font-weight: 400;
+      font-size: 0.78rem;
+      color: #444;
+    }
+    .notificaciones-grupo-titulo {
+      margin: 8px 0 0;
+      font-weight: 700;
+      font-size: 0.95rem;
+      text-align: left;
+      font-family: Calibri, Arial, sans-serif;
+    }
+    .notificaciones-grupo-titulo.colaborador {
+      color: #1b5e20;
+    }
+    .notificaciones-grupo-titulo.jugador {
+      color: #FF8C00;
+    }
+    .notificaciones-grupo-titulo.administrador {
+      color: #1565c0;
+    }
+    .notificaciones-titulo-texto {
+      font-family: 'Bangers', cursive;
+      font-size: 1.3rem;
+      color: #0b1b4d;
+      margin: 0;
+      cursor: pointer;
+      padding-right: 12px;
+    }
+    .notificaciones-titulo-texto:focus {
+      outline: 2px solid #0a8800;
+      outline-offset: 2px;
+    }
+    .notificaciones-todo-etiqueta {
+      color: #000000;
+      font-weight: 700;
+    }
+    .notificaciones-panel .switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 26px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .notificaciones-panel .switch input {
+      display: none;
+    }
+    .notificaciones-panel .switch .slider {
+      position: absolute;
+      inset: 0;
+      background: #cccccc;
+      border-radius: 26px;
+      transition: background 0.3s ease;
+    }
+    .notificaciones-panel .switch .slider::before {
+      content: "";
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      left: 2px;
+      top: 2px;
+      background: #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+      transition: transform 0.3s ease;
+    }
+    .notificaciones-panel .switch input:checked + .slider {
+      background: #4caf50;
+    }
+    .notificaciones-panel .switch input:checked + .slider::before {
+      transform: translateX(22px);
+    }
+    .notificaciones-panel .switch input:focus + .slider {
+      outline: 2px solid #0a8800;
+      outline-offset: 2px;
+    }
   </style>
 </head>
 <body>
@@ -626,6 +764,24 @@
       <button id="editar-btn" class="icon-btn" title="Editar" style="color:green;">&#9998; Editar</button>
       <button id="borrar-btn" class="icon-btn" title="Borrar" style="color:red;">&#128465; Borrar</button>
     </div>
+    <section id="notificaciones-panel" class="notificaciones-panel" aria-labelledby="notificaciones-titulo">
+      <div class="notificaciones-fila notificaciones-fila-titulo" data-switch="notificaciones-global">
+        <span id="notificaciones-titulo" class="notificaciones-titulo-texto" data-switch="notificaciones-global">Notificaciones</span>
+        <label class="switch switch-base" aria-labelledby="notificaciones-titulo">
+          <input type="checkbox" id="notificaciones-global">
+          <span class="slider" aria-hidden="true"></span>
+        </label>
+      </div>
+      <div id="notificaciones-contenido" class="notificaciones-contenido" aria-hidden="true">
+        <div class="notificaciones-opcion notificaciones-opcion-todo notificaciones-fila" data-switch="notificaciones-todo" data-base-opcion="true">
+          <span class="notificaciones-opcion-titulo notificaciones-todo-etiqueta">Notificarme de todo</span>
+          <label class="switch switch-base" aria-label="Notificarme de todo" data-base-switch="true">
+            <input type="checkbox" id="notificaciones-todo">
+            <span class="slider" aria-hidden="true"></span>
+          </label>
+        </div>
+      </div>
+    </section>
     <table id="bancos-table">
       <thead>
         <tr>
@@ -721,8 +877,10 @@
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/notificationCenter.js"></script>
+  <script src="js/notificationPanelSetup.js"></script>
   <script>
     ensureAuth('Administrador');
+    const panelNotificacionesAdministrador = setupNotificationPanel({ rol: 'Administrador' });
     const datos = [];
     const tbody = document.querySelector('#bancos-table tbody');
 
