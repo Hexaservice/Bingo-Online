@@ -764,24 +764,6 @@
       <button id="editar-btn" class="icon-btn" title="Editar" style="color:green;">&#9998; Editar</button>
       <button id="borrar-btn" class="icon-btn" title="Borrar" style="color:red;">&#128465; Borrar</button>
     </div>
-    <section id="notificaciones-panel" class="notificaciones-panel" aria-labelledby="notificaciones-titulo">
-      <div class="notificaciones-fila notificaciones-fila-titulo" data-switch="notificaciones-global">
-        <span id="notificaciones-titulo" class="notificaciones-titulo-texto" data-switch="notificaciones-global">Notificaciones</span>
-        <label class="switch switch-base" aria-labelledby="notificaciones-titulo">
-          <input type="checkbox" id="notificaciones-global">
-          <span class="slider" aria-hidden="true"></span>
-        </label>
-      </div>
-      <div id="notificaciones-contenido" class="notificaciones-contenido" aria-hidden="true">
-        <div class="notificaciones-opcion notificaciones-opcion-todo notificaciones-fila" data-switch="notificaciones-todo" data-base-opcion="true">
-          <span class="notificaciones-opcion-titulo notificaciones-todo-etiqueta">Notificarme de todo</span>
-          <label class="switch switch-base" aria-label="Notificarme de todo" data-base-switch="true">
-            <input type="checkbox" id="notificaciones-todo">
-            <span class="slider" aria-hidden="true"></span>
-          </label>
-        </div>
-      </div>
-    </section>
     <table id="bancos-table">
       <thead>
         <tr>
@@ -872,6 +854,24 @@
       <button type="button" id="guardar-link-whatsapp">Guardar</button>
     </div>
   </section>
+  <section id="notificaciones-panel" class="notificaciones-panel" aria-labelledby="notificaciones-titulo">
+    <div class="notificaciones-fila notificaciones-fila-titulo" data-switch="notificaciones-global">
+      <span id="notificaciones-titulo" class="notificaciones-titulo-texto" data-switch="notificaciones-global">Notificaciones</span>
+      <label class="switch switch-base" aria-labelledby="notificaciones-titulo">
+        <input type="checkbox" id="notificaciones-global">
+        <span class="slider" aria-hidden="true"></span>
+      </label>
+    </div>
+    <div id="notificaciones-contenido" class="notificaciones-contenido" aria-hidden="true">
+      <div class="notificaciones-opcion notificaciones-opcion-todo notificaciones-fila" data-switch="notificaciones-todo" data-base-opcion="true">
+        <span class="notificaciones-opcion-titulo notificaciones-todo-etiqueta">Notificarme de todo</span>
+        <label class="switch switch-base" aria-label="Notificarme de todo" data-base-switch="true">
+          <input type="checkbox" id="notificaciones-todo">
+          <span class="slider" aria-hidden="true"></span>
+        </label>
+      </div>
+    </div>
+  </section>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
@@ -880,7 +880,21 @@
   <script src="js/notificationPanelSetup.js"></script>
   <script>
     ensureAuth('Administrador');
-    const panelNotificacionesAdministrador = setupNotificationPanel({ rol: 'Administrador' });
+    let panelNotificacionesAdministrador = null;
+    let rolNotificacionesActual = null;
+    function configurarPanelNotificaciones(rolDestino){
+      if(typeof setupNotificationPanel !== 'function') return;
+      const rolNormalizado=(rolDestino||'Administrador').toString();
+      if(rolNotificacionesActual===rolNormalizado && panelNotificacionesAdministrador){
+        return;
+      }
+      if(panelNotificacionesAdministrador && typeof panelNotificacionesAdministrador.cleanup==='function'){
+        try{ panelNotificacionesAdministrador.cleanup(); }
+        catch(error){ console.error('No se pudo limpiar el panel de notificaciones previo',error); }
+      }
+      panelNotificacionesAdministrador=setupNotificationPanel({rol:rolNormalizado});
+      rolNotificacionesActual=rolNormalizado;
+    }
     const datos = [];
     const tbody = document.querySelector('#bancos-table tbody');
 
@@ -1739,12 +1753,47 @@
       if(typeof unsubscribeAsignacionUsuarios==='function') unsubscribeAsignacionUsuarios();
     });
     document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='admin.html';});
-    auth.onAuthStateChanged(user=>{
-      if(user){
-        document.getElementById('user-pic').src=user.photoURL;
-        document.getElementById('logout-link').addEventListener('click',e=>{e.preventDefault(); logout();});
+    function vincularEventosAuthConfiguraciones(){
+      if(!auth || typeof auth.onAuthStateChanged!=='function'){
+        return false;
       }
-    });
+      auth.onAuthStateChanged(async user=>{
+        if(user){
+          const foto=document.getElementById('user-pic');
+          if(foto){
+            foto.src=user.photoURL;
+          }
+          const enlaceSalir=document.getElementById('logout-link');
+          if(enlaceSalir && !enlaceSalir.dataset.logoutBound){
+            enlaceSalir.addEventListener('click',e=>{e.preventDefault(); logout();});
+            enlaceSalir.dataset.logoutBound='true';
+          }
+          let rolActual=window.currentRole;
+          if(!rolActual){
+            try{
+              const infoRol=await getUserRole(user,{createIfMissing:false});
+              rolActual=infoRol?.role;
+            }catch(error){
+              console.error('No se pudo determinar el rol del usuario para notificaciones',error);
+            }
+          }
+          configurarPanelNotificaciones(rolActual||'Administrador');
+        }else{
+          rolNotificacionesActual=null;
+          if(panelNotificacionesAdministrador && typeof panelNotificacionesAdministrador.cleanup==='function'){
+            try{ panelNotificacionesAdministrador.cleanup(); }
+            catch(error){ console.error('No se pudo limpiar el panel de notificaciones',error); }
+          }
+          panelNotificacionesAdministrador=null;
+        }
+      });
+      return true;
+    }
+    if(!vincularEventosAuthConfiguraciones()){
+      initFirebase()
+        .then(()=>{ vincularEventosAuthConfiguraciones(); })
+        .catch(error=>{ console.error('No se pudo vincular los eventos de autenticación en configuraciones',error); });
+    }
   </script>
   <script src="js/backNavigation.js"></script>
 </body>
