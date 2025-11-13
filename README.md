@@ -26,10 +26,53 @@ Este script creará las entradas en la colección `users` y actualizará los rol
 
 Para almacenar las imágenes de los sorteos se utiliza **Firebase Cloud Storage**. El servicio auxiliar (`uploadServer.js`) guarda los archivos en el bucket configurado y devuelve la URL pública. Además expone el endpoint `/toggleUser` utilizado en la página de gestión de usuarios para habilitar o deshabilitar cuentas.
 
+### Integración con SendGrid para alertas por correo
+
+Sigue estos pasos para preparar el envío de correos transaccionales con SendGrid desde el backend Node.js:
+
+1. **Crear la cuenta y la API Key**
+   - Regístrate en [https://sendgrid.com](https://sendgrid.com) y valida la dirección remitente (Single Sender) o el dominio desde donde se enviarán los correos.
+   - En el panel de SendGrid crea una API Key con permisos de `Mail Send`. Copia el valor generado.
+
+2. **Guardar las credenciales en variables de entorno**
+   - Define la variable `SENDGRID_API_KEY` con la clave obtenida y, opcionalmente, `SENDGRID_FROM_EMAIL` con la dirección verificada que actuará como remitente predeterminado. Puedes almacenarlas en un archivo `.env` en la raíz del proyecto junto con el resto de credenciales:
+
+     ```
+     GOOGLE_APPLICATION_CREDENTIALS=/ruta/al/serviceAccountKey.json
+     FIREBASE_STORAGE_BUCKET=bingo-online.appspot.com
+     SENDGRID_API_KEY=SG.xxxxxx
+     SENDGRID_FROM_EMAIL=notificaciones@tudominio.com
+     ```
+
+   - Recuerda que el archivo `.env` es privado y no debe subirse al repositorio.
+
+3. **Instalar el SDK oficial**
+   - Desde la raíz del proyecto ejecuta:
+
+     ```bash
+     npm install @sendgrid/mail
+     ```
+
+   - El comando añadirá la dependencia a `package.json` y `package-lock.json`.
+
+4. **Configurar un módulo de envío**
+   - Crea un archivo como `services/email.js` que importe `@sendgrid/mail`, inicialice el cliente con `process.env.SENDGRID_API_KEY` y exporte funciones para enviar correos.
+   - Define el remitente con `sgMail.setFrom('notificaciones@tudominio.com')` y construye funciones reutilizables como `enviarAlerta({ to, subject, html, text })`.
+
+5. **Invocar el servicio cuando ocurra un evento**
+   - Identifica los flujos (p. ej. activación de sorteos o avisos administrativos) y, tras verificar las preferencias del usuario, llama al módulo `services/email` para enviar el mensaje correspondiente.
+
+6. **Probar y monitorear**
+   - Envía mensajes a direcciones de prueba antes de pasar a producción.
+   - Activa el *Event Webhook* de SendGrid para registrar rebotes, quejas o desuscripciones si necesitas auditoría.
+
 Antes de ejecutarlo asegúrese de:
 
 - Definir la variable de entorno `GOOGLE_APPLICATION_CREDENTIALS` apuntando al archivo de claves del servicio.
 - Definir la variable `FIREBASE_STORAGE_BUCKET` con el nombre del bucket de Storage del proyecto.
+- Definir la variable `SENDGRID_API_KEY` con la clave generada en SendGrid para habilitar el envío de correos.
+
+Puede cargar estas variables desde un archivo `.env` en la raíz del proyecto. Este archivo es local y debe mantenerse fuera del control de versiones.
 
 Este servidor requiere privilegios de administrador de Firebase, por lo que es necesario definir las credenciales antes de iniciarlo. Luego inicie el servicio con:
 
