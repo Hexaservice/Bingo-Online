@@ -405,6 +405,45 @@
     initServerTime();
     const transacciones=[];
     let porcentajeRetiro=0, porcentajeAdministra=0;
+    let creditosTotales=0, creditosTransito=0, creditosDisponibles=0;
+
+    function toNumberSafe(valor, defecto=0){
+      const numero=parseFloat(valor);
+      return Number.isFinite(numero)?numero:defecto;
+    }
+
+    function formatearMontoPantalla(valor){
+      const numero=toNumberSafe(valor,0);
+      return numero.toFixed(2).replace(/\.00$/,'').replace(/(\.\d)0$/,'$1');
+    }
+
+    function actualizarResumenCreditos(data){
+      const total=toNumberSafe(data?.creditos,0);
+      const enTransito=Math.max(0,toNumberSafe(data?.creditostransito,0));
+      const disponibles=Math.max(0,total-enTransito);
+      creditosTotales=total;
+      creditosTransito=enTransito;
+      creditosDisponibles=disponibles;
+      const valorEl=document.getElementById('creditos-valor');
+      if(valorEl){
+        valorEl.textContent=formatearMontoPantalla(disponibles);
+        valorEl.className=disponibles>0?'verde':'rojo';
+        valorEl.dataset.total=total.toString();
+        valorEl.dataset.transito=enTransito.toString();
+        valorEl.dataset.disponibles=disponibles.toString();
+      }
+      return disponibles;
+    }
+
+    async function refrescarResumenBilletera(){
+      const user=auth.currentUser;
+      if(!user) return;
+      const billeteraRef=db.collection('Billetera').doc(user.email);
+      const snap=await billeteraRef.get();
+      if(snap.exists){
+        actualizarResumenCreditos(snap.data()||{});
+      }
+    }
 
     function cargarBancosBilletera(){
       db.collection('Bancos').where('categoria','==','Jugadores').where('estado','==','Activo').onSnapshot(snap=>{
@@ -534,9 +573,7 @@
         const doc = await billeteraRef.get();
         if(doc.exists){
           const data = doc.data();
-          const valorEl=document.getElementById('creditos-valor');
-          valorEl.textContent=data.creditos||0;
-          valorEl.className=data.creditos>0?'verde':'rojo';
+          actualizarResumenCreditos(data);
           document.getElementById('cartones-valor').textContent = data.CartonesGratis || 0;
           const cedulaEl=document.getElementById('cedula');
           cedulaEl.value=normalizarSoloNumeros(data.cedula);
@@ -551,9 +588,8 @@
           }
           document.getElementById('banco-retiro').textContent = 'Banco donde recibirás: '+(data.banco||'');
         } else {
-          await billeteraRef.set({creditos:0, CartonesGratis:0});
-          document.getElementById('creditos-valor').textContent='0';
-          document.getElementById('creditos-valor').className='rojo';
+          await billeteraRef.set({creditos:0, CartonesGratis:0, creditostransito:0});
+          actualizarResumenCreditos({creditos:0, creditostransito:0});
           document.getElementById('cartones-valor').textContent='0';
           document.getElementById('banco-retiro').textContent='Banco donde recibirás:';
         }
@@ -880,10 +916,11 @@
     async function ejecutarRetiro(monto,montoFinal){
       const user=auth.currentUser;
       await initServerTime();
-      const docB=await db.collection('Billetera').doc(user.email).get();
+      const billeteraRef=db.collection('Billetera').doc(user.email);
+      const transaccionRef=db.collection('transacciones').doc();
       const data={
         tipotrans:'retiro',
-        bancoreceptor: docB.exists?(docB.data().banco||''):'',
+        bancoreceptor:'',
         MontoSolicitado:monto,
         Monto:montoFinal,
         referencia:'',
@@ -898,7 +935,32 @@
         horagestion:'',
         nota:''
       };
-      await db.collection('transacciones').add(data);
+      try{
+        await db.runTransaction(async tx=>{
+          const billeteraSnap=await tx.get(billeteraRef);
+          const billeteraData=billeteraSnap.exists?(billeteraSnap.data()||{}):{};
+          const bancoSeleccionado=(billeteraData.banco||'').toString();
+          const creditosActual=toNumberSafe(billeteraData.creditos,0);
+          const transitoActual=Math.max(0,toNumberSafe(billeteraData.creditostransito,0));
+          const disponibles=Math.max(0,creditosActual-transitoActual);
+          if(monto>disponibles){
+            throw new Error('CREDITOS_INSUFICIENTES');
+          }
+          const nuevoTransito=transitoActual+monto;
+          if(!data.bancoreceptor){
+            data.bancoreceptor=bancoSeleccionado;
+          }
+          tx.set(billeteraRef,{creditostransito:nuevoTransito},{merge:true});
+          tx.set(transaccionRef,data);
+        });
+      }catch(error){
+        if(error?.message==='CREDITOS_INSUFICIENTES'){
+          throw new Error('CREDITOS_INSUFICIENTES');
+        }
+        console.error('No se pudo registrar el retiro',error);
+        throw error;
+      }
+      await refrescarResumenBilletera();
       alert('Solicitud enviada, una vez validada se transferirá a tu pago móvil');
       limpiarCamposTransaccion('retiro');
       cargarTransacciones();
@@ -909,12 +971,20 @@
       const montoStr=document.getElementById('monto-retiro').value.trim();
       const monto=parseFloat(montoStr);
       if(!montoStr || isNaN(monto) || monto<=0){alert('Ingrese un monto válido');document.getElementById('monto-retiro').focus();return;}
-      const creditos=parseFloat(document.getElementById('creditos-valor').textContent) || 0;
-      if(monto>creditos){ alert('El monto supera los créditos disponibles'); return; }
+      if(monto>creditosDisponibles){ alert(`El monto supera los créditos disponibles (${formatearMontoPantalla(creditosDisponibles)})`); return; }
       const montoFinal=monto - (monto*porcentajeRetiro/100) - (monto*porcentajeAdministra/100);
       document.getElementById('monto-retiro-neto').value = montoFinal>0 ? montoFinal.toFixed(2) : '';
       if(await confirm(`¿Confirmas la solicitud de retiro por ${montoFinal.toFixed(2)}?`)){
-        await ejecutarRetiro(monto,montoFinal);
+        try{
+          await ejecutarRetiro(monto,montoFinal);
+        }catch(error){
+          if(error?.message==='CREDITOS_INSUFICIENTES'){
+            await refrescarResumenBilletera();
+            alert('El saldo disponible cambió. Inténtalo nuevamente.');
+          }else{
+            alert('No se pudo registrar la solicitud de retiro. Inténtalo nuevamente.');
+          }
+        }
       }
     });
 
@@ -951,6 +1021,7 @@
         toggle.checked=true;
       }
       actualizarVisibilidad();
+      toggleT.checked=true;
       visTrans();
       if(debeAbrirDatos){
         setTimeout(()=>{
