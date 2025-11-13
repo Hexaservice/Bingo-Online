@@ -539,8 +539,23 @@
       font-size:1.5rem;
       display:inline-block;
       animation:pulse 1s infinite;
+      color:#333;
+      text-shadow:0 0 5px green;
+      cursor:pointer;
+      border-bottom:1px dashed transparent;
+      outline:none;
     }
-    #creditos-label{color:#333;text-shadow:0 0 5px green;}
+    #creditos-label:hover{border-bottom-color:#0b3d91;}
+    #creditos-label:focus-visible{border-bottom-color:#0b3d91;box-shadow:0 0 0 2px rgba(11,61,145,0.3);border-radius:4px;}
+    #creditos-modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;padding:15px;z-index:4000;}
+    #creditos-modal.visible{display:flex;}
+    .creditos-modal__box{background:#fff;padding:20px;border-radius:12px;max-width:320px;width:100%;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,0.2);font-family:'Poppins',sans-serif;}
+    .creditos-modal__titulo{margin:0 0 12px;font-size:1.2rem;color:#0b3d91;font-weight:bold;}
+    .creditos-modal__disponibles{margin:6px 0;font-size:1.1rem;font-weight:bold;color:#064d1f;}
+    .creditos-modal__retenidos{margin:6px 0;font-size:1.05rem;font-weight:bold;color:#a05000;}
+    .creditos-modal__nota{margin:10px 0 18px;font-size:0.72rem;color:#000;}
+    .creditos-modal__cerrar{font-family:'Bangers',cursive;background:linear-gradient(#0a8800,#11a000);color:#fff;border:2px solid #ffd700;border-radius:6px;padding:8px 22px;cursor:pointer;text-transform:uppercase;letter-spacing:1px;box-shadow:0 4px 10px rgba(0,0,0,0.2);}
+    .creditos-modal__cerrar:hover{filter:brightness(1.1);}
     .credit-icon{color:white;font-weight:bold;text-shadow:0 0 5px lime;}
     .action-btn{
       font-family:'Bangers',cursive;
@@ -711,7 +726,7 @@
         <input type="text" id="alias-jugador" readonly placeholder="Alias">
         <button id="editar-alias" onclick="window.location.href='perfil.html'"><img src="img/boton-perfiles300p.png" alt="Editar perfil"><span class="perfil-btn-label">PERFIL</span></button>
       </div>
-        <div class="wallet-row"><strong><span class="credit-icon">$</span> Créditos:</strong> <span id="creditos-label">0</span></div>
+        <div class="wallet-row"><strong><span class="credit-icon">$</span> Créditos:</strong> <span id="creditos-label" role="button" tabindex="0" aria-label="Ver detalle de créditos disponibles">0</span></div>
         <div class="wallet-row"><strong><img src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" class="carton-icon" alt="Cartón"> gratis:</strong> <span id="gratis-label">0</span></div>
         <button id="azar-btn" class="action-btn" title="Cargar jugadas al azar"><img src="https://api.iconify.design/mdi/dice-5.svg" class="carton-icon" alt="Azar"></button>
         <button id="limpiar-btn" class="action-btn" title="Limpiar cartón"><img src="https://api.iconify.design/mdi/broom.svg" class="carton-icon" alt="Limpiar"></button>
@@ -819,6 +834,16 @@
           <button type="button" id="datos-bancarios-ir" class="datos-bancarios-boton">GUARDAR DATOS BANCARIOS</button>
       </div>
   </div>
+  <div id="creditos-modal" aria-hidden="true">
+    <div class="creditos-modal__box" role="dialog" aria-modal="true" aria-labelledby="creditos-modal-titulo">
+      <h2 id="creditos-modal-titulo" class="creditos-modal__titulo">Detalle de créditos</h2>
+      <p class="creditos-modal__disponibles">Créditos disponibles: <span id="creditos-modal-disponibles">0</span></p>
+      <p class="creditos-modal__retenidos">Créditos retenidos: <span id="creditos-modal-retenidos">0</span></p>
+      <p class="creditos-modal__nota">Los créditos retenidos son todos aquellos que has solicitado para Retiro y no han sido transferidos a tu entidad bancaria.</p>
+      <button type="button" id="creditos-modal-cerrar" class="creditos-modal__cerrar">Aceptar</button>
+    </div>
+  </div>
+
   <div id="carton-confirm-modal" class="carton-modal-overlay" aria-hidden="true" role="dialog" aria-modal="true">
       <div class="carton-modal-card" id="carton-modal-card" role="document">
           <div class="carton-modal-header">
@@ -899,8 +924,15 @@
   let datosBancariosCompletos=false;
   let billeteraDatosCache=null;
   let billeteraDatosExiste=false;
+  let creditosDisponiblesActuales=0;
+  let creditosRetenidosActuales=0;
   const datosBancariosModal=document.getElementById('datos-bancarios-modal');
   const datosBancariosIrBtn=document.getElementById('datos-bancarios-ir');
+  const creditosModal=document.getElementById('creditos-modal');
+  const creditosModalDisponibles=document.getElementById('creditos-modal-disponibles');
+  const creditosModalRetenidos=document.getElementById('creditos-modal-retenidos');
+  const creditosModalCerrar=document.getElementById('creditos-modal-cerrar');
+  const creditosLabelEl=document.getElementById('creditos-label');
   const cartonModalOverlay=document.getElementById('carton-confirm-modal');
   const cartonModalCard=document.getElementById('carton-modal-card');
   const cartonModalHeaderIcons=document.getElementById('carton-modal-header-icons');
@@ -956,7 +988,9 @@
     const billeteraDoc=await billeteraRef.get();
     billeteraDatosExiste=billeteraDoc.exists;
     billeteraDatosCache=billeteraDoc.exists?(billeteraDoc.data()||{}):{};
+    billeteraDatosCache.creditostransito=toNumberSafe(billeteraDatosCache.creditostransito,0);
     datosBancariosCompletos=datosBancariosEstanCompletos(billeteraDatosCache);
+    aplicarResumenCreditos(prepararResumenCreditos(billeteraDatosCache));
     return {data:billeteraDatosCache,exists:billeteraDatosExiste};
   }
 
@@ -973,6 +1007,30 @@
   let cartonModalWalletHandler=null;
   let cartonRegistroEnProceso=false;
   let cartonToastTimeout=null;
+
+  function abrirModalCreditos(){
+    if(!creditosModal) return;
+    creditosModal.classList.add('visible');
+    creditosModal.setAttribute('aria-hidden','false');
+    if(creditosModalDisponibles){
+      creditosModalDisponibles.textContent=formatearCreditos(creditosDisponiblesActuales);
+    }
+    if(creditosModalRetenidos){
+      creditosModalRetenidos.textContent=formatearCreditos(creditosRetenidosActuales);
+    }
+    if(creditosModalCerrar){
+      creditosModalCerrar.focus();
+    }
+  }
+
+  function cerrarModalCreditos(){
+    if(!creditosModal) return;
+    creditosModal.classList.remove('visible');
+    creditosModal.setAttribute('aria-hidden','true');
+    if(creditosLabelEl){
+      creditosLabelEl.focus();
+    }
+  }
 
   function crearIconoCarton(tipo){
     const span=document.createElement('span');
@@ -1120,6 +1178,31 @@
       }
     });
   }
+  if(creditosLabelEl){
+    creditosLabelEl.addEventListener('click',abrirModalCreditos);
+    creditosLabelEl.addEventListener('keydown',event=>{
+      if(event.key==='Enter' || event.key===' '){
+        event.preventDefault();
+        abrirModalCreditos();
+      }
+    });
+  }
+  if(creditosModalCerrar){
+    creditosModalCerrar.addEventListener('click',cerrarModalCreditos);
+  }
+  if(creditosModal){
+    creditosModal.addEventListener('click',event=>{
+      if(event.target===creditosModal){
+        cerrarModalCreditos();
+      }
+    });
+  }
+  document.addEventListener('keydown',event=>{
+    if(event.key==='Escape' && creditosModal && creditosModal.classList.contains('visible')){
+      event.preventDefault();
+      cerrarModalCreditos();
+    }
+  });
   if(cartonModalAccept){
     cartonModalAccept.addEventListener('click',()=>{
       const handler=cartonModalAcceptHandler;
@@ -1313,6 +1396,32 @@ function toNumberSafe(value,fallback=0){
     return Number.isFinite(num)?num:fallback;
   }
   return fallback;
+}
+
+function formatearCreditos(valor){
+  const numero=toNumberSafe(valor,0);
+  return numero.toFixed(2).replace(/\.00$/,'').replace(/(\.\d)0$/,'$1');
+}
+
+function prepararResumenCreditos(data){
+  const total=toNumberSafe(data?data.creditos:0,0);
+  const retenidos=Math.max(0,toNumberSafe(data?data.creditostransito:0,0));
+  const disponibles=Math.max(0,total-retenidos);
+  return {total, retenidos, disponibles};
+}
+
+function aplicarResumenCreditos(resumen){
+  creditosDisponiblesActuales=resumen.disponibles;
+  creditosRetenidosActuales=resumen.retenidos;
+  if(creditosLabelEl){
+    creditosLabelEl.textContent=formatearCreditos(resumen.disponibles);
+  }
+  if(creditosModalDisponibles){
+    creditosModalDisponibles.textContent=formatearCreditos(resumen.disponibles);
+  }
+  if(creditosModalRetenidos){
+    creditosModalRetenidos.textContent=formatearCreditos(resumen.retenidos);
+  }
 }
 
 function formatearEnteroEs(valor){
@@ -2064,8 +2173,11 @@ function toggleForma(idx){
 
     const billeteraRef=db.collection('Billetera').doc(user.email);
     const billeteraDoc=await billeteraRef.get();
-    const creditos=toNumberSafe(billeteraDoc.data()?.creditos,0);
-    const gratis=toNumberSafe(billeteraDoc.data()?.CartonesGratis,0);
+    const billeteraData=billeteraDoc.data()||{};
+    const creditosTotales=toNumberSafe(billeteraData.creditos,0);
+    const creditosTransitoInicial=Math.max(0,toNumberSafe(billeteraData.creditostransito,0));
+    const creditosDisponibles=Math.max(0,creditosTotales-creditosTransitoInicial);
+    const gratis=toNumberSafe(billeteraData.CartonesGratis,0);
 
     const sorteoRef=db.collection('sorteos').doc(currentSorteo);
     const sorteoDoc=await sorteoRef.get();
@@ -2118,13 +2230,13 @@ function toggleForma(idx){
     if(gratis>0 && (maxGratis<=0 || gratisJugandoJugador<maxGratis)){
       jugarGratis=true;
     }else if(gratis>0 && maxGratis>0 && gratisJugandoJugador>=maxGratis){
-      if(creditos>=valor){
+      if(creditosDisponibles>=valor){
         jugarGratis=false;
       }else{
         throw new Error('No tienes créditos suficientes.');
       }
     }else if(gratis<=0){
-      if(creditos>=valor){
+      if(creditosDisponibles>=valor){
         jugarGratis=false;
       }else{
         throw new Error('No tienes créditos suficientes.');
@@ -2169,13 +2281,15 @@ function toggleForma(idx){
         const porcentajeSuValTx=valorCartonActual*porcentajeSuTx/100;
         const paraPremioTx=valorCartonActual-porcentajeValTx-porcentajeSuValTx;
         const creditosActual=toNumberSafe(billeteraSnap.data()?.creditos,0);
+        const creditosTransitoActual=Math.max(0,toNumberSafe(billeteraSnap.data()?.creditostransito,0));
         const gratisActual=toNumberSafe(billeteraSnap.data()?.CartonesGratis,0);
         if(!Number.isFinite(creditosActual) || !Number.isFinite(gratisActual)){
           throw new Error('BILLETERA_DATOS_INVALIDOS');
         }
         let gratisUsadosTx=gratisUsadosJugador;
         let tipoCarton='pagado';
-        let creditosRestantes=creditosActual;
+        let creditosTotalesPosteriores=creditosActual;
+        let creditosDisponiblesPosteriores=Math.max(0,creditosActual-creditosTransitoActual);
         let gratisRestantes=gratisActual;
         if(jugarGratis){
           if(gratisActual<=0){
@@ -2193,8 +2307,11 @@ function toggleForma(idx){
           tx.update(sorteoRef,{cartonesgratisjugando:nuevosCartonesGratisJugando});
           tipoCarton='gratis';
           gratisRestantes=nuevosGratis;
+          creditosTotalesPosteriores=creditosActual;
+          creditosDisponiblesPosteriores=Math.max(0,creditosActual-creditosTransitoActual);
         }else{
-          if(creditosActual<valorCartonActual){
+          const disponiblesPrevios=Math.max(0,creditosActual-creditosTransitoActual);
+          if(disponiblesPrevios<valorCartonActual){
             throw new Error('SIN_CREDITOS');
           }
           const nuevosCreditos=creditosActual-valorCartonActual;
@@ -2209,7 +2326,8 @@ function toggleForma(idx){
             totalporcentaje:totalPorcentajeActual+porcentajeValTx,
             totalporcentajesu:totalPorcentajeSuActual+porcentajeSuValTx
           });
-          creditosRestantes=nuevosCreditos;
+          creditosTotalesPosteriores=nuevosCreditos;
+          creditosDisponiblesPosteriores=Math.max(0,nuevosCreditos-creditosTransitoActual);
         }
         const ultimoNumero=Number(consecutivoSnap.exists?(consecutivoSnap.data()?.ultimoNumero ?? consecutivoSnap.data()?.ultimo ?? consecutivoSnap.data()?.valor ?? 0):0);
         const siguienteNumero=Number.isFinite(ultimoNumero) && ultimoNumero>=0?ultimoNumero+1:1;
@@ -2228,12 +2346,25 @@ function toggleForma(idx){
           fecha:fechaActual,
           hora:horaActual
         });
-        return {numero:siguienteNumero, tipoCarton, creditosRestantes, gratisRestantes};
+        return {
+          numero:siguienteNumero,
+          tipoCarton,
+          creditosTotales:creditosTotalesPosteriores,
+          creditosDisponibles:creditosDisponiblesPosteriores,
+          creditosRetenidos:creditosTransitoActual,
+          gratisRestantes
+        };
       });
       actualizarNumeroCartonLocal(resultado.numero);
-      const creditosLabel=document.getElementById('creditos-label');
-      if(creditosLabel && Number.isFinite(resultado.creditosRestantes)){
-        creditosLabel.textContent=resultado.creditosRestantes;
+      aplicarResumenCreditos({
+        total:resultado.creditosTotales,
+        disponibles:resultado.creditosDisponibles,
+        retenidos:resultado.creditosRetenidos
+      });
+      if(billeteraDatosCache){
+        billeteraDatosCache.creditos=resultado.creditosTotales;
+        billeteraDatosCache.creditostransito=resultado.creditosRetenidos;
+        billeteraDatosCache.CartonesGratis=resultado.gratisRestantes;
       }
       const gratisLabel=document.getElementById('gratis-label');
       if(gratisLabel && Number.isFinite(resultado.gratisRestantes)){
@@ -2300,7 +2431,9 @@ function toggleForma(idx){
       return;
     }
     const billeteraData=billeteraInfo.data||{};
-    const creditos=toNumberSafe(billeteraData.creditos,0);
+    billeteraData.creditostransito=toNumberSafe(billeteraData.creditostransito,0);
+    const resumenCreditos=prepararResumenCreditos(billeteraData);
+    const creditosDisponibles=resumenCreditos.disponibles;
     const gratis=toNumberSafe(billeteraData.CartonesGratis,0);
     const sorteoDoc=await db.collection('sorteos').doc(currentSorteo).get();
     const sorteoData=sorteoDoc.data();
@@ -2336,7 +2469,7 @@ function toggleForma(idx){
       mensajeModal='Tienes cartones gratis disponibles para este sorteo.<br><span class="carton-modal-highlight">¿Deseas jugar este cartón usando uno gratis?</span>';
       puedeJugar=true;
     }else if(gratis>0 && maxGratis>0 && gratisUsadosJugador>=maxGratis){
-      if(creditos>=valor){
+      if(creditosDisponibles>=valor){
         casoModal='limite_gratis';
         mensajeModal=`Alcanzaste el máximo de cartones gratis para este sorteo.<br>Podrás jugarlo descontando <strong>${valorMoneda}</strong> de tus créditos.`;
         puedeJugar=true;
@@ -2345,7 +2478,7 @@ function toggleForma(idx){
         mensajeModal='Alcanzaste el máximo de cartones gratis para este sorteo y no tienes créditos disponibles.<br>Ingresa a tu billetera para recargar y seguir jugando.';
       }
     }else{
-      if(creditos>=valor){
+      if(creditosDisponibles>=valor){
         casoModal='solo_creditos';
         mensajeModal=`No tienes cartones gratis para este sorteo.<br>Se descontarán de tus créditos <strong>${valorMoneda}</strong>.`;
         puedeJugar=true;
@@ -2981,17 +3114,18 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
           const billeteraDoc=await billeteraRef.get();
           if(billeteraDoc.exists){
             billeteraDatosCache=billeteraDoc.data()||{};
+            billeteraDatosCache.creditostransito=toNumberSafe(billeteraDatosCache.creditostransito,0);
             billeteraDatosExiste=true;
             datosBancariosCompletos=datosBancariosEstanCompletos(billeteraDatosCache);
-            document.getElementById('creditos-label').textContent=toNumberSafe(billeteraDatosCache.creditos,0);
+            aplicarResumenCreditos(prepararResumenCreditos(billeteraDatosCache));
             document.getElementById('gratis-label').textContent=toNumberSafe(billeteraDatosCache.CartonesGratis,0);
           }else{
-            await billeteraRef.set({creditos:0,CartonesGratis:0});
-            document.getElementById('creditos-label').textContent='0';
-            document.getElementById('gratis-label').textContent='0';
-            billeteraDatosCache={creditos:0,CartonesGratis:0};
+            await billeteraRef.set({creditos:0,CartonesGratis:0,creditostransito:0});
+            billeteraDatosCache={creditos:0,CartonesGratis:0,creditostransito:0};
             billeteraDatosExiste=true;
             datosBancariosCompletos=false;
+            aplicarResumenCreditos(prepararResumenCreditos(billeteraDatosCache));
+            document.getElementById('gratis-label').textContent='0';
           }
           actualizarEstadoCartonesGratis();
           cookieKey='jugarcarton_'+user.email.replace(/[^\w]/g,'_');
