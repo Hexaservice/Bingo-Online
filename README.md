@@ -30,6 +30,17 @@ Antes de ejecutarlo asegúrese de:
 
 - Definir la variable de entorno `GOOGLE_APPLICATION_CREDENTIALS` apuntando al archivo de claves del servicio.
 - Definir la variable `FIREBASE_STORAGE_BUCKET` con el nombre del bucket de Storage del proyecto.
+- Definir la variable `SENDGRID_API_KEY` con la clave generada en SendGrid para habilitar el envío de correos.
+
+Puede cargar estas variables desde un archivo `.env` en la raíz del proyecto. Un ejemplo mínimo sería:
+
+```
+GOOGLE_APPLICATION_CREDENTIALS=/ruta/al/serviceAccountKey.json
+FIREBASE_STORAGE_BUCKET=bingo-online.appspot.com
+SENDGRID_API_KEY=SG.xxxxxx
+```
+
+El archivo `.env` no debe versionarse si contiene credenciales sensibles en otros entornos.
 
 Este servidor requiere privilegios de administrador de Firebase, por lo que es necesario definir las credenciales antes de iniciarlo. Luego inicie el servicio con:
 

@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
@@ -5,7 +6,7 @@ const path = require('path');
 const admin = require('firebase-admin');
 
 // Verificar variables de entorno necesarias antes de inicializar Firebase
-const requiredEnv = ['GOOGLE_APPLICATION_CREDENTIALS', 'FIREBASE_STORAGE_BUCKET'];
+const requiredEnv = ['GOOGLE_APPLICATION_CREDENTIALS', 'FIREBASE_STORAGE_BUCKET', 'SENDGRID_API_KEY'];
 for (const name of requiredEnv) {
   if (!process.env[name]) {
     console.error(`Falta la variable de entorno ${name}`);
