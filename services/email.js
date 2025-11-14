@@ -1,14 +1,27 @@
+require('dotenv').config();
 const sgMail = require('@sendgrid/mail');
 
-function ensureApiKey() {
-  if (!process.env.SENDGRID_API_KEY) {
+const FALLBACK_SENDGRID_API_KEY = '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';
+
+function obtenerApiKey() {
+  const apiKey = process.env.SENDGRID_API_KEY || FALLBACK_SENDGRID_API_KEY;
+  if (!apiKey) {
     throw new Error('La variable de entorno SENDGRID_API_KEY es obligatoria para enviar correos.');
   }
+
+  if (!process.env.SENDGRID_API_KEY && apiKey === FALLBACK_SENDGRID_API_KEY) {
+    console.warn(
+      'Usando la clave SendGrid definida en el repositorio porque SENDGRID_API_KEY no está configurada. ' +
+        'Configúrala en el entorno para evitar exponer credenciales en código.'
+    );
+  }
+
+  return apiKey;
 }
 
 function setupSendGrid() {
-  ensureApiKey();
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+  const apiKey = obtenerApiKey();
+  sgMail.setApiKey(apiKey);
 }
 
 /**
@@ -27,7 +40,9 @@ async function enviarCorreo(opciones) {
   const fromAddress = opciones.from || process.env.SENDGRID_FROM_EMAIL;
 
   if (!fromAddress) {
-    throw new Error('Define la variable SENDGRID_FROM_EMAIL o proporciona el campo "from" al enviar un correo.');
+    throw new Error(
+      'Define la variable SENDGRID_FROM_EMAIL con el remitente verificado en SendGrid o proporciona el campo "from" al enviar un correo.'
+    );
   }
 
   const mensaje = {
