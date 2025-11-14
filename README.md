@@ -35,7 +35,7 @@ Sigue estos pasos para preparar el envío de correos transaccionales con SendGri
    - En el panel de SendGrid crea una API Key con permisos de `Mail Send`. Copia el valor generado.
 
 2. **Guardar las credenciales en variables de entorno**
-   - Define la variable `SENDGRID_API_KEY` con la clave obtenida y, opcionalmente, `SENDGRID_FROM_EMAIL` con la dirección verificada que actuará como remitente predeterminado. Puedes almacenarlas en un archivo `.env` en la raíz del proyecto junto con el resto de credenciales:
+   - Define la variable `SENDGRID_API_KEY` con la clave obtenida y `SENDGRID_FROM_EMAIL` con la dirección verificada que actuará como remitente predeterminado. Puedes almacenarlas en un archivo `.env` en la raíz del proyecto junto con el resto de credenciales:
 
      ```
      GOOGLE_APPLICATION_CREDENTIALS=/ruta/al/serviceAccountKey.json
@@ -63,6 +63,14 @@ Sigue estos pasos para preparar el envío de correos transaccionales con SendGri
 
 5. **Invocar el servicio cuando ocurra un evento**
    - Identifica los flujos (p. ej. activación de sorteos o avisos administrativos) y, tras verificar las preferencias del usuario, llama al módulo `services/email` para enviar el mensaje correspondiente.
+
+### Lista de verificación antes de enviar desde producción
+
+1. Confirma en SendGrid que el dominio (`juega-online.com`) o el remitente individual (`notificaciones@juega-online.com`) aparecen con estado **Verified** en la sección *Sender Authentication*.
+2. Carga en el entorno donde se ejecuta el script las variables `SENDGRID_API_KEY` y `SENDGRID_FROM_EMAIL=notificaciones@juega-online.com`. Evita depender de la clave de respaldo incluida para desarrollo.
+3. Comprueba que el archivo `serviceAccountKey.json` (o la ruta definida en `GOOGLE_APPLICATION_CREDENTIALS`) está disponible antes de lanzar `node scripts/notificarTransaccionesPendientes.js`.
+4. Ejecuta el script en un entorno de pruebas y verifica en el panel de SendGrid que el envío aparece como **Delivered**; revisa rebotes o bloqueos en la pestaña *Supressions* si es necesario.
+5. Mantén actualizado el registro de destinatarios (roles `Colaborador` y `Superadmin`) en la colección `users`, ya que el script sólo notificará a quienes tengan esos roles.
 
 6. **Probar y monitorear**
    - Envía mensajes a direcciones de prueba antes de pasar a producción.
