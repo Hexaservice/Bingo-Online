@@ -42,6 +42,8 @@ Sigue estos pasos para preparar el envío de correos transaccionales con SendGri
      FIREBASE_STORAGE_BUCKET=bingo-online.appspot.com
      SENDGRID_API_KEY=SG.xxxxxx
      SENDGRID_FROM_EMAIL=notificaciones@tudominio.com
+
+     > **Nota:** El repositorio incluye una clave de SendGrid de respaldo únicamente para facilitar las pruebas locales. Configura siempre tus propias credenciales en las variables de entorno `SENDGRID_API_KEY` y `SENDGRID_FROM_EMAIL` antes de desplegar o ejecutar el script en producción.
      ```
 
    - Recuerda que el archivo `.env` es privado y no debe subirse al repositorio.
