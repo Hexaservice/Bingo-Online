@@ -2850,6 +2850,11 @@
           }
       }
       @media (orientation: landscape) {
+          main {
+              max-width: min(100%, 1040px);
+              padding-left: clamp(10px, 2.8vw, 22px);
+              padding-right: clamp(10px, 2.8vw, 22px);
+          }
           #panel-superior {
               grid-template-columns: minmax(calc(var(--canto-cell-size) * 5 + clamp(6px, 1.6vw, 18px) * 2), clamp(320px, 52vw, 580px)) minmax(var(--panel-columna-derecha-min, clamp(240px, 32vw, 520px)), clamp(340px, 48vw, 640px));
               grid-template-areas:
@@ -2862,7 +2867,7 @@
               padding-bottom: 0;
           }
           #panel-columna-derecha {
-              padding-inline: clamp(12px, 3vw, 32px);
+              padding-inline: clamp(10px, 2.4vw, 20px);
               box-sizing: border-box;
           }
           .panel-columna-derecha__destacado {
@@ -3072,6 +3077,13 @@
           }
           .modal-contenido {
               margin-left: 0;
+          }
+      }
+      @media (min-width: 1200px) {
+          main {
+              max-width: min(100%, 980px);
+              padding-left: clamp(12px, 2.4vw, 26px);
+              padding-right: clamp(12px, 2.4vw, 26px);
           }
       }
         @media (orientation: landscape) and (max-width: 900px) {
@@ -3895,6 +3907,69 @@
       panelFormasLeyendaEl.appendChild(panelGananciasTotalesEl);
     }
     actualizarGananciasTotales();
+  }
+
+  function obtenerTotalGanadoresRegistrados(forma, totalGanadoresAlterno){
+    const directo=Number(totalGanadoresAlterno);
+    if(Number.isFinite(directo) && directo>=0){
+      return Math.max(0, Math.round(directo));
+    }
+    const idx=Number(forma?.idx ?? forma);
+    if(!Number.isInteger(idx) || !(cartonesGanadoresPorForma instanceof Map)){
+      return 0;
+    }
+    const registro=cartonesGanadoresPorForma.get(idx);
+    if(!registro){
+      return 0;
+    }
+    const totalRegistro=Number(registro?.totalGanadores);
+    if(Number.isFinite(totalRegistro) && totalRegistro>=0){
+      return Math.max(0, Math.round(totalRegistro));
+    }
+    const lista=registro?.cartones;
+    if(Array.isArray(lista)){
+      return lista.length;
+    }
+    return 0;
+  }
+
+  function crearBotonGanadoresForma(forma, totalGanadoresAlterno){
+    const idxNumero=Number(forma?.idx ?? forma);
+    if(!Number.isInteger(idxNumero) || idxNumero<=0){
+      return null;
+    }
+    const formaReferencia=(typeof forma==='object' && forma!==null)?forma:{idx: idxNumero};
+    const totalGanadores=obtenerTotalGanadoresRegistrados(formaReferencia, totalGanadoresAlterno);
+    const boton=document.createElement('button');
+    boton.type='button';
+    boton.className='carton-forma-accion';
+    boton.dataset.formaIdx=String(idxNumero).padStart(2,'0');
+    const textoBoton=document.createElement('span');
+    textoBoton.className='carton-forma-texto';
+    textoBoton.textContent=`GANADORES F${idxNumero}`;
+    const contadorBoton=document.createElement('span');
+    contadorBoton.className='carton-forma-contador';
+    contadorBoton.textContent=String(totalGanadores);
+    boton.appendChild(textoBoton);
+    boton.appendChild(contadorBoton);
+    const colorForma=obtenerColorParaForma(idxNumero);
+    boton.style.setProperty('--forma-color', colorForma);
+    const colorOscurecido=obtenerColorOscurecido(colorForma,0.7);
+    boton.style.setProperty('--forma-color-borde', colorOscurecido);
+    boton.style.setProperty('--forma-color-contador', obtenerColorOscurecido(colorForma,0.55));
+    boton.dataset.totalGanadores=String(totalGanadores);
+    boton.classList.toggle('con-ganadores', totalGanadores>0);
+    const nombre=(formaReferencia?.nombre||'').toString().trim();
+    const referenciaNombre=nombre?`, ${nombre}`:'';
+    const descripcionGanadores=totalGanadores===1?'1 cartón ganador':`${totalGanadores} cartones ganadores`;
+    boton.setAttribute('aria-label',`Ver cartones ganadores de la forma ${String(idxNumero).padStart(2,'0')}${referenciaNombre}, ${descripcionGanadores}`);
+    const tituloBase=nombre?`Ganadores ${nombre}`:`Ganadores Forma ${String(idxNumero).padStart(2,'0')}`;
+    boton.title=`${tituloBase} (${descripcionGanadores})`;
+    boton.addEventListener('click',evento=>{
+      evento.stopPropagation();
+      abrirModalGanadores(formaReferencia);
+    });
+    return boton;
   }
 
   function insertarBotonesFormas(botones){
@@ -6518,6 +6593,10 @@
       jugadorSinCartonesEnSorteo = mostrarRecomendacion;
       mostrarMensajeSinCartonesJugador(mostrarRecomendacion);
       if(mostrarRecomendacion){
+        const botonesGenericos=Array.isArray(formasActivas)
+          ? formasActivas.map(forma=>crearBotonGanadoresForma(forma)).filter(Boolean)
+          : [];
+        insertarBotonesFormas(botonesGenericos);
         cartonesMensajeEl.textContent='';
       }else{
         cartonesMensajeEl.textContent='No tienes cartones participando en este sorteo.';
@@ -6662,8 +6741,6 @@
         const forma=formasActivas.find(f=>Number(f.idx)===idx) || {idx};
         const colorForma=obtenerColorParaForma(idx);
         const colorTexto=obtenerColorOscurecido(colorForma,0.75);
-        const infoGanadores=cartonesGanadoresPorForma.get(idx) || {cartones:[]};
-        const totalGanadores=normalizarCantidadGanadores(infoGanadores?.totalGanadores) ?? (Array.isArray(infoGanadores.cartones)?infoGanadores.cartones.length:0);
         const linea=document.createElement('div');
         linea.className='back-forma-line';
         linea.style.color=colorTexto;
@@ -6671,34 +6748,10 @@
           `<span class="back-forma-etiqueta">FORMA ${String(idx).padStart(2,'0')}:</span>`+
           `<span class="back-forma-valor">${formatearCreditos(datosForma.valor||0)}</span>`;
         formasContenedor.appendChild(linea);
-        const boton=document.createElement('button');
-        boton.type='button';
-        boton.className='carton-forma-accion';
-        boton.dataset.formaIdx=String(idx).padStart(2,'0');
-        const textoBoton=document.createElement('span');
-        textoBoton.className='carton-forma-texto';
-        textoBoton.textContent=`GANADORES F${idx}`;
-        const contadorBoton=document.createElement('span');
-        contadorBoton.className='carton-forma-contador';
-        contadorBoton.textContent=String(totalGanadores);
-        boton.appendChild(textoBoton);
-        boton.appendChild(contadorBoton);
-        boton.style.setProperty('--forma-color', colorForma);
-        const colorOscurecido=obtenerColorOscurecido(colorForma,0.7);
-        boton.style.setProperty('--forma-color-borde', colorOscurecido);
-        boton.style.setProperty('--forma-color-contador', obtenerColorOscurecido(colorForma,0.55));
-        boton.dataset.totalGanadores=String(totalGanadores);
-        boton.classList.toggle('con-ganadores', totalGanadores>0);
-        const referenciaNombre=forma && forma.nombre?`, ${forma.nombre}`:'';
-        const descripcionGanadores=totalGanadores===1?'1 cartón ganador':`${totalGanadores} cartones ganadores`;
-        boton.setAttribute('aria-label',`Ver cartones ganadores de la forma ${String(idx).padStart(2,'0')}${referenciaNombre}, ${descripcionGanadores}`);
-        const tituloBase=forma && forma.nombre?`Ganadores ${forma.nombre}`:`Ganadores Forma ${String(idx).padStart(2,'0')}`;
-        boton.title=`${tituloBase} (${descripcionGanadores})`;
-        boton.addEventListener('click',evento=>{
-          evento.stopPropagation();
-          abrirModalGanadores(forma);
-        });
-        botonesFormas.push(boton);
+        const boton=crearBotonGanadoresForma(forma);
+        if(boton){
+          botonesFormas.push(boton);
+        }
       }
       const totalContenedor=document.createElement('div');
       totalContenedor.className='carton-back-total';
