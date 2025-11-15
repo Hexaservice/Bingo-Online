@@ -209,7 +209,23 @@
       flex-direction: column;
       align-items: center;
       width: 260px;
-      margin: 6px auto;
+      margin: 0 auto;
+    }
+    #datos-pm {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 6px;
+    }
+    #datos-pm .campo {
+      flex: 1 0 120px;
+      max-width: 150px;
+      width: auto;
+      margin: 0;
+    }
+    #datos-pm .campo input {
+      width: 100%;
     }
     select, input, textarea {
       font-size: 1rem;
@@ -217,6 +233,7 @@
       width: 100%;
       box-sizing: border-box;
       text-align: center;
+      margin: 5px auto;
     }
     #tipo-cuenta {
       display: flex;
@@ -238,7 +255,7 @@
       border: 3px solid #FFD700;
       border-radius: 8px;
       text-shadow: 2px 2px 4px #000;
-      width: 220px;
+      width: 200px;
       cursor: pointer;
       margin-top: 8px;
     }
@@ -260,26 +277,45 @@
       display: none;
       overflow-x: auto;
     }
-    table {
-      margin: 10px auto;
-      border-collapse: collapse;
-      width: 100%;
-      background: rgba(255,255,255,0.95);
-      font-family: Calibri, Arial, sans-serif;
-      table-layout: fixed;
+    #pagos-section .switch {
+      margin-top: 4px;
     }
-    th, td {
+    #tabla-pagos-colab {
+      width: 100%;
+      background: #fff;
+      font-family: Calibri, Arial, sans-serif;
+      margin: 5px 0;
+      border-collapse: collapse;
+    }
+    #tabla-pagos-colab th,
+    #tabla-pagos-colab td {
       border: 1px solid #ccc;
       padding: 4px 6px;
       font-size: 0.9rem;
+      font-weight: bold;
       white-space: nowrap;
     }
-    th:nth-child(1), td:nth-child(1) { width: 48px; }
-    th:nth-child(2), td:nth-child(2) { width: 110px; }
-    th:nth-child(3), td:nth-child(3) { width: 120px; }
-    th:nth-child(4), td:nth-child(4) { width: 140px; }
-    th:nth-child(5), td:nth-child(5) { width: 120px; }
-    th select, th input { width: 100%; box-sizing: border-box; font-size: 0.85rem; }
+    #tabla-pagos-colab th:nth-child(1),
+    #tabla-pagos-colab td:nth-child(1) {
+      width: 40px;
+      font-size: 0.8rem;
+    }
+    #tabla-pagos-colab th:nth-child(2),
+    #tabla-pagos-colab td:nth-child(2) { width: 120px; }
+    #tabla-pagos-colab th:nth-child(3),
+    #tabla-pagos-colab td:nth-child(3) { width: 100px; }
+    #tabla-pagos-colab th:nth-child(4),
+    #tabla-pagos-colab td:nth-child(4) { width: 140px; }
+    #tabla-pagos-colab th:nth-child(5),
+    #tabla-pagos-colab td:nth-child(5) { width: 120px; }
+    #tabla-pagos-colab select,
+    #tabla-pagos-colab input {
+      font-size: 0.9rem;
+      width: 100px;
+    }
+    #tabla-pagos-colab th:nth-child(3) input {
+      width: 100px;
+    }
     td.celda-monto { cursor: pointer; color: #1b5e20; font-weight: bold; }
     td.celda-fecha { cursor: pointer; color: #0d47a1; font-weight: bold; }
     td.estado { font-weight: bold; }
@@ -313,12 +349,22 @@
       body { padding: 8px; }
       #creditos-title { font-size: 1.6rem; }
       #creditos-valor { font-size: 2rem; }
-      th, td { font-size: 0.75rem; }
-      th:nth-child(1), td:nth-child(1) { width: 40px; }
-      th:nth-child(2), td:nth-child(2) { width: 90px; }
-      th:nth-child(3), td:nth-child(3) { width: 100px; }
-      th:nth-child(4), td:nth-child(4) { width: 120px; }
-      th:nth-child(5), td:nth-child(5) { width: 100px; }
+      #tabla-pagos-colab { margin: 2px 0; width: 100%; }
+      #tabla-pagos-colab th,
+      #tabla-pagos-colab td { font-size: 0.8rem; padding: 1px 2px; }
+      #tabla-pagos-colab th:nth-child(1),
+      #tabla-pagos-colab td:nth-child(1) { width: 40px; font-size: 0.7rem; }
+      #tabla-pagos-colab th:nth-child(2),
+      #tabla-pagos-colab td:nth-child(2) { width: 70px; }
+      #tabla-pagos-colab th:nth-child(3),
+      #tabla-pagos-colab td:nth-child(3) { width: 50px; }
+      #tabla-pagos-colab th:nth-child(4),
+      #tabla-pagos-colab td:nth-child(4) { width: 80px; }
+      #tabla-pagos-colab th:nth-child(5),
+      #tabla-pagos-colab td:nth-child(5) { width: 90px; }
+      #tabla-pagos-colab select,
+      #tabla-pagos-colab input { width: 80px; font-size: 0.8rem; }
+      #tabla-pagos-colab th:nth-child(3) input { width: 50px; }
       .menu-btn.back-btn { width: 44px; height: 44px; font-size: 0; }
       .menu-btn.back-btn::before { content: '\25C0'; font-size: 22px; }
       .menu-btn.back-btn > * { display: none; }
@@ -347,17 +393,19 @@
         </select>
       </div>
       <div class="campo">
-        <input type="text" id="cuenta" placeholder="N° Cuenta Bancaria">
+        <input type="text" id="cuenta" placeholder="N° Cuenta Bancaria" inputmode="numeric">
       </div>
       <div id="tipo-cuenta">
         <label><input type="radio" name="tipo-cuenta" value="Ahorro"> Ahorro</label>
         <label><input type="radio" name="tipo-cuenta" value="Corriente"> Corriente</label>
       </div>
-      <div class="campo">
-        <input type="text" id="cedula" placeholder="Cédula">
-      </div>
-      <div class="campo">
-        <input type="text" id="pagomovil" placeholder="Número Pago móvil">
+      <div id="datos-pm">
+        <div class="campo">
+          <input type="text" id="cedula" placeholder="Cédula" inputmode="numeric">
+        </div>
+        <div class="campo">
+          <input type="text" id="pagomovil" placeholder="Número Pago móvil" inputmode="tel">
+        </div>
       </div>
       <button id="guardar-datos">Guardar Datos</button>
     </div>
@@ -549,6 +597,14 @@
         return fechaB - fechaA;
       });
       filtrarPagos();
+      const togglePagos = document.getElementById('toggle-pagos');
+      const pagosContent = document.getElementById('pagos-content');
+      if(togglePagos){
+        togglePagos.checked = true;
+        togglePagos.dispatchEvent(new Event('change'));
+      } else if(pagosContent){
+        pagosContent.style.display = 'block';
+      }
     }
 
     function filtrarPagos(){
