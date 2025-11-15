@@ -646,7 +646,83 @@
     #premios-modal .modal-content{align-items:center;width:min(960px,95vw);max-height:90vh;overflow-y:auto;padding:clamp(16px,2.5vw,32px);gap:clamp(14px,2vw,24px);}
     #premios-modal .modal-content>h2,#premios-modal .modal-content>.text-premio-total{align-self:center;}
     #premios-modal #premios-aceptar{align-self:center;}
-    #info-cartones-modal .modal-content{align-items:center;}
+    #info-cartones-modal .modal-content{
+      align-items:stretch;
+      width:min(1024px,96vw);
+      max-height:92vh;
+      min-height:70vh;
+      padding:clamp(16px,2.5vw,28px);
+      gap:clamp(12px,2vw,18px);
+      display:flex;
+      box-shadow:0 16px 45px rgba(0,0,0,0.35);
+    }
+    #info-cartones-modal .modal-content h2{
+      align-self:center;
+    }
+    #info-cartones-modal .modal-buttons{
+      justify-content:center;
+      margin-top:0;
+    }
+    #info-cartones-tabla-contenedor{
+      width:100%;
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      border:2px solid rgba(13,31,89,0.18);
+      border-radius:12px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.98) 0%,rgba(240,244,255,0.96) 100%);
+      box-shadow:inset 0 4px 16px rgba(11,29,96,0.08);
+      overflow:hidden;
+    }
+    #info-cartones-tabla-wrapper{
+      flex:1;
+      overflow:auto;
+    }
+    #info-cartones-tabla{
+      width:100%;
+      border-collapse:collapse;
+      font-family:'Poppins',sans-serif;
+      font-size:clamp(0.68rem,1.5vw,0.82rem);
+      color:#0b1b4d;
+    }
+    #info-cartones-tabla thead th{
+      position:sticky;
+      top:0;
+      z-index:2;
+      background:rgba(255,255,255,0.95);
+      backdrop-filter:blur(6px);
+      font-weight:700;
+      padding:10px 12px;
+      text-align:left;
+      border-bottom:2px solid rgba(11,29,96,0.18);
+      text-transform:uppercase;
+      letter-spacing:0.04em;
+    }
+    #info-cartones-tabla thead th:nth-child(1){color:#0b1b4d;width:12%;min-width:60px;text-align:center;}
+    #info-cartones-tabla thead th:nth-child(2){color:#c35b00;width:34%;}
+    #info-cartones-tabla thead th:nth-child(3){color:#0b6a2b;width:28%;}
+    #info-cartones-tabla thead th:nth-child(4){color:#000;width:26%;}
+    #info-cartones-tabla tbody tr:nth-child(even){background:rgba(233,239,255,0.75);}
+    #info-cartones-tabla tbody tr:nth-child(odd){background:rgba(255,255,255,0.9);}
+    #info-cartones-tabla tbody td{
+      padding:8px 12px;
+      border-bottom:1px solid rgba(11,29,96,0.12);
+      font-weight:600;
+      white-space:nowrap;
+    }
+    #info-cartones-tabla tbody td.alias-col{color:#ff7a00;white-space:normal;}
+    #info-cartones-tabla tbody td.carton-col{color:#111;text-align:center;}
+    #info-cartones-tabla tbody td.tipo-col{font-weight:700;text-align:center;}
+    #info-cartones-tabla tbody td.tipo-col.pagado{color:#0b6a2b;}
+    #info-cartones-tabla tbody td.tipo-col.gratis{color:#0b3d91;}
+    #info-cartones-tabla tbody td.numero-col{text-align:center;}
+    #info-cartones-tabla tbody tr:hover{background:rgba(217,226,255,0.95);}
+    #info-cartones-tabla tbody td.tabla-mensaje{
+      text-align:center;
+      color:#0b1b4d;
+      font-weight:600;
+      padding:18px 12px;
+    }
     #info-cartones-aceptar,#premios-aceptar{font-size:1.2rem;padding:8px 20px;}
     .text-premio-total{font-family:'Bangers',cursive;color:white;font-size:clamp(1.2rem,2.8vw,1.6rem);text-align:center;}
     .text-premio-total div{ text-shadow:0 0 4px darkgreen; }
@@ -801,6 +877,25 @@
           <div class="modal-buttons">
             <button id="info-cartones-aceptar" class="action-btn">Aceptar</button>
           </div>
+          <div id="info-cartones-tabla-contenedor">
+            <div id="info-cartones-tabla-wrapper">
+              <table id="info-cartones-tabla">
+                <thead>
+                  <tr>
+                    <th scope="col">N°</th>
+                    <th scope="col">Alias</th>
+                    <th scope="col">N° Cartón</th>
+                    <th scope="col">Tipo</th>
+                  </tr>
+                </thead>
+                <tbody id="info-cartones-tabla-body">
+                  <tr>
+                    <td class="tabla-mensaje" colspan="4">Sin cartones registrados</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
       </div>
   </div>
   <div id="premios-modal" class="modal" onclick="this.style.display='none'">
@@ -945,9 +1040,56 @@
   const cartonProcessingText=document.getElementById('carton-processing-text');
   const cartonProcessingSpinner=cartonProcessingOverlay?cartonProcessingOverlay.querySelector('.carton-processing-spinner'):null;
   const cartonToast=document.getElementById('carton-toast');
+  const infoCartonesTablaBody=document.getElementById('info-cartones-tabla-body');
 
   function normalizarAliasPerfil(valor){
     return (valor||'').toString().trim().slice(0,20);
+  }
+
+  function mostrarMensajeTablaCartones(mensaje){
+    if(!infoCartonesTablaBody) return;
+    infoCartonesTablaBody.innerHTML='';
+    const fila=document.createElement('tr');
+    const celda=document.createElement('td');
+    celda.colSpan=4;
+    celda.className='tabla-mensaje';
+    celda.textContent=mensaje;
+    fila.appendChild(celda);
+    infoCartonesTablaBody.appendChild(fila);
+  }
+
+  function extraerAliasCarton(data){
+    const candidatos=[data?.alias,data?.aliascarton,data?.aliasCarton,data?.aliasJugador,data?.aliasjugador];
+    for(const candidato of candidatos){
+      const normalizado=normalizarAliasPerfil(candidato);
+      if(normalizado){
+        return normalizado;
+      }
+    }
+    return 'Sin alias';
+  }
+
+  function extraerNumeroCartonDatos(data){
+    const candidatos=[data?.cartonNum,data?.Ncarton,data?.carton];
+    for(const candidato of candidatos){
+      const numero=Number.parseInt(candidato,10);
+      if(Number.isFinite(numero)){
+        return {orden:numero,texto:String(numero).padStart(4,'0')};
+      }
+    }
+    const texto=candidatos.find(valor=>valor!==undefined&&valor!==null&&valor!=='');
+    return {orden:-Infinity,texto:texto?String(texto):'----'};
+  }
+
+  function extraerTipoCartonDato(data){
+    const candidatos=[data?.tipocarton,data?.tipoCarton,data?.tipo];
+    for(const candidato of candidatos){
+      const texto=(candidato??'').toString().trim().toLowerCase();
+      if(texto){
+        return texto==='gratis'?'GRATIS':'PAGADO';
+      }
+    }
+    return 'PAGADO';
   }
 
   function normalizarCelularPerfil(valor){
@@ -2740,7 +2882,58 @@ function toggleForma(idx){
     }
   }
 
-  function mostrarCartonesJugandoModal(){
+  async function cargarCartonesJugandoTabla(){
+    if(!infoCartonesTablaBody||!currentSorteo){
+      return;
+    }
+    mostrarMensajeTablaCartones('Cargando cartones...');
+    try{
+      const snap=await db.collection('CartonJugado').where('sorteoId','==',currentSorteo).get();
+      const registros=[];
+      snap.forEach(doc=>{
+        const data=doc.data()||{};
+        const alias=extraerAliasCarton(data);
+        const numero=extraerNumeroCartonDatos(data);
+        const tipo=extraerTipoCartonDato(data);
+        registros.push({alias,numeroOrden:numero.orden,numeroTexto:numero.texto,tipo});
+      });
+      if(registros.length===0){
+        mostrarMensajeTablaCartones('Sin cartones registrados');
+        return;
+      }
+      registros.sort((a,b)=>{
+        if(b.numeroOrden!==a.numeroOrden){
+          return b.numeroOrden-a.numeroOrden;
+        }
+        return a.alias.localeCompare(b.alias,'es',{sensitivity:'base'});
+      });
+      infoCartonesTablaBody.innerHTML='';
+      const total=registros.length;
+      registros.forEach((registro,index)=>{
+        const fila=document.createElement('tr');
+        const numeroTd=document.createElement('td');
+        numeroTd.className='numero-col';
+        numeroTd.textContent=formatearEnteroEs(total-index);
+        const aliasTd=document.createElement('td');
+        aliasTd.className='alias-col';
+        aliasTd.textContent=registro.alias;
+        const cartonTd=document.createElement('td');
+        cartonTd.className='carton-col';
+        cartonTd.textContent=registro.numeroTexto;
+        const tipoTd=document.createElement('td');
+        const tipoClase=registro.tipo==='GRATIS'?'gratis':'pagado';
+        tipoTd.className=`tipo-col ${tipoClase}`;
+        tipoTd.textContent=registro.tipo;
+        fila.append(numeroTd,aliasTd,cartonTd,tipoTd);
+        infoCartonesTablaBody.appendChild(fila);
+      });
+    }catch(error){
+      console.error('Error cargando cartones jugados para la tabla',error);
+      mostrarMensajeTablaCartones('No se pudieron cargar los cartones.');
+    }
+  }
+
+  async function mostrarCartonesJugandoModal(){
     if(!currentSorteo){
       alert('Debes selecionar primero un sorteo');
       abrirSorteosModal();
@@ -2752,9 +2945,13 @@ function toggleForma(idx){
     infoNombre.style.color=currentSorteoTipo==='Sorteo Diario'?'green':'orange';
     const cj=document.getElementById('info-cartones-jugando');
     cj.innerHTML=`Cartones jugando: <strong style="color:purple;">${cartonesJugando}</strong>`;
-  const cg=document.getElementById('info-cartones-gratis');
-  cg.innerHTML=`Cartones Gratis jugando: <strong style="color:${COLOR_CARTONES_GRATIS_MODAL};">${formatearEnteroEs(cartonesGratisJugando)}</strong>`;
-    document.getElementById('info-cartones-modal').style.display='flex';
+    const cg=document.getElementById('info-cartones-gratis');
+    cg.innerHTML=`Cartones Gratis jugando: <strong style="color:${COLOR_CARTONES_GRATIS_MODAL};">${formatearEnteroEs(cartonesGratisJugando)}</strong>`;
+    const modal=document.getElementById('info-cartones-modal');
+    if(modal){
+      modal.style.display='flex';
+    }
+    await cargarCartonesJugandoTabla();
   }
 
   function mostrarPremiosModal(){
