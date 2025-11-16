@@ -172,6 +172,22 @@
           box-shadow: 0 10px 22px rgba(0,0,0,0.25);
           cursor: pointer;
           z-index: 42;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .live-stream-toggle.live-activo {
+          animation: livePulse 1.2s ease-in-out infinite;
+          box-shadow: 0 0 18px rgba(255,87,34,0.65);
+      }
+      @keyframes livePulse {
+          0% {
+              transform: scale(1);
+          }
+          50% {
+              transform: scale(1.08);
+          }
+          100% {
+              transform: scale(1);
+          }
       }
       .live-stream-toggle:focus-visible {
           outline: 3px solid rgba(255,255,255,0.9);
@@ -184,8 +200,10 @@
           position: fixed;
           top: 90px;
           right: 18px;
-          width: min(420px, 90vw);
-          height: min(260px, 55vh);
+          width: min(var(--live-stream-width, 420px), 90vw);
+          max-width: 90vw;
+          min-width: 240px;
+          height: auto;
           background: rgba(19,19,19,0.95);
           border-radius: 18px;
           box-shadow: 0 18px 30px rgba(0,0,0,0.35);
@@ -197,11 +215,21 @@
           transform: translateY(12px);
           transition: opacity 0.25s ease, transform 0.25s ease;
           z-index: 41;
+          touch-action: none;
       }
       .live-stream-window.visible {
           opacity: 1;
           pointer-events: auto;
           transform: translateY(0);
+      }
+      .live-stream-window.maximizado {
+          left: 50% !important;
+          top: 50% !important;
+          right: auto !important;
+          bottom: auto !important;
+          transform: translate(-50%, -50%) !important;
+          max-width: 96vw;
+          max-height: 92vh;
       }
       .live-stream-header {
           display: flex;
@@ -212,8 +240,6 @@
           font-family: 'Bangers', cursive;
           letter-spacing: 1px;
           gap: 12px;
-          cursor: grab;
-          touch-action: none;
           user-select: none;
       }
       .live-stream-titulo {
@@ -235,12 +261,14 @@
           display: flex;
           flex-direction: column;
           gap: 12px;
+          position: relative;
       }
       .live-stream-player {
           flex: 1;
           border-radius: 12px;
           overflow: hidden;
           display: none;
+          background: #000;
       }
       .live-stream-player.visible {
           display: block;
@@ -251,6 +279,55 @@
           border: none;
           border-radius: inherit;
           background: #000;
+      }
+      .live-stream-resize-handle {
+          position: absolute;
+          width: 26px;
+          height: 26px;
+          border-radius: 50%;
+          border: 2px solid rgba(255,255,255,0.6);
+          bottom: 6px;
+          background: rgba(0,0,0,0.35);
+          z-index: 2;
+          cursor: nwse-resize;
+          touch-action: none;
+      }
+      .live-stream-resize-handle--left {
+          left: 6px;
+          cursor: nesw-resize;
+      }
+      .live-stream-resize-handle--right {
+          right: 6px;
+      }
+      .live-stream-maximize-btn {
+          position: absolute;
+          right: 18px;
+          bottom: 18px;
+          border: none;
+          border-radius: 999px;
+          width: 40px;
+          height: 40px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(0,0,0,0.5);
+          color: #fff;
+          cursor: pointer;
+          transition: transform 0.2s ease, background 0.2s ease;
+          z-index: 3;
+      }
+      .live-stream-maximize-btn:hover {
+          transform: scale(1.05);
+          background: rgba(0,0,0,0.65);
+      }
+      .live-stream-maximize-btn .icon-min {
+          display: none;
+      }
+      .live-stream-maximize-btn.activo .icon-max {
+          display: none;
+      }
+      .live-stream-maximize-btn.activo .icon-min {
+          display: inline;
       }
       .live-stream-vacio {
           flex: 1;
@@ -3298,17 +3375,23 @@
   <div id="live-stream-window" class="live-stream-window" aria-hidden="true" role="dialog" aria-label="Transmisión en vivo">
     <div id="live-stream-handle" class="live-stream-header">
       <span class="live-stream-titulo">Transmisión en vivo</span>
-      <button id="live-stream-close" type="button" class="live-stream-close" aria-label="Cerrar transmisión">&times;</button>
+      <button id="live-stream-close" type="button" class="live-stream-close live-stream-control" aria-label="Cerrar transmisión">&times;</button>
     </div>
     <div class="live-stream-body">
       <div id="live-stream-player" class="live-stream-player" aria-hidden="true">
-        <iframe id="live-stream-iframe" title="Transmisión" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        <iframe id="live-stream-iframe" title="Transmisión" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; microphone" allowfullscreen></iframe>
       </div>
       <div id="live-stream-empty" class="live-stream-vacio" aria-hidden="true">
         <p id="live-stream-empty-text">No hay transmisiones en vivo actualmente.</p>
-        <button id="live-stream-accept" type="button">Aceptar</button>
+        <button id="live-stream-accept" type="button" class="live-stream-control">Aceptar</button>
       </div>
+      <button id="live-stream-maximize" type="button" class="live-stream-maximize-btn live-stream-control" aria-label="Maximizar video">
+        <span class="icon-max" aria-hidden="true">⛶</span>
+        <span class="icon-min" aria-hidden="true">🗗</span>
+      </button>
     </div>
+    <div class="live-stream-resize-handle live-stream-resize-handle--left live-stream-control" data-live-resize="left" aria-hidden="true"></div>
+    <div class="live-stream-resize-handle live-stream-resize-handle--right live-stream-control" data-live-resize="right" aria-hidden="true"></div>
   </div>
   <main>
     <header id="sorteo-header">
@@ -3505,6 +3588,8 @@
   const liveStreamCloseBtn = document.getElementById('live-stream-close');
   const liveStreamAcceptBtn = document.getElementById('live-stream-accept');
   const liveStreamHandleEl = document.getElementById('live-stream-handle');
+  const liveStreamMaximizeBtn = document.getElementById('live-stream-maximize');
+  const liveStreamResizeHandles = document.querySelectorAll('[data-live-resize]');
 
   const FORM_COLORS = ['#90ee90', '#fffacd', '#add8e6', '#d8b0ff', '#ffcc99', '#f77fb3', '#9ad3bc', '#fecf6a'];
   const CONFETI_COLORES = ['#ff5252', '#ffeb3b', '#69f0ae', '#40c4ff', '#ff80ab', '#7c4dff', '#fdd835', '#ff9100'];
@@ -3540,6 +3625,13 @@
   let liveStreamLinkPromesa = null;
   let liveStreamVisible = false;
   let liveStreamDragState = {activo:false, offsetX:0, offsetY:0, pointerId:null};
+  let liveStreamTieneTransmision = false;
+  let liveStreamAspectRatio = 16/9;
+  let liveStreamDimension = {width: null};
+  let liveStreamMaximizado = false;
+  let liveStreamConfigAnterior = null;
+  let liveStreamResizeState = {activo:false, corner:null, pointerId:null, inicioX:0, anchoInicial:0, leftInicial:0, handle:null};
+  let liveStreamAudioPermisoSolicitado = false;
 
   let cartonSeleccionadoId = null;
   const animacionesCartones = new Map();
@@ -3715,6 +3807,8 @@
     if(liveStreamEmptyTextEl){
       liveStreamEmptyTextEl.textContent = mensaje;
     }
+    liveStreamTieneTransmision = false;
+    actualizarBotonLiveAnimacion();
     liveStreamEmptyEl.classList.add('visible');
     liveStreamEmptyEl.setAttribute('aria-hidden','false');
     if(liveStreamPlayerEl){
@@ -3731,6 +3825,9 @@
     liveStreamVisible = true;
     liveStreamWindowEl.classList.add('visible');
     liveStreamWindowEl.setAttribute('aria-hidden','false');
+    inicializarDimensionesLive();
+    asegurarLiveDentroDePantalla();
+    actualizarBotonMaximizar();
     if(liveStreamToggleBtn){
       liveStreamToggleBtn.classList.add('oculto');
       liveStreamToggleBtn.setAttribute('aria-label','Ocultar transmisión en vivo');
@@ -3742,6 +3839,11 @@
     if(liveStreamWindowEl){
       liveStreamWindowEl.classList.remove('visible');
       liveStreamWindowEl.setAttribute('aria-hidden','true');
+    }
+    if(liveStreamMaximizado){
+      restaurarLiveDesdeMaximizado();
+    }else{
+      actualizarBotonMaximizar();
     }
     if(liveStreamToggleBtn){
       liveStreamToggleBtn.classList.remove('oculto');
@@ -3769,6 +3871,9 @@
       liveStreamEmptyEl.classList.remove('visible');
       liveStreamEmptyEl.setAttribute('aria-hidden','true');
     }
+    liveStreamTieneTransmision = true;
+    actualizarBotonLiveAnimacion();
+    actualizarAspectRatioLive(calcularAspectRatioDesdeLink(enlace));
   }
 
   function obtenerLinkLiveStream(){
@@ -3802,6 +3907,7 @@
   function prepararLiveStream(){
     mostrarLiveStream();
     mostrarMensajeLive('Buscando transmisiones en vivo...');
+    solicitarPermisoAudioLive();
     const cargarLink = liveStreamLinkCargado ? Promise.resolve(liveStreamLinkValor) : obtenerLinkLiveStream();
     cargarLink
       .then(link=>{
@@ -3816,6 +3922,8 @@
         }else{
           mostrarMensajeLive(MENSAJE_LIVE_NO_DISPONIBLE);
         }
+        liveStreamTieneTransmision = !!embed;
+        actualizarBotonLiveAnimacion();
       })
       .catch(err=>{
         console.error('No se pudo cargar el enlace de transmisión', err);
@@ -3823,10 +3931,119 @@
       });
   }
 
+  function actualizarBotonLiveAnimacion(){
+    if(!liveStreamToggleBtn) return;
+    if(liveStreamTieneTransmision){
+      liveStreamToggleBtn.classList.add('live-activo');
+    }else{
+      liveStreamToggleBtn.classList.remove('live-activo');
+    }
+  }
+
+  function calcularAspectRatioDesdeLink(enlace){
+    if(typeof enlace !== 'string') return 16/9;
+    try{
+      const url = new URL(enlace);
+      const host = url.hostname.toLowerCase();
+      const path = url.pathname.toLowerCase();
+      if(host.includes('tiktok') || host.includes('instagram') || path.includes('/shorts') || path.includes('/reel') || path.includes('/vertical')){
+        return 9/16;
+      }
+      return 16/9;
+    }catch(err){
+      return 16/9;
+    }
+  }
+
+  function actualizarAspectRatioLive(ratio){
+    const valor = Number.isFinite(Number(ratio)) && Number(ratio) > 0 ? Number(ratio) : (16/9);
+    liveStreamAspectRatio = valor;
+    if(liveStreamWindowEl){
+      liveStreamWindowEl.style.setProperty('--live-stream-aspect', valor);
+    }
+    aplicarDimensionesLive(liveStreamDimension.width);
+  }
+
+  function obtenerAnchoInicialLive(){
+    const propuesto = window.innerWidth * 0.75;
+    return Math.min(380, Math.max(260, propuesto));
+  }
+
+  function aplicarDimensionesLive(anchoDeseado){
+    if(!liveStreamWindowEl || !liveStreamPlayerEl) return;
+    const minAncho = 240;
+    const maxAncho = liveStreamMaximizado ? Math.min(window.innerWidth * 0.96, 880) : Math.min(window.innerWidth * 0.9, 520);
+    let ancho = typeof anchoDeseado === 'number' && Number.isFinite(anchoDeseado) ? anchoDeseado : (liveStreamDimension.width ?? obtenerAnchoInicialLive());
+    ancho = Math.min(Math.max(ancho, minAncho), Math.max(minAncho, maxAncho));
+    let alto = ancho / liveStreamAspectRatio;
+    const maxAlto = liveStreamMaximizado ? window.innerHeight * 0.9 : window.innerHeight * 0.6;
+    if(alto > maxAlto){
+      alto = maxAlto;
+      ancho = Math.max(minAncho, Math.min(maxAncho, alto * liveStreamAspectRatio));
+    }
+    liveStreamDimension.width = ancho;
+    liveStreamWindowEl.style.setProperty('--live-stream-width', `${ancho}px`);
+    liveStreamWindowEl.style.width = `${ancho}px`;
+    liveStreamPlayerEl.style.height = `${alto}px`;
+  }
+
+  function inicializarDimensionesLive(){
+    if(liveStreamDimension.width === null){
+      liveStreamDimension.width = obtenerAnchoInicialLive();
+    }
+    aplicarDimensionesLive(liveStreamDimension.width);
+  }
+
+  function asegurarLiveDentroDePantalla(){
+    if(!liveStreamWindowEl || liveStreamMaximizado) return;
+    const rect = liveStreamWindowEl.getBoundingClientRect();
+    let nuevoLeft = rect.left;
+    let nuevoTop = rect.top;
+    let ajustes = false;
+    if(rect.right > window.innerWidth){
+      nuevoLeft = Math.max(0, window.innerWidth - rect.width - 12);
+      ajustes = true;
+    }
+    if(rect.left < 0){
+      nuevoLeft = 0;
+      ajustes = true;
+    }
+    if(rect.bottom > window.innerHeight){
+      nuevoTop = Math.max(0, window.innerHeight - rect.height - 12);
+      ajustes = true;
+    }
+    if(rect.top < 0){
+      nuevoTop = 0;
+      ajustes = true;
+    }
+    if(ajustes){
+      liveStreamWindowEl.style.left = `${nuevoLeft}px`;
+      liveStreamWindowEl.style.top = `${nuevoTop}px`;
+      liveStreamWindowEl.style.right = 'auto';
+      liveStreamWindowEl.style.bottom = 'auto';
+    }
+  }
+
+  function solicitarPermisoAudioLive(){
+    if(liveStreamAudioPermisoSolicitado) return;
+    liveStreamAudioPermisoSolicitado = true;
+    if(!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') return;
+    navigator.mediaDevices.getUserMedia({audio:true})
+      .then(stream=>{
+        stream.getTracks().forEach(track=>track.stop());
+      })
+      .catch(err=>{
+        console.warn('No se pudo obtener permiso de audio para la transmisión', err);
+      });
+  }
+
   function configurarArrastreLive(){
-    if(!liveStreamHandleEl || !liveStreamWindowEl) return;
-    liveStreamHandleEl.addEventListener('pointerdown',evento=>{
-      if(!liveStreamWindowEl) return;
+    if(!liveStreamWindowEl) return;
+    const iniciarArrastre = evento =>{
+      if(liveStreamMaximizado) return;
+      const esTouch = evento.pointerType === 'touch' || evento.pointerType === 'pen';
+      if(!esTouch && (!liveStreamHandleEl || !liveStreamHandleEl.contains(evento.target))) return;
+      if(evento.target.closest('.live-stream-control')) return;
       liveStreamDragState.activo = true;
       liveStreamDragState.pointerId = evento.pointerId;
       const rect = liveStreamWindowEl.getBoundingClientRect();
@@ -3834,7 +4051,7 @@
       liveStreamDragState.offsetY = evento.clientY - rect.top;
       liveStreamWindowEl.setPointerCapture(evento.pointerId);
       liveStreamWindowEl.style.transition = 'none';
-    });
+    };
 
     const mover = evento =>{
       if(!liveStreamDragState.activo || evento.pointerId !== liveStreamDragState.pointerId) return;
@@ -3860,9 +4077,132 @@
       }
     };
 
+    liveStreamWindowEl.addEventListener('pointerdown', iniciarArrastre);
     window.addEventListener('pointermove', mover);
     window.addEventListener('pointerup', finalizar);
     window.addEventListener('pointercancel', finalizar);
+  }
+
+  function configurarRedimensionLive(){
+    if(!liveStreamResizeHandles?.length || !liveStreamWindowEl) return;
+    const iniciar = (evento, esquina, handleEl) =>{
+      if(liveStreamMaximizado) return;
+      evento.preventDefault();
+      const rect = liveStreamWindowEl.getBoundingClientRect();
+      liveStreamWindowEl.style.left = `${rect.left}px`;
+      liveStreamWindowEl.style.top = `${rect.top}px`;
+      liveStreamWindowEl.style.right = 'auto';
+      liveStreamWindowEl.style.bottom = 'auto';
+      liveStreamResizeState = {
+        activo: true,
+        corner: esquina,
+        pointerId: evento.pointerId,
+        inicioX: evento.clientX,
+        anchoInicial: liveStreamDimension.width ?? liveStreamWindowEl.offsetWidth,
+        leftInicial: rect.left,
+        handle: handleEl
+      };
+      handleEl.setPointerCapture(evento.pointerId);
+    };
+
+    const mover = evento =>{
+      if(!liveStreamResizeState.activo || evento.pointerId !== liveStreamResizeState.pointerId) return;
+      evento.preventDefault();
+      let delta = evento.clientX - liveStreamResizeState.inicioX;
+      if(liveStreamResizeState.corner === 'left'){
+        const nuevoLeft = Math.min(Math.max(0, liveStreamResizeState.leftInicial + delta), Math.max(0, window.innerWidth - 60));
+        const ajuste = nuevoLeft - liveStreamResizeState.leftInicial;
+        liveStreamWindowEl.style.left = `${nuevoLeft}px`;
+        liveStreamWindowEl.style.right = 'auto';
+        delta = -(ajuste);
+      }else{
+        delta = Math.min(delta, window.innerWidth - (liveStreamResizeState.leftInicial + liveStreamResizeState.anchoInicial));
+      }
+      const nuevoAncho = liveStreamResizeState.anchoInicial + delta;
+      aplicarDimensionesLive(nuevoAncho);
+    };
+
+    const finalizar = evento =>{
+      if(!liveStreamResizeState.activo || evento.pointerId !== liveStreamResizeState.pointerId) return;
+      liveStreamResizeState.activo = false;
+      try{
+        liveStreamResizeState.handle?.releasePointerCapture(evento.pointerId);
+      }catch(err){
+        /* noop */
+      }
+      asegurarLiveDentroDePantalla();
+    };
+
+    liveStreamResizeHandles.forEach(handle=>{
+      const esquina = handle.dataset.liveResize === 'left' ? 'left' : 'right';
+      handle.addEventListener('pointerdown',evento=>iniciar(evento,esquina,handle));
+    });
+    window.addEventListener('pointermove', mover);
+    window.addEventListener('pointerup', finalizar);
+    window.addEventListener('pointercancel', finalizar);
+  }
+
+  function actualizarBotonMaximizar(){
+    if(!liveStreamMaximizeBtn) return;
+    liveStreamMaximizeBtn.classList.toggle('activo', liveStreamMaximizado);
+    liveStreamMaximizeBtn.setAttribute('aria-label', liveStreamMaximizado ? 'Minimizar video' : 'Maximizar video');
+  }
+
+  function restaurarLiveDesdeMaximizado(){
+    if(!liveStreamWindowEl) return;
+    liveStreamMaximizado = false;
+    liveStreamWindowEl.classList.remove('maximizado');
+    if(liveStreamConfigAnterior){
+      liveStreamWindowEl.style.left = liveStreamConfigAnterior.left ?? '';
+      liveStreamWindowEl.style.top = liveStreamConfigAnterior.top ?? '';
+      liveStreamWindowEl.style.right = liveStreamConfigAnterior.right ?? '';
+      liveStreamWindowEl.style.bottom = liveStreamConfigAnterior.bottom ?? '';
+      aplicarDimensionesLive(liveStreamConfigAnterior.width);
+    }else{
+      liveStreamWindowEl.style.left = '';
+      liveStreamWindowEl.style.top = '';
+      liveStreamWindowEl.style.right = '18px';
+      liveStreamWindowEl.style.bottom = '';
+      aplicarDimensionesLive();
+    }
+    liveStreamConfigAnterior = null;
+    actualizarBotonMaximizar();
+    asegurarLiveDentroDePantalla();
+  }
+
+  function alternarMaximizadoLive(){
+    if(!liveStreamWindowEl) return;
+    if(liveStreamMaximizado){
+      restaurarLiveDesdeMaximizado();
+      return;
+    }
+    liveStreamConfigAnterior = {
+      left: liveStreamWindowEl.style.left,
+      top: liveStreamWindowEl.style.top,
+      right: liveStreamWindowEl.style.right,
+      bottom: liveStreamWindowEl.style.bottom,
+      width: liveStreamDimension.width
+    };
+    liveStreamMaximizado = true;
+    liveStreamWindowEl.classList.add('maximizado');
+    liveStreamWindowEl.style.left = '50%';
+    liveStreamWindowEl.style.top = '50%';
+    liveStreamWindowEl.style.right = 'auto';
+    liveStreamWindowEl.style.bottom = 'auto';
+    aplicarDimensionesLive(Math.min(window.innerWidth * 0.9, 820));
+    actualizarBotonMaximizar();
+  }
+
+  function sincronizarEstadoLiveInicial(){
+    obtenerLinkLiveStream()
+      .then(link=>{
+        liveStreamTieneTransmision = typeof link === 'string' && !!link.trim();
+        actualizarBotonLiveAnimacion();
+      })
+      .catch(()=>{
+        liveStreamTieneTransmision = false;
+        actualizarBotonLiveAnimacion();
+      });
   }
 
   let recalculoAlturaCartonProgramado = false;
@@ -7345,7 +7685,12 @@
   if(liveStreamAcceptBtn){
     liveStreamAcceptBtn.addEventListener('click',ocultarLiveStream);
   }
+  if(liveStreamMaximizeBtn){
+    liveStreamMaximizeBtn.addEventListener('click',alternarMaximizadoLive);
+  }
+  sincronizarEstadoLiveInicial();
   configurarArrastreLive();
+  configurarRedimensionLive();
 
   window.addEventListener('resize',()=>{
     if(sinCartonesActivosEl?.classList?.contains('visible')){
@@ -7353,6 +7698,10 @@
     }
     if(vistaConductoActiva){
       requestAnimationFrame(()=>actualizarPosicionesConducto(false));
+    }
+    if(liveStreamWindowEl && liveStreamVisible){
+      aplicarDimensionesLive(liveStreamDimension.width);
+      asegurarLiveDentroDePantalla();
     }
   });
 
