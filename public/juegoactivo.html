@@ -154,6 +154,130 @@
               transform: scale(1) rotate(0deg);
           }
       }
+      .live-stream-toggle {
+          position: fixed;
+          top: clamp(12px, 3vw, 18px);
+          right: clamp(12px, 3vw, 18px);
+          width: clamp(46px, 11vw, 60px);
+          height: clamp(46px, 11vw, 60px);
+          border-radius: 50%;
+          border: 3px solid rgba(255,255,255,0.7);
+          background: linear-gradient(145deg, rgba(255,136,0,0.95), rgba(255,94,0,0.95));
+          color: #fff;
+          font-family: 'Bangers', cursive;
+          font-size: clamp(1rem, 4vw, 1.4rem);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 10px 22px rgba(0,0,0,0.25);
+          cursor: pointer;
+          z-index: 42;
+      }
+      .live-stream-toggle:focus-visible {
+          outline: 3px solid rgba(255,255,255,0.9);
+          outline-offset: 3px;
+      }
+      .live-stream-toggle.oculto {
+          background: rgba(30,30,30,0.9);
+      }
+      .live-stream-window {
+          position: fixed;
+          top: 90px;
+          right: 18px;
+          width: min(420px, 90vw);
+          height: min(260px, 55vh);
+          background: rgba(19,19,19,0.95);
+          border-radius: 18px;
+          box-shadow: 0 18px 30px rgba(0,0,0,0.35);
+          border: 2px solid rgba(255,255,255,0.18);
+          display: flex;
+          flex-direction: column;
+          opacity: 0;
+          pointer-events: none;
+          transform: translateY(12px);
+          transition: opacity 0.25s ease, transform 0.25s ease;
+          z-index: 41;
+      }
+      .live-stream-window.visible {
+          opacity: 1;
+          pointer-events: auto;
+          transform: translateY(0);
+      }
+      .live-stream-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 10px 14px;
+          color: #fff;
+          font-family: 'Bangers', cursive;
+          letter-spacing: 1px;
+          gap: 12px;
+          cursor: grab;
+          touch-action: none;
+          user-select: none;
+      }
+      .live-stream-titulo {
+          font-size: 1.1rem;
+          text-transform: uppercase;
+      }
+      .live-stream-close {
+          background: transparent;
+          border: none;
+          color: #fff;
+          font-size: 1.6rem;
+          line-height: 1;
+          cursor: pointer;
+          padding: 4px;
+      }
+      .live-stream-body {
+          flex: 1;
+          padding: 0 14px 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+      }
+      .live-stream-player {
+          flex: 1;
+          border-radius: 12px;
+          overflow: hidden;
+          display: none;
+      }
+      .live-stream-player.visible {
+          display: block;
+      }
+      .live-stream-player iframe {
+          width: 100%;
+          height: 100%;
+          border: none;
+          border-radius: inherit;
+          background: #000;
+      }
+      .live-stream-vacio {
+          flex: 1;
+          display: none;
+          align-items: center;
+          justify-content: center;
+          flex-direction: column;
+          text-align: center;
+          padding: 12px;
+          color: #fff;
+          font-size: 0.95rem;
+          gap: 10px;
+      }
+      .live-stream-vacio.visible {
+          display: flex;
+      }
+      .live-stream-vacio button {
+          font-family: 'Bangers', cursive;
+          font-size: 1rem;
+          border: none;
+          border-radius: 999px;
+          padding: 8px 24px;
+          background: linear-gradient(145deg,#ff9f43,#ff6b21);
+          color: #fff;
+          cursor: pointer;
+          box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+      }
       .panel {
           background: var(--panel-bg);
           box-shadow: var(--panel-shadow);
@@ -3170,6 +3294,22 @@
   <button id="whatsapp-flotante" class="whatsapp-flotante" type="button" aria-label="Abrir grupo de WhatsApp">
     <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/WhatsApp_icon.png/598px-WhatsApp_icon.png" alt="">
   </button>
+  <button id="live-stream-toggle" class="live-stream-toggle" type="button" aria-label="Mostrar transmisión en vivo">LIVE</button>
+  <div id="live-stream-window" class="live-stream-window" aria-hidden="true" role="dialog" aria-label="Transmisión en vivo">
+    <div id="live-stream-handle" class="live-stream-header">
+      <span class="live-stream-titulo">Transmisión en vivo</span>
+      <button id="live-stream-close" type="button" class="live-stream-close" aria-label="Cerrar transmisión">&times;</button>
+    </div>
+    <div class="live-stream-body">
+      <div id="live-stream-player" class="live-stream-player" aria-hidden="true">
+        <iframe id="live-stream-iframe" title="Transmisión" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+      <div id="live-stream-empty" class="live-stream-vacio" aria-hidden="true">
+        <p id="live-stream-empty-text">No hay transmisiones en vivo actualmente.</p>
+        <button id="live-stream-accept" type="button">Aceptar</button>
+      </div>
+    </div>
+  </div>
   <main>
     <header id="sorteo-header">
       <div id="sin-sorteo-contenedor" class="sin-sorteo-contenedor" hidden>
@@ -3356,6 +3496,15 @@
   const whatsappModalEl = document.getElementById('modal-whatsapp');
   const whatsappModalAceptarBtn = document.getElementById('modal-whatsapp-aceptar');
   const whatsappModalMensajeEl = document.getElementById('modal-whatsapp-mensaje');
+  const liveStreamToggleBtn = document.getElementById('live-stream-toggle');
+  const liveStreamWindowEl = document.getElementById('live-stream-window');
+  const liveStreamIframeEl = document.getElementById('live-stream-iframe');
+  const liveStreamPlayerEl = document.getElementById('live-stream-player');
+  const liveStreamEmptyEl = document.getElementById('live-stream-empty');
+  const liveStreamEmptyTextEl = document.getElementById('live-stream-empty-text');
+  const liveStreamCloseBtn = document.getElementById('live-stream-close');
+  const liveStreamAcceptBtn = document.getElementById('live-stream-accept');
+  const liveStreamHandleEl = document.getElementById('live-stream-handle');
 
   const FORM_COLORS = ['#90ee90', '#fffacd', '#add8e6', '#d8b0ff', '#ffcc99', '#f77fb3', '#9ad3bc', '#fecf6a'];
   const CONFETI_COLORES = ['#ff5252', '#ffeb3b', '#69f0ae', '#40c4ff', '#ff80ab', '#7c4dff', '#fdd835', '#ff9100'];
@@ -3365,6 +3514,7 @@
   const MENSAJE_COMPLEMENTARIOS_PENDIENTES = 'Ya hay GANADORES en todas las FORMAS, ahora se continua con los cantos de números faltantes para transparencia del SORTEO';
   const MENSAJE_COMPLEMENTARIOS_COMPLETOS = 'Ya hay GANADORES en todas las FORMAS, y ya se han cantado todos los cantos restantes para la transparencia del SORTEO';
   const MENSAJE_WHATSAPP_NO_DISPONIBLE = 'Aún no hay grupos disponibles de WhatsApp';
+  const MENSAJE_LIVE_NO_DISPONIBLE = 'No hay transmisiones en vivo actualmente';
   const cantoCellsMap = new Map();
   let cantosOrdenados = [];
   let cantosEtiquetas = [];
@@ -3385,6 +3535,11 @@
   let whatsappLinkValor = '';
   let whatsappLinkCargado = false;
   let whatsappLinkPromesa = null;
+  let liveStreamLinkValor = '';
+  let liveStreamLinkCargado = false;
+  let liveStreamLinkPromesa = null;
+  let liveStreamVisible = false;
+  let liveStreamDragState = {activo:false, offsetX:0, offsetY:0, pointerId:null};
 
   let cartonSeleccionadoId = null;
   const animacionesCartones = new Map();
@@ -3517,6 +3672,197 @@
         whatsappLinkCargado = true;
         mostrarModalWhatsapp(MENSAJE_WHATSAPP_NO_DISPONIBLE);
       });
+  }
+
+  function normalizarEnlaceLive(link){
+    if(typeof link !== 'string') return '';
+    const valor = link.trim();
+    if(!valor) return '';
+    try {
+      const url = new URL(valor);
+      const host = url.hostname.toLowerCase();
+      if(host.includes('youtube.com')){
+        const videoId = url.searchParams.get('v');
+        if(videoId){
+          return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+        }
+        if(url.pathname.startsWith('/embed/')){
+          return url.href;
+        }
+        const segmentos = url.pathname.split('/').filter(Boolean);
+        if(segmentos.length>=2 && segmentos[0]==='live'){
+          return `https://www.youtube.com/embed/${segmentos[1]}?autoplay=1`;
+        }
+      }
+      if(host.includes('youtu.be')){
+        const id = url.pathname.replace(/^\//,'');
+        if(id){
+          return `https://www.youtube.com/embed/${id}?autoplay=1`;
+        }
+      }
+      return url.href;
+    }catch(err){
+      if(/^https?:\/\//i.test(valor)){
+        return valor;
+      }
+      return `https://${valor}`;
+    }
+  }
+
+  function mostrarMensajeLive(texto){
+    if(!liveStreamEmptyEl) return;
+    const mensaje = typeof texto === 'string' && texto.trim() ? texto.trim() : MENSAJE_LIVE_NO_DISPONIBLE;
+    if(liveStreamEmptyTextEl){
+      liveStreamEmptyTextEl.textContent = mensaje;
+    }
+    liveStreamEmptyEl.classList.add('visible');
+    liveStreamEmptyEl.setAttribute('aria-hidden','false');
+    if(liveStreamPlayerEl){
+      liveStreamPlayerEl.classList.remove('visible');
+      liveStreamPlayerEl.setAttribute('aria-hidden','true');
+    }
+    if(liveStreamIframeEl){
+      liveStreamIframeEl.removeAttribute('src');
+    }
+  }
+
+  function mostrarLiveStream(){
+    if(!liveStreamWindowEl) return;
+    liveStreamVisible = true;
+    liveStreamWindowEl.classList.add('visible');
+    liveStreamWindowEl.setAttribute('aria-hidden','false');
+    if(liveStreamToggleBtn){
+      liveStreamToggleBtn.classList.add('oculto');
+      liveStreamToggleBtn.setAttribute('aria-label','Ocultar transmisión en vivo');
+    }
+  }
+
+  function ocultarLiveStream(){
+    liveStreamVisible = false;
+    if(liveStreamWindowEl){
+      liveStreamWindowEl.classList.remove('visible');
+      liveStreamWindowEl.setAttribute('aria-hidden','true');
+    }
+    if(liveStreamToggleBtn){
+      liveStreamToggleBtn.classList.remove('oculto');
+      liveStreamToggleBtn.setAttribute('aria-label','Mostrar transmisión en vivo');
+    }
+    if(liveStreamIframeEl){
+      liveStreamIframeEl.removeAttribute('src');
+    }
+    if(liveStreamPlayerEl){
+      liveStreamPlayerEl.classList.remove('visible');
+      liveStreamPlayerEl.setAttribute('aria-hidden','true');
+    }
+    if(liveStreamEmptyEl){
+      liveStreamEmptyEl.classList.remove('visible');
+      liveStreamEmptyEl.setAttribute('aria-hidden','true');
+    }
+  }
+
+  function mostrarLiveStreamVideo(enlace){
+    if(!liveStreamPlayerEl || !liveStreamIframeEl) return;
+    liveStreamIframeEl.src = enlace;
+    liveStreamPlayerEl.classList.add('visible');
+    liveStreamPlayerEl.setAttribute('aria-hidden','false');
+    if(liveStreamEmptyEl){
+      liveStreamEmptyEl.classList.remove('visible');
+      liveStreamEmptyEl.setAttribute('aria-hidden','true');
+    }
+  }
+
+  function obtenerLinkLiveStream(){
+    if(liveStreamLinkPromesa) return liveStreamLinkPromesa;
+    liveStreamLinkPromesa = (async ()=>{
+      try {
+        await initFirebase();
+      }catch(err){
+        console.error('No se pudo inicializar Firebase para el live stream', err);
+        liveStreamLinkCargado = true;
+        return liveStreamLinkValor;
+      }
+      try {
+        const doc = await db.collection('Variablesglobales').doc('Parametros').get();
+        if(doc.exists){
+          const data = doc.data() || {};
+          const enlace = (data.linkLiveTiktok ?? data.linklivetiktok ?? data.link_live_tiktok ?? '').toString().trim();
+          if(enlace){
+            liveStreamLinkValor = enlace;
+          }
+        }
+      }catch(err){
+        console.error('Error obteniendo el enlace de la transmisión en vivo', err);
+      }
+      liveStreamLinkCargado = true;
+      return liveStreamLinkValor;
+    })();
+    return liveStreamLinkPromesa;
+  }
+
+  function prepararLiveStream(){
+    mostrarLiveStream();
+    mostrarMensajeLive('Buscando transmisiones en vivo...');
+    const cargarLink = liveStreamLinkCargado ? Promise.resolve(liveStreamLinkValor) : obtenerLinkLiveStream();
+    cargarLink
+      .then(link=>{
+        const enlace = typeof link === 'string' ? link.trim() : '';
+        if(!enlace){
+          mostrarMensajeLive(MENSAJE_LIVE_NO_DISPONIBLE);
+          return;
+        }
+        const embed = normalizarEnlaceLive(enlace);
+        if(embed){
+          mostrarLiveStreamVideo(embed);
+        }else{
+          mostrarMensajeLive(MENSAJE_LIVE_NO_DISPONIBLE);
+        }
+      })
+      .catch(err=>{
+        console.error('No se pudo cargar el enlace de transmisión', err);
+        mostrarMensajeLive('No pudimos cargar la transmisión en vivo.');
+      });
+  }
+
+  function configurarArrastreLive(){
+    if(!liveStreamHandleEl || !liveStreamWindowEl) return;
+    liveStreamHandleEl.addEventListener('pointerdown',evento=>{
+      if(!liveStreamWindowEl) return;
+      liveStreamDragState.activo = true;
+      liveStreamDragState.pointerId = evento.pointerId;
+      const rect = liveStreamWindowEl.getBoundingClientRect();
+      liveStreamDragState.offsetX = evento.clientX - rect.left;
+      liveStreamDragState.offsetY = evento.clientY - rect.top;
+      liveStreamWindowEl.setPointerCapture(evento.pointerId);
+      liveStreamWindowEl.style.transition = 'none';
+    });
+
+    const mover = evento =>{
+      if(!liveStreamDragState.activo || evento.pointerId !== liveStreamDragState.pointerId) return;
+      evento.preventDefault();
+      const ancho = liveStreamWindowEl.offsetWidth;
+      const alto = liveStreamWindowEl.offsetHeight;
+      const maxX = window.innerWidth - ancho;
+      const maxY = window.innerHeight - alto;
+      const nuevoLeft = Math.min(Math.max(0, evento.clientX - liveStreamDragState.offsetX), Math.max(0, maxX));
+      const nuevoTop = Math.min(Math.max(0, evento.clientY - liveStreamDragState.offsetY), Math.max(0, maxY));
+      liveStreamWindowEl.style.left = `${nuevoLeft}px`;
+      liveStreamWindowEl.style.top = `${nuevoTop}px`;
+      liveStreamWindowEl.style.right = 'auto';
+      liveStreamWindowEl.style.bottom = 'auto';
+    };
+
+    const finalizar = evento =>{
+      if(!liveStreamDragState.activo || evento.pointerId !== liveStreamDragState.pointerId) return;
+      liveStreamDragState.activo = false;
+      if(liveStreamWindowEl){
+        liveStreamWindowEl.releasePointerCapture(evento.pointerId);
+        liveStreamWindowEl.style.transition = '';
+      }
+    };
+
+    window.addEventListener('pointermove', mover);
+    window.addEventListener('pointerup', finalizar);
+    window.addEventListener('pointercancel', finalizar);
   }
 
   let recalculoAlturaCartonProgramado = false;
@@ -6983,6 +7329,23 @@
       }
     });
   }
+
+  if(liveStreamToggleBtn){
+    liveStreamToggleBtn.addEventListener('click',()=>{
+      if(liveStreamVisible){
+        ocultarLiveStream();
+      }else{
+        prepararLiveStream();
+      }
+    });
+  }
+  if(liveStreamCloseBtn){
+    liveStreamCloseBtn.addEventListener('click',ocultarLiveStream);
+  }
+  if(liveStreamAcceptBtn){
+    liveStreamAcceptBtn.addEventListener('click',ocultarLiveStream);
+  }
+  configurarArrastreLive();
 
   window.addEventListener('resize',()=>{
     if(sinCartonesActivosEl?.classList?.contains('visible')){

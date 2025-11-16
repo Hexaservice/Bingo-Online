@@ -542,6 +542,27 @@
     .whatsapp-actions button:hover {
       transform: scale(1.02);
     }
+    .live-link-actions {
+      margin-top: 8px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .live-link-actions button {
+      background: linear-gradient(135deg,#ff9a3c,#ff6200);
+      color: #fff;
+      border: none;
+      font-family: 'Bangers', cursive;
+      font-size: 1rem;
+      padding: 8px 18px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .live-link-actions button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    }
     @media (orientation: portrait) {
       #asignacion-usuarios-section {
         margin: 4px 0;
@@ -853,6 +874,11 @@
     <div class="whatsapp-actions">
       <button type="button" id="guardar-link-whatsapp">Guardar</button>
     </div>
+    <label for="link-live-tiktok">Link Live Tiktok</label>
+    <textarea id="link-live-tiktok" placeholder="https://www.tiktok.com/@cuenta/live o https://youtube.com/watch?v=..." spellcheck="false"></textarea>
+    <div class="live-link-actions">
+      <button type="button" id="guardar-link-live-tiktok">Guardar</button>
+    </div>
   </section>
   <section id="notificaciones-panel" class="notificaciones-panel" aria-labelledby="notificaciones-titulo">
     <div class="notificaciones-fila notificaciones-fila-titulo" data-switch="notificaciones-global">
@@ -1045,6 +1071,8 @@
     const etiquetaNumeroWhatsapp=document.getElementById('numero-whatsapp-label');
     const campoLinkWhatsapp=document.getElementById('link-whatsapp');
     const botonGuardarLink=document.getElementById('guardar-link-whatsapp');
+    const campoLinkLiveTiktok=document.getElementById('link-live-tiktok');
+    const botonGuardarLinkLive=document.getElementById('guardar-link-live-tiktok');
 
     async function cargarParametrosWhatsapp(){
       try {
@@ -1062,6 +1090,10 @@
           const linkGuardado=data.linkWhatsapp??data.linkwhatsapp??'';
           if(linkGuardado){
             campoLinkWhatsapp.value=linkGuardado;
+          }
+          const linkLiveGuardado=data.linkLiveTiktok??data.linklivetiktok??data.link_live_tiktok??'';
+          if(linkLiveGuardado){
+            campoLinkLiveTiktok.value=linkLiveGuardado;
           }
         }
       } catch(err){
@@ -1105,6 +1137,18 @@
       } catch(err){
         console.error('No se pudo guardar el link de WhatsApp',err);
         alert('Ocurrió un error al guardar el link de WhatsApp. Inténtalo nuevamente.');
+      }
+    });
+    botonGuardarLinkLive.addEventListener('click',async ()=>{
+      const valor=campoLinkLiveTiktok.value.trim();
+      const confirmar=await confirm(valor ? '¿Deseas guardar este enlace para la transmisión en vivo?' : '¿Deseas eliminar el link guardado para transmisiones en vivo?');
+      if(!confirmar) return;
+      try {
+        await db.collection('Variablesglobales').doc('Parametros').set({linkLiveTiktok:valor},{merge:true});
+        alert(valor ? 'Link de transmisión guardado correctamente.' : 'Se eliminó el link de transmisión en vivo.');
+      } catch(err){
+        console.error('No se pudo guardar el link de transmisión',err);
+        alert('Ocurrió un error al guardar el link de transmisión. Inténtalo nuevamente.');
       }
     });
     cargarParametrosWhatsapp();
