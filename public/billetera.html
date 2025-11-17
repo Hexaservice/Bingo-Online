@@ -406,6 +406,8 @@
     const transacciones=[];
     let porcentajeRetiro=0, porcentajeAdministra=0;
     let creditosTotales=0, creditosTransito=0, creditosDisponibles=0;
+    let numeroWhatsappDestino='';
+    let numeroWhatsappCargado=false;
 
     function toNumberSafe(valor, defecto=0){
       const numero=parseFloat(valor);
@@ -490,6 +492,89 @@
       return (tieneMas?'+':'')+limpio;
     }
 
+    function normalizarNumeroWhatsapp(valor){
+      const texto=(valor||'').toString();
+      let limpio=texto.replace(/[^0-9+]/g,'');
+      if(!limpio) return '';
+      if(limpio.startsWith('+')){
+        limpio='+'+limpio.slice(1).replace(/\+/g,'');
+      }else{
+        limpio=limpio.replace(/\+/g,'');
+      }
+      return limpio;
+    }
+
+    function construirEnlaceWhatsapp(numero,mensaje){
+      const normalizado=normalizarNumeroWhatsapp(numero);
+      if(!normalizado) return '';
+      const destino=normalizado.startsWith('+')?normalizado.slice(1):normalizado;
+      const texto=encodeURIComponent((mensaje||'').toString());
+      return `https://wa.me/${destino}${texto?`?text=${texto}`:''}`;
+    }
+
+    function obtenerNombreUsuario(){
+      const user=auth.currentUser;
+      const nombre=(user?.displayName||'').trim();
+      if(nombre) return nombre;
+      return (user?.email||'').trim();
+    }
+
+    async function obtenerNumeroWhatsappConfigurado(){
+      if(numeroWhatsappDestino){
+        numeroWhatsappCargado=true;
+        return numeroWhatsappDestino;
+      }
+      if(numeroWhatsappCargado) return '';
+      try{
+        const snap=await db.collection('Variablesglobales').doc('Parametros').get();
+        if(snap.exists){
+          const data=snap.data()||{};
+          numeroWhatsappDestino=normalizarNumeroWhatsapp(data.numeroWhatsapp||data.numero_whatsapp||'');
+        }
+      }catch(error){
+        console.error('No se pudo cargar el número de WhatsApp configurado',error);
+      }
+      numeroWhatsappCargado=true;
+      return numeroWhatsappDestino;
+    }
+
+    function construirMensajeWhatsapp(tipo,info){
+      const correo=auth.currentUser?.email||'';
+      const lineas=[];
+      if(tipo==='deposito'){
+        lineas.push('Solicitud de DEPÓSITO');
+        lineas.push(`Banco receptor: ${info?.banco||'N/D'}`);
+        lineas.push(`Monto: ${toNumberSafe(info?.monto,0).toFixed(2)}`);
+        lineas.push(`Referencia: ${info?.referencia||'N/D'}`);
+        if(info?.comentario){ lineas.push(`Comentario: ${info.comentario}`); }
+      }else if(tipo==='retiro'){
+        lineas.push('Solicitud de RETIRO');
+        lineas.push(`Banco receptor: ${info?.banco||'N/D'}`);
+        if(info?.pagomovil){ lineas.push(`Pago móvil: ${info.pagomovil}`); }
+        if(info?.cuenta){ lineas.push(`Cuenta: ${info.cuenta}`); }
+        lineas.push(`Monto solicitado: ${toNumberSafe(info?.montoSolicitado,0).toFixed(2)}`);
+        lineas.push(`Monto a recibir: ${toNumberSafe(info?.montoNeto,0).toFixed(2)}`);
+        if(info?.comentario){ lineas.push(`Comentario: ${info.comentario}`); }
+      }
+      const nombre=obtenerNombreUsuario();
+      if(nombre) lineas.unshift(`Usuario: ${nombre}`);
+      if(correo) lineas.unshift(`Correo: ${correo}`);
+      return lineas.filter(Boolean).join('\n');
+    }
+
+    async function notificarSolicitudWhatsapp(tipo,info){
+      try{
+        const numero=await obtenerNumeroWhatsappConfigurado();
+        if(!numero) return;
+        const mensaje=construirMensajeWhatsapp(tipo,info);
+        const enlace=construirEnlaceWhatsapp(numero,mensaje);
+        if(!enlace) return;
+        window.open(enlace,'_blank','noopener');
+      }catch(error){
+        console.error('No se pudo preparar el mensaje de WhatsApp',error);
+      }
+    }
+
     function limitarSoloNumeros(input){
       if(!input) return;
       const sanitizar=()=>{
@@ -565,6 +650,8 @@
         if(paramDoc.exists){
           porcentajeRetiro = parseFloat(paramDoc.data().porcentajeretiro) || 0;
           porcentajeAdministra = parseFloat(paramDoc.data().porcentajeadministra) || 0;
+          numeroWhatsappDestino = normalizarNumeroWhatsapp(paramDoc.data().numeroWhatsapp||paramDoc.data().numero_whatsapp||'');
+          numeroWhatsappCargado = true;
           document.getElementById('porcentaje-retiro').textContent = porcentajeRetiro;
           document.getElementById('porcentaje-admin').textContent = porcentajeAdministra;
           actualizarMontoNeto();
@@ -909,11 +996,17 @@
       };
       await db.collection('transacciones').add(data);
       alert('Bien, recibimos tu solicitud, una vez verificado el pago se recargará tu billetera');
+      await notificarSolicitudWhatsapp('deposito',{
+        banco:banco,
+        monto:monto,
+        referencia:ref,
+        comentario:data.comentario
+      });
       limpiarCamposTransaccion('deposito');
       cargarTransacciones();
     });
 
-    async function ejecutarRetiro(monto,montoFinal){
+    async function ejecutarRetiro(monto,montoFinal, comentario){
       const user=auth.currentUser;
       await initServerTime();
       const billeteraRef=db.collection('Billetera').doc(user.email);
@@ -924,7 +1017,7 @@
         MontoSolicitado:monto,
         Monto:montoFinal,
         referencia:'',
-        comentario:document.getElementById('comentario-retiro').value.trim(),
+        comentario:comentario,
         estado:'PENDIENTE',
         IDbilletera:user.email,
         fechasolicitud:fechaActual(),
@@ -935,10 +1028,11 @@
         horagestion:'',
         nota:''
       };
+      let billeteraData=null;
       try{
         await db.runTransaction(async tx=>{
           const billeteraSnap=await tx.get(billeteraRef);
-          const billeteraData=billeteraSnap.exists?(billeteraSnap.data()||{}):{};
+          billeteraData=billeteraSnap.exists?(billeteraSnap.data()||{}):{};
           const bancoSeleccionado=(billeteraData.banco||'').toString();
           const creditosActual=toNumberSafe(billeteraData.creditos,0);
           const transitoActual=Math.max(0,toNumberSafe(billeteraData.creditostransito,0));
@@ -964,6 +1058,7 @@
       alert('Solicitud enviada, una vez validada se transferirá a tu pago móvil');
       limpiarCamposTransaccion('retiro');
       cargarTransacciones();
+      return { data, billetera: billeteraData };
     }
 
     document.getElementById('btn-retirar').addEventListener('click', async () => {
@@ -974,9 +1069,18 @@
       if(monto>creditosDisponibles){ alert(`El monto supera los créditos disponibles (${formatearMontoPantalla(creditosDisponibles)})`); return; }
       const montoFinal=monto - (monto*porcentajeRetiro/100) - (monto*porcentajeAdministra/100);
       document.getElementById('monto-retiro-neto').value = montoFinal>0 ? montoFinal.toFixed(2) : '';
+      const comentarioRetiro=document.getElementById('comentario-retiro').value.trim();
       if(await confirm(`¿Confirmas la solicitud de retiro por ${montoFinal.toFixed(2)}?`)){
         try{
-          await ejecutarRetiro(monto,montoFinal);
+          const resultado=await ejecutarRetiro(monto,montoFinal, comentarioRetiro);
+          await notificarSolicitudWhatsapp('retiro',{
+            montoSolicitado:monto,
+            montoNeto:montoFinal,
+            comentario:comentarioRetiro,
+            banco:resultado?.billetera?.banco||resultado?.data?.bancoreceptor||'',
+            pagomovil:resultado?.billetera?.pagomovil||'',
+            cuenta:resultado?.billetera?.cuenta||''
+          });
         }catch(error){
           if(error?.message==='CREDITOS_INSUFICIENTES'){
             await refrescarResumenBilletera();
