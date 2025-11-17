@@ -547,6 +547,74 @@
       return Number.isFinite(numero)?numero:defecto;
     }
 
+    const cacheWhatsapp=new Map();
+    function normalizarNumeroWhatsapp(valor){
+      const texto=(valor||'').toString();
+      let limpio=texto.replace(/[^0-9+]/g,'');
+      if(!limpio) return '';
+      if(limpio.startsWith('+')){
+        limpio='+'+limpio.slice(1).replace(/\+/g,'');
+      }else{
+        limpio=limpio.replace(/\+/g,'');
+      }
+      return limpio;
+    }
+    function construirEnlaceWhatsapp(numero,mensaje){
+      const normalizado=normalizarNumeroWhatsapp(numero);
+      if(!normalizado) return '';
+      const destino=normalizado.startsWith('+')?normalizado.slice(1):normalizado;
+      const texto=encodeURIComponent((mensaje||'').toString());
+      return `https://wa.me/${destino}${texto?`?text=${texto}`:''}`;
+    }
+    async function obtenerNumeroWhatsappDestino(idBilletera){
+      if(!idBilletera) return '';
+      if(cacheWhatsapp.has(idBilletera)) return cacheWhatsapp.get(idBilletera);
+      let numero='';
+      try{
+        const billeteraDoc=await db.collection('Billetera').doc(idBilletera).get();
+        if(billeteraDoc.exists){
+          const data=billeteraDoc.data()||{};
+          numero=data.numeroWhatsapp||data.numero_whatsapp||data.whatsapp||data.celular||data.numerocel||data.telefono||data.Telefono||'';
+        }
+        if(!numero){
+          const userDoc=await db.collection('users').doc(idBilletera).get();
+          if(userDoc.exists){
+            const data=userDoc.data()||{};
+            numero=data.telefono||data.Telefono||data.celular||data.whatsapp||data.phoneNumber||'';
+          }
+        }
+      }catch(err){
+        console.error('No se pudo obtener el número de WhatsApp',err);
+      }
+      const normalizado=normalizarNumeroWhatsapp(numero);
+      cacheWhatsapp.set(idBilletera,normalizado);
+      return normalizado;
+    }
+    function construirMensajeWhatsapp(transaccion,estadoFinal,nota){
+      const tipo=((transaccion.tipotrans||'').toLowerCase()==='retiro')?'retiro':'depósito';
+      const montoNum=toNumberSafe(transaccion.MontoSolicitado??transaccion.Monto,transaccion.Monto);
+      const monto=formatearMonto(montoNum);
+      let mensaje=`Hola, tu ${tipo} por ${monto} Bs ha sido ${estadoFinal==='APROBADO'?'aprobado':'anulado'}.`;
+      if(estadoFinal==='ANULADO' && nota){
+        mensaje+=` Motivo: ${nota}`;
+      }
+      return mensaje;
+    }
+    async function notificarWhatsappTransacciones(lista,estadoFinal,nota){
+      for(const transaccion of lista){
+        const numero=await obtenerNumeroWhatsappDestino(transaccion.IDbilletera);
+        if(!numero){
+          console.warn('La transacción no tiene número de WhatsApp disponible',transaccion.IDbilletera);
+          continue;
+        }
+        const mensaje=construirMensajeWhatsapp(transaccion,estadoFinal,nota);
+        const enlace=construirEnlaceWhatsapp(numero,mensaje);
+        if(enlace){
+          window.open(enlace,'_blank');
+        }
+      }
+    }
+
     async function actualizar(ids,estado,nota,ref,condicion){
       await initServerTime();
       for(const id of ids){
@@ -617,11 +685,12 @@
       toggleView('toggle-recargas',document.getElementById('recargas-content'));
       toggleView('toggle-retiros',document.getElementById('retiros-content'));
 
-      document.getElementById('aprobar-rec').addEventListener('click',()=>{
+      document.getElementById('aprobar-rec').addEventListener('click',async()=>{
         const tb=document.getElementById('tabla-recargas');
         const sel=Array.from(tb.querySelectorAll('input[type=checkbox]:checked'));
         if(!sel.length) return;
         const ids=[];
+        const registrosAprobados=[];
         let hasAprobado=false;
         let hasAnulado=false;
         sel.forEach(chk=>{
@@ -634,11 +703,15 @@
             chk.checked=false;
           }else{
             ids.push(chk.dataset.id);
+            registrosAprobados.push(t);
           }
         });
         if(hasAnulado) alert('No se pueden Aprobar transacciones ANULADAS');
         if(hasAprobado) alert('No se pueden aprobar las transacciones APROBADAS');
-        if(ids.length) actualizar(ids,'APROBADO');
+        if(ids.length){
+          await actualizar(ids,'APROBADO');
+          await notificarWhatsappTransacciones(registrosAprobados,'APROBADO');
+        }
       });
 
       document.getElementById('anular-rec').addEventListener('click',async()=>{
@@ -654,7 +727,9 @@
         }
         const motivo=await solicitarMotivo();
         if(!motivo) return;
-        actualizar(ids,'ANULADO',motivo);
+        const registrosAnulados=ids.map(id=>datosRec.find(t=>t.id===id)).filter(Boolean);
+        await actualizar(ids,'ANULADO',motivo);
+        await notificarWhatsappTransacciones(registrosAnulados,'ANULADO',motivo);
       });
 
       document.getElementById('archivar-rec').addEventListener('click',()=>{
@@ -702,6 +777,7 @@
           const conf=await confirm('¿Deseas APROBAR todos los registros seleccionados?');
           if(!conf) return;
         }
+        const registrosAprobados=[];
         for(const chk of sel){
           const ref=chk.closest('tr').children[4].textContent.trim();
           const t=datosRet.find(x=>x.id===chk.dataset.id);
@@ -709,11 +785,15 @@
             alert('No se pueden aprobar las transacciones APROBADAS');
             chk.checked=false;
           }else if(t.estado==='PENDIENTE'){
+            registrosAprobados.push({...t, referencia:ref});
             await actualizar([chk.dataset.id],'APROBADO',null,ref);
           }else{
             alert('No se pueden aprobar las transacciones ANULADAS');
             chk.checked=false;
           }
+        }
+        if(registrosAprobados.length){
+          await notificarWhatsappTransacciones(registrosAprobados,'APROBADO');
         }
         actualizarEditable();
       });
@@ -762,7 +842,10 @@
           alert('Debes colocar un motivo para anulación');
           return;
         }
-        actualizar(ids,'ANULADO',nota.trim());
+        const registrosAnulados=ids.map(id=>datosRet.find(t=>t.id===id)).filter(Boolean);
+        const motivo=nota.trim();
+        await actualizar(ids,'ANULADO',motivo);
+        await notificarWhatsappTransacciones(registrosAnulados,'ANULADO',motivo);
       });
 
       document.getElementById('archivar-ret').addEventListener('click',()=>{
