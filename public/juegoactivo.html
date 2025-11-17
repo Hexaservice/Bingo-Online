@@ -175,7 +175,7 @@
           transition: transform 0.2s ease, box-shadow 0.2s ease;
       }
       .live-stream-toggle.live-activo {
-          animation: livePulse 1.2s ease-in-out infinite;
+          animation: livePulse 0.8s ease-in-out infinite;
           box-shadow: 0 0 18px rgba(255,87,34,0.65);
       }
       @keyframes livePulse {
@@ -183,7 +183,7 @@
               transform: scale(1);
           }
           50% {
-              transform: scale(1.08);
+              transform: scale(1.2);
           }
           100% {
               transform: scale(1);
@@ -330,6 +330,12 @@
       }
       .live-stream-maximize-btn .icon-min {
           display: none;
+      }
+      .live-stream-window.maximizado .live-stream-maximize-btn .icon-max {
+          display: none;
+      }
+      .live-stream-window.maximizado .live-stream-maximize-btn .icon-min {
+          display: inline;
       }
       .live-stream-maximize-btn.activo .icon-max {
           display: none;
@@ -1080,6 +1086,31 @@
           cursor: pointer;
           box-shadow: 0 8px 20px rgba(0,0,0,0.2);
           transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .live-stream-toggle .live-stream-icon {
+          width: clamp(20px, 6vw, 24px);
+          height: clamp(14px, 4.5vw, 18px);
+          display: inline-block;
+          background-repeat: no-repeat;
+          background-size: contain;
+          filter: drop-shadow(0 0 4px rgba(0,0,0,0.55));
+      }
+      .live-stream-icon--youtube {
+          background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='4' fill='%23ff0000'/><path d='M10 7l7 5-7 5z' fill='white'/></svg>");
+      }
+      .live-stream-icon--tiktok {
+          background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%2325F4EE' d='M16 4.5v3.3c1 .8 2.2 1.2 3.5 1.2v2.5c-1.6 0-3-.4-4.3-1.2v5.6c0 3.1-2.5 5.6-5.6 5.6-1.7 0-3.1-.7-4.2-1.8a5.6 5.6 0 0 1 4.2-9.3c.4 0 .9.05 1.3.15v2.6a3 3 0 1 0 2.9 3.1V4.5z'/><path fill='%23FF0050' d='M14.6 7.3a7 7 0 0 1-1.4-.5v5c0 3-2.4 5.4-5.4 5.4-.5 0-.9-.05-1.4-.15 1 1.1 2.4 1.8 4 1.8 3.1 0 5.6-2.5 5.6-5.6V7.3z'/><path fill='white' d='M13.2 5h2.8c.2 1.1 1 2 2.2 2.5v2.3c-1.2-.2-2.2-.7-3-1.5v5.5a4.5 4.5 0 1 1-4.5-4.5c.3 0 .6 0 .9.1V12a2 2 0 1 0 1.6 1.9z'/></svg>");
+      }
+      .sr-only {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0,0,0,0);
+          white-space: nowrap;
+          border: 0;
       }
       .ultimo-canto-popup .popup-accion:hover {
           transform: translateY(-1px);
@@ -3673,6 +3704,10 @@
   let liveStreamAudioPermisoSolicitado = false;
   let liveStreamAudioHabilitado = false;
   let liveStreamAudioContexto = null;
+  let liveStreamPlatform = 'otro';
+  let liveStreamIconInterval = null;
+  let liveStreamMostrarTexto = true;
+  const LIVE_ICON_INTERVAL_MS = 3000;
 
   let cartonSeleccionadoId = null;
   const animacionesCartones = new Map();
@@ -3961,12 +3996,13 @@
           return;
         }
         const embed = normalizarEnlaceLive(enlace);
+        liveStreamTieneTransmision = !!embed;
+        actualizarPlataformaLive(embed ? enlace : '');
         if(embed){
           mostrarLiveStreamVideo(embed);
         }else{
           mostrarMensajeLive(MENSAJE_LIVE_NO_DISPONIBLE);
         }
-        liveStreamTieneTransmision = !!embed;
         actualizarBotonLiveAnimacion();
       })
       .catch(err=>{
@@ -3982,6 +4018,74 @@
     }else{
       liveStreamToggleBtn.classList.remove('live-activo');
     }
+    actualizarAlternanciaContenidoLive();
+  }
+
+  function detectarPlataformaLive(link){
+    if(typeof link !== 'string') return 'otro';
+    try{
+      const url = new URL(link.trim());
+      const host = url.hostname.toLowerCase();
+      if(host.includes('youtube') || host.includes('youtu.be')) return 'youtube';
+      if(host.includes('tiktok')) return 'tiktok';
+      return 'otro';
+    }catch(err){
+      return 'otro';
+    }
+  }
+
+  function establecerContenidoBotonLive(modo){
+    if(!liveStreamToggleBtn) return;
+    if(modo === 'youtube'){
+      liveStreamToggleBtn.innerHTML = "<span class=\"live-stream-icon live-stream-icon--youtube\" aria-hidden=\"true\"></span><span class=\"sr-only\">Transmisión en YouTube</span>";
+      return;
+    }
+    if(modo === 'tiktok'){
+      liveStreamToggleBtn.innerHTML = "<span class=\"live-stream-icon live-stream-icon--tiktok\" aria-hidden=\"true\"></span><span class=\"sr-only\">Transmisión en TikTok</span>";
+      return;
+    }
+    liveStreamToggleBtn.textContent = 'LIVE';
+  }
+
+  function detenerAlternanciaIconoLive(){
+    if(liveStreamIconInterval){
+      clearInterval(liveStreamIconInterval);
+      liveStreamIconInterval = null;
+    }
+    liveStreamMostrarTexto = true;
+    establecerContenidoBotonLive();
+  }
+
+  function iniciarAlternanciaIconoLive(){
+    detenerAlternanciaIconoLive();
+    if(!liveStreamTieneTransmision) return;
+    if(liveStreamPlatform !== 'youtube' && liveStreamPlatform !== 'tiktok'){
+      establecerContenidoBotonLive();
+      return;
+    }
+    liveStreamMostrarTexto = false;
+    establecerContenidoBotonLive(liveStreamPlatform);
+    liveStreamIconInterval = setInterval(()=>{
+      liveStreamMostrarTexto = !liveStreamMostrarTexto;
+      if(liveStreamMostrarTexto){
+        establecerContenidoBotonLive();
+      }else{
+        establecerContenidoBotonLive(liveStreamPlatform);
+      }
+    }, LIVE_ICON_INTERVAL_MS);
+  }
+
+  function actualizarAlternanciaContenidoLive(){
+    if(liveStreamTieneTransmision){
+      iniciarAlternanciaIconoLive();
+    }else{
+      detenerAlternanciaIconoLive();
+    }
+  }
+
+  function actualizarPlataformaLive(link){
+    liveStreamPlatform = detectarPlataformaLive(link);
+    actualizarAlternanciaContenidoLive();
   }
 
   function calcularAspectRatioDesdeLink(enlace){
@@ -4345,10 +4449,12 @@
     obtenerLinkLiveStream()
       .then(link=>{
         liveStreamTieneTransmision = typeof link === 'string' && !!link.trim();
+        actualizarPlataformaLive(liveStreamTieneTransmision ? link : '');
         actualizarBotonLiveAnimacion();
       })
       .catch(()=>{
         liveStreamTieneTransmision = false;
+        actualizarPlataformaLive('');
         actualizarBotonLiveAnimacion();
       });
   }
