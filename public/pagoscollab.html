@@ -276,6 +276,9 @@
     #pagos-content {
       display: none;
       overflow-x: auto;
+      max-height: 70vh;
+      overflow-y: auto;
+      position: relative;
     }
     #pagos-section .switch {
       margin-top: 4px;
@@ -294,6 +297,12 @@
       font-size: 0.9rem;
       font-weight: bold;
       white-space: nowrap;
+    }
+    #tabla-pagos-colab thead th {
+      position: sticky;
+      top: 0;
+      background: #f7f7f7;
+      z-index: 2;
     }
     #tabla-pagos-colab th:nth-child(1),
     #tabla-pagos-colab td:nth-child(1) {
@@ -625,12 +634,15 @@
         const estadoTx = (tx.estado || '').toUpperCase();
         if(estado && estadoTx !== estado) return;
         const montoFmt = (parseFloat(tx.Monto) || 0).toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
+        const esRetiro = tipoTx === 'retiro';
+        const colorTipo = esRetiro ? '#b71c1c' : '#1b5e20';
+        const colorMonto = esRetiro ? '#b71c1c' : '#1b5e20';
         const estadoColor = estadoTx === 'APROBADO' ? '#1b5e20' : estadoTx === 'PENDIENTE' ? '#ff8c00' : '#b71c1c';
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${contador}</td>
-          <td>${tipoTx.toUpperCase()}</td>
-          <td class="celda-monto">${montoFmt}</td>
+          <td style="color:${colorTipo};">${tipoTx.toUpperCase()}</td>
+          <td class="celda-monto" style="color:${colorMonto};">${montoFmt}</td>
           <td class="celda-fecha">${fechaMostrar}</td>
           <td class="estado" style="color:${estadoColor}">${estadoTx || '-'}</td>
         `;

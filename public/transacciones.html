@@ -434,7 +434,7 @@
     function sortTrans(a,b){
       if(a.estado==='PENDIENTE'&&b.estado!=='PENDIENTE')return -1;
       if(a.estado!=='PENDIENTE'&&b.estado==='PENDIENTE')return 1;
-      return parseFecha(a.fechasolicitud)-parseFecha(b.fechasolicitud);
+      return parseFecha(b.fechasolicitud)-parseFecha(a.fechasolicitud);
     }
     function renderRec(){
       const tb=document.querySelector('#tabla-recargas tbody');
@@ -601,7 +601,9 @@
         if(tipo==='deposito'){
           return `Hola, tu depósito por ${baseSolicitado} ha sido aprobado.`;
         }
-        return `Hola, tu retiro por ${baseSolicitado} ha sido aprobado. Se transfirieron ${montoTransferido} Créditos luego de comisiones.`;
+        const referenciaTexto=(transaccion.referencia||'').toString().trim();
+        const referencia=referenciaTexto?` ${referenciaTexto}`:' pendiente';
+        return `Hola, tu retiro por ${baseSolicitado} ha sido aprobado. con la ref,${referencia}\nTotal transferidos: ${montoTransferido} Créditos\n luego de comisiones.`;
       }
       let mensaje=tipo==='deposito'
         ? `Hola, tu depósito por ${baseSolicitado} fue anulado.`
