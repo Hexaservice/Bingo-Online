@@ -439,20 +439,26 @@
     function renderRec(){
       const tb=document.querySelector('#tabla-recargas tbody');
       tb.innerHTML='';
-      let i=1;
-      datosRec.forEach(t=>{
+      const visibles=datosRec.filter(t=>{
         const cond=t.Condicion||'VISIBLE';
-        if(mostrarRecArch?cond!=='ARCHIVADA':cond==='ARCHIVADA')return;
+        if(mostrarRecArch?cond!=='ARCHIVADA':cond==='ARCHIVADA')return false;
         const fecha=formatearFecha(t.fechasolicitud);
         const montoNum=parseFloat(t.Monto);
         const montoStr=montoNum.toFixed(2);
-        if(filtrosRec.monto && !montoStr.includes(filtrosRec.monto))return;
+        if(filtrosRec.monto && !montoStr.includes(filtrosRec.monto))return false;
         const monto=formatearMonto(montoNum);
-        if(filtrosRec.nombre && !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRec.nombre))return;
-        if(filtrosRec.banco && (t.bancoreceptor||'')!==filtrosRec.banco)return;
-        if(filtrosRec.ref && !(t.referencia||'').toString().includes(filtrosRec.ref))return;
-        if(filtrosRec.fecha && fecha!==filtrosRec.fecha)return;
-        if(filtrosRec.estado && t.estado!==filtrosRec.estado)return;
+        if(filtrosRec.nombre && !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRec.nombre))return false;
+        if(filtrosRec.banco && (t.bancoreceptor||'')!==filtrosRec.banco)return false;
+        if(filtrosRec.ref && !(t.referencia||'').toString().includes(filtrosRec.ref))return false;
+        if(filtrosRec.fecha && fecha!==filtrosRec.fecha)return false;
+        if(filtrosRec.estado && t.estado!==filtrosRec.estado)return false;
+        return true;
+      });
+      let i=visibles.length;
+      visibles.forEach(t=>{
+        const fecha=formatearFecha(t.fechasolicitud);
+        const montoNum=parseFloat(t.Monto);
+        const monto=formatearMonto(montoNum);
         const tr=document.createElement('tr');
         tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td>${t.bancoreceptor||''}</td><td style='color:#4b0082;'>${t.referencia}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
         const estadoTd=tr.children[6];
@@ -472,26 +478,31 @@
         fechaTd.style.cursor='pointer';
         fechaTd.addEventListener('click',()=>mostrarDatosTransaccion(t));
         tb.appendChild(tr);
-        i++;
+        i--;
       });
     }
     function renderRet(){
       const tb=document.querySelector('#tabla-retiros tbody');
       tb.innerHTML='';
-      let i=1;
-      datosRet.forEach(t=>{
+      const visibles=datosRet.filter(t=>{
         const cond=t.Condicion||'VISIBLE';
-        if(mostrarRetArch?cond!=='ARCHIVADA':cond==='ARCHIVADA')return;
+        if(mostrarRetArch?cond!=='ARCHIVADA':cond==='ARCHIVADA')return false;
         const fecha=formatearFecha(t.fechasolicitud);
         const montoNum=parseFloat(t.Monto);
         const montoStr=montoNum.toFixed(2);
-        if(filtrosRet.monto && !montoStr.includes(filtrosRet.monto))return;
+        if(filtrosRet.monto && !montoStr.includes(filtrosRet.monto))return false;
+        if(filtrosRet.nombre && !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRet.nombre))return false;
+        if(filtrosRet.banco && (t.bancoreceptor||'')!==filtrosRet.banco)return false;
+        if(filtrosRet.ref && !(t.referencia||'').toString().includes(filtrosRet.ref))return false;
+        if(filtrosRet.fecha && fecha!==filtrosRet.fecha)return false;
+        if(filtrosRet.estado && t.estado!==filtrosRet.estado)return false;
+        return true;
+      });
+      let i=visibles.length;
+      visibles.forEach(t=>{
+        const fecha=formatearFecha(t.fechasolicitud);
+        const montoNum=parseFloat(t.Monto);
         const monto=formatearMonto(montoNum);
-        if(filtrosRet.nombre && !abreviar(t.IDbilletera).toLowerCase().includes(filtrosRet.nombre))return;
-        if(filtrosRet.banco && (t.bancoreceptor||'')!==filtrosRet.banco)return;
-        if(filtrosRet.ref && !(t.referencia||'').toString().includes(filtrosRet.ref))return;
-        if(filtrosRet.fecha && fecha!==filtrosRet.fecha)return;
-        if(filtrosRet.estado && t.estado!==filtrosRet.estado)return;
         const tr=document.createElement('tr');
         const refValue=refCookies[t.id]!==undefined?refCookies[t.id]:(t.referencia||'');
         tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;' contenteditable='false' inputmode='numeric'>${refValue}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
@@ -522,7 +533,7 @@
         fechaTd.style.cursor='pointer';
         fechaTd.addEventListener('click',()=>mostrarDatosTransaccion(t));
         tb.appendChild(tr);
-        i++;
+        i--;
       });
     }
     function actualizarEditable(){

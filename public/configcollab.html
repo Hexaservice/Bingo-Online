@@ -11,7 +11,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Configuraciones Colaborador</title>
-  <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
     body {
       background-color: #ffffff;
@@ -89,6 +89,81 @@
     }
     h2 {
       margin-top: 80px;
+    }
+    main#perfil-contenido {
+      width: min(420px, 90vw);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-top: clamp(30px, 8vh, 90px);
+      font-family: 'Poppins', sans-serif;
+    }
+    input {font-size:1rem;padding:8px;text-align:center;border-radius:8px;border:1px solid #ccc;width:100%;box-sizing:border-box;display:block;transition:border-color 0.2s ease, box-shadow 0.2s ease;}
+    h3, h4 { margin:5px 0; }
+    #perfil-titulo {
+      font-family: 'Bangers', cursive;
+      font-size: clamp(2rem, 5vw, 2.6rem);
+      color: #0b1b4d;
+      text-shadow: 0 0 14px rgba(0, 26, 95, 0.15);
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    #perfil-subtitulo {
+      font-family: 'Poppins', sans-serif;
+      color: #0b1b4d;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+    .nombre-apellido-row {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      flex-wrap: wrap;
+    }
+    .campo-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      width: 100%;
+    }
+    .nombre-apellido-row .campo-wrap {
+      flex: 1 1 150px;
+      min-width: 0;
+    }
+    .campo-wrap.campo-completo {
+      margin-top: 8px;
+    }
+    .mensaje-validacion {
+      font-size: 0.8rem;
+      color: #b71c1c;
+      min-height: 18px;
+      text-align: center;
+      font-family: 'Poppins', sans-serif;
+    }
+    .campo-error {
+      border-color: #d50000 !important;
+      box-shadow: 0 0 6px rgba(213,0,0,0.35);
+    }
+    .campo-wrap.campo-error input {
+      border-color: #d50000 !important;
+      box-shadow: 0 0 6px rgba(213,0,0,0.35);
+    }
+    #guardar-perfil-btn {
+      font-family: 'Bangers', cursive;
+      font-size: 1.2rem;
+      background: linear-gradient(135deg, #0a8800, #48c752);
+      color: white;
+      border: 3px solid #FFD700;
+      border-radius: 10px;
+      text-shadow: 2px 2px 4px #000;
+      width: 220px;
+      cursor: pointer;
+      transition: background 0.3s ease, box-shadow 0.3s ease;
+    }
+    #guardar-perfil-btn.modo-edicion {
+      background: linear-gradient(135deg, #083cbe, #ffffff);
+      box-shadow: 0 0 14px rgba(8, 60, 190, 0.45);
     }
     .notificaciones-panel {
       width: min(420px, 90vw);
@@ -236,6 +311,26 @@
     <a href="#" id="logout-link">Cerrar sesión</a>
   </div>
   <h2>Configuraciones</h2>
+  <main id="perfil-contenido">
+    <h3 id="perfil-titulo">Perfil del Colaborador</h3>
+    <h4 id="perfil-subtitulo">Tus Datos Personales</h4>
+    <div class="nombre-apellido-row">
+      <div class="campo-wrap">
+        <input type="text" id="perfil-nombre" placeholder="Nombre" autocomplete="given-name" required />
+      </div>
+      <div class="campo-wrap">
+        <input type="text" id="perfil-apellido" placeholder="Apellido" autocomplete="family-name" required />
+      </div>
+    </div>
+    <div class="campo-wrap campo-completo">
+      <input type="text" id="perfil-alias" placeholder="Alias" maxlength="20" autocomplete="nickname" required />
+    </div>
+    <div class="campo-wrap campo-completo">
+      <input type="tel" id="perfil-celular" placeholder="Número Celular" autocomplete="tel" inputmode="tel" maxlength="20" pattern="\+?[0-9]+" title="Ingresa un número válido (solo dígitos y un signo + inicial)" required />
+    </div>
+    <div id="perfil-mensaje" class="mensaje-validacion" role="alert" aria-live="polite"></div>
+    <button id="guardar-perfil-btn" class="menu-btn" data-modo="guardar">Guardar</button>
+  </main>
   <section id="notificaciones-panel" class="notificaciones-panel" aria-labelledby="notificaciones-titulo">
     <div class="notificaciones-fila notificaciones-fila-titulo" data-switch="notificaciones-global">
       <span id="notificaciones-titulo" class="notificaciones-titulo-texto" data-switch="notificaciones-global">Notificaciones</span>
@@ -263,8 +358,177 @@
   <script src="js/notificationPanelSetup.js"></script>
   <script>
     ensureAuth('Colaborador');
+    const nombreInput=document.getElementById('perfil-nombre');
+    const apellidoInput=document.getElementById('perfil-apellido');
+    const aliasInput=document.getElementById('perfil-alias');
+    const celularInput=document.getElementById('perfil-celular');
+    const guardarBtn=document.getElementById('guardar-perfil-btn');
+    const mensajeValidacionEl=document.getElementById('perfil-mensaje');
+    const camposObligatorios=[nombreInput,apellidoInput,aliasInput,celularInput];
+    let valoresOriginales={name:'',apellido:'',alias:'',celular:'',numerocel:''};
+    let tieneDatosGuardados=false;
     let panelNotificacionesColaborador=null;
     let rolNotificacionesActual=null;
+    function normalizarAlias(valor){
+      return (valor||'').toString().normalize('NFD').replace(/\p{Diacritic}/gu,'').replace(/[^a-zA-Z0-9 ]/g,'').trim();
+    }
+    function normalizarCelular(valor){
+      return (valor||'').toString().replace(/\s+/g,'').replace(/(?!^)[^0-9+]/g,'');
+    }
+    function esCelularValido(valor){
+      const limpio=normalizarCelular(valor);
+      return limpio.length>=10 && /^\+?[0-9]+$/.test(limpio);
+    }
+    function camposObligatoriosCompletos(valores){
+      return ['name','apellido','alias','celular'].every(campo=>valores[campo] && valores[campo].trim()!=='' && (campo!=='celular'||esCelularValido(valores[campo])));
+    }
+    function mostrarMensajeValidacion(texto){
+      if(mensajeValidacionEl){
+        mensajeValidacionEl.textContent=texto||'';
+      }
+    }
+    function limpiarMensajeValidacion(){
+      mostrarMensajeValidacion('');
+    }
+    function actualizarEstadoErrorCampo(campo,esError){
+      if(!campo) return;
+      const wrapper=campo.parentElement;
+      if(esError){
+        campo.classList.add('campo-error');
+        if(wrapper) wrapper.classList.add('campo-error');
+      }else{
+        campo.classList.remove('campo-error');
+        if(wrapper) wrapper.classList.remove('campo-error');
+      }
+    }
+    function validarCamposObligatorios(){
+      let esValido=true;
+      camposObligatorios.forEach(campo=>{
+        if(!campo) return;
+        let valido=campo.value.trim().length>0;
+        if(campo===aliasInput){
+          const aliasNormalizado=normalizarAlias(campo.value);
+          if(aliasInput.value!==aliasNormalizado){
+            aliasInput.value=aliasNormalizado;
+          }
+          valido=aliasNormalizado.length>0;
+        }
+        if(campo===celularInput){
+          const limpio=normalizarCelular(campo.value);
+          if(celularInput.value!==limpio){
+            celularInput.value=limpio;
+          }
+          valido=esCelularValido(limpio);
+        }
+        actualizarEstadoErrorCampo(campo,!valido);
+        if(!valido){
+          esValido=false;
+        }
+      });
+      if(!esValido){
+        mostrarMensajeValidacion('Todos los campos son obligatorios y deben ser válidos');
+      }else{
+        limpiarMensajeValidacion();
+      }
+      return esValido;
+    }
+    function obtenerValoresPerfil(){
+      const aliasValor=normalizarAlias(aliasInput.value);
+      if(aliasInput.value!==aliasValor){
+        aliasInput.value=aliasValor;
+      }
+      const celularValor=normalizarCelular(celularInput.value);
+      if(celularInput.value!==celularValor){
+        celularInput.value=celularValor;
+      }
+      return {
+        name:nombreInput.value.trim(),
+        apellido:apellidoInput.value.trim(),
+        alias:aliasValor,
+        celular:celularValor,
+        numerocel:celularValor
+      };
+    }
+    function establecerEstadoBoton(modo){
+      if(!guardarBtn) return;
+      if(modo==='editar'){
+        guardarBtn.textContent='Editar';
+        guardarBtn.dataset.modo='editar';
+        guardarBtn.classList.add('modo-edicion');
+      }else{
+        guardarBtn.textContent='Guardar';
+        guardarBtn.dataset.modo='guardar';
+        guardarBtn.classList.remove('modo-edicion');
+      }
+    }
+    function evaluarCambios(){
+      const actuales=obtenerValoresPerfil();
+      const hayCambios=['name','apellido','alias','celular'].some(campo=>actuales[campo]!==valoresOriginales[campo]);
+      if(tieneDatosGuardados && hayCambios){
+        establecerEstadoBoton('editar');
+      }else{
+        establecerEstadoBoton('guardar');
+      }
+    }
+    async function guardarPerfil(){
+      const user=auth?.currentUser;
+      if(!user || !guardarBtn) return;
+      const modo=(guardarBtn.dataset.modo||'guardar')==='editar'?'editar':'guardar';
+      const valores=obtenerValoresPerfil();
+      if(!validarCamposObligatorios()){
+        return;
+      }
+      const confirmar=await window.confirm(modo==='editar'?'¿Deseas EDITAR los datos?':'¿Deseas GUARDAR los datos de tu perfil?');
+      if(!confirmar) return;
+      const baseDatos={
+        email:user.email,
+        photoURL:user.photoURL||'',
+        role:'Colaborador',
+        celular:valores.celular,
+        numerocel:valores.celular
+      };
+      try{
+        if(modo==='editar'){
+          const cambios={};
+          ['name','apellido','alias','celular'].forEach(campo=>{
+            if(valores[campo]!==valoresOriginales[campo]){
+              cambios[campo]=valores[campo];
+            }
+          });
+          if('celular' in cambios){
+            cambios.numerocel=valores.celular;
+          }
+          if(Object.keys(cambios).length===0){
+            alert('No se detectaron cambios para editar.');
+            evaluarCambios();
+            return;
+          }
+          await db.collection('users').doc(user.email).set({...baseDatos,...cambios},{merge:true});
+          alert('Datos editados correctamente.');
+          tieneDatosGuardados=camposObligatoriosCompletos(valores);
+        }else{
+          await db.collection('users').doc(user.email).set({...baseDatos,...valores},{merge:true});
+          alert('Datos guardados correctamente.');
+          tieneDatosGuardados=camposObligatoriosCompletos(valores);
+        }
+        valoresOriginales={...valores};
+        evaluarCambios();
+      }catch(error){
+        console.error('No se pudieron guardar los datos del perfil del colaborador',error);
+        alert('Ocurrió un error al guardar los datos. Intenta nuevamente.');
+      }
+    }
+    if(guardarBtn){
+      guardarBtn.addEventListener('click',guardarPerfil);
+    }
+    camposObligatorios.forEach(campo=>{
+      ['input','change'].forEach(evt=>{
+        campo?.addEventListener(evt,()=>{
+          validarCamposObligatorios();
+          evaluarCambios();
+        });
+      });
+    });
     function configurarPanelNotificaciones(rolDestino){
       if(typeof setupNotificationPanel!=='function') return;
       const rolNormalizado=(rolDestino||'Colaborador').toString();
@@ -298,6 +562,36 @@
             enlaceSalir.dataset.logoutBound='true';
           }
           let rolActual=window.currentRole;
+          try{
+            const doc=await db.collection('users').doc(user.email).get();
+            if(doc.exists){
+              const d=doc.data()||{};
+              valoresOriginales={
+                name:(d.name||'').toString().trim(),
+                apellido:(d.apellido||'').toString().trim(),
+                alias:normalizarAlias(d.alias||''),
+                celular:normalizarCelular(d.celular||d.numerocel||d.telefono||d.Telefono||d.whatsapp||''),
+                numerocel:normalizarCelular(d.numerocel||d.celular||d.telefono||d.Telefono||d.whatsapp||'')
+              };
+              if(nombreInput) nombreInput.value=valoresOriginales.name;
+              if(apellidoInput) apellidoInput.value=valoresOriginales.apellido;
+              if(aliasInput) aliasInput.value=valoresOriginales.alias;
+              if(celularInput) celularInput.value=valoresOriginales.celular;
+              tieneDatosGuardados=camposObligatoriosCompletos(valoresOriginales);
+              rolActual=rolActual||d.role||d.rol||d.rolinterno;
+            }else{
+              valoresOriginales={name:'',apellido:'',alias:'',celular:'',numerocel:''};
+              if(nombreInput) nombreInput.value='';
+              if(apellidoInput) apellidoInput.value='';
+              if(aliasInput) aliasInput.value='';
+              if(celularInput) celularInput.value='';
+              tieneDatosGuardados=false;
+            }
+            evaluarCambios();
+          }catch(error){
+            console.error('No se pudo cargar la información del colaborador',error);
+            mostrarMensajeValidacion('No se pudieron cargar tus datos. Intenta nuevamente.');
+          }
           if(!rolActual){
             try{
               const infoRol=await getUserRole(user,{createIfMissing:false});
