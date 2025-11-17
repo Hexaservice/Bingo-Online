@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="img/android-chrome-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="img/android-chrome-512x512.png">
+  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
+  <link rel="icon" type="image/x-icon" sizes="16x16" href="img/favicon-16x16.ico">
+  <link rel="icon" type="image/x-icon" sizes="32x32" href="img/favicon-32x32.ico">
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reportes Generales - Bingo Online</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --azul: rgba(0, 170, 255, 0.9);
+      --dorado: #FFD700;
+      --texto-principal: #1f2937;
+      --borde-claro: #e5e7eb;
+      --sombra: 0 12px 28px rgba(0,0,0,0.18);
+    }
+    * { box-sizing: border-box; }
+    body {
+      background-image: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)),
+                        url('img/fondo-dinero-porcentage.jpg');
+      background-repeat: repeat;
+      background-size: auto;
+      background-position: 0 0, 0 0;
+      animation: fondo-movimiento 120s linear infinite;
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Poppins', Arial, sans-serif;
+      color: var(--texto-principal);
+    }
+    @keyframes fondo-movimiento {
+      0% { background-position: 0 0, 0 0; }
+      100% { background-position: 0 0, -600px 600px; }
+    }
+    header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 15px 12px 5px;
+    }
+    #logo-bingo {
+      width: 220px;
+      max-width: 80vw;
+      height: auto;
+    }
+    h1 {
+      font-family: 'Bangers', cursive;
+      letter-spacing: 1px;
+      margin: 4px 0 12px;
+      font-size: clamp(1.4rem, 4vw, 1.9rem);
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.25);
+    }
+    .menu-btn {
+      width: 130px;
+      height: 42px;
+      font-family: 'Bangers', cursive;
+      font-size: 1.05rem;
+      background: var(--azul);
+      color: white;
+      border: 3px solid var(--dorado);
+      border-radius: 12px;
+      text-shadow: 1px 1px 2px #000;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform 0.25s, box-shadow 0.25s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .menu-btn:hover { transform: scale(1.03); box-shadow: 0 0 12px rgba(255,215,0,0.75); }
+    .back-btn {
+      position: fixed;
+      top: 8px;
+      left: 8px;
+      z-index: 30;
+      background: orange;
+    }
+    .reportes-wrapper {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 10px 14px 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .panel {
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid var(--borde-claro);
+      border-radius: 14px;
+      box-shadow: var(--sombra);
+      padding: 12px;
+    }
+    .panel h2 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #0f172a;
+    }
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+      align-items: end;
+      font-size: 0.9rem;
+    }
+    label { font-size: 0.82rem; color: #374151; }
+    input[type="date"], select {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid #d1d5db;
+      font-size: 0.95rem;
+      font-family: 'Poppins', Arial, sans-serif;
+      background: #f8fafc;
+    }
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }
+    .data-card {
+      background: linear-gradient(135deg, rgba(0,170,255,0.12), rgba(255,215,0,0.15));
+      border: 1px solid rgba(0,0,0,0.05);
+      border-radius: 12px;
+      padding: 10px 12px;
+      box-shadow: 0 10px 18px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.92rem;
+    }
+    .data-card .label { color: #374151; font-size: 0.82rem; }
+    .data-card .value { font-weight: 700; font-size: 1.15rem; color: #0f172a; }
+    .chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+    .chip {
+      background: #0ea5e9;
+      color: #fff;
+      padding: 5px 8px;
+      border-radius: 10px;
+      font-size: 0.78rem;
+    }
+    .table-card {
+      overflow: hidden;
+      padding: 0;
+    }
+    .table-card header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(0,170,255,0.12);
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--borde-claro);
+    }
+    .table-card h3 {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+      padding: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+    }
+    th, td {
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+      white-space: nowrap;
+    }
+    th {
+      background: #f8fafc;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      color: #fff;
+    }
+    .tag.deposito { background: #22c55e; }
+    .tag.retiro { background: #ef4444; }
+    .tag.pendiente { background: #f59e0b; }
+    .tag.aprobado { background: #22c55e; }
+    .tag.rechazado { background: #ef4444; }
+    @media (max-width: 720px) {
+      .table-wrapper { padding: 8px; }
+      th, td { padding: 7px 8px; }
+      .data-card { font-size: 0.88rem; }
+    }
+  </style>
+</head>
+<body>
+  <button id="volver-super" class="menu-btn back-btn" data-compact-back="true">&#9664; Volver</button>
+  <header>
+    <img id="logo-bingo" src="img/Logo-BingOnline-nuevo500p.png" alt="logo" />
+    <h1>Reportes Generales</h1>
+  </header>
+  <main class="reportes-wrapper">
+    <section class="panel">
+      <h2>Filtros rápidos</h2>
+      <div class="filters">
+        <div>
+          <label for="fecha-desde">Desde</label>
+          <input type="date" id="fecha-desde">
+        </div>
+        <div>
+          <label for="fecha-hasta">Hasta</label>
+          <input type="date" id="fecha-hasta">
+        </div>
+        <div>
+          <label for="tipo-movimiento">Tipo de movimiento</label>
+          <select id="tipo-movimiento">
+            <option value="todos">Todos</option>
+            <option value="deposito">Depósitos</option>
+            <option value="retiro">Retiros</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Resumen ejecutivo</h2>
+      <div class="cards-grid" id="cards-grid"></div>
+    </section>
+
+    <section class="panel table-card">
+      <header>
+        <h3>Solicitudes de movimientos</h3>
+        <span id="contador-movimientos" style="font-size:0.85rem;color:#374151;"></span>
+      </header>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Tipo</th>
+              <th>Monto</th>
+              <th>Estado</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-movimientos"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel table-card">
+      <header>
+        <h3>Usuarios por rol</h3>
+        <span style="font-size:0.85rem;color:#374151;" id="contador-roles"></span>
+      </header>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Rol</th>
+              <th>Cantidad</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-roles"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Actividad de usuarios</h2>
+      <div class="cards-grid" id="actividad-usuarios"></div>
+    </section>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    ensureAuth('Superadmin');
+
+    const billeterasDemo=[
+      { dueno:'Cliente VIP', creditos:125000, cartonesGratis:42 },
+      { dueno:'Jugador frecuente', creditos:58500, cartonesGratis:18 },
+      { dueno:'Promotor regional', creditos:30400, cartonesGratis:22 },
+      { dueno:'Usuario prueba', creditos:12600, cartonesGratis:7 }
+    ];
+
+    const movimientosDemo=[
+      { id:'DEP-1034', tipo:'deposito', monto:50000, estado:'aprobado', fecha:'2024-12-01' },
+      { id:'DEP-1042', tipo:'deposito', monto:28000, estado:'pendiente', fecha:'2024-12-08' },
+      { id:'RET-2023', tipo:'retiro', monto:15000, estado:'aprobado', fecha:'2024-12-10' },
+      { id:'RET-2028', tipo:'retiro', monto:8200, estado:'pendiente', fecha:'2024-12-12' },
+      { id:'RET-2030', tipo:'retiro', monto:4600, estado:'rechazado', fecha:'2024-12-14' },
+      { id:'DEP-1050', tipo:'deposito', monto:18000, estado:'aprobado', fecha:'2024-12-15' },
+      { id:'RET-2035', tipo:'retiro', monto:12500, estado:'aprobado', fecha:'2024-12-18' }
+    ];
+
+    const usuariosDemo=[
+      { nombre:'Ana López', rol:'Superadmin', estado:'activo', fechaRegistro:'2024-11-02' },
+      { nombre:'Carlos Pérez', rol:'Colaborador', estado:'activo', fechaRegistro:'2024-11-18' },
+      { nombre:'Laura Méndez', rol:'Jugador', estado:'bloqueado', fechaRegistro:'2024-12-03' },
+      { nombre:'Diego Rivas', rol:'Jugador', estado:'activo', fechaRegistro:'2024-12-05' },
+      { nombre:'María Colmenares', rol:'Colaborador', estado:'activo', fechaRegistro:'2024-12-07' },
+      { nombre:'Yolanda Silva', rol:'Jugador', estado:'inhabilitado', fechaRegistro:'2024-12-10' },
+      { nombre:'Pedro Ángel', rol:'Jugador', estado:'activo', fechaRegistro:'2024-12-12' },
+      { nombre:'Diana Cabrera', rol:'Jugador', estado:'activo', fechaRegistro:'2024-12-14' }
+    ];
+
+    const fechaDesde=document.getElementById('fecha-desde');
+    const fechaHasta=document.getElementById('fecha-hasta');
+    const tipoMovimiento=document.getElementById('tipo-movimiento');
+    const cardsGrid=document.getElementById('cards-grid');
+    const actividadGrid=document.getElementById('actividad-usuarios');
+    const tablaMovimientos=document.getElementById('tabla-movimientos');
+    const tablaRoles=document.getElementById('tabla-roles');
+    const contadorMov=document.getElementById('contador-movimientos');
+    const contadorRoles=document.getElementById('contador-roles');
+
+    document.getElementById('volver-super').addEventListener('click',()=>{window.location.href='super.html';});
+
+    const parseFecha=valor=> valor? new Date(`${valor}T00:00:00`): null;
+    const estaEnRango=(valor,desde,hasta)=>{
+      if(!valor) return true;
+      if(desde && valor<desde) return false;
+      if(hasta && valor>hasta) return false;
+      return true;
+    };
+
+    const formatearNumero=n=>n.toLocaleString('es-VE',{minimumFractionDigits:0});
+
+    function render(){
+      const desde=parseFecha(fechaDesde.value);
+      const hasta=parseFecha(fechaHasta.value);
+      const filtroTipo=tipoMovimiento.value;
+
+      const movimientosFiltrados=movimientosDemo.filter(mov=>{
+        const fecha=parseFecha(mov.fecha);
+        const coincideTipo=filtroTipo==='todos' || mov.tipo===filtroTipo;
+        return coincideTipo && estaEnRango(fecha,desde,hasta);
+      });
+      const usuariosFiltrados=usuariosDemo.filter(usr=>estaEnRango(parseFecha(usr.fechaRegistro),desde,hasta));
+
+      const totalCreditos=billeterasDemo.reduce((acc,w)=>acc+w.creditos,0);
+      const totalCartones=billeterasDemo.reduce((acc,w)=>acc+w.cartonesGratis,0);
+      const totalRetiros=movimientosFiltrados.filter(m=>m.tipo==='retiro').reduce((acc,m)=>acc+m.monto,0);
+      const totalDepositos=movimientosFiltrados.filter(m=>m.tipo==='deposito').reduce((acc,m)=>acc+m.monto,0);
+      const bloqueados=usuariosFiltrados.filter(u=>['bloqueado','inhabilitado'].includes(u.estado.toLowerCase())).length;
+
+      const cards=[
+        { label:'Créditos actuales (todas las billeteras)', value:`${formatearNumero(totalCreditos)} cr.` },
+        { label:'Cartones gratis totales', value:formatearNumero(totalCartones) },
+        { label:'Solicitudes de retiros', value:`${formatearNumero(totalRetiros)} cr.` },
+        { label:'Solicitudes de depósitos', value:`${formatearNumero(totalDepositos)} cr.` },
+        { label:'Usuarios bloqueados / inhabilitados', value:bloqueados }
+      ];
+
+      cardsGrid.innerHTML=cards.map(card=>`
+        <article class="data-card">
+          <span class="label">${card.label}</span>
+          <span class="value">${card.value}</span>
+        </article>
+      `).join('');
+
+      tablaMovimientos.innerHTML=movimientosFiltrados.map(mov=>`
+        <tr>
+          <td>${mov.id}</td>
+          <td><span class="tag ${mov.tipo}">${mov.tipo==='deposito'?'Depósito':'Retiro'}</span></td>
+          <td>${formatearNumero(mov.monto)} cr.</td>
+          <td><span class="tag ${mov.estado}">${mov.estado.charAt(0).toUpperCase()+mov.estado.slice(1)}</span></td>
+          <td>${mov.fecha}</td>
+        </tr>
+      `).join('');
+      contadorMov.textContent=`${movimientosFiltrados.length} movimiento(s)`;
+
+      const roles=usuariosFiltrados.reduce((acc,usr)=>{
+        acc[usr.rol]=(acc[usr.rol]||0)+1;
+        return acc;
+      },{});
+      const totalUsuarios=usuariosFiltrados.length;
+      contadorRoles.textContent=`${totalUsuarios} usuario(s)`;
+      tablaRoles.innerHTML=Object.entries(roles).map(([rol,cantidad])=>`
+        <tr>
+          <td>${rol}</td>
+          <td>${cantidad}</td>
+        </tr>
+      `).join('');
+
+      const nuevosRegistros=usuariosFiltrados.length;
+      const resumenActividad=[
+        { label:'Nuevos registros', value:nuevosRegistros },
+        { label:'Usuarios activos', value:usuariosFiltrados.filter(u=>u.estado==='activo').length },
+        { label:'Roles distintos', value:Object.keys(roles).length || 1 },
+        { label:'Solicitudes en revisión', value:movimientosFiltrados.filter(m=>m.estado==='pendiente').length }
+      ];
+      actividadGrid.innerHTML=resumenActividad.map(item=>`
+        <article class="data-card">
+          <span class="label">${item.label}</span>
+          <span class="value">${item.value}</span>
+        </article>
+      `).join('');
+    }
+
+    fechaDesde.addEventListener('change',render);
+    fechaHasta.addEventListener('change',render);
+    tipoMovimiento.addEventListener('change',render);
+    render();
+  </script>
+  <script src="js/backNavigation.js"></script>
+</body>
+</html>
