@@ -2778,6 +2778,15 @@
           font-size: 0.85rem;
           color: var(--texto-secundario);
       }
+      #modal-sin-ganadores-preview {
+          display: flex;
+          justify-content: center;
+          margin-top: 10px;
+      }
+      #modal-sin-ganadores-preview .carton-visual {
+          box-shadow: 0 6px 14px rgba(0,0,0,0.2);
+          border-radius: 10px;
+      }
       @keyframes zoomPulse {
           0% { transform: scale(1); }
           48% { transform: scale(1.24); }
@@ -3544,6 +3553,7 @@
       <div id="modal-subtitulo" class="mensaje"></div>
       <div id="modal-ganadores-lista"></div>
       <div id="modal-sin-ganadores" class="modal-mensaje"></div>
+      <div id="modal-sin-ganadores-preview"></div>
     </div>
   </div>
 
@@ -3648,6 +3658,7 @@
   const modalSubtituloEl = document.getElementById('modal-subtitulo');
   const modalListaEl = document.getElementById('modal-ganadores-lista');
   const modalSinGanadoresEl = document.getElementById('modal-sin-ganadores');
+  const modalSinGanadoresPreviewEl = document.getElementById('modal-sin-ganadores-preview');
   const modalPremioFormaEl = document.getElementById('modal-premio-forma');
   const modalPremioFormaValorEl = document.getElementById('modal-premio-forma-valor');
   const modalPremioFormaLabelEl = document.getElementById('modal-premio-forma-label');
@@ -7554,15 +7565,15 @@
       const mostrarRecomendacion = haySorteoJugando && !!activeSorteo && estadoSorteoActual === 'jugando';
       jugadorSinCartonesEnSorteo = mostrarRecomendacion;
       mostrarMensajeSinCartonesJugador(mostrarRecomendacion);
+      const botonesGenericos=Array.isArray(formasActivas)
+        ? formasActivas.map(forma=>crearBotonGanadoresForma(forma)).filter(Boolean)
+        : [];
       if(mostrarRecomendacion){
-        const botonesGenericos=Array.isArray(formasActivas)
-          ? formasActivas.map(forma=>crearBotonGanadoresForma(forma)).filter(Boolean)
-          : [];
-        insertarBotonesFormas(botonesGenericos);
         cartonesMensajeEl.textContent='';
       }else{
         cartonesMensajeEl.textContent='No tienes cartones participando en este sorteo.';
       }
+      insertarBotonesFormas(botonesGenericos);
       if(celebracionModalActiva){
         cerrarModalCelebracionGanador();
       }
@@ -7779,8 +7790,25 @@
     }
     modalListaEl.innerHTML='';
     modalSinGanadoresEl.textContent='';
+    if(modalSinGanadoresPreviewEl){
+      modalSinGanadoresPreviewEl.innerHTML='';
+      modalSinGanadoresPreviewEl.style.display='none';
+    }
     if(!ganadores.length){
       modalSinGanadoresEl.textContent='Aún no hay cartones ganadores para esta forma.';
+      if(modalSinGanadoresPreviewEl){
+        const tablaInfo=crearTablaCartonVisual({id:'forma-preview', posiciones:[]},'mini');
+        aplicarFormaCarton(tablaInfo,{
+          posiciones:obtenerPosicionesNormalizadas(forma),
+          color:obtenerColorParaForma(forma.idx),
+          nombre:forma.nombre,
+          indice:forma.idx,
+          mostrarLeyenda:true,
+          resaltarTodas:true
+        });
+        modalSinGanadoresPreviewEl.appendChild(tablaInfo.contenedor);
+        modalSinGanadoresPreviewEl.style.display='flex';
+      }
     }else{
       const ordenados=ganadores.slice().sort((a,b)=>{
         const pasoA=(formasPorCarton.get(a.id)||[]).find(f=>f.forma.idx===forma.idx)?.paso??Infinity;
@@ -7856,6 +7884,10 @@
         card.appendChild(premiosCol);
         modalListaEl.appendChild(card);
       });
+      if(modalSinGanadoresPreviewEl){
+        modalSinGanadoresPreviewEl.style.display='none';
+        modalSinGanadoresPreviewEl.innerHTML='';
+      }
     }
     actualizarModalGanadoresConExtras([]);
     modalGanadores.classList.add('activa');

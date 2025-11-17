@@ -85,9 +85,10 @@
     #tabla-transacciones th:nth-child(5),#tabla-transacciones td:nth-child(5){width:120px;}
     #tabla-transacciones select,#tabla-transacciones input{font-size:0.9rem;width:100px;}
     #tabla-transacciones th:nth-child(3) input{width:100px;}
+    #tabla-transacciones thead th{position:sticky;top:0;background:#f7f7f7;z-index:2;}
     #datos-content{display:none;}
-    #transacciones-content{overflow-x:auto;display:none;}
-    #transacciones-section .switch{margin-top:4px;}
+    #transacciones-content{overflow-x:auto;display:none;max-height:70vh;overflow-y:auto;position:relative;}
+    #transacciones-section .switch{margin-top:4px;visibility:hidden;}
     #tabla-bancos{background:rgba(255,255,255,0.95);}
     #tabla-bancos th,#tabla-bancos td{
       font-weight:bold;
@@ -408,6 +409,13 @@
     let creditosTotales=0, creditosTransito=0, creditosDisponibles=0;
     let numeroWhatsappDestino='';
     let numeroWhatsappCargado=false;
+
+    function mostrarSwitchTransacciones(){
+      const contenedorSwitch=document.querySelector('#transacciones-section .switch');
+      if(contenedorSwitch){
+        contenedorSwitch.style.visibility='visible';
+      }
+    }
 
     function toNumberSafe(valor, defecto=0){
       const numero=parseFloat(valor);
@@ -828,6 +836,7 @@
         return db-da;
       });
       filtrarTransacciones();
+      mostrarSwitchTransacciones();
     }
 
     function filtrarTransacciones(){
