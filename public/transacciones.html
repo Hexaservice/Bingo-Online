@@ -591,13 +591,25 @@
       return normalizado;
     }
     function construirMensajeWhatsapp(transaccion,estadoFinal,nota){
-      const tipo=((transaccion.tipotrans||'').toLowerCase()==='retiro')?'retiro':'depósito';
-      const montoNum=toNumberSafe(transaccion.MontoSolicitado??transaccion.Monto,transaccion.Monto);
-      const monto=formatearMonto(montoNum);
-      let mensaje=`Hola, tu ${tipo} por ${monto} Bs ha sido ${estadoFinal==='APROBADO'?'aprobado':'anulado'}.`;
-      if(estadoFinal==='ANULADO' && nota){
-        mensaje+=` Motivo: ${nota}`;
+      const tipo=((transaccion.tipotrans||'').toLowerCase()==='retiro')?'retiro':'deposito';
+      const montoSolicitadoNum=toNumberSafe(transaccion.MontoSolicitado??transaccion.Monto,transaccion.Monto);
+      const montoTransferidoNum=toNumberSafe(transaccion.Monto,transaccion.MontoSolicitado??transaccion.Monto);
+      const montoSolicitado=formatearMonto(montoSolicitadoNum);
+      const montoTransferido=formatearMonto(montoTransferidoNum);
+      const baseSolicitado=`${montoSolicitado} Créditos en BingOnline`;
+      if(estadoFinal==='APROBADO'){
+        if(tipo==='deposito'){
+          return `Hola, tu depósito por ${baseSolicitado} ha sido aprobado.`;
+        }
+        return `Hola, tu retiro por ${baseSolicitado} ha sido aprobado. Se transfirieron ${montoTransferido} Créditos luego de comisiones.`;
       }
+      let mensaje=tipo==='deposito'
+        ? `Hola, tu depósito por ${baseSolicitado} fue anulado.`
+        : `Hola, tu retiro por ${baseSolicitado} fue anulado.`;
+      if(nota){
+        mensaje+=` Motivo: ${nota}.`;
+      }
+      mensaje+=' Revisa los datos de tu solicitud y vuelve a intentarlo.';
       return mensaje;
     }
     async function notificarWhatsappTransacciones(lista,estadoFinal,nota){
