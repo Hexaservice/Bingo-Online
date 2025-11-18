@@ -113,6 +113,19 @@
       .campo-wrap.campo-completo {
           margin-top: 8px;
       }
+      .celular-row{
+          display:flex;
+          gap:8px;
+          align-items:center;
+          width:100%;
+      }
+      .celular-row select{
+          flex:0 0 44%;
+          max-width:160px;
+      }
+      .celular-row input{
+          flex:1;
+      }
       .nota-campos {
           font-size: 0.65rem;
           margin: 0;
@@ -411,7 +424,10 @@
     </div>
     <p class="nota-campos">Nota: Tu Nombre y Apellido no serán visibles para ningún otro jugador, sólo será visible tu Alias.</p>
     <div class="campo-wrap campo-completo">
-      <input type="tel" id="perfil-celular" placeholder="Número Celular" autocomplete="tel" inputmode="tel" maxlength="20" pattern="\+?[0-9]+" title="Ingresa un número válido (solo dígitos y un signo + inicial)" required />
+      <div class="celular-row">
+        <select id="perfil-codigo-pais" aria-label="Código de país" required></select>
+        <input type="tel" id="perfil-celular" placeholder="Número Celular" autocomplete="tel" inputmode="tel" maxlength="20" pattern="\+?[0-9]+" title="Ingresa un número válido (solo dígitos y un signo + inicial)" required />
+      </div>
     </div>
     <p class="nota-celular"><strong>IMPORTANTE:</strong> Tu número celular no será visible para ningún otro jugador, sin embargo, este número debe ser el mismo que usaras al entrar en los Grupos de WhatsApp, de lo contrario tu acceso al sistema será restringido.</p>
     <div id="perfil-mensaje" class="mensaje-validacion" role="alert" aria-live="polite"></div>
@@ -459,10 +475,21 @@
   <script>
   initFechaHora('fecha-hora');
 
+  const codigosPais=[
+    {codigo:'VE',nombre:'Venezuela',prefijo:'+58',bandera:'🇻🇪'},
+    {codigo:'CO',nombre:'Colombia',prefijo:'+57',bandera:'🇨🇴'},
+    {codigo:'MX',nombre:'México',prefijo:'+52',bandera:'🇲🇽'},
+    {codigo:'US',nombre:'Estados Unidos',prefijo:'+1',bandera:'🇺🇸'},
+    {codigo:'AR',nombre:'Argentina',prefijo:'+54',bandera:'🇦🇷'},
+    {codigo:'CL',nombre:'Chile',prefijo:'+56',bandera:'🇨🇱'},
+    {codigo:'PE',nombre:'Perú',prefijo:'+51',bandera:'🇵🇪'}
+  ];
+
   const nombreInput=document.getElementById('perfil-nombre');
   const apellidoInput=document.getElementById('perfil-apellido');
   const aliasInput=document.getElementById('perfil-alias');
   const celularInput=document.getElementById('perfil-celular');
+  const codigoPaisSelect=document.getElementById('perfil-codigo-pais');
   const guardarBtn=document.getElementById('guardar-perfil-btn');
   const whatsappModalEl=document.getElementById('modal-whatsapp');
   const whatsappModalMensajeEl=document.getElementById('modal-whatsapp-mensaje');
@@ -474,6 +501,21 @@
   const notificacionesTodoInput=document.getElementById('notificaciones-todo');
   const notificacionesTitulo=document.getElementById('notificaciones-titulo');
   const notificacionesEncabezado=document.querySelector('#notificaciones-panel .notificaciones-fila-titulo');
+
+  function poblarSelectCodigos(select){
+    if(!select) return;
+    codigosPais.forEach(pais=>{
+      const opcion=document.createElement('option');
+      opcion.value=pais.prefijo;
+      opcion.textContent=`${pais.bandera||''} ${pais.nombre} (${pais.prefijo})`;
+      select.appendChild(opcion);
+    });
+    if(!select.value && codigosPais[0]){
+      select.value=codigosPais[0].prefijo;
+    }
+  }
+
+  poblarSelectCodigos(codigoPaisSelect);
   if(notificacionesTitulo){
     notificacionesTitulo.setAttribute('role','button');
     notificacionesTitulo.setAttribute('tabindex','0');
@@ -531,7 +573,7 @@
   let valoresOriginales={name:'',apellido:'',alias:'',celular:'',numerocel:''};
   let tieneDatosGuardados=false;
 
-  const camposObligatorios=[nombreInput,apellidoInput,aliasInput,celularInput].filter(Boolean);
+  const camposObligatorios=[nombreInput,apellidoInput,aliasInput,celularInput,codigoPaisSelect].filter(Boolean);
 
   if(notificacionesGlobalInput){
     notificacionesGlobalInput.addEventListener('change',()=>{
@@ -872,6 +914,10 @@
     return (valor||'').toString().trim().slice(0,20);
   }
 
+  function normalizarNumeroLocal(valor){
+    return (valor||'').toString().replace(/[^0-9]/g,'');
+  }
+
   function normalizarCelular(valor){
     const texto=(valor||'').toString();
     let limpio=texto.replace(/[^0-9+]/g,'');
@@ -884,11 +930,44 @@
     return limpio;
   }
 
+  function separarNumeroCompleto(numero){
+    const limpio=normalizarCelular(numero);
+    const candidatos=[...codigosPais].sort((a,b)=>b.prefijo.length-a.prefijo.length);
+    for(const pais of candidatos){
+      const pref=pais.prefijo;
+      if(limpio.startsWith(pref)){
+        return {prefijo:pref,local:limpio.slice(pref.length)};
+      }
+      const prefSinMas=pref.replace('+','');
+      if(prefSinMas && limpio.startsWith(prefSinMas)){
+        return {prefijo:pref,local:limpio.slice(prefSinMas.length)};
+      }
+    }
+    const prefSeleccionado=codigoPaisSelect && codigoPaisSelect.value ? codigoPaisSelect.value : (codigosPais[0]?.prefijo||'');
+    const sinSigno=limpio.startsWith('+')?limpio.slice(1):limpio;
+    return {prefijo:prefSeleccionado,local:sinSigno};
+  }
+
+  function obtenerNumeroCompletoDesdeInputs(){
+    const prefijo=codigoPaisSelect ? (codigoPaisSelect.value || '') : '';
+    const local=normalizarNumeroLocal(celularInput ? celularInput.value : '');
+    return normalizarCelular((prefijo||'')+local);
+  }
+
+  function actualizarCamposCelularDesdeNumero(numero){
+    const {prefijo,local}=separarNumeroCompleto(numero||'');
+    if(codigoPaisSelect){
+      codigoPaisSelect.value=prefijo;
+    }
+    if(celularInput){
+      celularInput.value=local;
+    }
+  }
+
   function esCelularValido(valor){
-    const normalizado=normalizarCelular(valor);
-    if(!normalizado) return false;
-    const sinSigno=normalizado.startsWith('+')?normalizado.slice(1):normalizado;
-    return sinSigno.length>0;
+    const numero=valor===undefined?obtenerNumeroCompletoDesdeInputs():normalizarCelular(valor);
+    const partes=separarNumeroCompleto(numero);
+    return Boolean(partes.prefijo && partes.local.length>0);
   }
 
   function actualizarEstadoErrorCampo(campo,conError){
@@ -919,9 +998,14 @@
         }
       }
       if(input===celularInput){
-        const limpio=normalizarCelular(celularInput.value);
+        const limpio=normalizarNumeroLocal(celularInput.value);
         if(celularInput.value!==limpio){
           celularInput.value=limpio;
+        }
+      }
+      if(input===codigoPaisSelect){
+        if(!codigoPaisSelect.value && codigosPais[0]){
+          codigoPaisSelect.value=codigosPais[0].prefijo;
         }
       }
       actualizarEstadoCamposObligatorios();
@@ -979,7 +1063,10 @@
         tieneValor=normalizarAlias(campo.value).length>0;
       }
       if(campo===celularInput){
-        tieneValor=esCelularValido(campo.value);
+        tieneValor=esCelularValido(obtenerNumeroCompletoDesdeInputs());
+      }
+      if(campo===codigoPaisSelect){
+        tieneValor=Boolean(codigoPaisSelect.value);
       }
       if(tieneValor){
         actualizarEstadoErrorCampo(campo,false);
@@ -1010,11 +1097,18 @@
         valido=aliasNormalizado.length>0;
       }
       if(campo===celularInput){
-        const limpio=normalizarCelular(campo.value);
+        const limpio=normalizarNumeroLocal(campo.value);
         if(celularInput.value!==limpio){
           celularInput.value=limpio;
         }
-        valido=esCelularValido(limpio);
+        valido=esCelularValido(obtenerNumeroCompletoDesdeInputs());
+      }
+      if(campo===codigoPaisSelect){
+        valido=Boolean(codigoPaisSelect.value);
+        if(!valido && codigosPais[0]){
+          codigoPaisSelect.value=codigosPais[0].prefijo;
+          valido=true;
+        }
       }
       actualizarEstadoErrorCampo(campo,!valido);
       if(!valido){
@@ -1034,10 +1128,11 @@
     if(aliasInput.value!==aliasValor){
       aliasInput.value=aliasValor;
     }
-    const celularValor=normalizarCelular(celularInput.value);
-    if(celularInput.value!==celularValor){
-      celularInput.value=celularValor;
+    const numeroLocal=normalizarNumeroLocal(celularInput.value);
+    if(celularInput.value!==numeroLocal){
+      celularInput.value=numeroLocal;
     }
+    const celularValor=obtenerNumeroCompletoDesdeInputs();
     return {
       name:nombreInput.value.trim(),
       apellido:apellidoInput.value.trim(),
@@ -1129,28 +1224,25 @@
             if(doc.exists){
               const d=doc.data()||{};
               datosPerfil=d;
+              const celularNormalizado=normalizarCelular(d.celular||d.numerocel||d.telefono||d.Telefono||d.whatsapp||'');
               valoresOriginales={
                 name:(d.name||'').toString().trim(),
                 apellido:(d.apellido||'').toString().trim(),
                 alias:normalizarAlias(d.alias||''),
-                celular:normalizarCelular(d.celular||d.numerocel||d.telefono||d.Telefono||d.whatsapp||''),
+                celular:celularNormalizado,
                 numerocel:normalizarCelular(d.numerocel||d.celular||d.telefono||d.Telefono||d.whatsapp||'')
               };
               nombreInput.value=valoresOriginales.name;
               apellidoInput.value=valoresOriginales.apellido;
               aliasInput.value=valoresOriginales.alias;
-              if(celularInput){
-                celularInput.value=valoresOriginales.celular;
-              }
+              actualizarCamposCelularDesdeNumero(valoresOriginales.celular);
               tieneDatosGuardados=camposObligatoriosCompletos(valoresOriginales);
             }else{
               valoresOriginales={name:'',apellido:'',alias:'',celular:'',numerocel:''};
               nombreInput.value='';
               apellidoInput.value='';
               aliasInput.value='';
-              if(celularInput){
-                celularInput.value='';
-              }
+              actualizarCamposCelularDesdeNumero('');
               tieneDatosGuardados=false;
             }
           }catch(error){
