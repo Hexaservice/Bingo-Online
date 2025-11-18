@@ -605,25 +605,38 @@
       const tipo=((transaccion.tipotrans||'').toLowerCase()==='retiro')?'retiro':'deposito';
       const montoSolicitadoNum=toNumberSafe(transaccion.MontoSolicitado??transaccion.Monto,transaccion.Monto);
       const montoTransferidoNum=toNumberSafe(transaccion.Monto,transaccion.MontoSolicitado??transaccion.Monto);
-      const montoSolicitado=formatearMonto(montoSolicitadoNum);
-      const montoTransferido=formatearMonto(montoTransferidoNum);
-      const baseSolicitado=`${montoSolicitado} Créditos en BingOnline`;
+      const formatearEnteroSeguro=valor=>Math.trunc(toNumberSafe(valor,0)).toString();
+      const montoSolicitadoBold=`*${formatearEnteroSeguro(montoSolicitadoNum)}*`;
+      const montoTransferido=formatearEnteroSeguro(montoTransferidoNum);
+      const lineas=[];
+
       if(estadoFinal==='APROBADO'){
         if(tipo==='deposito'){
-          return `Hola, tu depósito por ${baseSolicitado} ha sido aprobado.`;
+          lineas.push('✅ *DEPÓSITO APROBADO*');
+          lineas.push(`Tu depósito por ${montoSolicitadoBold} Créditos en BingOnline ha sido aprobado.`);
+        }else{
+          lineas.push('✅ *RETIRO APROBADO*');
+          lineas.push(`Tu depósito por ${montoSolicitadoBold} Créditos en BingOnline ha sido aprobado.`);
+          const referenciaTexto=(transaccion.referencia||'').toString().trim();
+          const referencia=referenciaTexto||'pendiente';
+          lineas.push(`Referencia: *${referencia}*`);
+          lineas.push(`Total transferidos: ${montoTransferido} Créditos`);
         }
-        const referenciaTexto=(transaccion.referencia||'').toString().trim();
-        const referencia=referenciaTexto?` ${referenciaTexto}`:' pendiente';
-        return `Hola, tu retiro por ${baseSolicitado} ha sido aprobado. con la ref,${referencia}\nTotal transferidos: ${montoTransferido} Créditos\n luego de comisiones.`;
+      }else{
+        if(tipo==='deposito'){
+          lineas.push('🚫 *DEPÓSITO ANULADO*');
+          lineas.push(`Hola, tu depósito por ${formatearMonto(montoSolicitadoNum)} Créditos en BingOnline fue anulado.`);
+        }else{
+          lineas.push('🚫 *RETIRO ANULADO*');
+          lineas.push(`Hola, tu retiro por ${formatearMonto(montoSolicitadoNum)} Créditos en BingOnline fue anulado.`);
+        }
+        if(nota){
+          lineas[lineas.length-1]+=` Motivo: ${nota}.`;
+        }
+        lineas.push('Revisa los datos de tu solicitud y vuelve a intentarlo.');
       }
-      let mensaje=tipo==='deposito'
-        ? `Hola, tu depósito por ${baseSolicitado} fue anulado.`
-        : `Hola, tu retiro por ${baseSolicitado} fue anulado.`;
-      if(nota){
-        mensaje+=` Motivo: ${nota}.`;
-      }
-      mensaje+=' Revisa los datos de tu solicitud y vuelve a intentarlo.';
-      return mensaje;
+
+      return lineas.filter(Boolean).join('\n');
     }
     async function notificarWhatsappTransacciones(lista,estadoFinal,nota){
       for(const transaccion of lista){
