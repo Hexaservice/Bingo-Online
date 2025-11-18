@@ -833,9 +833,15 @@
       text-align: left;
     }
     #whatsapp-tabla th { background: #ede9fe; position: sticky; top: 0; }
-    #whatsapp-tabla select { width: 140px; }
+    #whatsapp-tabla select { width: 115px; }
     #whatsapp-tabla input[type="text"] { width: 100%; box-sizing: border-box; padding: 6px; border-radius: 6px; border: 1px solid #c4b5fd; }
     #whatsapp-tabla button { background: transparent; border: none; color: #b91c1c; cursor: pointer; font-weight: 700; }
+    #whatsapp-tabla tbody tr { cursor: pointer; }
+    #whatsapp-tabla tbody tr.seleccionado { background: #e0f2fe; }
+    #whatsapp-tabla .col-prefijo { width: 22%; }
+    #whatsapp-tabla .col-numero { width: 48%; }
+    #whatsapp-tabla .col-acciones { width: 30%; }
+    .whatsapp-modal-controles .whatsapp-guardar { background: #16a34a; }
     .whatsapp-modal-footer { text-align: right; }
     #cerrar-whatsapp-modal { background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
     .notificaciones-panel .switch input:focus + .slider {
@@ -985,13 +991,17 @@
       <div class="whatsapp-modal-controles">
         <button type="button" id="whatsapp-agregar">Agregar número</button>
         <button type="button" id="whatsapp-editar">Editar seleccionado</button>
-        <button type="button" id="whatsapp-guardar">Guardar</button>
+        <button type="button" id="whatsapp-guardar" class="whatsapp-guardar">Guardar</button>
       </div>
       <div id="whatsapp-tabla-wrap">
         <table id="whatsapp-tabla">
+          <colgroup>
+            <col class="col-prefijo">
+            <col class="col-numero">
+            <col class="col-acciones">
+          </colgroup>
           <thead>
             <tr>
-              <th>Elegir</th>
               <th>Prefijo</th>
               <th>Número</th>
               <th>Acciones</th>
@@ -1236,6 +1246,25 @@
     function normalizarNumeroWhatsapp(valor){
       return (valor||'').toString().replace(/\s+/g,'').replace(/(?!^)[^0-9+]/g,'');
     }
+    function valorCompuestoNumero(num){
+      const localLimpio=(num.local||'').replace(/\D/g,'');
+      return `${num.prefijo||''}${localLimpio}`;
+    }
+    function construirListadoWhatsapp(){
+      return numerosWhatsappList.map(item=>valorCompuestoNumero(item)).filter(Boolean);
+    }
+    function marcarFilaSeleccionada(valor){
+      if(!tablaWhatsapp) return;
+      const filas=tablaWhatsapp.querySelectorAll('tr[data-valor]');
+      filas.forEach(fila=>{
+        fila.classList.toggle('seleccionado',fila.dataset.valor===valor);
+      });
+    }
+    function actualizarSeleccion(valor){
+      numeroSeleccionado=valor;
+      marcarFilaSeleccionada(valor);
+      renderDropdownWhatsapp();
+    }
     function descomponerNumeroWhatsapp(valor){
       const limpio=normalizarNumeroWhatsapp(valor);
       const candidatos=[...codigosPais].sort((a,b)=>b.prefijo.length-a.prefijo.length);
@@ -1291,7 +1320,7 @@
       if(numerosWhatsappList.length===0){
         const fila=document.createElement('tr');
         const celda=document.createElement('td');
-        celda.colSpan=4;
+        celda.colSpan=3;
         celda.textContent='Agrega al menos un número para usarlo en la aplicación.';
         fila.appendChild(celda);
         tablaWhatsapp.appendChild(fila);
@@ -1299,41 +1328,76 @@
       }
       numerosWhatsappList.forEach(num=>{
         const fila=document.createElement('tr');
-        const colSeleccion=document.createElement('td');
-        const radio=document.createElement('input');
-        radio.type='radio';
-        radio.name='seleccion-numero';
-        radio.value=num.id;
-        const valorCompuesto=`${num.prefijo||''}${(num.local||'').replace(/\D/g,'')}`;
-        radio.checked=valorCompuesto===numeroSeleccionado;
-        radio.addEventListener('change',()=>{ numeroSeleccionado=valorCompuesto; });
-        colSeleccion.appendChild(radio);
+        const valorCompuesto=valorCompuestoNumero(num);
+        fila.dataset.valor=valorCompuesto;
+        if(!numeroSeleccionado){
+          numeroSeleccionado=valorCompuesto;
+        }
+        fila.classList.toggle('seleccionado',valorCompuesto===numeroSeleccionado);
+        fila.addEventListener('click',()=>{ actualizarSeleccion(valorCompuestoNumero(num)); });
         const colPrefijo=document.createElement('td');
         const selectPrefijo=crearSelectPrefijo(num.prefijo);
-        selectPrefijo.addEventListener('change',()=>{ num.prefijo=selectPrefijo.value; if(radio.checked){ numeroSeleccionado=`${num.prefijo}${(num.local||'').replace(/\D/g,'')}`; } marcarModificacion(); renderDropdownWhatsapp(); renderTablaNumeros(); });
+        selectPrefijo.addEventListener('change',()=>{
+          num.prefijo=selectPrefijo.value;
+          fila.dataset.valor=valorCompuestoNumero(num);
+          if(fila.classList.contains('seleccionado')){
+            actualizarSeleccion(valorCompuestoNumero(num));
+          }else{
+            renderDropdownWhatsapp();
+          }
+          marcarModificacion();
+        });
         colPrefijo.appendChild(selectPrefijo);
         const colNumero=document.createElement('td');
         const inputNumero=document.createElement('input');
         inputNumero.type='text';
         inputNumero.value=(num.local||'').replace(/\D/g,'');
-        inputNumero.addEventListener('input',()=>{ num.local=inputNumero.value.replace(/\D/g,''); if(radio.checked){ numeroSeleccionado=`${num.prefijo}${num.local}`; } marcarModificacion(); renderDropdownWhatsapp(); });
+        inputNumero.addEventListener('focus',()=>{ actualizarSeleccion(valorCompuestoNumero(num)); });
+        inputNumero.addEventListener('input',()=>{
+          num.local=inputNumero.value.replace(/\D/g,'');
+          fila.dataset.valor=valorCompuestoNumero(num);
+          if(fila.classList.contains('seleccionado')){
+            actualizarSeleccion(valorCompuestoNumero(num));
+          }else{
+            renderDropdownWhatsapp();
+          }
+          marcarModificacion();
+        });
         colNumero.appendChild(inputNumero);
         const colAcciones=document.createElement('td');
         const btnEliminar=document.createElement('button');
         btnEliminar.textContent='Eliminar';
-        btnEliminar.addEventListener('click',()=>{
+        btnEliminar.addEventListener('click',async (e)=>{
+          e.stopPropagation();
+          const numeroCompleto=valorCompuestoNumero(num);
+          const confirmar=await confirm(`¿Deseas eliminar el número ${numeroCompleto}?`);
+          if(!confirmar) return;
+          const respaldo=[...numerosWhatsappList];
           numerosWhatsappList=numerosWhatsappList.filter(item=>item.id!==num.id);
-          marcarModificacion();
-          renderTablaNumeros();
-          renderDropdownWhatsapp();
+          const listaFinal=numerosWhatsappList.map(item=>valorCompuestoNumero(item)).filter(Boolean);
+          try{
+            await db.collection('Variablesglobales').doc('Parametros').set({numerosWhatsapp:listaFinal,numeroWhatsapp:listaFinal[0]||''},{merge:true});
+            alert('Número eliminado correctamente.');
+            if(numeroSeleccionado===numeroCompleto){
+              numeroSeleccionado=listaFinal[0]||'';
+            }
+            renderDropdownWhatsapp();
+            renderTablaNumeros();
+          }catch(err){
+            console.error('No se pudo eliminar el número de WhatsApp',err);
+            alert('Ocurrió un error al eliminar el número. Inténtalo nuevamente.');
+            numerosWhatsappList=respaldo;
+            renderDropdownWhatsapp();
+            renderTablaNumeros();
+          }
         });
         colAcciones.appendChild(btnEliminar);
-        fila.appendChild(colSeleccion);
         fila.appendChild(colPrefijo);
         fila.appendChild(colNumero);
         fila.appendChild(colAcciones);
         tablaWhatsapp.appendChild(fila);
       });
+      marcarFilaSeleccionada(numeroSeleccionado);
     }
     function abrirModalWhatsapp(){
       if(!modalOverlay) return;
@@ -1401,10 +1465,12 @@
       }
     });
     if(campoNumeroWhatsapp){
-      campoNumeroWhatsapp.addEventListener('change',()=>{ numeroSeleccionado=campoNumeroWhatsapp.value; });
+      campoNumeroWhatsapp.addEventListener('change',()=>{ actualizarSeleccion(campoNumeroWhatsapp.value); });
     }
     function agregarNumeroWhatsapp(prefijo='+58',local=''){
-      numerosWhatsappList.push({id:`num-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,prefijo,local});
+      const nuevo={id:`num-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,prefijo,local};
+      numerosWhatsappList.unshift(nuevo);
+      numeroSeleccionado=valorCompuestoNumero(nuevo);
       marcarModificacion();
       renderTablaNumeros();
       renderDropdownWhatsapp();
@@ -1413,14 +1479,13 @@
       botonAgregarNumero.addEventListener('click',()=>{agregarNumeroWhatsapp(selectUltimoPrefijo()||'+58','');});
     }
     function selectUltimoPrefijo(){
-      const ultimo=numerosWhatsappList[numerosWhatsappList.length-1];
+      const ultimo=numerosWhatsappList[0];
       return ultimo?.prefijo||'+58';
     }
     if(botonEditarSeleccion){
       botonEditarSeleccion.addEventListener('click',()=>{
-        const seleccionado=document.querySelector('input[name="seleccion-numero"]:checked');
-        if(!seleccionado){ alert('Selecciona un número de la tabla para editarlo.'); return; }
-        const fila=seleccionado.closest('tr');
+        const fila=tablaWhatsapp?.querySelector('tr.seleccionado');
+        if(!fila){ alert('Selecciona un número de la tabla para editarlo.'); return; }
         const inputNumero=fila?.querySelector('input[type="text"]');
         inputNumero?.focus();
       });
@@ -1439,11 +1504,8 @@
         alert('Agrega al menos un número antes de guardar.');
         return;
       }
-      const listaFinal=numerosWhatsappList.map(item=>{
-        const localLimpio=(item.local||'').replace(/\D/g,'');
-        return `${item.prefijo||''}${localLimpio}`;
-      }).filter(Boolean);
-      if(listaFinal.some(n=>n.replace(/\D/g,'').length<6)){
+      const listaFinal=construirListadoWhatsapp();
+      if(numerosWhatsappList.some(n=>(n.local||'').replace(/\D/g,'').length<6)){
         alert('Cada número debe tener al menos 6 dígitos en la parte local.');
         return;
       }
