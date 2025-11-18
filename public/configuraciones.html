@@ -479,6 +479,7 @@
       gap: 8px;
       align-items: center;
     }
+    .whatsapp-number-row select,
     .whatsapp-number-row input {
       flex: 1 1 220px;
       min-width: 180px;
@@ -489,6 +490,24 @@
       font-family: Calibri, Arial, sans-serif;
       font-size: 0.85rem;
     }
+    .whatsapp-number-row select {
+      min-width: 220px;
+    }
+    .whatsapp-edit-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid #7c3aed;
+      background: #f3e8ff;
+      color: #6a1b9a;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    }
+    .whatsapp-edit-btn:hover { filter: brightness(0.98); }
     .whatsapp-number-guardar {
       background: #7c3aed;
       color: #fff;
@@ -749,6 +768,76 @@
     .notificaciones-panel .switch input:checked + .slider::before {
       transform: translateX(22px);
     }
+    .whatsapp-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      padding: 10px;
+    }
+    .whatsapp-modal-overlay.visible { display: flex; }
+    .whatsapp-modal {
+      width: min(680px, 96vw);
+      max-height: 90vh;
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 14px 14px 10px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.25);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .whatsapp-modal h3 {
+      margin: 0;
+      color: #6a1b9a;
+      text-align: center;
+      letter-spacing: 0.4px;
+    }
+    .whatsapp-modal-controles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+    .whatsapp-modal-controles button {
+      background: #6a1b9a;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 3px 10px rgba(106,27,154,0.2);
+    }
+    .whatsapp-modal-controles button:hover { filter: brightness(1.05); }
+    #whatsapp-tabla-wrap {
+      flex: 1;
+      overflow: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      background: #faf5ff;
+    }
+    #whatsapp-tabla {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 0.9rem;
+    }
+    #whatsapp-tabla th, #whatsapp-tabla td {
+      padding: 8px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+    }
+    #whatsapp-tabla th { background: #ede9fe; position: sticky; top: 0; }
+    #whatsapp-tabla select { width: 140px; }
+    #whatsapp-tabla input[type="text"] { width: 100%; box-sizing: border-box; padding: 6px; border-radius: 6px; border: 1px solid #c4b5fd; }
+    #whatsapp-tabla button { background: transparent; border: none; color: #b91c1c; cursor: pointer; font-weight: 700; }
+    .whatsapp-modal-footer { text-align: right; }
+    #cerrar-whatsapp-modal { background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
     .notificaciones-panel .switch input:focus + .slider {
       outline: 2px solid #0a8800;
       outline-offset: 2px;
@@ -874,7 +963,8 @@
     <div class="whatsapp-number">
       <label id="numero-whatsapp-label" for="numero-whatsapp">Número WhatsApp para la aplicación</label>
       <div class="whatsapp-number-row">
-        <input type="text" id="numero-whatsapp" placeholder="+58 000-0000000" autocomplete="tel" />
+        <select id="numero-whatsapp" aria-label="Selecciona el número de WhatsApp"></select>
+        <button type="button" id="editar-numeros-whatsapp" class="whatsapp-edit-btn" title="Gestionar números">✏️</button>
         <button type="button" id="guardar-numero-whatsapp" class="whatsapp-number-guardar">Guardar</button>
       </div>
     </div>
@@ -889,6 +979,32 @@
       <button type="button" id="guardar-link-live-tiktok">Guardar</button>
     </div>
   </section>
+  <div id="whatsapp-modal-overlay" class="whatsapp-modal-overlay" aria-hidden="true">
+    <div class="whatsapp-modal" role="dialog" aria-modal="true" aria-labelledby="whatsapp-modal-titulo">
+      <h3 id="whatsapp-modal-titulo">Gestiona los números de WhatsApp</h3>
+      <div class="whatsapp-modal-controles">
+        <button type="button" id="whatsapp-agregar">Agregar número</button>
+        <button type="button" id="whatsapp-editar">Editar seleccionado</button>
+        <button type="button" id="whatsapp-guardar">Guardar</button>
+      </div>
+      <div id="whatsapp-tabla-wrap">
+        <table id="whatsapp-tabla">
+          <thead>
+            <tr>
+              <th>Elegir</th>
+              <th>Prefijo</th>
+              <th>Número</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="whatsapp-modal-footer">
+        <button type="button" id="cerrar-whatsapp-modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
   <section id="notificaciones-panel" class="notificaciones-panel" aria-labelledby="notificaciones-titulo">
     <div class="notificaciones-fila notificaciones-fila-titulo" data-switch="notificaciones-global">
       <span id="notificaciones-titulo" class="notificaciones-titulo-texto" data-switch="notificaciones-global">Notificaciones</span>
@@ -917,6 +1033,15 @@
     ensureAuth('Administrador');
     let panelNotificacionesAdministrador = null;
     let rolNotificacionesActual = null;
+    const codigosPais=[
+      {codigo:'VE',nombre:'Venezuela',prefijo:'+58',bandera:'🇻🇪'},
+      {codigo:'CO',nombre:'Colombia',prefijo:'+57',bandera:'🇨🇴'},
+      {codigo:'MX',nombre:'México',prefijo:'+52',bandera:'🇲🇽'},
+      {codigo:'US',nombre:'Estados Unidos',prefijo:'+1',bandera:'🇺🇸'},
+      {codigo:'AR',nombre:'Argentina',prefijo:'+54',bandera:'🇦🇷'},
+      {codigo:'CL',nombre:'Chile',prefijo:'+56',bandera:'🇨🇱'},
+      {codigo:'PE',nombre:'Perú',prefijo:'+51',bandera:'🇵🇪'}
+    ];
     function configurarPanelNotificaciones(rolDestino){
       if(typeof setupNotificationPanel !== 'function') return;
       const rolNormalizado=(rolDestino||'Administrador').toString();
@@ -1076,12 +1201,151 @@
       if(toggle.checked) cargarDatos();
     });
     const campoNumeroWhatsapp=document.getElementById('numero-whatsapp');
+    const botonEditarNumerosWhatsapp=document.getElementById('editar-numeros-whatsapp');
     const botonGuardarNumeroWhatsapp=document.getElementById('guardar-numero-whatsapp');
     const etiquetaNumeroWhatsapp=document.getElementById('numero-whatsapp-label');
     const campoLinkWhatsapp=document.getElementById('link-whatsapp');
     const botonGuardarLink=document.getElementById('guardar-link-whatsapp');
     const campoLinkLiveTiktok=document.getElementById('link-live-tiktok');
     const botonGuardarLinkLive=document.getElementById('guardar-link-live-tiktok');
+    const modalOverlay=document.getElementById('whatsapp-modal-overlay');
+    const tablaWhatsapp=document.querySelector('#whatsapp-tabla tbody');
+    const botonAgregarNumero=document.getElementById('whatsapp-agregar');
+    const botonEditarSeleccion=document.getElementById('whatsapp-editar');
+    const botonGuardarNumeros=document.getElementById('whatsapp-guardar');
+    const botonCerrarModal=document.getElementById('cerrar-whatsapp-modal');
+    let numerosWhatsappList=[];
+    let numeroSeleccionado=null;
+    let numerosModificados=false;
+    function poblarSelectCodigos(select,valorDefecto='+58'){
+      if(!select) return;
+      select.innerHTML='';
+      codigosPais.forEach(pais=>{
+        const opt=document.createElement('option');
+        opt.value=pais.prefijo;
+        opt.textContent=`${pais.bandera||''} ${pais.nombre} (${pais.prefijo})`;
+        select.appendChild(opt);
+      });
+      select.value=valorDefecto||'+58';
+    }
+    function crearSelectPrefijo(valor){
+      const select=document.createElement('select');
+      poblarSelectCodigos(select,valor||'+58');
+      return select;
+    }
+    function normalizarNumeroWhatsapp(valor){
+      return (valor||'').toString().replace(/\s+/g,'').replace(/(?!^)[^0-9+]/g,'');
+    }
+    function descomponerNumeroWhatsapp(valor){
+      const limpio=normalizarNumeroWhatsapp(valor);
+      const candidatos=[...codigosPais].sort((a,b)=>b.prefijo.length-a.prefijo.length);
+      for(const pais of candidatos){
+        const pref=pais.prefijo;
+        if(limpio.startsWith(pref)){
+          return {prefijo:pref,local:limpio.slice(pref.length)};
+        }
+        const prefSinMas=pref.replace('+','');
+        if(prefSinMas && limpio.startsWith(prefSinMas)){
+          return {prefijo:pref,local:limpio.slice(prefSinMas.length)};
+        }
+      }
+      return {prefijo:'+58',local:limpio};
+    }
+    function marcarModificacion(){
+      numerosModificados=true;
+      if(botonGuardarNumeros){
+        botonGuardarNumeros.textContent='Editar';
+      }
+    }
+    function limpiarMarcaModificacion(){
+      numerosModificados=false;
+      if(botonGuardarNumeros){
+        botonGuardarNumeros.textContent='Guardar';
+      }
+    }
+    function renderDropdownWhatsapp(){
+      if(!campoNumeroWhatsapp) return;
+      campoNumeroWhatsapp.innerHTML='';
+      numerosWhatsappList.forEach(num=>{
+        const opt=document.createElement('option');
+        const localLimpio=(num.local||'').replace(/\D/g,'');
+        opt.value=`${num.prefijo||''}${localLimpio}`;
+        opt.textContent=`${num.prefijo||''} ${localLimpio}`.trim();
+        campoNumeroWhatsapp.appendChild(opt);
+      });
+      if(numeroSeleccionado && numerosWhatsappList.some(n=>`${n.prefijo}${(n.local||'').replace(/\D/g,'')}`===numeroSeleccionado)){
+        campoNumeroWhatsapp.value=numeroSeleccionado;
+      }else if(campoNumeroWhatsapp.options.length>0){
+        campoNumeroWhatsapp.selectedIndex=0;
+        numeroSeleccionado=campoNumeroWhatsapp.value;
+      }else{
+        const opt=document.createElement('option');
+        opt.value='';
+        opt.textContent='Sin números disponibles';
+        campoNumeroWhatsapp.appendChild(opt);
+      }
+    }
+    function renderTablaNumeros(){
+      if(!tablaWhatsapp) return;
+      tablaWhatsapp.innerHTML='';
+      if(numerosWhatsappList.length===0){
+        const fila=document.createElement('tr');
+        const celda=document.createElement('td');
+        celda.colSpan=4;
+        celda.textContent='Agrega al menos un número para usarlo en la aplicación.';
+        fila.appendChild(celda);
+        tablaWhatsapp.appendChild(fila);
+        return;
+      }
+      numerosWhatsappList.forEach(num=>{
+        const fila=document.createElement('tr');
+        const colSeleccion=document.createElement('td');
+        const radio=document.createElement('input');
+        radio.type='radio';
+        radio.name='seleccion-numero';
+        radio.value=num.id;
+        const valorCompuesto=`${num.prefijo||''}${(num.local||'').replace(/\D/g,'')}`;
+        radio.checked=valorCompuesto===numeroSeleccionado;
+        radio.addEventListener('change',()=>{ numeroSeleccionado=valorCompuesto; });
+        colSeleccion.appendChild(radio);
+        const colPrefijo=document.createElement('td');
+        const selectPrefijo=crearSelectPrefijo(num.prefijo);
+        selectPrefijo.addEventListener('change',()=>{ num.prefijo=selectPrefijo.value; if(radio.checked){ numeroSeleccionado=`${num.prefijo}${(num.local||'').replace(/\D/g,'')}`; } marcarModificacion(); renderDropdownWhatsapp(); renderTablaNumeros(); });
+        colPrefijo.appendChild(selectPrefijo);
+        const colNumero=document.createElement('td');
+        const inputNumero=document.createElement('input');
+        inputNumero.type='text';
+        inputNumero.value=(num.local||'').replace(/\D/g,'');
+        inputNumero.addEventListener('input',()=>{ num.local=inputNumero.value.replace(/\D/g,''); if(radio.checked){ numeroSeleccionado=`${num.prefijo}${num.local}`; } marcarModificacion(); renderDropdownWhatsapp(); });
+        colNumero.appendChild(inputNumero);
+        const colAcciones=document.createElement('td');
+        const btnEliminar=document.createElement('button');
+        btnEliminar.textContent='Eliminar';
+        btnEliminar.addEventListener('click',()=>{
+          numerosWhatsappList=numerosWhatsappList.filter(item=>item.id!==num.id);
+          marcarModificacion();
+          renderTablaNumeros();
+          renderDropdownWhatsapp();
+        });
+        colAcciones.appendChild(btnEliminar);
+        fila.appendChild(colSeleccion);
+        fila.appendChild(colPrefijo);
+        fila.appendChild(colNumero);
+        fila.appendChild(colAcciones);
+        tablaWhatsapp.appendChild(fila);
+      });
+    }
+    function abrirModalWhatsapp(){
+      if(!modalOverlay) return;
+      modalOverlay.classList.add('visible');
+      modalOverlay.setAttribute('aria-hidden','false');
+      renderTablaNumeros();
+    }
+    function cerrarModalWhatsapp(){
+      if(!modalOverlay) return;
+      modalOverlay.classList.remove('visible');
+      modalOverlay.setAttribute('aria-hidden','true');
+    }
 
     async function cargarParametrosWhatsapp(){
       try {
@@ -1092,10 +1356,19 @@
           if(nombreApp){
             etiquetaNumeroWhatsapp.textContent=`Número WhatsApp para ${nombreApp}`;
           }
-          const numeroGuardado=data.numeroWhatsapp??data.numero_whatsapp??'';
-          if(numeroGuardado){
-            campoNumeroWhatsapp.value=numeroGuardado;
+          const listaGuardada=Array.isArray(data.numerosWhatsapp)?data.numerosWhatsapp:[];
+          const numeroGuardado=normalizarNumeroWhatsapp(data.numeroWhatsapp??data.numero_whatsapp??'');
+          const listaNormalizada=listaGuardada.length>0?listaGuardada.map(normalizarNumeroWhatsapp):[];
+          const baseLista=listaNormalizada.length>0?listaNormalizada:[numeroGuardado].filter(Boolean);
+          numerosWhatsappList=baseLista.map(valor=>{
+            const {prefijo,local}=descomponerNumeroWhatsapp(valor);
+            return {id:`num-${prefijo}-${local}`,prefijo,local};
+          });
+          if(numerosWhatsappList.length===0){
+            numerosWhatsappList.push({id:'num-+58',prefijo:'+58',local:''});
           }
+          numeroSeleccionado=numeroGuardado|| (numerosWhatsappList[0] ? `${numerosWhatsappList[0].prefijo}${numerosWhatsappList[0].local}` : '');
+          renderDropdownWhatsapp();
           const linkGuardado=data.linkWhatsapp??data.linkwhatsapp??'';
           if(linkGuardado){
             campoLinkWhatsapp.value=linkGuardado;
@@ -1111,14 +1384,9 @@
     }
 
     botonGuardarNumeroWhatsapp.addEventListener('click',async ()=>{
-      const valor=campoNumeroWhatsapp.value.trim();
+      const valor=normalizarNumeroWhatsapp(campoNumeroWhatsapp.value||'');
       if(!valor){
-        alert('El número de WhatsApp no puede estar vacío');
-        return;
-      }
-      const patronNumero=/^[+]?[-\d\s()]{6,}$/;
-      if(!patronNumero.test(valor)){
-        alert('Ingresa un número de WhatsApp válido.');
+        alert('Debes elegir un número de WhatsApp');
         return;
       }
       const confirmar=await confirm('¿Deseas guardar este número de WhatsApp para la aplicación?');
@@ -1126,11 +1394,75 @@
       try {
         await db.collection('Variablesglobales').doc('Parametros').set({numeroWhatsapp:valor},{merge:true});
         alert('Número de WhatsApp guardado correctamente.');
+        numeroSeleccionado=valor;
       } catch(err){
         console.error('No se pudo guardar el número de WhatsApp',err);
         alert('Ocurrió un error al guardar el número de WhatsApp. Inténtalo nuevamente.');
       }
     });
+    if(campoNumeroWhatsapp){
+      campoNumeroWhatsapp.addEventListener('change',()=>{ numeroSeleccionado=campoNumeroWhatsapp.value; });
+    }
+    function agregarNumeroWhatsapp(prefijo='+58',local=''){
+      numerosWhatsappList.push({id:`num-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,prefijo,local});
+      marcarModificacion();
+      renderTablaNumeros();
+      renderDropdownWhatsapp();
+    }
+    if(botonAgregarNumero){
+      botonAgregarNumero.addEventListener('click',()=>{agregarNumeroWhatsapp(selectUltimoPrefijo()||'+58','');});
+    }
+    function selectUltimoPrefijo(){
+      const ultimo=numerosWhatsappList[numerosWhatsappList.length-1];
+      return ultimo?.prefijo||'+58';
+    }
+    if(botonEditarSeleccion){
+      botonEditarSeleccion.addEventListener('click',()=>{
+        const seleccionado=document.querySelector('input[name="seleccion-numero"]:checked');
+        if(!seleccionado){ alert('Selecciona un número de la tabla para editarlo.'); return; }
+        const fila=seleccionado.closest('tr');
+        const inputNumero=fila?.querySelector('input[type="text"]');
+        inputNumero?.focus();
+      });
+    }
+    if(botonEditarNumerosWhatsapp){
+      botonEditarNumerosWhatsapp.addEventListener('click',()=>{ abrirModalWhatsapp(); });
+    }
+    if(botonCerrarModal){
+      botonCerrarModal.addEventListener('click',()=>{ cerrarModalWhatsapp(); });
+    }
+    if(modalOverlay){
+      modalOverlay.addEventListener('click',e=>{ if(e.target===modalOverlay) cerrarModalWhatsapp(); });
+    }
+    async function guardarListadoWhatsapp(){
+      if(numerosWhatsappList.length===0){
+        alert('Agrega al menos un número antes de guardar.');
+        return;
+      }
+      const listaFinal=numerosWhatsappList.map(item=>{
+        const localLimpio=(item.local||'').replace(/\D/g,'');
+        return `${item.prefijo||''}${localLimpio}`;
+      }).filter(Boolean);
+      if(listaFinal.some(n=>n.replace(/\D/g,'').length<6)){
+        alert('Cada número debe tener al menos 6 dígitos en la parte local.');
+        return;
+      }
+      const confirmar=await confirm('¿Deseas guardar los números configurados?');
+      if(!confirmar) return;
+      try{
+        await db.collection('Variablesglobales').doc('Parametros').set({numerosWhatsapp:listaFinal,numeroWhatsapp:listaFinal[0]||''},{merge:true});
+        alert('Listado de números actualizado.');
+        numeroSeleccionado=listaFinal[0]||'';
+        renderDropdownWhatsapp();
+        limpiarMarcaModificacion();
+      }catch(err){
+        console.error('No se pudo guardar el listado de números de WhatsApp',err);
+        alert('Hubo un problema guardando los números. Intenta nuevamente.');
+      }
+    }
+    if(botonGuardarNumeros){
+      botonGuardarNumeros.addEventListener('click',guardarListadoWhatsapp);
+    }
 
     botonGuardarLink.addEventListener('click',async ()=>{
       const valor=campoLinkWhatsapp.value.trim();
