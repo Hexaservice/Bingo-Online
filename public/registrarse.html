@@ -40,8 +40,17 @@
       text-align:center;
       background:#fff;
       font-weight:bold;
+      box-sizing:border-box;
     }
     input[type="checkbox"]{width:auto;margin:0;}
+    select{
+      font-size:0.95rem;
+      padding:6px;
+      border-radius:8px;
+      border:1px solid #ccc;
+      background:#fff;
+      font-weight:bold;
+    }
     #alias{color:#ff6600;}
     #email{
       margin:10px;
@@ -83,6 +92,24 @@
     }
     #fecha-hora,#derechos{font-size:0.7rem;font-family:'Poppins',sans-serif;}
     #derechos{font-size:0.6rem;}
+    .celular-row{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      width:260px;
+      max-width:90vw;
+      margin:0 auto;
+    }
+    #codigo-pais{
+      width:115px;
+      flex:0 0 115px;
+    }
+    #celular{
+      flex:1;
+      width:100%;
+      margin:5px 0;
+    }
   </style>
 </head>
 <body>
@@ -91,7 +118,10 @@
   <input type="text" id="nombre" placeholder="Nombre">
   <input type="text" id="apellido" placeholder="Apellido">
   <input type="text" id="alias" placeholder="Alias">
-  <input type="tel" id="celular" placeholder="Número Celular">
+  <div class="celular-row">
+    <select id="codigo-pais" aria-label="Código de país" required></select>
+    <input type="tel" id="celular" placeholder="Número Celular" aria-label="Número celular" required>
+  </div>
   <p class="nota-registro">Nota: Sólo tu Alias será visible para los otros Jugadores, Tu nombre, Apellido, Número celular o Gmail serán confidenciales.</p>
   <div id="email"></div>
   <div id="terms-container"><input type="checkbox" id="accept-terms"> <label for="accept-terms">Acepto <a href="terminos.html" target="_blank">términos y condiciones</a></label></div>
@@ -109,6 +139,52 @@
   <script src="js/notificationCenter.js"></script>
   <script src="js/timezone.js"></script>
   <script>
+    const codigosPais=[
+      {codigo:'VE',nombre:'Venezuela',prefijo:'+58',bandera:'🇻🇪'},
+      {codigo:'CO',nombre:'Colombia',prefijo:'+57',bandera:'🇨🇴'},
+      {codigo:'MX',nombre:'México',prefijo:'+52',bandera:'🇲🇽'},
+      {codigo:'US',nombre:'Estados Unidos',prefijo:'+1',bandera:'🇺🇸'},
+      {codigo:'AR',nombre:'Argentina',prefijo:'+54',bandera:'🇦🇷'},
+      {codigo:'CL',nombre:'Chile',prefijo:'+56',bandera:'🇨🇱'},
+      {codigo:'PE',nombre:'Perú',prefijo:'+51',bandera:'🇵🇪'}
+    ];
+
+    function poblarSelectCodigos(select){
+      if(!select) return;
+      codigosPais.forEach(pais=>{
+        const opcion=document.createElement('option');
+        opcion.value=pais.prefijo;
+        opcion.textContent=`${pais.bandera||''} ${pais.nombre} (${pais.prefijo})`;
+        select.appendChild(opcion);
+      });
+      select.value='+58';
+    }
+
+    function separarPrefijo(numero){
+      const limpio=(numero||'').toString().replace(/[^0-9+]/g,'');
+      const candidatos=[...codigosPais].sort((a,b)=>b.prefijo.length-a.prefijo.length);
+      for(const pais of candidatos){
+        const pref=pais.prefijo;
+        if(limpio.startsWith(pref)){
+          return {prefijo:pref,local:limpio.slice(pref.length)};
+        }
+        const prefSinMas=pref.replace('+','');
+        if(prefSinMas && limpio.startsWith(prefSinMas)){
+          return {prefijo:pref,local:limpio.slice(prefSinMas.length)};
+        }
+      }
+      return {prefijo:selectCodigoPais ? selectCodigoPais.value || '+58' : '+58',local:limpio};
+    }
+
+    function obtenerNumeroCompleto(){
+      const prefijo=selectCodigoPais ? (selectCodigoPais.value || '') : '';
+      const local=document.getElementById('celular').value.trim().replace(/\D/g,'');
+      return (prefijo||'')+local;
+    }
+
+    const selectCodigoPais=document.getElementById('codigo-pais');
+    poblarSelectCodigos(selectCodigoPais);
+
     (async()=>{
       try{
         await initFirebase();
@@ -132,7 +208,13 @@
             if(data.apellido) document.getElementById('apellido').value = data.apellido;
             if(data.alias) document.getElementById('alias').value = data.alias;
             const celularGuardado = data.celular || data.numerocel;
-            if(celularGuardado) document.getElementById('celular').value = celularGuardado;
+            if(celularGuardado){
+              const {prefijo,local}=separarPrefijo(celularGuardado.toString());
+              if(selectCodigoPais){
+                selectCodigoPais.value=prefijo;
+              }
+              document.getElementById('celular').value=local;
+            }
           }
         }catch(loadErr){
           console.error('No se pudieron cargar datos previos del usuario', loadErr);
@@ -152,8 +234,9 @@
       const alias = document.getElementById('alias').value.trim();
       if(!alias){ alert('Debes llenar el campo Alias'); document.getElementById('alias').focus(); return; }
       if(alias.length>60){ alert('Alias inválido'); document.getElementById('alias').focus(); return; }
-      const celular = document.getElementById('celular').value.trim();
-      if(!celular){ alert('Debes agregar tu número celular'); document.getElementById('celular').focus(); return; }
+      const celularLocal = document.getElementById('celular').value.trim().replace(/\D/g,'');
+      if(!selectCodigoPais || !selectCodigoPais.value){ alert('Debes elegir un código de país'); selectCodigoPais.focus(); return; }
+      if(!celularLocal){ alert('Debes agregar tu número celular'); document.getElementById('celular').focus(); return; }
       if(!document.getElementById('accept-terms').checked){
         alert('Para poder registrarte debes aceptar nuestros terminos y condiciones');
         return;
@@ -164,12 +247,13 @@
         window.location.href='index.html';
         return;
       }
+      const numeroCompleto=obtenerNumeroCompleto();
       await db.collection('users').doc(user.email).set({
         name:nombre,
         apellido:apellido,
         alias:alias,
-        celular:celular,
-        numerocel:celular,
+        celular:numeroCompleto,
+        numerocel:numeroCompleto,
         email:user.email,
         photoURL:user.photoURL,
         role:'Jugador',
