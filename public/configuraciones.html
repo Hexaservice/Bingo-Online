@@ -990,7 +990,6 @@
       <h3 id="whatsapp-modal-titulo">Gestiona los números de WhatsApp</h3>
       <div class="whatsapp-modal-controles">
         <button type="button" id="whatsapp-agregar">Agregar número</button>
-        <button type="button" id="whatsapp-editar">Editar seleccionado</button>
         <button type="button" id="whatsapp-guardar" class="whatsapp-guardar">Guardar</button>
       </div>
       <div id="whatsapp-tabla-wrap">
@@ -1221,10 +1220,10 @@
     const modalOverlay=document.getElementById('whatsapp-modal-overlay');
     const tablaWhatsapp=document.querySelector('#whatsapp-tabla tbody');
     const botonAgregarNumero=document.getElementById('whatsapp-agregar');
-    const botonEditarSeleccion=document.getElementById('whatsapp-editar');
     const botonGuardarNumeros=document.getElementById('whatsapp-guardar');
     const botonCerrarModal=document.getElementById('cerrar-whatsapp-modal');
     let numerosWhatsappList=[];
+    let numerosWhatsappBase=[];
     let numeroSeleccionado=null;
     let numerosModificados=false;
     function poblarSelectCodigos(select,valorDefecto='+58'){
@@ -1280,16 +1279,25 @@
       }
       return {prefijo:'+58',local:limpio};
     }
-    function marcarModificacion(){
-      numerosModificados=true;
-      if(botonGuardarNumeros){
-        botonGuardarNumeros.textContent='Editar';
-      }
+    function obtenerListaNormalizadaWhatsapp(lista){
+      return (lista||[]).map(valor=>normalizarNumeroWhatsapp(valor)).filter(Boolean);
     }
-    function limpiarMarcaModificacion(){
-      numerosModificados=false;
+    function registrarEstadoBaseWhatsapp(listaActual){
+      numerosWhatsappBase=obtenerListaNormalizadaWhatsapp(listaActual).sort();
+      actualizarEstadoBotonGuardar();
+    }
+    function hayCambiosWhatsapp(){
+      const actual=obtenerListaNormalizadaWhatsapp(numerosWhatsappList.map(valorCompuestoNumero)).sort();
+      if(actual.length!==numerosWhatsappBase.length) return true;
+      for(let i=0;i<actual.length;i++){
+        if(actual[i]!==numerosWhatsappBase[i]) return true;
+      }
+      return false;
+    }
+    function actualizarEstadoBotonGuardar(){
+      numerosModificados=hayCambiosWhatsapp();
       if(botonGuardarNumeros){
-        botonGuardarNumeros.textContent='Guardar';
+        botonGuardarNumeros.textContent=numerosModificados?'Editar':'Guardar';
       }
     }
     function renderDropdownWhatsapp(){
@@ -1345,7 +1353,7 @@
           }else{
             renderDropdownWhatsapp();
           }
-          marcarModificacion();
+          actualizarEstadoBotonGuardar();
         });
         colPrefijo.appendChild(selectPrefijo);
         const colNumero=document.createElement('td');
@@ -1361,7 +1369,7 @@
           }else{
             renderDropdownWhatsapp();
           }
-          marcarModificacion();
+          actualizarEstadoBotonGuardar();
         });
         colNumero.appendChild(inputNumero);
         const colAcciones=document.createElement('td');
@@ -1383,12 +1391,14 @@
             }
             renderDropdownWhatsapp();
             renderTablaNumeros();
+            registrarEstadoBaseWhatsapp(listaFinal);
           }catch(err){
             console.error('No se pudo eliminar el número de WhatsApp',err);
             alert('Ocurrió un error al eliminar el número. Inténtalo nuevamente.');
             numerosWhatsappList=respaldo;
             renderDropdownWhatsapp();
             renderTablaNumeros();
+            actualizarEstadoBotonGuardar();
           }
         });
         colAcciones.appendChild(btnEliminar);
@@ -1433,6 +1443,7 @@
           }
           numeroSeleccionado=numeroGuardado|| (numerosWhatsappList[0] ? `${numerosWhatsappList[0].prefijo}${numerosWhatsappList[0].local}` : '');
           renderDropdownWhatsapp();
+          registrarEstadoBaseWhatsapp(baseLista.length>0?baseLista:numerosWhatsappList.map(valorCompuestoNumero));
           const linkGuardado=data.linkWhatsapp??data.linkwhatsapp??'';
           if(linkGuardado){
             campoLinkWhatsapp.value=linkGuardado;
@@ -1471,9 +1482,9 @@
       const nuevo={id:`num-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,prefijo,local};
       numerosWhatsappList.unshift(nuevo);
       numeroSeleccionado=valorCompuestoNumero(nuevo);
-      marcarModificacion();
       renderTablaNumeros();
       renderDropdownWhatsapp();
+      actualizarEstadoBotonGuardar();
     }
     if(botonAgregarNumero){
       botonAgregarNumero.addEventListener('click',()=>{agregarNumeroWhatsapp(selectUltimoPrefijo()||'+58','');});
@@ -1481,14 +1492,6 @@
     function selectUltimoPrefijo(){
       const ultimo=numerosWhatsappList[0];
       return ultimo?.prefijo||'+58';
-    }
-    if(botonEditarSeleccion){
-      botonEditarSeleccion.addEventListener('click',()=>{
-        const fila=tablaWhatsapp?.querySelector('tr.seleccionado');
-        if(!fila){ alert('Selecciona un número de la tabla para editarlo.'); return; }
-        const inputNumero=fila?.querySelector('input[type="text"]');
-        inputNumero?.focus();
-      });
     }
     if(botonEditarNumerosWhatsapp){
       botonEditarNumerosWhatsapp.addEventListener('click',()=>{ abrirModalWhatsapp(); });
@@ -1516,7 +1519,7 @@
         alert('Listado de números actualizado.');
         numeroSeleccionado=listaFinal[0]||'';
         renderDropdownWhatsapp();
-        limpiarMarcaModificacion();
+        registrarEstadoBaseWhatsapp(listaFinal);
       }catch(err){
         console.error('No se pudo guardar el listado de números de WhatsApp',err);
         alert('Hubo un problema guardando los números. Intenta nuevamente.');
