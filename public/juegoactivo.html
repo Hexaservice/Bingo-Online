@@ -1345,11 +1345,6 @@
           color: #19d46b;
           animation: premioZoom 2s ease-in-out infinite;
       }
-      #carton-destacado.carton-destacado--simulado .carton-back,
-      #carton-destacado.carton-destacado--simulado .carton-front,
-      #carton-destacado.carton-destacado--simulado .carton-tabla {
-          opacity: 0.65;
-      }
       #carton-destacado-premio .carton-destacado-premio__plus {
           font-weight: 700;
           color: #000000;
@@ -1864,15 +1859,6 @@
           transition: transform 0.18s ease, box-shadow 0.18s ease;
           margin: 0 auto;
       }
-      .carton-visual--simulado,
-      .carton-visual--simulado .carton-tabla,
-      .carton-visual--principal.carton-visual--simulado .carton-tabla {
-          opacity: 0.55;
-      }
-      .carton-visual--simulado:hover,
-      .carton-visual--simulado:focus-visible {
-          opacity: 0.7;
-      }
       .carton-visual--mini:focus-visible {
           outline: 3px solid rgba(255,215,0,0.45);
           outline-offset: 3px;
@@ -1931,21 +1917,6 @@
       }
       .carton-forma-leyenda.visible {
           opacity: 1;
-          transform: translateY(0) scale(1);
-          filter: drop-shadow(0 0 10px rgba(0,0,0,0.25));
-      }
-      .carton-forma-leyenda--simulando {
-          color: #d50000;
-          text-shadow: 0 0 6px rgba(0,0,0,0.9);
-          animation: simulandoParpadeo 1s ease-in-out infinite;
-      }
-      .carton-forma-leyenda--simulado {
-          color: #1b4b9b;
-          text-shadow: 0 0 6px rgba(0,0,0,0.75);
-      }
-      @keyframes simulandoParpadeo {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.35; }
       }
       .carton-info {
           font-size: 0.72rem;
@@ -2714,10 +2685,6 @@
           animation: confetiCaida var(--confeti-duracion, 4s) linear infinite;
           transform-origin: center;
           will-change: transform;
-      }
-      #confeti-overlay.confeti-simulado .confeti-papelillo {
-          filter: grayscale(1);
-          opacity: 0.7;
       }
       .confeti-papelillo:nth-child(3n) {
           border-radius: 50%;
@@ -3564,7 +3531,7 @@
       </div>
     </section>
     <section id="mis-cartones-section">
-      <h2><span id="mis-cartones-titulo-texto">MIS CARTONES EN EL SORTEO</span> <span id="mis-cartones-total" class="mis-cartones-total">(0)</span></h2>
+      <h2>MIS CARTONES EN EL SORTEO <span id="mis-cartones-total" class="mis-cartones-total">(0)</span></h2>
       <div id="cartones-mensaje" class="mensaje"></div>
       <div id="mis-cartones-grid" aria-live="polite"></div>
     </section>
@@ -3695,7 +3662,6 @@
   const modalPremioFormaEl = document.getElementById('modal-premio-forma');
   const modalPremioFormaValorEl = document.getElementById('modal-premio-forma-valor');
   const modalPremioFormaLabelEl = document.getElementById('modal-premio-forma-label');
-  const misCartonesTituloTextoEl = document.getElementById('mis-cartones-titulo-texto');
   const misCartonesTotalEl = document.getElementById('mis-cartones-total');
   const modalSorteosFinalizadosEl = document.getElementById('modal-sorteos-finalizados');
   const modalSorteosFinalizadosListaEl = document.getElementById('modal-sorteos-finalizados-lista');
@@ -3707,7 +3673,6 @@
   const modalFormasSinGanadoresAceptarBtn = document.getElementById('modal-formas-sin-ganadores-aceptar');
   const confetiOverlayEl = document.getElementById('confeti-overlay');
   const modalCelebracionEl = document.getElementById('modal-celebracion');
-  const modalCelebracionTituloEl = document.getElementById('modal-celebracion-titulo');
   const modalCelebracionListaEl = document.getElementById('modal-celebracion-lista');
   const modalCelebracionAceptarBtn = document.getElementById('modal-celebracion-aceptar');
   const modalCelebracionMensajeEl = document.getElementById('modal-celebracion-mensaje');
@@ -3747,16 +3712,11 @@
   let cartonesSorteo = new Map();
   let cartonesGanadoresPorForma = new Map();
   let formasPorCarton = new Map();
-  let formasPorCartonSimulado = new Map();
-  let cartonesGanadoresSimuladosPorForma = new Map();
   let activeSorteo = null;
   let activeSorteoId = null;
   let sorteoManualSeleccionadoId = null;
   let haySorteoJugando = false;
   let jugadorSinCartonesEnSorteo = false;
-  let simulandoCartonesGuardados = false;
-  let cartonesGuardadosCache = null;
-  let cargandoCartonesGuardados = false;
   let sinCartonesResizeObserver = null;
   let cargandoSorteosFinalizados = false;
   let usuarioActual = null;
@@ -3792,7 +3752,6 @@
   let formaDestacadaSeleccionada = null;
   let desplazamientoArribaPendiente = false;
   let evitarReaplicarFormaDestacada = false;
-  let simulacionLeyendaTimer = null;
   let panelFormasLeyendaEl = null;
   let panelGananciasTotalesEl = null;
   let panelGananciasTotalesValorEl = null;
@@ -6253,11 +6212,11 @@
     return `Cartón ${numero==='--'?'--':`#${numero}`}`;
   }
 
-  function obtenerResumenGananciasCarton(carton, limiteFormas=5, mapaFormas=formasPorCarton){
+  function obtenerResumenGananciasCarton(carton, limiteFormas=5){
     const resultado={formas:[], total:0, cartonesGratis:0};
     if(!carton) return resultado;
     const gananciasPorForma=new Map();
-    const lista=mapaFormas?.get(carton.id)||[];
+    const lista=formasPorCarton.get(carton.id)||[];
     lista.forEach(item=>{
       const idx=Number(item?.forma?.idx);
       if(!Number.isFinite(idx)) return;
@@ -6318,7 +6277,6 @@
     if(info.leyenda){
       info.leyenda.textContent='';
       info.leyenda.classList.remove('visible');
-      info.leyenda.classList.remove('carton-forma-leyenda--simulado','carton-forma-leyenda--simulando');
       info.leyenda.style.removeProperty('color');
       info.leyenda.style.removeProperty('border-color');
       info.leyenda.style.removeProperty('text-shadow');
@@ -6417,10 +6375,7 @@
           etiqueta=`Forma ${indiceTexto.padStart(2,'0')}`;
         }
         const esPrincipal=info?.contenedor?.classList?.contains('carton-visual--principal');
-        let leyendaTexto=etiqueta;
-        if(esPrincipal && etiqueta){
-          leyendaTexto=simulandoCartonesGuardados?`Simulaste con ${etiqueta}`:`Ganaste con ${etiqueta}`;
-        }
+        const leyendaTexto=esPrincipal && etiqueta?`Ganaste con ${etiqueta}`:etiqueta;
         info.leyenda.textContent=leyendaTexto;
         if(datosForma.color){
           info.leyenda.style.color=ajustarLuminosidad(datosForma.color,-0.5);
@@ -7426,81 +7381,6 @@
     }
   }
 
-  function limpiarAlternanciaLeyenda(){
-    if(simulacionLeyendaTimer){
-      clearInterval(simulacionLeyendaTimer);
-      simulacionLeyendaTimer=null;
-    }
-  }
-
-  function actualizarTituloMisCartones(simulando){
-    if(!misCartonesTituloTextoEl) return;
-    misCartonesTituloTextoEl.textContent = simulando ? 'MIS CARTONES GUARDADOS' : 'MIS CARTONES EN EL SORTEO';
-  }
-
-  async function obtenerCartonesGuardadosUsuario(){
-    if(!db || !usuarioActual) return [];
-    if(cargandoCartonesGuardados){
-      return Array.isArray(cartonesGuardadosCache)?cartonesGuardadosCache:[];
-    }
-    cargandoCartonesGuardados=true;
-    try{
-      const snap=await db.collection('CartonGuardado').where('userId','==',usuarioActual.uid).get();
-      const lista=[];
-      snap.forEach(doc=>{
-        const data=doc.data()||{};
-        const posicionesRaw=Array.isArray(data.posiciones)?data.posiciones:[];
-        const posiciones=posicionesRaw
-          .map(p=>({r:Number(p.r),c:Number(p.c),valor:normalizarNumero(p.valor ?? p.numero ?? p.value ?? p.num)}))
-          .filter(p=>Number.isInteger(p.r)&&Number.isInteger(p.c)&&p.valor!==null);
-        const valorPorPos=new Map();
-        posiciones.forEach(pos=>valorPorPos.set(`${pos.r}-${pos.c}`, pos.valor));
-        lista.push({
-          id:`sim-${doc.id}`,
-          guardadoId:doc.id,
-          userId:usuarioActual.uid,
-          alias:data.alias||'',
-          cartonNum:data.nombre || data.alias || 'Guardado',
-          Ncarton:data.nombre || data.alias || 'Guardado',
-          tipocarton:'guardado',
-          posiciones,
-          valorPorPos,
-          esSimulado:true
-        });
-      });
-      cartonesGuardadosCache=lista;
-      return lista;
-    }catch(err){
-      console.error('Error cargando cartones guardados',err);
-      return cartonesGuardadosCache||[];
-    }finally{
-      cargandoCartonesGuardados=false;
-    }
-  }
-
-  function aplicarLeyendaSimulacion(carton, info){
-    if(!simulandoCartonesGuardados || !info?.leyenda) return;
-    limpiarAlternanciaLeyenda();
-    info.leyenda.classList.remove('carton-forma-leyenda--simulado','carton-forma-leyenda--simulando');
-    const formas=formasPorCartonSimulado.get(carton?.id)||[];
-    if(!formas.length){
-      info.leyenda.textContent='SIMULANDO';
-      info.leyenda.classList.add('carton-forma-leyenda--simulando','visible');
-      return;
-    }
-    const formaBase=formas[0]?.forma || formasActivas.find(f=>Number(f.idx)===Number(formas[0]?.forma?.idx || formas[0]?.idx)) || {idx:formas[0]?.idx};
-    const etiqueta=construirEtiquetaForma(formaBase);
-    const mensajes=[`Simulaste con ${etiqueta}`,'¡Ganaste con una forma!'];
-    let indice=0;
-    const alternar=()=>{
-      info.leyenda.textContent=mensajes[indice];
-      indice=(indice+1)%mensajes.length;
-    };
-    info.leyenda.classList.add('carton-forma-leyenda--simulado','visible');
-    alternar();
-    simulacionLeyendaTimer=setInterval(alternar,1600);
-  }
-
   function crearLineaCelebracionGanador(detalle){
     const linea=document.createElement('div');
     linea.className='celebracion-linea';
@@ -7542,7 +7422,6 @@
 
   function iniciarConfetiCelebracion(){
     if(!confetiOverlayEl) return;
-    confetiOverlayEl.classList.toggle('confeti-simulado', simulandoCartonesGuardados);
     confetiOverlayEl.innerHTML='';
     const anchoVentana=Math.max(window.innerWidth||0,320);
     const piezas=Math.min(140, Math.max(60, Math.round(anchoVentana/8)));
@@ -7578,7 +7457,6 @@
   function detenerConfetiCelebracion(){
     if(!confetiOverlayEl) return;
     confetiOverlayEl.classList.remove('activo');
-    confetiOverlayEl.classList.remove('confeti-simulado');
     confetiOverlayEl.innerHTML='';
   }
 
@@ -7590,16 +7468,9 @@
     lista.forEach(detalle=>{
       modalCelebracionListaEl.appendChild(crearLineaCelebracionGanador(detalle));
     });
-    const total=lista.length;
-    if(modalCelebracionTituloEl){
-      modalCelebracionTituloEl.textContent=simulandoCartonesGuardados?'SI HUBIERAS JUGADO':'¡Felicidades!';
-    }
     if(modalCelebracionMensajeEl){
-      if(simulandoCartonesGuardados){
-        modalCelebracionMensajeEl.textContent=total>1?'¡Hubieses ganado con estas formas!':'¡Hubieses ganado con esta forma!';
-      }else{
-        modalCelebracionMensajeEl.textContent=total===1?'¡Ganaste con una forma!':`¡Ganaste con ${total} formas!`;
-      }
+      const total=lista.length;
+      modalCelebracionMensajeEl.textContent=total===1?'¡Ganaste con una forma!':`¡Ganaste con ${total} formas!`;
     }
     modalCelebracionEl.classList.add('activa');
     modalCelebracionEl.setAttribute('aria-hidden','false');
@@ -7671,86 +7542,56 @@
     }
   }
 
-  async function renderCartonesJugador(){
+  function renderCartonesJugador(){
     detenerTodasAnimaciones();
     limpiarCartonesRenderizados();
     cartonDestacadoEl.innerHTML='';
-    cartonDestacadoEl.classList.remove('activo','carton-destacado--simulado');
+    cartonDestacadoEl.classList.remove('activo');
     cartonDestacadoEl.style.removeProperty('--carton-contenido-ancho');
     cartonDestacadoEl.style.removeProperty('--carton-contenido-alto');
     limpiarBotonesFormas();
     mostrarMensajeSinCartonesJugador(false);
     jugadorSinCartonesEnSorteo = false;
-    simulandoCartonesGuardados = false;
-    formasPorCartonSimulado = new Map();
-    cartonesGanadoresSimuladosPorForma = new Map();
-    actualizarTituloMisCartones(false);
-    limpiarAlternanciaLeyenda();
-
-    const indiceCantosActual = (cantosIndiceMap && cantosIndiceMap.size) ? cantosIndiceMap : construirIndiceCantos();
     const lista=Array.from(cartonesSorteo.values()).filter(c=>c.userId===(usuarioActual?usuarioActual.uid:null));
-    let decorados=[];
-    let mapaFormasActual=formasPorCarton;
-
-    if(!lista.length){
-      const estadoSorteoActual = (activeSorteo?.estado || activeSorteo?.estadoSorteo || '').toString().toLowerCase();
-      const mostrarRecomendacion = haySorteoJugando && !!activeSorteo && estadoSorteoActual === 'jugando';
-      const guardados = await obtenerCartonesGuardadosUsuario();
-      if(!guardados.length){
-        jugadorSinCartonesEnSorteo = mostrarRecomendacion;
-        mostrarMensajeSinCartonesJugador(mostrarRecomendacion);
-        const botonesGenericos=Array.isArray(formasActivas)
-          ? formasActivas.map(forma=>crearBotonGanadoresForma(forma)).filter(Boolean)
-          : [];
-        if(mostrarRecomendacion){
-          cartonesMensajeEl.textContent='';
-        }else{
-          cartonesMensajeEl.textContent='No tienes cartones participando en este sorteo.';
-        }
-        insertarBotonesFormas(botonesGenericos);
-        if(celebracionModalActiva){
-          cerrarModalCelebracionGanador();
-        }
-        cartonSeleccionadoId=null;
-        cartonPrincipalInfo=null;
-        formaDestacadaSeleccionada=null;
-        totalGananciasJugador=0;
-        actualizarGananciasTotales();
-        actualizarSinSorteoUI();
-        actualizarTituloMisCartones(false);
-        return;
-      }
-      simulandoCartonesGuardados = true;
-      actualizarTituloMisCartones(true);
-      const mapaSimulado=new Map();
-      guardados.forEach(carton=>mapaSimulado.set(carton.id, carton));
-      const resultadosSim=calcularGanadoresParaMapa(mapaSimulado, indiceCantosActual);
-      formasPorCartonSimulado=resultadosSim.formasPorCarton;
-      cartonesGanadoresSimuladosPorForma=resultadosSim.cartonesGanadoresPorForma;
-      mapaFormasActual=formasPorCartonSimulado;
-      decorados=guardados.map(carton=>{
-        const formasGanadas=mapaFormasActual.get(carton.id)||[];
-        const primerPaso=formasGanadas.length?Math.min(...formasGanadas.map(f=>f.paso)):Infinity;
-        const resumenGanancias=obtenerResumenGananciasCarton(carton,5,mapaFormasActual);
-        return {...carton, formasGanadas, primerPaso, resumenGanancias};
-      });
-    }else{
-      decorados=lista.map(carton=>{
-        const formasGanadas=mapaFormasActual.get(carton.id)||[];
-        const primerPaso=formasGanadas.length?Math.min(...formasGanadas.map(f=>f.paso)):Infinity;
-        const resumenGanancias=obtenerResumenGananciasCarton(carton,5,mapaFormasActual);
-        return {...carton, formasGanadas, primerPaso, resumenGanancias};
-      });
-    }
-
-    const idsActuales=new Set(decorados.map(carton=>carton.id).filter(Boolean));
+    actualizarTotalCartonesSorteo(lista.length);
+    const idsActuales=new Set(lista.map(carton=>carton.id).filter(Boolean));
     Array.from(formasCelebradasPorCarton.keys()).forEach(id=>{
       if(!idsActuales.has(id)){
         formasCelebradasPorCarton.delete(id);
       }
     });
-
+    if(!lista.length){
+      const estadoSorteoActual = (activeSorteo?.estado || activeSorteo?.estadoSorteo || '').toString().toLowerCase();
+      const mostrarRecomendacion = haySorteoJugando && !!activeSorteo && estadoSorteoActual === 'jugando';
+      jugadorSinCartonesEnSorteo = mostrarRecomendacion;
+      mostrarMensajeSinCartonesJugador(mostrarRecomendacion);
+      const botonesGenericos=Array.isArray(formasActivas)
+        ? formasActivas.map(forma=>crearBotonGanadoresForma(forma)).filter(Boolean)
+        : [];
+      if(mostrarRecomendacion){
+        cartonesMensajeEl.textContent='';
+      }else{
+        cartonesMensajeEl.textContent='No tienes cartones participando en este sorteo.';
+      }
+      insertarBotonesFormas(botonesGenericos);
+      if(celebracionModalActiva){
+        cerrarModalCelebracionGanador();
+      }
+      cartonSeleccionadoId=null;
+      cartonPrincipalInfo=null;
+      formaDestacadaSeleccionada=null;
+      totalGananciasJugador=0;
+      actualizarGananciasTotales();
+      actualizarSinSorteoUI();
+      return;
+    }
     cartonesMensajeEl.textContent='';
+    const decorados=lista.map(carton=>{
+      const formasGanadas=formasPorCarton.get(carton.id)||[];
+      const primerPaso=formasGanadas.length?Math.min(...formasGanadas.map(f=>f.paso)):Infinity;
+      const resumenGanancias=obtenerResumenGananciasCarton(carton,5);
+      return {...carton, formasGanadas, primerPaso, resumenGanancias};
+    });
     totalGananciasJugador=decorados.reduce((acum,carton)=>{
       const total=Number(carton?.resumenGanancias?.total)||0;
       return acum+total;
@@ -7782,9 +7623,6 @@
     const fragment=document.createDocumentFragment();
     decorados.forEach(carton=>{
       const tablaInfo=crearTablaCartonVisual(carton,'mini');
-      if(simulandoCartonesGuardados){
-        tablaInfo.contenedor.classList.add('carton-visual--simulado');
-      }
       aplicarResumenCarton(tablaInfo);
       registrarTabla(carton.id,tablaInfo);
       const contenedor=tablaInfo.contenedor;
@@ -7807,11 +7645,7 @@
       const tipoCarton=normalizarTipoCarton(carton);
       const tipoDiv=document.createElement('div');
       tipoDiv.className=`carton-info-tipo carton-info-tipo--${tipoCarton}`;
-      if(simulandoCartonesGuardados){
-        tipoDiv.textContent='SIMULADO';
-      }else{
-        tipoDiv.textContent=tipoCarton==='gratis'?'GRATIS':'PAGADO';
-      }
+      tipoDiv.textContent=tipoCarton==='gratis'?'GRATIS':'PAGADO';
       info.appendChild(tipoDiv);
       contenedor.appendChild(info);
       contenedor.addEventListener('click',()=>{
@@ -7843,13 +7677,9 @@
     const seleccionado=decorados.find(c=>c.id===cartonSeleccionadoId);
     if(seleccionado){
       const tablaInfoPrincipal=crearTablaCartonVisual(seleccionado,'principal');
-      if(simulandoCartonesGuardados){
-        tablaInfoPrincipal.contenedor.classList.add('carton-visual--simulado');
-        cartonDestacadoEl.classList.add('carton-destacado--simulado');
-      }
       aplicarResumenCarton(tablaInfoPrincipal);
       registrarTabla(seleccionado.id,tablaInfoPrincipal);
-      const resumenGanancias=seleccionado.resumenGanancias || obtenerResumenGananciasCarton(seleccionado,5,mapaFormasActual);
+      const resumenGanancias=seleccionado.resumenGanancias || obtenerResumenGananciasCarton(seleccionado,5);
       const cartonBox=document.createElement('div');
       cartonBox.className='carton-box';
       const cartonWrapper=document.createElement('div');
@@ -7886,36 +7716,15 @@
         const colorTexto=obtenerColorOscurecido(colorForma,0.75);
         const linea=document.createElement('div');
         linea.className='back-forma-line';
-        linea.style.setProperty('--forma-rgb', obtenerRgbTexto(colorForma));
-        const etiqueta=document.createElement('span');
-        etiqueta.className='back-forma-etiqueta';
-        etiqueta.textContent=`Forma ${String(idx).padStart(2,'0')}`;
-        const valor=document.createElement('span');
-        valor.className='back-forma-valor';
-        valor.textContent=formatearCreditos(datosForma.valor||0);
-        linea.appendChild(etiqueta);
-        linea.appendChild(valor);
-        const boton=document.createElement('button');
-        boton.type='button';
-        boton.className='carton-forma-accion carton-forma-accion--back';
-        boton.style.setProperty('--forma-rgb', obtenerRgbTexto(colorForma));
-        boton.style.setProperty('--forma-rgb-vivo', obtenerRgbVivoTexto(colorForma));
-        const textoBoton=document.createElement('span');
-        textoBoton.className='carton-forma-texto';
-        const nombreForma=(forma?.nombre||'').toString().trim();
-        textoBoton.textContent=nombreForma?`F${idx} · ${nombreForma}`:`Forma ${idx}`;
-        const contador=document.createElement('span');
-        contador.className='carton-forma-contador';
-        const totalGanadores=obtenerTotalGanadoresForma(forma, datosForma?.totalGanadores || datosForma?.ganadores || null);
-        contador.textContent=Number.isFinite(totalGanadores)?`${totalGanadores} GAN`:'0 GAN';
-        boton.appendChild(textoBoton);
-        boton.appendChild(contador);
-        boton.addEventListener('click',()=>{
-          formaDestacadaSeleccionada=idx;
-          establecerFormaDestacada(idx,colorForma);
-        });
-        botonesFormas.push(boton);
+        linea.style.color=colorTexto;
+        linea.innerHTML=
+          `<span class="back-forma-etiqueta">FORMA ${String(idx).padStart(2,'0')}:</span>`+
+          `<span class="back-forma-valor">${formatearCreditos(datosForma.valor||0)}</span>`;
         formasContenedor.appendChild(linea);
+        const boton=crearBotonGanadoresForma(forma);
+        if(boton){
+          botonesFormas.push(boton);
+        }
       }
       const totalContenedor=document.createElement('div');
       totalContenedor.className='carton-back-total';
@@ -7923,10 +7732,10 @@
       totalFila.className='carton-back-total-row';
       const totalLabel=document.createElement('span');
       totalLabel.className='carton-back-total-label';
-      totalLabel.textContent='TOTAL GANADO:';
+      totalLabel.textContent='TOTAL GANADO CARTÓN:';
       const totalValor=document.createElement('span');
       totalValor.className='carton-back-total-valor';
-      totalValor.textContent=formatearCreditos(resumenGanancias.total||0);
+      totalValor.textContent=formatearCreditos(resumenGanancias.total);
       totalFila.appendChild(totalLabel);
       totalFila.appendChild(totalValor);
       totalContenedor.appendChild(totalFila);
@@ -7939,30 +7748,19 @@
       cartonesGratisLabel.appendChild(document.createTextNode(' '));
       cartonesGratisLabel.appendChild(cartonesGratisValor);
       totalContenedor.appendChild(cartonesGratisLabel);
-      formasContenedor.appendChild(totalContenedor);
-      const panelGanancias=document.createElement('div');
-      panelGanancias.className='panel-formas-ganancias';
-      panelGanancias.setAttribute('role','group');
-      panelGanancias.setAttribute('aria-label','Formas disponibles en el cartón');
-      botonesFormas.forEach(btn=>panelGanancias.appendChild(btn));
-      cartonBox.appendChild(panelGanancias);
-      const cartonBackLogo=document.createElement('div');
-      cartonBackLogo.className='carton-back-logo';
-      const logoImg=document.createElement('img');
-      logoImg.src='img/Logo-BingOnline-nuevo500p.png';
-      logoImg.alt='Logo HexaBingo';
-      cartonBackLogo.appendChild(logoImg);
-      cartonBack.appendChild(cartonBackLogo);
+      backContent.appendChild(totalContenedor);
+      const backLogo=document.createElement('img');
+      backLogo.src='img/Logo-BingOnline-nuevo500p.png';
+      backLogo.alt='Logo HexaBingo';
+      cartonBack.appendChild(backLogo);
+      insertarBotonesFormas(botonesFormas);
+      actualizarGananciasTotales();
+      colocarLeyendaPrincipalEnPanel(tablaInfoPrincipal);
       cartonDestacadoEl.appendChild(cartonBox);
       tablaInfoPrincipal.wrapper=cartonWrapper;
       tablaInfoPrincipal.cartonBack=cartonBack;
       tablaInfoPrincipal.celdaCentral=tablaInfoPrincipal.celdas.get('2-2');
-      cartonPrincipalInfo={cartonId:seleccionado.id, info:tablaInfoPrincipal};
       cartonDestacadoEl.classList.add('activo');
-      colocarLeyendaPrincipalEnPanel(tablaInfoPrincipal);
-      if(simulandoCartonesGuardados){
-        aplicarLeyendaSimulacion(seleccionado, tablaInfoPrincipal);
-      }
       configurarEventosCartonPrincipal(seleccionado,tablaInfoPrincipal);
       configurarInteraccionFormasDestacadas(tablaInfoPrincipal);
       restaurarFormaDestacada();
@@ -8239,27 +8037,25 @@
     }
   });
 
-  function construirIndiceCantos(){
-    const mapa=new Map();
+  function calcularGanadores(){
+    cartonesGanadoresPorForma=new Map();
+    formasPorCarton=new Map();
+    cantosIndiceMap=new Map();
     cantosOrdenados.forEach((num,idx)=>{
-      if(!mapa.has(num)) mapa.set(num,idx);
+      if(!cantosIndiceMap.has(num)) cantosIndiceMap.set(num,idx);
     });
-    cantosIndiceMap=mapa;
-    return mapa;
-  }
-
-  function calcularGanadoresParaMapa(mapaCartones, indiceCantos=construirIndiceCantos()){
-    const formasPorCartonLocal=new Map();
-    const cartonesGanadoresLocal=new Map();
-    if(!formasActivas.length || !mapaCartones?.size || !indiceCantos?.size){
-      return {formasPorCarton: formasPorCartonLocal, cartonesGanadoresPorForma: cartonesGanadoresLocal};
+    if(!formasActivas.length || !cartonesSorteo.size || !cantosOrdenados.length){
+      evaluarEstadoFormasGanadoras();
+      renderFormas();
+      renderCartonesJugador();
+      return;
     }
     formasActivas.forEach(forma=>{
       const posiciones=obtenerPosicionesNormalizadas(forma);
       if(!posiciones.length) return;
       let mejorPaso=Infinity;
       const ganadores=[];
-      mapaCartones.forEach(carton=>{
+      cartonesSorteo.forEach(carton=>{
         let valido=true;
         let maxPaso=-1;
         for(const pos of posiciones){
@@ -8268,7 +8064,7 @@
             valido=false;
             break;
           }
-          const idx=indiceCantos.get(valor);
+          const idx=cantosIndiceMap.get(valor);
           if(idx===undefined){
             valido=false;
             break;
@@ -8285,41 +8081,18 @@
         }
       });
       const totalGanadores=ganadores.length;
-      cartonesGanadoresLocal.set(forma.idx,{forma,cartones:ganadores,paso:mejorPaso,totalGanadores});
+      cartonesGanadoresPorForma.set(forma.idx,{forma,cartones:ganadores,paso:mejorPaso,totalGanadores});
       ganadores.forEach(carton=>{
-        if(!formasPorCartonLocal.has(carton.id)) formasPorCartonLocal.set(carton.id,[]);
-        formasPorCartonLocal.get(carton.id).push({forma,paso:mejorPaso,totalGanadores});
+        if(!formasPorCarton.has(carton.id)) formasPorCarton.set(carton.id,[]);
+        formasPorCarton.get(carton.id).push({forma,paso:mejorPaso,totalGanadores});
       });
     });
-    formasPorCartonLocal.forEach(lista=>{
+    formasPorCarton.forEach(lista=>{
       lista.sort((a,b)=>{
         if(a.paso!==b.paso) return a.paso-b.paso;
         return (a.forma.idx||0)-(b.forma.idx||0);
       });
     });
-    return {formasPorCarton: formasPorCartonLocal, cartonesGanadoresPorForma: cartonesGanadoresLocal};
-  }
-
-  function construirEtiquetaForma(forma){
-    const idx=Number(forma?.idx);
-    const base=Number.isInteger(idx)?`Forma ${String(idx).padStart(2,'0')}`:'Forma';
-    const nombre=(forma?.nombre||'').toString().trim();
-    return nombre?`${base} · ${nombre}`:base;
-  }
-
-  function calcularGanadores(){
-    construirIndiceCantos();
-    if(!formasActivas.length || !cartonesSorteo.size || !cantosOrdenados.length){
-      cartonesGanadoresPorForma=new Map();
-      formasPorCarton=new Map();
-      evaluarEstadoFormasGanadoras();
-      renderFormas();
-      renderCartonesJugador();
-      return;
-    }
-    const resultados=calcularGanadoresParaMapa(cartonesSorteo, cantosIndiceMap);
-    cartonesGanadoresPorForma=resultados.cartonesGanadoresPorForma;
-    formasPorCarton=resultados.formasPorCarton;
     evaluarEstadoFormasGanadoras();
     renderFormas();
     renderCartonesJugador();
