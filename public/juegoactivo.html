@@ -2787,6 +2787,71 @@
           box-shadow: 0 6px 14px rgba(0,0,0,0.2);
           border-radius: 10px;
       }
+      #modal-sin-ganadores-preview .carton-visual--mini {
+          padding: 8px;
+          background: linear-gradient(160deg, rgba(255,255,255,0.95), rgba(243,247,255,0.92));
+          border-radius: 14px;
+          border: 1px solid rgba(0,0,0,0.06);
+      }
+      #modal-sin-ganadores-preview .carton-tabla--mini {
+          width: 100%;
+          max-width: clamp(150px, 34vw, 220px);
+          background: linear-gradient(160deg, rgba(255,255,255,0.95), rgba(243,247,255,0.95));
+          border-radius: 10px;
+          overflow: hidden;
+          box-shadow: 0 6px 18px rgba(0,0,0,0.16);
+          border: 1px solid rgba(0,0,0,0.05);
+      }
+      #modal-sin-ganadores-preview .carton-tabla--mini thead,
+      #modal-sin-ganadores-preview .carton-tabla--mini tbody,
+      #modal-sin-ganadores-preview .carton-tabla--mini tr {
+          display: contents;
+      }
+      #modal-sin-ganadores-preview .carton-tabla--mini th,
+      #modal-sin-ganadores-preview .carton-tabla--mini td {
+          border: 1px solid rgba(0,0,0,0.12);
+          background: #ffffff;
+          padding: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          aspect-ratio: 1 / 1;
+          position: relative;
+          font-size: clamp(0.52rem, 2.4vw, 0.82rem);
+      }
+      #modal-sin-ganadores-preview .carton-tabla--mini th {
+          font-size: clamp(0.68rem, 2.8vw, 1.05rem);
+          background: linear-gradient(135deg, rgba(var(--forma-rgb, 11, 83, 148), 1), rgba(var(--forma-rgb, 11, 83, 148), 0.9));
+          color: #ffffff;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+      }
+      #modal-sin-ganadores-preview .carton-tabla--mini td.celda-forma-estrella {
+          background: linear-gradient(145deg,
+              rgba(var(--forma-rgb, 0, 120, 255), 0.25),
+              rgba(255,255,255,0.95));
+      }
+      #modal-sin-ganadores-preview .carton-tabla--mini td.celda-forma-estrella .cell-content {
+          opacity: 0.5;
+      }
+      #modal-sin-ganadores-preview .carton-tabla--mini td.celda-forma-estrella .forma-estrella {
+          position: absolute;
+          inset: 0;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: rgb(var(--forma-rgb, 0, 120, 255));
+          font-size: clamp(0.9rem, 3.4vw, 1.3rem);
+          text-shadow: 0 0 6px rgba(0,0,0,0.15);
+      }
+      #modal-sin-ganadores-preview .carton-tabla--mini td.free {
+          background: linear-gradient(135deg, #ffb347, #ff7b00);
+          color: #ffffff;
+      }
+      #modal-sin-ganadores-preview .carton-tabla--mini td.free .cell-content {
+          color: inherit;
+          font-weight: 700;
+          text-shadow: 0 0 6px rgba(0,0,0,0.25);
+      }
       @keyframes zoomPulse {
           0% { transform: scale(1); }
           48% { transform: scale(1.24); }
@@ -6337,11 +6402,14 @@
     info.celdas.forEach(celda=>{
       celda.classList.remove('forma-resaltada');
       celda.classList.remove('celda-forma-activa');
+      celda.classList.remove('celda-forma-estrella');
       celda.classList.remove('celda-forma-solo-borde');
       celda.style.removeProperty('--forma-rgb');
       celda.style.removeProperty('--forma-rgb-vivo');
       celda.style.removeProperty('--forma-rgb-borde');
       celda.classList.remove('celda-complementario-flash');
+      const estrellas=celda.querySelectorAll('.forma-estrella');
+      estrellas.forEach(n=>n.remove());
       if(celda.dataset.cantada==='1'){
         celda.classList.add('celda-cantada');
       }
@@ -6357,6 +6425,13 @@
       celda.style.setProperty('--forma-rgb-vivo',rgbVivoTexto);
       if(rgbBordeTexto){
         celda.style.setProperty('--forma-rgb-borde',rgbBordeTexto);
+      }
+      if(datosForma.mostrarEstrellas){
+        celda.classList.add('celda-forma-estrella');
+        const estrella=document.createElement('span');
+        estrella.className='forma-estrella';
+        estrella.textContent='★';
+        celda.appendChild(estrella);
       }
     });
     if(info.leyenda){
@@ -7804,7 +7879,8 @@
           nombre:forma.nombre,
           indice:forma.idx,
           mostrarLeyenda:true,
-          resaltarTodas:true
+          resaltarTodas:true,
+          mostrarEstrellas:true
         });
         modalSinGanadoresPreviewEl.appendChild(tablaInfo.contenedor);
         modalSinGanadoresPreviewEl.style.display='flex';
