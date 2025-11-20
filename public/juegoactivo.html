@@ -1918,6 +1918,38 @@
       .carton-forma-leyenda.visible {
           opacity: 1;
       }
+      body.simulacion-cartones-activa .carton-visual,
+      body.simulacion-cartones-activa .carton-tabla,
+      body.simulacion-cartones-activa .carton-back,
+      body.simulacion-cartones-activa .carton-box,
+      body.simulacion-cartones-activa #carton-destacado {
+          --simulacion-opacidad: 0.62;
+      }
+      body.simulacion-cartones-activa .carton-visual,
+      body.simulacion-cartones-activa .carton-tabla,
+      body.simulacion-cartones-activa .carton-back,
+      body.simulacion-cartones-activa .carton-box {
+          opacity: var(--simulacion-opacidad, 0.62);
+      }
+      .carton-visual.simulado,
+      .carton-visual.simulado .carton-tabla,
+      .carton-visual.simulado .carton-back {
+          opacity: var(--simulacion-opacidad, 0.62);
+      }
+      .carton-forma-leyenda--simulacion {
+          background: rgba(255, 255, 255, 0.95);
+          color: #b30000;
+          text-shadow: 0 0 6px #000000;
+          box-shadow: 0 0 12px rgba(0,0,0,0.55);
+          border-color: rgba(0,0,0,0.35);
+      }
+      .carton-forma-leyenda--simulacion.parpadeo {
+          animation: parpadeoSimulacion 1s ease-in-out infinite;
+      }
+      @keyframes parpadeoSimulacion {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.35; }
+      }
       .carton-info {
           font-size: 0.72rem;
           color: var(--texto-primario);
@@ -3625,7 +3657,7 @@
       </div>
     </section>
     <section id="mis-cartones-section">
-      <h2>MIS CARTONES EN EL SORTEO <span id="mis-cartones-total" class="mis-cartones-total">(0)</span></h2>
+      <h2><span id="mis-cartones-label">MIS CARTONES EN EL SORTEO</span> <span id="mis-cartones-total" class="mis-cartones-total">(0)</span></h2>
       <div id="cartones-mensaje" class="mensaje"></div>
       <div id="mis-cartones-grid" aria-live="polite"></div>
     </section>
@@ -3739,6 +3771,7 @@
   const complementariosAvisoMensajeEl = document.getElementById('complementarios-aviso-mensaje');
   const misCartonesGridEl = document.getElementById('mis-cartones-grid');
   const cartonesMensajeEl = document.getElementById('cartones-mensaje');
+  const misCartonesLabelEl = document.getElementById('mis-cartones-label');
   const cartonDestacadoEl = document.getElementById('carton-destacado');
   const panelDestacadoWrapperEl = document.querySelector('.panel-columna-derecha__destacado');
   const cartonDestacadoPremioEl = document.getElementById('carton-destacado-premio');
@@ -3770,6 +3803,7 @@
   const modalCelebracionListaEl = document.getElementById('modal-celebracion-lista');
   const modalCelebracionAceptarBtn = document.getElementById('modal-celebracion-aceptar');
   const modalCelebracionMensajeEl = document.getElementById('modal-celebracion-mensaje');
+  const modalCelebracionTituloEl = document.getElementById('modal-celebracion-titulo');
   const whatsappBtnEl = document.getElementById('whatsapp-flotante');
   const whatsappModalEl = document.getElementById('modal-whatsapp');
   const whatsappModalAceptarBtn = document.getElementById('modal-whatsapp-aceptar');
@@ -3790,6 +3824,7 @@
 
   const FORM_COLORS = ['#90ee90', '#fffacd', '#add8e6', '#d8b0ff', '#ffcc99', '#f77fb3', '#9ad3bc', '#fecf6a'];
   const CONFETI_COLORES = ['#ff5252', '#ffeb3b', '#69f0ae', '#40c4ff', '#ff80ab', '#7c4dff', '#fdd835', '#ff9100'];
+  const CONFETI_COLORES_GRISES = ['#f2f2f2', '#d9d9d9', '#bfbfbf', '#a6a6a6', '#8c8c8c'];
   const BINGO_LETRAS = ['B','I','N','G','O'];
 
   const TEXTO_BOTON_CONSULTAR_SELECCIONADOS = 'CONSULTAR SORTEOS FINALIZADOS';
@@ -3841,6 +3876,13 @@
   const celdasPenalizadasTimers = new Map();
   const celdasComplementariasTimers = new Map();
   const formasCelebradasPorCarton = new Map();
+  let formasPorCartonSimulados = new Map();
+  let cartonesGanadoresSimuladosPorForma = new Map();
+  let cartonesGuardadosJugador = new Map();
+  let modoSimulacionCartones = false;
+  let simulacionActivaPrevia = false;
+  let ultimoTextoGanadorSimulado = '';
+  let leyendaSimulacionTimer = null;
   let cartonPrincipalInfo = null;
   let resaltadoTemporal = {timer:null, tablas:null, cartonId:null};
   let formaDestacadaSeleccionada = null;
@@ -3875,6 +3917,7 @@
   let cantoColorMap = new Map();
   let formasSinGanadoresAlertaClave = '';
   let celebracionModalActiva = false;
+  let unsubscribeCartonesGuardados = null;
 
   function mostrarModalWhatsapp(mensaje){
     if(!whatsappModalEl) return;
@@ -4944,6 +4987,46 @@
       panelGananciasTotalesValorEl.textContent=formatearCreditos(valorMostrar);
     }
     actualizarVisibilidadPanelGanancias();
+  }
+
+  function detenerParpadeoLeyendaSimulacion(){
+    if(leyendaSimulacionTimer){
+      clearInterval(leyendaSimulacionTimer);
+      leyendaSimulacionTimer=null;
+    }
+    ultimoTextoGanadorSimulado='';
+    const leyenda=cartonPrincipalInfo?.info?.leyenda;
+    if(leyenda){
+      leyenda.classList.remove('carton-forma-leyenda--simulacion','parpadeo');
+    }
+  }
+
+  function actualizarLeyendaSimulacion(textoGanador){
+    detenerParpadeoLeyendaSimulacion();
+    if(!modoSimulacionCartones) return;
+    const leyenda=cartonPrincipalInfo?.info?.leyenda;
+    if(!leyenda) return;
+    ultimoTextoGanadorSimulado=textoGanador || '';
+    leyenda.classList.add('carton-forma-leyenda--simulacion');
+    leyenda.classList.add('visible');
+    if(!ultimoTextoGanadorSimulado){
+      leyenda.textContent='SIMULANDO';
+      leyenda.classList.add('parpadeo');
+      return;
+    }
+    let mostrarSimulando=true;
+    const alternar=()=>{
+      if(mostrarSimulando){
+        leyenda.textContent='SIMULANDO';
+        leyenda.classList.add('parpadeo');
+      }else{
+        leyenda.textContent=ultimoTextoGanadorSimulado;
+        leyenda.classList.remove('parpadeo');
+      }
+      mostrarSimulando=!mostrarSimulando;
+    };
+    alternar();
+    leyendaSimulacionTimer=setInterval(alternar,1200);
   }
 
   function asegurarPanelGananciasTotales(){
@@ -6308,11 +6391,15 @@
     return `Cartón ${numero==='--'?'--':`#${numero}`}`;
   }
 
+  function obtenerFormasPorCartonActivo(){
+    return modoSimulacionCartones ? formasPorCartonSimulados : formasPorCarton;
+  }
+
   function obtenerResumenGananciasCarton(carton, limiteFormas=5){
     const resultado={formas:[], total:0, cartonesGratis:0};
     if(!carton) return resultado;
     const gananciasPorForma=new Map();
-    const lista=formasPorCarton.get(carton.id)||[];
+    const lista=obtenerFormasPorCartonActivo().get(carton.id)||[];
     lista.forEach(item=>{
       const idx=Number(item?.forma?.idx);
       if(!Number.isFinite(idx)) return;
@@ -6337,6 +6424,31 @@
       resultado.cartonesGratis+=cartonesGratis;
     }
     return resultado;
+  }
+
+  function actualizarEtiquetaMisCartones(){
+    if(!misCartonesLabelEl) return;
+    misCartonesLabelEl.textContent = modoSimulacionCartones
+      ? 'MIS CARTONES GUARDADOS'
+      : 'MIS CARTONES EN EL SORTEO';
+  }
+
+  function obtenerCartonesJugadorActual(){
+    const listaReales=Array.from(cartonesSorteo.values()).filter(c=>c.userId===(usuarioActual?usuarioActual.uid:null));
+    const estadoSorteoActual=(activeSorteo?.estado || activeSorteo?.estadoSorteo || '').toString().toLowerCase();
+    const guardados=Array.from(cartonesGuardadosJugador.values());
+    const activarSimulacion=!listaReales.length && haySorteoJugando && estadoSorteoActual==='jugando' && guardados.length>0;
+    if(simulacionActivaPrevia!==activarSimulacion){
+      formasCelebradasPorCarton.clear();
+      if(!activarSimulacion){
+        detenerParpadeoLeyendaSimulacion();
+      }
+    }
+    simulacionActivaPrevia=activarSimulacion;
+    modoSimulacionCartones=activarSimulacion;
+    document.body.classList.toggle('simulacion-cartones-activa', modoSimulacionCartones);
+    actualizarEtiquetaMisCartones();
+    return modoSimulacionCartones?guardados:listaReales;
   }
 
   function detenerAnimacionCarton(cartonId){
@@ -6492,7 +6604,9 @@
           etiqueta=`Forma ${indiceTexto.padStart(2,'0')}`;
         }
         const esPrincipal=info?.contenedor?.classList?.contains('carton-visual--principal');
-        const leyendaTexto=esPrincipal && etiqueta?`Ganaste con ${etiqueta}`:etiqueta;
+        const leyendaTexto=esPrincipal && etiqueta
+          ? (modoSimulacionCartones ? `HUBIESES GANADO CON ${etiqueta}` : `Ganaste con ${etiqueta}`)
+          : etiqueta;
         info.leyenda.textContent=leyendaTexto;
         if(datosForma.color){
           info.leyenda.style.color=ajustarLuminosidad(datosForma.color,-0.5);
@@ -7537,15 +7651,16 @@
     return linea;
   }
 
-  function iniciarConfetiCelebracion(){
+  function iniciarConfetiCelebracion(esSimulado=false){
     if(!confetiOverlayEl) return;
     confetiOverlayEl.innerHTML='';
     const anchoVentana=Math.max(window.innerWidth||0,320);
     const piezas=Math.min(140, Math.max(60, Math.round(anchoVentana/8)));
+    const paletaColores=esSimulado?CONFETI_COLORES_GRISES:CONFETI_COLORES;
     for(let i=0;i<piezas;i++){
       const pieza=document.createElement('span');
       pieza.className='confeti-papelillo';
-      const color=CONFETI_COLORES[i%CONFETI_COLORES.length];
+      const color=paletaColores[i%paletaColores.length];
       pieza.style.setProperty('--confeti-color', color);
       if(Math.random()<0.28){
         pieza.classList.add('estrella');
@@ -7577,7 +7692,7 @@
     confetiOverlayEl.innerHTML='';
   }
 
-  function mostrarModalCelebracionGanador(detalles){
+  function mostrarModalCelebracionGanador(detalles, esSimulacion=false){
     if(!modalCelebracionEl || !modalCelebracionListaEl) return;
     const lista=Array.isArray(detalles)?detalles.filter(Boolean):[];
     if(!lista.length) return;
@@ -7587,12 +7702,21 @@
     });
     if(modalCelebracionMensajeEl){
       const total=lista.length;
-      modalCelebracionMensajeEl.textContent=total===1?'¡Ganaste con una forma!':`¡Ganaste con ${total} formas!`;
+      if(esSimulacion){
+        modalCelebracionMensajeEl.textContent=total===1
+          ? '¡Hubieses ganado con esta forma!'
+          : '¡Hubieses ganado con estas formas!';
+      }else{
+        modalCelebracionMensajeEl.textContent=total===1?'¡Ganaste con una forma!':`¡Ganaste con ${total} formas!`;
+      }
+    }
+    if(modalCelebracionTituloEl){
+      modalCelebracionTituloEl.textContent = esSimulacion ? 'SI HUBIERAS JUGADO' : '¡Felicidades!';
     }
     modalCelebracionEl.classList.add('activa');
     modalCelebracionEl.setAttribute('aria-hidden','false');
     celebracionModalActiva = true;
-    iniciarConfetiCelebracion();
+    iniciarConfetiCelebracion(esSimulacion);
     modalCelebracionAceptarBtn?.focus({preventScroll:true});
   }
 
@@ -7607,7 +7731,7 @@
     detenerConfetiCelebracion();
   }
 
-  function gestionarCelebracionesNuevosGanadores(cartones){
+  function gestionarCelebracionesNuevosGanadores(cartones, esSimulacion=false){
     if(!Array.isArray(cartones) || !cartones.length){
       return;
     }
@@ -7642,7 +7766,7 @@
       formasCelebradasPorCarton.set(carton.id, registro);
     });
     if(detalles.length){
-      mostrarModalCelebracionGanador(detalles);
+      mostrarModalCelebracionGanador(detalles, esSimulacion);
     }
   }
 
@@ -7669,7 +7793,8 @@
     limpiarBotonesFormas();
     mostrarMensajeSinCartonesJugador(false);
     jugadorSinCartonesEnSorteo = false;
-    const lista=Array.from(cartonesSorteo.values()).filter(c=>c.userId===(usuarioActual?usuarioActual.uid:null));
+    const lista=obtenerCartonesJugadorActual();
+    const mapaFormasActivo=obtenerFormasPorCartonActivo();
     actualizarTotalCartonesSorteo(lista.length);
     const idsActuales=new Set(lista.map(carton=>carton.id).filter(Boolean));
     Array.from(formasCelebradasPorCarton.keys()).forEach(id=>{
@@ -7704,7 +7829,7 @@
     }
     cartonesMensajeEl.textContent='';
     const decorados=lista.map(carton=>{
-      const formasGanadas=formasPorCarton.get(carton.id)||[];
+      const formasGanadas=mapaFormasActivo.get(carton.id)||[];
       const primerPaso=formasGanadas.length?Math.min(...formasGanadas.map(f=>f.paso)):Infinity;
       const resumenGanancias=obtenerResumenGananciasCarton(carton,5);
       return {...carton, formasGanadas, primerPaso, resumenGanancias};
@@ -7726,7 +7851,7 @@
       const numB=b.cartonNum ?? b.Ncarton ?? Number.MAX_SAFE_INTEGER;
       return numA-numB;
     });
-    gestionarCelebracionesNuevosGanadores(decorados);
+    gestionarCelebracionesNuevosGanadores(decorados, modoSimulacionCartones);
     if(!cartonSeleccionadoId || !decorados.some(c=>c.id===cartonSeleccionadoId)){
       cartonSeleccionadoId=decorados[0].id;
       formaDestacadaSeleccionada=null;
@@ -7751,6 +7876,7 @@
       if(carton.id===cartonSeleccionadoId){
         contenedor.classList.add('seleccionado');
       }
+      contenedor.classList.toggle('simulado', modoSimulacionCartones);
       contenedor.setAttribute('role','button');
       contenedor.setAttribute('tabindex','0');
       contenedor.addEventListener('click',()=>{
@@ -7787,6 +7913,7 @@
       const resumenGanancias=seleccionado.resumenGanancias || obtenerResumenGananciasCarton(seleccionado,5);
       const cartonBox=document.createElement('div');
       cartonBox.className='carton-box';
+      cartonBox.classList.toggle('simulado', modoSimulacionCartones);
       const cartonWrapper=document.createElement('div');
       cartonWrapper.className='carton-wrapper';
       cartonBox.appendChild(cartonWrapper);
@@ -7861,6 +7988,15 @@
       insertarBotonesFormas(botonesFormas);
       actualizarGananciasTotales();
       colocarLeyendaPrincipalEnPanel(tablaInfoPrincipal);
+      if(modoSimulacionCartones){
+        const primeraForma=Array.isArray(seleccionado.formasGanadas)&&seleccionado.formasGanadas.length
+          ? seleccionado.formasGanadas[0].forma
+          : null;
+        const etiquetaSimulada=primeraForma?.nombre
+          ? `HUBIESES GANADO CON ${primeraForma.nombre}`
+          : '';
+        actualizarLeyendaSimulacion(etiquetaSimulada);
+      }
       cartonDestacadoEl.appendChild(cartonBox);
       tablaInfoPrincipal.wrapper=cartonWrapper;
       tablaInfoPrincipal.cartonBack=cartonBack;
@@ -8143,25 +8279,18 @@
     }
   });
 
-  function calcularGanadores(){
-    cartonesGanadoresPorForma=new Map();
-    formasPorCarton=new Map();
-    cantosIndiceMap=new Map();
-    cantosOrdenados.forEach((num,idx)=>{
-      if(!cantosIndiceMap.has(num)) cantosIndiceMap.set(num,idx);
-    });
-    if(!formasActivas.length || !cartonesSorteo.size || !cantosOrdenados.length){
-      evaluarEstadoFormasGanadoras();
-      renderFormas();
-      renderCartonesJugador();
-      return;
+  function calcularGanadoresEnMapa(mapa){
+    const formasMapa=new Map();
+    const ganadoresForma=new Map();
+    if(!formasActivas.length || !mapa.size || !cantosOrdenados.length){
+      return {formasPorCarton:formasMapa, cartonesGanadoresPorForma:ganadoresForma};
     }
     formasActivas.forEach(forma=>{
       const posiciones=obtenerPosicionesNormalizadas(forma);
       if(!posiciones.length) return;
       let mejorPaso=Infinity;
       const ganadores=[];
-      cartonesSorteo.forEach(carton=>{
+      mapa.forEach(carton=>{
         let valido=true;
         let maxPaso=-1;
         for(const pos of posiciones){
@@ -8187,18 +8316,34 @@
         }
       });
       const totalGanadores=ganadores.length;
-      cartonesGanadoresPorForma.set(forma.idx,{forma,cartones:ganadores,paso:mejorPaso,totalGanadores});
+      ganadoresForma.set(forma.idx,{forma,cartones:ganadores,paso:mejorPaso,totalGanadores});
       ganadores.forEach(carton=>{
-        if(!formasPorCarton.has(carton.id)) formasPorCarton.set(carton.id,[]);
-        formasPorCarton.get(carton.id).push({forma,paso:mejorPaso,totalGanadores});
+        if(!formasMapa.has(carton.id)) formasMapa.set(carton.id,[]);
+        formasMapa.get(carton.id).push({forma,paso:mejorPaso,totalGanadores});
       });
     });
-    formasPorCarton.forEach(lista=>{
+    formasMapa.forEach(lista=>{
       lista.sort((a,b)=>{
         if(a.paso!==b.paso) return a.paso-b.paso;
         return (a.forma.idx||0)-(b.forma.idx||0);
       });
     });
+    return {formasPorCarton:formasMapa, cartonesGanadoresPorForma:ganadoresForma};
+  }
+
+  function calcularGanadores(){
+    cartonesGanadoresPorForma=new Map();
+    formasPorCarton=new Map();
+    cantosIndiceMap=new Map();
+    cantosOrdenados.forEach((num,idx)=>{
+      if(!cantosIndiceMap.has(num)) cantosIndiceMap.set(num,idx);
+    });
+    const resultadoReal=calcularGanadoresEnMapa(cartonesSorteo);
+    cartonesGanadoresPorForma=resultadoReal.cartonesGanadoresPorForma;
+    formasPorCarton=resultadoReal.formasPorCarton;
+    const resultadoSimulado=calcularGanadoresEnMapa(cartonesGuardadosJugador);
+    cartonesGanadoresSimuladosPorForma=resultadoSimulado.cartonesGanadoresPorForma;
+    formasPorCartonSimulados=resultadoSimulado.formasPorCarton;
     evaluarEstadoFormasGanadoras();
     renderFormas();
     renderCartonesJugador();
@@ -8436,6 +8581,40 @@
     if(!activeSorteoId) return;
     unsubscribeFormas=db.collection('formas').where('sorteoId','==',activeSorteoId).onSnapshot(procesarFormas,err=>{
       console.error('Error escuchando formas',err);
+    });
+  }
+
+  function suscribirCartonesGuardados(userId){
+    if(unsubscribeCartonesGuardados){
+      unsubscribeCartonesGuardados();
+      unsubscribeCartonesGuardados=null;
+    }
+    if(!userId || !db) return;
+    unsubscribeCartonesGuardados=db.collection('CartonGuardado').where('userId','==',userId).onSnapshot(snapshot=>{
+      const mapa=new Map();
+      snapshot.forEach(doc=>{
+        const data=doc.data()||{};
+        const posicionesRaw=Array.isArray(data.posiciones)?data.posiciones:[];
+        const posiciones=posicionesRaw
+          .map(p=>({r:Number(p.r),c:Number(p.c),valor:normalizarNumero(p.valor ?? p.numero ?? p.value)}))
+          .filter(p=>Number.isInteger(p.r)&&Number.isInteger(p.c)&&p.valor!==null);
+        const valorPorPos=new Map();
+        posiciones.forEach(p=>{
+          valorPorPos.set(`${p.r}-${p.c}`,p.valor);
+        });
+        mapa.set(doc.id,{
+          id:doc.id,
+          userId:data.userId||'',
+          alias:data.alias||data.nombre||'',
+          cartonNum:data.cartonNum ?? data.Ncarton ?? data.numero ?? data.numeroCarton,
+          posiciones,
+          valorPorPos
+        });
+      });
+      cartonesGuardadosJugador=mapa;
+      calcularGanadores();
+    },err=>{
+      console.error('Error escuchando cartones guardados',err);
     });
   }
 
@@ -8708,6 +8887,7 @@
           return;
         }
         usuarioActual=user;
+        suscribirCartonesGuardados(user.uid);
         iniciarSorteosListener();
       });
     })
