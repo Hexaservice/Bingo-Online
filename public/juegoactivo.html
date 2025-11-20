@@ -6183,10 +6183,12 @@
     contenedor.className=`carton-visual carton-visual--${modo}`;
     const tipoCarton=normalizarTipoCarton(carton);
     contenedor.dataset.tipocarton=tipoCarton;
-    const leyenda=document.createElement('div');
-    leyenda.className='carton-forma-leyenda';
-    if(modo!=='principal'){
-      contenedor.appendChild(leyenda);
+    const leyenda=modo==='mini'?null:document.createElement('div');
+    if(leyenda){
+      leyenda.className='carton-forma-leyenda';
+      if(modo!=='principal'){
+        contenedor.appendChild(leyenda);
+      }
     }
     const tabla=document.createElement('table');
     tabla.className=`carton-tabla carton-tabla--${modo}`;
@@ -6250,7 +6252,7 @@
               td.classList.add('celda-cantada');
             }
           }else{
-            span.textContent='\u00a0';
+            span.textContent='';
           }
           td.appendChild(span);
         }
@@ -6438,6 +6440,17 @@
         celda.appendChild(estrella);
       }
     });
+    if(datosForma.mostrarEstrellas){
+      info.celdas.forEach(celda=>{
+        if(!celda || celda.classList.contains('free')) return;
+        if(celda.querySelector('.forma-estrella')) return;
+        if(celda.dataset.valor!==undefined) return;
+        const contenido=celda.querySelector('.cell-content');
+        if(contenido){
+          contenido.textContent='';
+        }
+      });
+    }
     if(info.leyenda){
       if(datosForma.mostrarLeyenda===false){
         info.leyenda.textContent='';
@@ -7715,18 +7728,6 @@
       }
       contenedor.setAttribute('role','button');
       contenedor.setAttribute('tabindex','0');
-      const info=document.createElement('div');
-      info.className='carton-info';
-      const numeroDiv=document.createElement('div');
-      numeroDiv.className='carton-info-numero';
-      numeroDiv.textContent=formatearInfoCarton(carton);
-      info.appendChild(numeroDiv);
-      const tipoCarton=normalizarTipoCarton(carton);
-      const tipoDiv=document.createElement('div');
-      tipoDiv.className=`carton-info-tipo carton-info-tipo--${tipoCarton}`;
-      tipoDiv.textContent=tipoCarton==='gratis'?'GRATIS':'PAGADO';
-      info.appendChild(tipoDiv);
-      contenedor.appendChild(info);
       contenedor.addEventListener('click',()=>{
         if(cartonSeleccionadoId!==carton.id){
           cartonSeleccionadoId=carton.id;
