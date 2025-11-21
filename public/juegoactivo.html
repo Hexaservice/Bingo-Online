@@ -1372,6 +1372,7 @@
           align-items: stretch;
           perspective: 1200px;
           perspective-origin: 50% 50%;
+          position: relative;
       }
       #carton-destacado .carton-wrapper {
           position: relative;
@@ -1923,18 +1924,41 @@
       body.simulacion-cartones-activa .carton-back,
       body.simulacion-cartones-activa .carton-box,
       body.simulacion-cartones-activa #carton-destacado {
-          --simulacion-opacidad: 0.62;
+          --simulacion-opacidad: 0.78;
       }
       body.simulacion-cartones-activa .carton-visual,
       body.simulacion-cartones-activa .carton-tabla,
       body.simulacion-cartones-activa .carton-back,
       body.simulacion-cartones-activa .carton-box {
-          opacity: var(--simulacion-opacidad, 0.62);
+          opacity: var(--simulacion-opacidad, 0.78);
       }
       .carton-visual.simulado,
       .carton-visual.simulado .carton-tabla,
       .carton-visual.simulado .carton-back {
-          opacity: var(--simulacion-opacidad, 0.62);
+          opacity: var(--simulacion-opacidad, 0.78);
+      }
+      #carton-destacado .carton-box.simulado::after {
+          content: 'SIMULACIÓN';
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%) rotate(-30deg);
+          font-family: 'Poppins', sans-serif;
+          font-weight: 700;
+          color: #d00000;
+          text-shadow: 0 0 10px rgba(0,0,0,0.8);
+          font-size: clamp(1.4rem, 4vw, 2.6rem);
+          letter-spacing: 1.6px;
+          opacity: 0;
+          pointer-events: none;
+          z-index: 6;
+          animation: simulacionAviso 3s ease-in-out infinite;
+      }
+      @keyframes simulacionAviso {
+          0% { opacity: 0; }
+          25% { opacity: 0.7; }
+          65% { opacity: 0.7; }
+          100% { opacity: 0; }
       }
       .carton-forma-leyenda--simulacion {
           background: rgba(255, 255, 255, 0.95);
@@ -8279,13 +8303,27 @@
     }
   });
 
-  function calcularGanadoresEnMapa(mapa){
+  function calcularGanadoresEnMapa(mapa, formasExcluidas = new Set()){
     const formasMapa=new Map();
     const ganadoresForma=new Map();
     if(!formasActivas.length || !mapa.size || !cantosOrdenados.length){
       return {formasPorCarton:formasMapa, cartonesGanadoresPorForma:ganadoresForma};
     }
+    const formasBloqueadas = new Set();
+    if(formasExcluidas instanceof Set){
+      formasExcluidas.forEach(idx=>{
+        const valor=Number(idx);
+        if(Number.isFinite(valor)){
+          formasBloqueadas.add(valor);
+        }
+      });
+    }
     formasActivas.forEach(forma=>{
+      const indiceForma=Number(forma.idx);
+      if(formasBloqueadas.has(indiceForma)){
+        ganadoresForma.set(forma.idx,{forma,cartones:[],paso:Infinity,totalGanadores:0});
+        return;
+      }
       const posiciones=obtenerPosicionesNormalizadas(forma);
       if(!posiciones.length) return;
       let mejorPaso=Infinity;
@@ -8341,7 +8379,17 @@
     const resultadoReal=calcularGanadoresEnMapa(cartonesSorteo);
     cartonesGanadoresPorForma=resultadoReal.cartonesGanadoresPorForma;
     formasPorCarton=resultadoReal.formasPorCarton;
-    const resultadoSimulado=calcularGanadoresEnMapa(cartonesGuardadosJugador);
+    const formasBloqueadasSimulacion=new Set();
+    resultadoReal.cartonesGanadoresPorForma.forEach((info, idx)=>{
+      const total=Array.isArray(info?.cartones)?info.cartones.length:0;
+      if(total>0){
+        const indiceNormalizado=Number(idx);
+        if(Number.isFinite(indiceNormalizado)){
+          formasBloqueadasSimulacion.add(indiceNormalizado);
+        }
+      }
+    });
+    const resultadoSimulado=calcularGanadoresEnMapa(cartonesGuardadosJugador, formasBloqueadasSimulacion);
     cartonesGanadoresSimuladosPorForma=resultadoSimulado.cartonesGanadoresPorForma;
     formasPorCartonSimulados=resultadoSimulado.formasPorCarton;
     evaluarEstadoFormasGanadoras();
