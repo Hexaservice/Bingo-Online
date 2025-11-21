@@ -8709,11 +8709,16 @@
           c:Number(p.c),
           valor:normalizarNumero(p.valor ?? p.numero ?? p.value)
         })).filter(p=>Number.isInteger(p.r)&&Number.isInteger(p.c)&&p.valor!==null):[];
+
+        const numeroCarton=normalizarNumero(
+          carton.cartonNum ?? carton.Ncarton ?? carton.numero ?? carton.numeroCarton
+        );
+
         return {
           id:carton.id||'',
           userId:usuarioActual.uid,
-          alias:carton.alias||'',
-          cartonNum:carton.cartonNum ?? carton.Ncarton ?? carton.numero ?? carton.numeroCarton,
+          alias:(carton.alias||carton.nombre||'').toString(),
+          cartonNum:Number.isFinite(numeroCarton)?numeroCarton:null,
           posiciones
         };
       });
