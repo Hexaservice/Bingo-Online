@@ -3907,6 +3907,8 @@
   let simulacionActivaPrevia = false;
   let ultimoTextoGanadorSimulado = '';
   let leyendaSimulacionTimer = null;
+  let cartonesRealesCargados = false;
+  let cartonesGuardadosCargados = false;
   let cartonPrincipalInfo = null;
   let resaltadoTemporal = {timer:null, tablas:null, cartonId:null};
   let formaDestacadaSeleccionada = null;
@@ -6461,7 +6463,13 @@
     const listaReales=Array.from(cartonesSorteo.values()).filter(c=>c.userId===(usuarioActual?usuarioActual.uid:null));
     const estadoSorteoActual=(activeSorteo?.estado || activeSorteo?.estadoSorteo || '').toString().toLowerCase();
     const guardados=Array.from(cartonesGuardadosJugador.values());
-    const activarSimulacion=!listaReales.length && haySorteoJugando && estadoSorteoActual==='jugando' && guardados.length>0;
+    const datosRealesListos = cartonesRealesCargados || listaReales.length>0;
+    const guardadosListos = cartonesGuardadosCargados || guardados.length>0;
+    const activarSimulacion = datosRealesListos
+      && !listaReales.length
+      && haySorteoJugando
+      && estadoSorteoActual==='jugando'
+      && guardadosListos;
     if(simulacionActivaPrevia!==activarSimulacion){
       formasCelebradasPorCarton.clear();
       if(!activarSimulacion){
@@ -8554,6 +8562,7 @@
       });
     });
     cartonesSorteo=mapa;
+    cartonesRealesCargados=true;
     calcularGanadores();
     actualizarMapaColoresConducto();
     actualizarConductoEsferas([], false);
@@ -8660,6 +8669,7 @@
         });
       });
       cartonesGuardadosJugador=mapa;
+      cartonesGuardadosCargados=true;
       calcularGanadores();
     },err=>{
       console.error('Error escuchando cartones guardados',err);
@@ -8680,6 +8690,8 @@
   function seleccionarSorteo(activos){
     const lista=Array.isArray(activos)?activos:[];
     haySorteoJugando=lista.length>0;
+    cartonesRealesCargados=false;
+    cartonesGuardadosCargados=false;
     if(haySorteoJugando){
       sorteoManualSeleccionadoId=null;
       reiniciarAlertaFormasSinGanadores();
