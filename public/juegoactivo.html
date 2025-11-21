@@ -2545,6 +2545,78 @@
       .modal-sorteos .modal-mensaje {
           margin-top: 6px;
       }
+      .modal-simulacion {
+          display: none;
+      }
+      .modal-simulacion.activa {
+          display: flex;
+      }
+      .modal-simulacion .modal-contenido {
+          max-width: min(520px, calc(100vw - 32px));
+          width: min(520px, calc(100vw - 32px));
+          gap: 14px;
+          text-align: center;
+          align-items: center;
+      }
+      .modal-simulacion-titulo {
+          font-family: 'Bangers', cursive;
+          font-size: clamp(1.4rem, 4.2vw, 1.8rem);
+          margin: 0;
+          letter-spacing: 0.6px;
+          color: #0b4dda;
+      }
+      .modal-simulacion-mensaje {
+          margin: 0;
+          color: #1f1f1f;
+          font-size: clamp(0.98rem, 3.2vw, 1.08rem);
+          line-height: 1.5;
+          font-weight: 500;
+      }
+      .modal-simulacion-aviso {
+          margin: 0;
+          color: #d35400;
+          font-weight: 600;
+          font-size: clamp(0.9rem, 3vw, 1rem);
+      }
+      .modal-simulacion-acciones {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          justify-content: center;
+          width: 100%;
+      }
+      .modal-simulacion-boton {
+          padding: 12px 22px;
+          border-radius: 12px;
+          border: none;
+          cursor: pointer;
+          font-weight: 700;
+          letter-spacing: 0.5px;
+          transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+      }
+      #modal-simulacion-jugar {
+          background: linear-gradient(135deg, #0b4dda, #1e88e5);
+          color: #ffffff;
+          box-shadow: 0 8px 18px rgba(14, 76, 194, 0.28);
+      }
+      #modal-simulacion-jugar:disabled {
+          opacity: 0.65;
+          cursor: not-allowed;
+          box-shadow: none;
+      }
+      #modal-simulacion-jugar:not(:disabled):hover {
+          transform: translateY(-1px) scale(1.01);
+          box-shadow: 0 12px 26px rgba(14, 76, 194, 0.32);
+      }
+      #modal-simulacion-cancelar {
+          background: #f1f5f9;
+          color: #1f1f1f;
+          border: 2px solid rgba(0,0,0,0.08);
+      }
+      #modal-simulacion-cancelar:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 10px 18px rgba(0,0,0,0.08);
+      }
       .modal-formas-sin .modal-contenido {
           max-width: min(420px, calc(100vw - 32px));
           width: min(420px, calc(100vw - 32px));
@@ -3707,6 +3779,19 @@
     </div>
   </div>
 
+  <div id="modal-simulacion" class="modal modal-simulacion" role="dialog" aria-modal="true" aria-labelledby="modal-simulacion-titulo" aria-hidden="true">
+    <div class="modal-contenido" role="document">
+      <button type="button" id="modal-simulacion-cerrar" class="modal-cerrar" aria-label="Cerrar">✖</button>
+      <h2 id="modal-simulacion-titulo" class="modal-simulacion-titulo">¿Quieres jugar una simulación?</h2>
+      <p id="modal-simulacion-mensaje" class="modal-simulacion-mensaje">No haz jugado cartones en este sorteo. ¿Quieres hacer una simulación de juego usando tus cartones actuales guardados?</p>
+      <p id="modal-simulacion-aviso" class="modal-simulacion-aviso"></p>
+      <div class="modal-simulacion-acciones">
+        <button type="button" id="modal-simulacion-jugar" class="modal-simulacion-boton">JUGAR SIMULACIÓN</button>
+        <button type="button" id="modal-simulacion-cancelar" class="modal-simulacion-boton">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <div id="modal-sorteos-finalizados" class="modal modal-sorteos" role="dialog" aria-modal="true" aria-labelledby="modal-sorteos-finalizados-titulo" aria-hidden="true">
     <div class="modal-contenido" role="document">
       <button type="button" id="modal-sorteos-finalizados-cerrar" class="modal-cerrar" aria-label="Cerrar">✖</button>
@@ -3813,6 +3898,12 @@
   const modalPremioFormaEl = document.getElementById('modal-premio-forma');
   const modalPremioFormaValorEl = document.getElementById('modal-premio-forma-valor');
   const modalPremioFormaLabelEl = document.getElementById('modal-premio-forma-label');
+  const modalSimulacionEl = document.getElementById('modal-simulacion');
+  const modalSimulacionMensajeEl = document.getElementById('modal-simulacion-mensaje');
+  const modalSimulacionAvisoEl = document.getElementById('modal-simulacion-aviso');
+  const modalSimulacionJugarBtn = document.getElementById('modal-simulacion-jugar');
+  const modalSimulacionCancelarBtn = document.getElementById('modal-simulacion-cancelar');
+  const modalSimulacionCerrarBtn = document.getElementById('modal-simulacion-cerrar');
   const misCartonesTotalEl = document.getElementById('mis-cartones-total');
   const modalSorteosFinalizadosEl = document.getElementById('modal-sorteos-finalizados');
   const modalSorteosFinalizadosListaEl = document.getElementById('modal-sorteos-finalizados-lista');
@@ -3903,6 +3994,13 @@
   let formasPorCartonSimulados = new Map();
   let cartonesGanadoresSimuladosPorForma = new Map();
   let cartonesGuardadosJugador = new Map();
+  let cartonesSimulacionActiva = new Map();
+  let simulacionSorteoActiva = false;
+  let simulacionDatosCargados = false;
+  let simulacionEnRegistro = false;
+  let simulacionModalMostrada = new Set();
+  let simulacionCancelada = new Set();
+  let suscripcionSimulacion = null;
   let modoSimulacionCartones = false;
   let simulacionActivaPrevia = false;
   let ultimoTextoGanadorSimulado = '';
@@ -6421,6 +6519,10 @@
     return modoSimulacionCartones ? formasPorCartonSimulados : formasPorCarton;
   }
 
+  function obtenerCartonesSimuladosActivos(){
+    return Array.from(cartonesSimulacionActiva.values());
+  }
+
   function obtenerResumenGananciasCarton(carton, limiteFormas=5){
     const resultado={formas:[], total:0, cartonesGratis:0};
     if(!carton) return resultado;
@@ -6462,9 +6564,9 @@
   function obtenerCartonesJugadorActual(){
     const listaReales=Array.from(cartonesSorteo.values()).filter(c=>c.userId===(usuarioActual?usuarioActual.uid:null));
     const estadoSorteoActual=(activeSorteo?.estado || activeSorteo?.estadoSorteo || '').toString().toLowerCase();
-    const guardados=Array.from(cartonesGuardadosJugador.values());
+    const guardados=simulacionSorteoActiva ? obtenerCartonesSimuladosActivos() : [];
     const datosRealesListos = cartonesRealesCargados || listaReales.length>0;
-    const guardadosListos = cartonesGuardadosCargados || guardados.length>0;
+    const guardadosListos = simulacionSorteoActiva && (simulacionDatosCargados || guardados.length>0);
     const esSorteoFinalizadoSeleccionado = !haySorteoJugando
       && sorteoManualSeleccionadoId
       && activeSorteoId===sorteoManualSeleccionadoId
@@ -7853,6 +7955,7 @@
         cartonesMensajeEl.textContent='No tienes cartones participando en este sorteo.';
       }
       insertarBotonesFormas(botonesGenericos);
+      evaluarSolicitudSimulacionInicial();
       if(celebracionModalActiva){
         cerrarModalCelebracionGanador();
       }
@@ -8198,6 +8301,37 @@
       window.location.href='jugarcartones.html';
     });
   }
+  if(modalSimulacionJugarBtn){
+    modalSimulacionJugarBtn.addEventListener('click',registrarSimulacionSorteoActual);
+  }
+  if(modalSimulacionCancelarBtn){
+    modalSimulacionCancelarBtn.addEventListener('click',()=>{
+      if(activeSorteoId){
+        simulacionCancelada.add(activeSorteoId);
+      }
+      cerrarModalSimulacion();
+      limpiarDatosSimulacion();
+      calcularGanadores();
+    });
+  }
+  if(modalSimulacionCerrarBtn){
+    modalSimulacionCerrarBtn.addEventListener('click',()=>{
+      if(activeSorteoId){
+        simulacionCancelada.add(activeSorteoId);
+      }
+      cerrarModalSimulacion();
+    });
+  }
+  if(modalSimulacionEl){
+    modalSimulacionEl.addEventListener('click',evento=>{
+      if(evento.target===modalSimulacionEl){
+        if(activeSorteoId){
+          simulacionCancelada.add(activeSorteoId);
+        }
+        cerrarModalSimulacion();
+      }
+    });
+  }
   if(modalSorteosFinalizadosCerrarBtn){
     modalSorteosFinalizadosCerrarBtn.addEventListener('click',cerrarModalSorteosFinalizados);
   }
@@ -8305,6 +8439,13 @@
     if(complementariosAvisoEl?.classList?.contains('activa')){
       cerrarAvisoComplementarios();
     }
+    if(modalSimulacionEl?.classList?.contains('activa')){
+      if(activeSorteoId){
+        simulacionCancelada.add(activeSorteoId);
+      }
+      cerrarModalSimulacion();
+      return;
+    }
     if(modalSorteosFinalizadosEl?.classList?.contains('activa')){
       cerrarModalSorteosFinalizados();
     }
@@ -8402,12 +8543,189 @@
         }
       }
     });
-    const resultadoSimulado=calcularGanadoresEnMapa(cartonesGuardadosJugador, formasBloqueadasSimulacion);
-    cartonesGanadoresSimuladosPorForma=resultadoSimulado.cartonesGanadoresPorForma;
-    formasPorCartonSimulados=resultadoSimulado.formasPorCarton;
+    let resultadoSimulado={cartonesGanadoresPorForma:new Map(), formasPorCarton:new Map()};
+    if(simulacionSorteoActiva){
+      resultadoSimulado=calcularGanadoresEnMapa(cartonesSimulacionActiva, formasBloqueadasSimulacion);
+    }
+    cartonesGanadoresSimuladosPorForma=resultadoSimulado.cartonesGanadoresPorForma || new Map();
+    formasPorCartonSimulados=resultadoSimulado.formasPorCarton || new Map();
     evaluarEstadoFormasGanadoras();
     renderFormas();
     renderCartonesJugador();
+  }
+
+  function limpiarDatosSimulacion(){
+    simulacionSorteoActiva=false;
+    simulacionDatosCargados=false;
+    simulacionEnRegistro=false;
+    cartonesSimulacionActiva=new Map();
+    cartonesGanadoresSimuladosPorForma=new Map();
+    formasPorCartonSimulados=new Map();
+  }
+
+  function cerrarModalSimulacion(){
+    if(!modalSimulacionEl) return;
+    modalSimulacionEl.classList.remove('activa');
+    modalSimulacionEl.setAttribute('aria-hidden','true');
+  }
+
+  function actualizarModalSimulacionEstado(){
+    const tieneGuardados=cartonesGuardadosJugador.size>0;
+    if(modalSimulacionAvisoEl){
+      modalSimulacionAvisoEl.textContent=tieneGuardados
+        ? 'Usaremos tus cartones guardados para simular tu participación sin afectar el sorteo real.'
+        : 'Necesitas tener cartones guardados para poder simular tu participación.';
+    }
+    if(modalSimulacionJugarBtn){
+      modalSimulacionJugarBtn.disabled=!tieneGuardados || simulacionEnRegistro;
+    }
+  }
+
+  function abrirModalSimulacion(){
+    if(!modalSimulacionEl) return;
+    actualizarModalSimulacionEstado();
+    modalSimulacionEl.classList.add('activa');
+    modalSimulacionEl.setAttribute('aria-hidden','false');
+  }
+
+  function construirCartonSimulacion(carton){
+    if(!carton) return null;
+    const posicionesRaw=Array.isArray(carton.posiciones)?carton.posiciones:[];
+    const posiciones=posicionesRaw
+      .map(p=>({r:Number(p.r),c:Number(p.c),valor:normalizarNumero(p.valor ?? p.numero ?? p.value)}))
+      .filter(p=>Number.isInteger(p.r)&&Number.isInteger(p.c)&&p.valor!==null);
+    const valorPorPos=new Map();
+    posiciones.forEach(p=>valorPorPos.set(`${p.r}-${p.c}`,p.valor));
+    const idCarton=carton.id || carton.cartonId || '';
+    return {
+      id:idCarton,
+      userId:carton.userId || '',
+      alias:carton.alias || carton.nombre || '',
+      cartonNum:carton.cartonNum ?? carton.Ncarton ?? carton.numero ?? carton.numeroCarton,
+      posiciones,
+      valorPorPos
+    };
+  }
+
+  function cargarCartonesSimulacionDesdeLista(lista){
+    const mapa=new Map();
+    const fuente=Array.isArray(lista)?lista:[];
+    fuente.forEach(item=>{
+      const normalizado=construirCartonSimulacion(item);
+      if(normalizado && normalizado.id){
+        mapa.set(normalizado.id,normalizado);
+      }
+    });
+    cartonesSimulacionActiva=mapa;
+    simulacionSorteoActiva=mapa.size>0;
+    simulacionDatosCargados=true;
+  }
+
+  function procesarSimulacionSnapshot(doc){
+    if(!doc || !doc.exists){
+      limpiarDatosSimulacion();
+      calcularGanadores();
+      return;
+    }
+    const data=doc.data()||{};
+    const cartones=Array.isArray(data.cartones)?data.cartones:[];
+    const sorteoDocId=data.sorteoId || activeSorteoId || '';
+    if(sorteoDocId && cartones.length){
+      simulacionModalMostrada.add(sorteoDocId);
+      simulacionCancelada.delete(sorteoDocId);
+    }
+    cargarCartonesSimulacionDesdeLista(cartones);
+    calcularGanadores();
+  }
+
+  function suscribirSimulacionSorteo(sorteoId){
+    if(suscripcionSimulacion){
+      suscripcionSimulacion();
+      suscripcionSimulacion=null;
+    }
+    limpiarDatosSimulacion();
+    if(!db || !usuarioActual || !sorteoId){
+      return;
+    }
+    const docId=`${sorteoId}_${usuarioActual.uid}`;
+    suscripcionSimulacion=db.collection('SimulacionesSorteo').doc(docId).onSnapshot(procesarSimulacionSnapshot,err=>{
+      console.error('Error escuchando simulación de sorteo',err);
+    });
+  }
+
+  async function registrarSimulacionSorteoActual(){
+    if(!db || !usuarioActual || !activeSorteoId){
+      alert('No se pudo registrar la simulación en este momento.');
+      return;
+    }
+    if(simulacionEnRegistro){
+      return;
+    }
+    const guardados=Array.from(cartonesGuardadosJugador.values());
+    if(!guardados.length){
+      alert('Necesitas tener cartones guardados para simular tu participación.');
+      actualizarModalSimulacionEstado();
+      return;
+    }
+    simulacionEnRegistro=true;
+    actualizarModalSimulacionEstado();
+    try{
+      const cartonesPayload=guardados.map(carton=>{
+        const posiciones=Array.isArray(carton.posiciones)?carton.posiciones.map(p=>({
+          r:Number(p.r),
+          c:Number(p.c),
+          valor:normalizarNumero(p.valor ?? p.numero ?? p.value)
+        })).filter(p=>Number.isInteger(p.r)&&Number.isInteger(p.c)&&p.valor!==null):[];
+        return {
+          id:carton.id||'',
+          userId:usuarioActual.uid,
+          alias:carton.alias||'',
+          cartonNum:carton.cartonNum ?? carton.Ncarton ?? carton.numero ?? carton.numeroCarton,
+          posiciones
+        };
+      });
+      const payload={
+        userId:usuarioActual.uid,
+        sorteoId:activeSorteoId,
+        sorteoNombre:activeSorteo?.nombre || '',
+        estadoSorteo:activeSorteo?.estado || activeSorteo?.estadoSorteo || '',
+        cartones:cartonesPayload,
+        creadoEn:firebase.firestore?.FieldValue?.serverTimestamp ? firebase.firestore.FieldValue.serverTimestamp() : Date.now()
+      };
+      const docId=`${activeSorteoId}_${usuarioActual.uid}`;
+      await db.collection('SimulacionesSorteo').doc(docId).set(payload);
+      simulacionCancelada.delete(activeSorteoId);
+      simulacionModalMostrada.add(activeSorteoId);
+      cargarCartonesSimulacionDesdeLista(cartonesPayload);
+      calcularGanadores();
+      cerrarModalSimulacion();
+    }catch(err){
+      console.error('No se pudo registrar la simulación',err);
+      alert('No pudimos registrar tu simulación. Intenta nuevamente.');
+    }finally{
+      simulacionEnRegistro=false;
+      actualizarModalSimulacionEstado();
+    }
+  }
+
+  function evaluarSolicitudSimulacionInicial(){
+    const sorteoId=activeSorteoId;
+    const estadoSorteoActual=(activeSorteo?.estado || activeSorteo?.estadoSorteo || '').toString().toLowerCase();
+    if(!haySorteoJugando || estadoSorteoActual!=='jugando' || !sorteoId){
+      return;
+    }
+    if(!cartonesGuardadosJugador.size){
+      return;
+    }
+    if(simulacionSorteoActiva || simulacionCancelada.has(sorteoId) || simulacionModalMostrada.has(sorteoId)){
+      return;
+    }
+    const tieneCartonesEnSorteo=Array.from(cartonesSorteo.values()).some(c=>c.userId===(usuarioActual?.uid||''));
+    if(tieneCartonesEnSorteo){
+      return;
+    }
+    simulacionModalMostrada.add(sorteoId);
+    abrirModalSimulacion();
   }
 
   function procesarCantos(data){
@@ -8704,6 +9022,7 @@
     }
     actualizarSinSorteoUI();
     if(!lista.length){
+      suscribirSimulacionSorteo(null);
       if(sorteoManualSeleccionadoId && activeSorteoId===sorteoManualSeleccionadoId && activeSorteo){
         actualizarHeader();
         return;
@@ -8735,6 +9054,7 @@
     activeSorteo=elegido;
     activeSorteoId=elegido.id;
     actualizarHeader();
+    suscribirSimulacionSorteo(activeSorteoId);
     if(cambio){
       reiniciarAlertaFormasSinGanadores();
       todasFormasConGanadores=false;
@@ -8899,6 +9219,7 @@
       activeSorteo={id:info.id,...data};
       activeSorteoId=info.id;
       actualizarHeader();
+      suscribirSimulacionSorteo(activeSorteoId);
       todasFormasConGanadores=false;
       indiceUltimoGanador=null;
       cantosComplementariosActivos=false;
