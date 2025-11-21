@@ -6465,11 +6465,16 @@
     const guardados=Array.from(cartonesGuardadosJugador.values());
     const datosRealesListos = cartonesRealesCargados || listaReales.length>0;
     const guardadosListos = cartonesGuardadosCargados || guardados.length>0;
-    const activarSimulacion = datosRealesListos
+    const esSorteoFinalizadoSeleccionado = !haySorteoJugando
+      && sorteoManualSeleccionadoId
+      && activeSorteoId===sorteoManualSeleccionadoId
+      && estadoSorteoActual==='finalizado';
+    const activarSimulacion = guardadosListos
       && !listaReales.length
-      && haySorteoJugando
-      && estadoSorteoActual==='jugando'
-      && guardadosListos;
+      && (
+        (datosRealesListos && haySorteoJugando && estadoSorteoActual==='jugando')
+        || esSorteoFinalizadoSeleccionado
+      );
     if(simulacionActivaPrevia!==activarSimulacion){
       formasCelebradasPorCarton.clear();
       if(!activarSimulacion){
