@@ -1841,6 +1841,24 @@
       #mis-cartones-grid:empty {
           display: none;
       }
+      .carton-mini-info {
+          text-align: center;
+          font-family: 'Poppins', sans-serif;
+          font-size: 0.75rem;
+          line-height: 1.2;
+          margin-top: 4px;
+      }
+      .carton-mini-numero {
+          font-weight: 600;
+          color: #1f1f1f;
+      }
+      .carton-mini-tipo {
+          font-weight: 600;
+          color: var(--color-bingo-pagado);
+      }
+      .carton-mini-tipo--gratis {
+          color: var(--color-bingo-gratis);
+      }
       .carton-visual {
           position: relative;
           display: flex;
@@ -6496,6 +6514,21 @@
     }
     tabla.appendChild(tbody);
     contenedor.appendChild(tabla);
+    if(modo==='mini'){
+      const infoMini=document.createElement('div');
+      infoMini.className='carton-mini-info';
+      const numeroSpan=document.createElement('div');
+      numeroSpan.className='carton-mini-numero';
+      const numeroCarton=obtenerNumeroCarton(carton);
+      numeroSpan.textContent=numeroCarton==='--'?'--':`#${numeroCarton}`;
+      const tipoSpan=document.createElement('div');
+      const tipoCartonTexto=tipoCarton==='gratis'?'GRATIS':'PAGADO';
+      tipoSpan.className=`carton-mini-tipo carton-mini-tipo--${tipoCarton}`;
+      tipoSpan.textContent=`Tipo: ${tipoCartonTexto}`;
+      infoMini.appendChild(numeroSpan);
+      infoMini.appendChild(tipoSpan);
+      contenedor.appendChild(infoMini);
+    }
     return {contenedor, tabla, celdas, letras:Array.from(trHead.querySelectorAll('.encabezado-letra')), leyenda};
   }
 
