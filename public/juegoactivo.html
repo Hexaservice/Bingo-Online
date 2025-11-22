@@ -1955,6 +1955,21 @@
       .carton-visual.simulado .carton-back {
           opacity: var(--simulacion-opacidad, 0.78);
       }
+      .carton-visual--opaco,
+      .carton-visual--opaco .carton-tabla,
+      .carton-visual--opaco .carton-back,
+      .carton-visual--opaco .carton-box {
+          opacity: 1 !important;
+      }
+      .carton-tabla.carton-visual--opaco {
+          opacity: 1 !important;
+      }
+      #modal-ganadores .carton-visual,
+      #modal-ganadores .carton-tabla,
+      #modal-ganadores .carton-back,
+      #modal-ganadores .carton-box {
+          opacity: 1 !important;
+      }
       #carton-destacado .carton-box.simulado::after {
           content: 'SIMULACIÓN';
           position: absolute;
@@ -2874,11 +2889,21 @@
           flex-direction: column;
           gap: 3px;
           text-align: center;
+          font-family: 'Poppins', sans-serif;
       }
-      .ganador-info strong {
-          color: #4b0082;
-          font-family: 'Bangers', cursive;
-          letter-spacing: 0.5px;
+      .ganador-info__carton {
+          font-weight: 700;
+          letter-spacing: 0.4px;
+      }
+      .ganador-info__alias {
+          font-weight: 700;
+      }
+      .ganador-info__tipo {
+          font-weight: 700;
+          color: var(--color-bingo-pagado);
+      }
+      .ganador-info__tipo--gratis {
+          color: var(--color-bingo-gratis);
       }
       .ganador-premios {
           grid-column: 2 / 3;
@@ -6429,9 +6454,13 @@
     }
   }
 
-  function crearTablaCartonVisual(carton, modo='mini'){
+  function crearTablaCartonVisual(carton, modo='mini', opciones={}){
+    const {mostrarInfoMini=true, forzarOpacidad=false} = opciones || {};
     const contenedor=document.createElement('div');
     contenedor.className=`carton-visual carton-visual--${modo}`;
+    if(forzarOpacidad){
+      contenedor.classList.add('carton-visual--opaco');
+    }
     const tipoCarton=normalizarTipoCarton(carton);
     contenedor.dataset.tipocarton=tipoCarton;
     const leyenda=modo==='mini'?null:document.createElement('div');
@@ -6443,6 +6472,9 @@
     }
     const tabla=document.createElement('table');
     tabla.className=`carton-tabla carton-tabla--${modo}`;
+    if(forzarOpacidad){
+      tabla.classList.add('carton-visual--opaco');
+    }
     tabla.dataset.tipocarton=tipoCarton;
     tabla.dataset.cartonId=carton.id||'';
     const esGanador=Array.isArray(carton.formasGanadas)&&carton.formasGanadas.length>0;
@@ -6515,7 +6547,7 @@
     }
     tabla.appendChild(tbody);
     contenedor.appendChild(tabla);
-    if(modo==='mini'){
+    if(modo==='mini' && mostrarInfoMini){
       const infoMini=document.createElement('div');
       infoMini.className='carton-mini-info';
       const numeroSpan=document.createElement('div');
@@ -8229,17 +8261,25 @@
       if(!ganadores.length){
         modalSinGanadoresEl.textContent='Aún no hay cartones ganadores para esta forma.';
         if(modalSinGanadoresPreviewEl){
-          const tablaInfo=crearTablaCartonVisual({id:'forma-preview', posiciones:[]},'mini');
+          const colorForma=obtenerColorParaForma(forma.idx);
+          const tablaInfo=crearTablaCartonVisual({id:'forma-preview', posiciones:[]},'mini',{mostrarInfoMini:false, forzarOpacidad:true});
           aplicarFormaCarton(tablaInfo,{
             posiciones:obtenerPosicionesNormalizadas(forma),
-            color:obtenerColorParaForma(forma.idx),
+            color:colorForma,
             nombre:forma.nombre,
             indice:forma.idx,
             mostrarLeyenda:true,
             resaltarTodas:true,
             mostrarEstrellas:true
           });
-          modalSinGanadoresPreviewEl.appendChild(tablaInfo.contenedor);
+          const colorIntenso=obtenerColorOscurecido(colorForma,0.7);
+          const colorSuave=ajustarLuminosidad(colorForma,0.35);
+          const colorSuperSuave=ajustarLuminosidad(colorForma,0.6);
+          modalSinGanadoresPreviewEl.style.setProperty('--forma-color', colorForma);
+          modalSinGanadoresPreviewEl.style.setProperty('--forma-color-intenso', colorIntenso);
+          modalSinGanadoresPreviewEl.style.setProperty('--forma-color-suave', colorSuave);
+          modalSinGanadoresPreviewEl.style.setProperty('--forma-color-super-suave', colorSuperSuave);
+          modalSinGanadoresPreviewEl.appendChild(tablaInfo.tabla);
           modalSinGanadoresPreviewEl.style.display='flex';
         }
       }else{
@@ -8261,7 +8301,7 @@
           const infoCol=document.createElement('div');
           infoCol.className='ganador-card-info';
           const cartonExtendido={...carton, formasGanadas:[{forma}]};
-          const tablaInfo=crearTablaCartonVisual(cartonExtendido,'mini');
+          const tablaInfo=crearTablaCartonVisual(cartonExtendido,'mini',{forzarOpacidad:true});
           aplicarResumenCarton(tablaInfo);
           aplicarFormaCarton(tablaInfo,{
             posiciones:obtenerPosicionesNormalizadas(forma),
@@ -8275,9 +8315,21 @@
           const infoBox=document.createElement('div');
           infoBox.className='ganador-info';
           const numero=(carton.cartonNum ?? carton.Ncarton ?? '').toString();
-          infoBox.innerHTML=`<strong>Cartón ${numero?`#${numero.padStart(4,'0')}`:'--'}</strong>`+
-            `<span>Alias: ${carton.alias || 'Sin alias'}</span>`+
-            `<span>Tipo: ${(carton.tipocarton||'Pagado').toUpperCase()}</span>`;
+          const numeroTexto=numero?`#${numero.padStart(4,'0')}`:'--';
+          const tipoCartonModal=normalizarTipoCarton(carton);
+          const tipoCartonTexto=tipoCartonModal==='gratis'?'GRATIS':'PAGADO';
+          const cartonLabel=document.createElement('div');
+          cartonLabel.className='ganador-info__carton';
+          cartonLabel.textContent=`CARTÓN: ${numeroTexto}`;
+          const aliasLabel=document.createElement('div');
+          aliasLabel.className='ganador-info__alias';
+          aliasLabel.textContent=`Alias: ${carton.alias || 'Sin alias'}`;
+          const tipoLabel=document.createElement('div');
+          tipoLabel.className=`ganador-info__tipo ${tipoCartonModal==='gratis'?'ganador-info__tipo--gratis':''}`.trim();
+          tipoLabel.textContent=`Tipo: ${tipoCartonTexto}`;
+          infoBox.appendChild(cartonLabel);
+          infoBox.appendChild(aliasLabel);
+          infoBox.appendChild(tipoLabel);
           infoCol.appendChild(infoBox);
           card.appendChild(infoCol);
           const premiosCol=document.createElement('div');
