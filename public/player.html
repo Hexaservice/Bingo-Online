@@ -769,17 +769,25 @@
     return objetivoUtc + (offset * 60000);
   }
 
+  function normalizarTipoSorteo(valor){
+    if(typeof valor !== 'string') return '';
+    const limpio = valor.toLowerCase();
+    if(limpio.includes('especial')) return 'ESPECIAL';
+    if(limpio.includes('diario')) return 'DIARIO';
+    return valor.toUpperCase();
+  }
+
   function seleccionarSorteosProximos(lista){
     const proximos = { ESPECIAL: null, DIARIO: null };
     const ahora = typeof obtenerEpochActual === 'function' ? obtenerEpochActual() : Date.now();
     lista.forEach(item => {
-      const tipo = item?.tipo;
+      const tipo = normalizarTipoSorteo(item?.tipo);
       if(tipo !== 'ESPECIAL' && tipo !== 'DIARIO') return;
       const objetivo = construirFechaObjetivo(item);
       if(!objetivo || objetivo <= ahora) return;
       const actual = proximos[tipo];
       if(!actual || objetivo < actual.objetivo){
-        proximos[tipo] = { ...item, objetivo };
+        proximos[tipo] = { ...item, tipo, objetivo };
       }
     });
     return Object.values(proximos).filter(Boolean);
@@ -860,11 +868,12 @@
     if(!Array.isArray(sorteos) || sorteos.length === 0) return;
 
     contadoresActivos = sorteos.map(sorteo => {
+      const tipoNormalizado = normalizarTipoSorteo(sorteo.tipo);
       const elemento = document.createElement('div');
-      const claseTipo = sorteo.tipo === 'ESPECIAL' ? 'contador-especial' : 'contador-diario';
+      const claseTipo = tipoNormalizado === 'ESPECIAL' ? 'contador-especial' : 'contador-diario';
       elemento.className = `contador-linea ${claseTipo}`;
       contenedoresSorteosEl.appendChild(elemento);
-      return { ...sorteo, elemento, activo: true };
+      return { ...sorteo, tipo: tipoNormalizado, elemento, activo: true };
     });
 
     contenedoresSorteosEl.style.display = 'flex';
@@ -900,7 +909,6 @@
     try {
       contadoresUnsubscribe = firestoreRef.collection('sorteos')
         .where('estado', '==', 'Activo')
-        .where('tipo', 'in', ['ESPECIAL', 'DIARIO'])
         .onSnapshot(snapshot => {
           if(!snapshot){
             limpiarContadores();
