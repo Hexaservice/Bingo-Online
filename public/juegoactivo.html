@@ -6522,15 +6522,15 @@
       numeroSpan.className='carton-mini-numero';
       const numeroCarton=obtenerNumeroCarton(carton);
       const aliasCarton=(carton.alias || carton.nombre || '').toString().trim();
-      const mostrarAliasSimulacion = modoSimulacionCartones && aliasCarton.length>0;
-      numeroSpan.textContent=mostrarAliasSimulacion
-        ? aliasCarton
+      const etiquetaSimulada = aliasCarton || (numeroCarton==='--'?'Cartón guardado':`#${numeroCarton}`);
+      numeroSpan.textContent=modoSimulacionCartones
+        ? etiquetaSimulada
         : numeroCarton==='--'?'--':`#${numeroCarton}`;
       const tipoSpan=document.createElement('div');
       const tipoCartonTexto=tipoCarton==='gratis'?'GRATIS':'PAGADO';
       tipoSpan.className=`carton-mini-tipo carton-mini-tipo--${tipoCarton}`;
       tipoSpan.textContent = modoSimulacionCartones
-        ? (numeroCarton==='--'?'--':`#${numeroCarton}`)
+        ? etiquetaSimulada
         : `Tipo: ${tipoCartonTexto}`;
       infoMini.appendChild(numeroSpan);
       infoMini.appendChild(tipoSpan);
@@ -7912,6 +7912,9 @@
 
   function gestionarCelebracionesNuevosGanadores(cartones, esSimulacion=false){
     if(!Array.isArray(cartones) || !cartones.length){
+      return;
+    }
+    if(esSimulacion && !cartonesRealesCargados){
       return;
     }
     const idsActuales=new Set(cartones.map(carton=>carton?.id).filter(Boolean));
