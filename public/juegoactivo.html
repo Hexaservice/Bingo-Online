@@ -5206,11 +5206,12 @@
     if(Number.isFinite(directo) && directo>=0){
       return Math.max(0, Math.round(directo));
     }
+    const mapaGanadores = modoSimulacionCartones ? cartonesGanadoresSimuladosPorForma : cartonesGanadoresPorForma;
     const idx=Number(forma?.idx ?? forma);
-    if(!Number.isInteger(idx) || !(cartonesGanadoresPorForma instanceof Map)){
+    if(!Number.isInteger(idx) || !(mapaGanadores instanceof Map)){
       return 0;
     }
-    const registro=cartonesGanadoresPorForma.get(idx);
+    const registro=mapaGanadores.get(idx);
     if(!registro){
       return 0;
     }
@@ -6520,11 +6521,17 @@
       const numeroSpan=document.createElement('div');
       numeroSpan.className='carton-mini-numero';
       const numeroCarton=obtenerNumeroCarton(carton);
-      numeroSpan.textContent=numeroCarton==='--'?'--':`#${numeroCarton}`;
+      const aliasCarton=(carton.alias || carton.nombre || '').toString().trim();
+      const mostrarAliasSimulacion = modoSimulacionCartones && aliasCarton.length>0;
+      numeroSpan.textContent=mostrarAliasSimulacion
+        ? aliasCarton
+        : numeroCarton==='--'?'--':`#${numeroCarton}`;
       const tipoSpan=document.createElement('div');
       const tipoCartonTexto=tipoCarton==='gratis'?'GRATIS':'PAGADO';
       tipoSpan.className=`carton-mini-tipo carton-mini-tipo--${tipoCarton}`;
-      tipoSpan.textContent=`Tipo: ${tipoCartonTexto}`;
+      tipoSpan.textContent = modoSimulacionCartones
+        ? (numeroCarton==='--'?'--':`#${numeroCarton}`)
+        : `Tipo: ${tipoCartonTexto}`;
       infoMini.appendChild(numeroSpan);
       infoMini.appendChild(tipoSpan);
       contenedor.appendChild(infoMini);
@@ -8193,7 +8200,8 @@
 
   function abrirModalGanadores(forma){
     if(!forma) return;
-    const info=cartonesGanadoresPorForma.get(forma.idx);
+    const mapaGanadores = modoSimulacionCartones ? cartonesGanadoresSimuladosPorForma : cartonesGanadoresPorForma;
+    const info=mapaGanadores.get(forma.idx);
     const ganadores=info&&Array.isArray(info.cartones)?info.cartones:[];
     modalTituloEl.textContent=`Ganadores Forma ${String(forma.idx).padStart(2,'0')}`;
     actualizarModalPremioForma(forma);
