@@ -6524,9 +6524,7 @@
       const aliasCarton=(carton.alias || carton.nombre || '').toString().trim();
       const nombreGuardado=(carton.nombreGuardado || carton.nombre || '').toString().trim();
       const etiquetaSimulada = aliasCarton || (numeroCarton==='--'?'Cartón guardado':`#${numeroCarton}`);
-      const etiquetaGuardado = nombreGuardado
-        ? `CartonGuardado>${nombreGuardado}`
-        : etiquetaSimulada;
+      const etiquetaGuardado = nombreGuardado || etiquetaSimulada;
       numeroSpan.textContent=modoSimulacionCartones
         ? etiquetaGuardado
         : numeroCarton==='--'?'--':`#${numeroCarton}`;
@@ -6534,7 +6532,7 @@
       const tipoCartonTexto=tipoCarton==='gratis'?'GRATIS':'PAGADO';
       tipoSpan.className=`carton-mini-tipo carton-mini-tipo--${tipoCarton}`;
       tipoSpan.textContent = modoSimulacionCartones
-        ? etiquetaGuardado
+        ? `Tipo: ${tipoCartonTexto}`
         : `Tipo: ${tipoCartonTexto}`;
       infoMini.appendChild(numeroSpan);
       infoMini.appendChild(tipoSpan);
@@ -8205,122 +8203,136 @@
     }
   }
 
+
   function abrirModalGanadores(forma){
     if(!forma) return;
     const info=cartonesGanadoresPorForma.get(forma.idx);
     const ganadores=info&&Array.isArray(info.cartones)?info.cartones:[];
-    modalTituloEl.textContent=`Ganadores Forma ${String(forma.idx).padStart(2,'0')}`;
-    actualizarModalPremioForma(forma);
-    const nombreBase=forma.nombre?forma.nombre:'';
-    if(modalSubtituloEl){
-      modalSubtituloEl.textContent=nombreBase;
-      modalSubtituloEl.dataset.nombreBase=nombreBase;
+    const restaurarSimulacion = modoSimulacionCartones;
+    if(restaurarSimulacion){
+      modoSimulacionCartones=false;
     }
-    modalListaEl.innerHTML='';
-    modalSinGanadoresEl.textContent='';
-    if(modalSinGanadoresPreviewEl){
-      modalSinGanadoresPreviewEl.innerHTML='';
-      modalSinGanadoresPreviewEl.style.display='none';
-    }
-    if(!ganadores.length){
-      modalSinGanadoresEl.textContent='Aún no hay cartones ganadores para esta forma.';
-      if(modalSinGanadoresPreviewEl){
-        const tablaInfo=crearTablaCartonVisual({id:'forma-preview', posiciones:[]},'mini');
-        aplicarFormaCarton(tablaInfo,{
-          posiciones:obtenerPosicionesNormalizadas(forma),
-          color:obtenerColorParaForma(forma.idx),
-          nombre:forma.nombre,
-          indice:forma.idx,
-          mostrarLeyenda:true,
-          resaltarTodas:true,
-          mostrarEstrellas:true
-        });
-        modalSinGanadoresPreviewEl.appendChild(tablaInfo.contenedor);
-        modalSinGanadoresPreviewEl.style.display='flex';
+    try{
+      modalTituloEl.textContent=`Ganadores Forma ${String(forma.idx).padStart(2,'0')}`;
+      actualizarModalPremioForma(forma);
+      const nombreBase=forma.nombre?forma.nombre:'';
+      if(modalSubtituloEl){
+        modalSubtituloEl.textContent=nombreBase;
+        modalSubtituloEl.dataset.nombreBase=nombreBase;
       }
-    }else{
-      const ordenados=ganadores.slice().sort((a,b)=>{
-        const pasoA=(formasPorCarton.get(a.id)||[]).find(f=>f.forma.idx===forma.idx)?.paso??Infinity;
-        const pasoB=(formasPorCarton.get(b.id)||[]).find(f=>f.forma.idx===forma.idx)?.paso??Infinity;
-        if(pasoA!==pasoB) return pasoA-pasoB;
-        const numA=a.cartonNum ?? a.Ncarton ?? Number.MAX_SAFE_INTEGER;
-        const numB=b.cartonNum ?? b.Ncarton ?? Number.MAX_SAFE_INTEGER;
-        return numA-numB;
-      });
-      const totalGanadores=Math.max(1,ordenados.length);
-      const premioIndividual=obtenerCreditosPorGanador(forma,totalGanadores);
-      const cartonesGratisTotales=obtenerCartonesGratisTotalEntregados(forma,totalGanadores);
-      const cartonesGratisPorGanador=obtenerCartonesGratisPorGanador(forma,totalGanadores);
-      ordenados.forEach(carton=>{
-        const card=document.createElement('div');
-        card.className='ganador-card';
-        const infoCol=document.createElement('div');
-        infoCol.className='ganador-card-info';
-        const cartonExtendido={...carton, formasGanadas:[{forma}]};
-        const tablaInfo=crearTablaCartonVisual(cartonExtendido,'mini');
-        aplicarResumenCarton(tablaInfo);
-        aplicarFormaCarton(tablaInfo,{
-          posiciones:obtenerPosicionesNormalizadas(forma),
-          color:obtenerColorParaForma(forma.idx),
-          nombre:forma.nombre,
-          indice:forma.idx,
-          mostrarLeyenda:false,
-          resaltarTodas:true
-        });
-        infoCol.appendChild(tablaInfo.contenedor);
-        const infoBox=document.createElement('div');
-        infoBox.className='ganador-info';
-        const numero=(carton.cartonNum ?? carton.Ncarton ?? '').toString();
-        infoBox.innerHTML=`<strong>Cartón ${numero?`#${numero.padStart(4,'0')}`:'--'}</strong>`+
-          `<span>Alias: ${carton.alias || 'Sin alias'}</span>`+
-          `<span>Tipo: ${(carton.tipocarton||'Pagado').toUpperCase()}</span>`;
-        infoCol.appendChild(infoBox);
-        card.appendChild(infoCol);
-        const premiosCol=document.createElement('div');
-        premiosCol.className='ganador-premios';
-
-        const creditosItem=document.createElement('div');
-        creditosItem.className='ganador-premio-item';
-        const premioLabel=document.createElement('div');
-        premioLabel.className='ganador-premio-label';
-        premioLabel.textContent='CRÉDITOS GANADOS:';
-        const premioMonto=document.createElement('div');
-        premioMonto.className='ganador-premio-monto';
-        premioMonto.textContent=formatearCreditos(premioIndividual);
-        creditosItem.appendChild(premioLabel);
-        creditosItem.appendChild(premioMonto);
-        premiosCol.appendChild(creditosItem);
-
-        const cartonesItem=document.createElement('div');
-        cartonesItem.className='ganador-premio-item';
-        const cartonesLabel=document.createElement('div');
-        cartonesLabel.className='ganador-premio-label';
-        cartonesLabel.textContent='CARTONES GRATIS POR GANADOR:';
-        const cartonesValor=document.createElement('div');
-        cartonesValor.className='ganador-premio-monto ganador-premio-monto--cartones';
-        cartonesValor.textContent=formatearCreditos(cartonesGratisPorGanador);
-        if(cartonesGratisTotales>0){
-          cartonesItem.title=`Total forma: ${formatearCreditos(cartonesGratisTotales)} cartones gratis`;
-        }
-        if(cartonesGratisPorGanador<=0){
-          cartonesItem.classList.add('ganador-premio-item--sin-premio');
-          cartonesValor.classList.add('sin-premio');
-        }
-        cartonesItem.appendChild(cartonesLabel);
-        cartonesItem.appendChild(cartonesValor);
-        premiosCol.appendChild(cartonesItem);
-
-        card.appendChild(premiosCol);
-        modalListaEl.appendChild(card);
-      });
+      modalListaEl.innerHTML='';
+      modalSinGanadoresEl.textContent='';
       if(modalSinGanadoresPreviewEl){
-        modalSinGanadoresPreviewEl.style.display='none';
         modalSinGanadoresPreviewEl.innerHTML='';
+        modalSinGanadoresPreviewEl.style.display='none';
+      }
+      if(!ganadores.length){
+        modalSinGanadoresEl.textContent='Aún no hay cartones ganadores para esta forma.';
+        if(modalSinGanadoresPreviewEl){
+          const tablaInfo=crearTablaCartonVisual({id:'forma-preview', posiciones:[]},'mini');
+          aplicarFormaCarton(tablaInfo,{
+            posiciones:obtenerPosicionesNormalizadas(forma),
+            color:obtenerColorParaForma(forma.idx),
+            nombre:forma.nombre,
+            indice:forma.idx,
+            mostrarLeyenda:true,
+            resaltarTodas:true,
+            mostrarEstrellas:true
+          });
+          modalSinGanadoresPreviewEl.appendChild(tablaInfo.contenedor);
+          modalSinGanadoresPreviewEl.style.display='flex';
+        }
+      }else{
+        const ordenados=ganadores.slice().sort((a,b)=>{
+          const pasoA=(formasPorCarton.get(a.id)||[]).find(f=>f.forma.idx===forma.idx)?.paso??Infinity;
+          const pasoB=(formasPorCarton.get(b.id)||[]).find(f=>f.forma.idx===forma.idx)?.paso??Infinity;
+          if(pasoA!==pasoB) return pasoA-pasoB;
+          const numA=a.cartonNum ?? a.Ncarton ?? Number.MAX_SAFE_INTEGER;
+          const numB=b.cartonNum ?? b.Ncarton ?? Number.MAX_SAFE_INTEGER;
+          return numA-numB;
+        });
+        const totalGanadores=Math.max(1,ordenados.length);
+        const premioIndividual=obtenerCreditosPorGanador(forma,totalGanadores);
+        const cartonesGratisTotales=obtenerCartonesGratisTotalEntregados(forma,totalGanadores);
+        const cartonesGratisPorGanador=obtenerCartonesGratisPorGanador(forma,totalGanadores);
+        ordenados.forEach(carton=>{
+          const card=document.createElement('div');
+          card.className='ganador-card';
+          const infoCol=document.createElement('div');
+          infoCol.className='ganador-card-info';
+          const cartonExtendido={...carton, formasGanadas:[{forma}]};
+          const tablaInfo=crearTablaCartonVisual(cartonExtendido,'mini');
+          aplicarResumenCarton(tablaInfo);
+          aplicarFormaCarton(tablaInfo,{
+            posiciones:obtenerPosicionesNormalizadas(forma),
+            color:obtenerColorParaForma(forma.idx),
+            nombre:forma.nombre,
+            indice:forma.idx,
+            mostrarLeyenda:false,
+            resaltarTodas:true
+          });
+          infoCol.appendChild(tablaInfo.contenedor);
+          const infoBox=document.createElement('div');
+          infoBox.className='ganador-info';
+          const numero=(carton.cartonNum ?? carton.Ncarton ?? '').toString();
+          infoBox.innerHTML=`<strong>Cartón ${numero?`#${numero.padStart(4,'0')}`:'--'}</strong>`+
+            `<span>Alias: ${carton.alias || 'Sin alias'}</span>`+
+            `<span>Tipo: ${(carton.tipocarton||'Pagado').toUpperCase()}</span>`;
+          infoCol.appendChild(infoBox);
+          card.appendChild(infoCol);
+          const premiosCol=document.createElement('div');
+          premiosCol.className='ganador-premios';
+
+          const creditosItem=document.createElement('div');
+          creditosItem.className='ganador-premio-item';
+          const premioLabel=document.createElement('div');
+          premioLabel.className='ganador-premio-label';
+          premioLabel.textContent='CRÉDITOS GANADOS:';
+          const premioMonto=document.createElement('div');
+          premioMonto.className='ganador-premio-monto';
+          premioMonto.textContent=formatearCreditos(premioIndividual);
+          creditosItem.appendChild(premioLabel);
+          creditosItem.appendChild(premioMonto);
+          premiosCol.appendChild(creditosItem);
+
+          const cartonesItem=document.createElement('div');
+          cartonesItem.className='ganador-premio-item';
+          const cartonesLabel=document.createElement('div');
+          cartonesLabel.className='ganador-premio-label';
+          cartonesLabel.textContent='CARTONES GRATIS POR GANADOR:';
+          const cartonesValor=document.createElement('div');
+          cartonesValor.className='ganador-premio-monto ganador-premio-monto--cartones';
+          cartonesValor.textContent=formatearCreditos(cartonesGratisPorGanador);
+          if(cartonesGratisTotales>0){
+            cartonesItem.title=`Total forma: ${formatearCreditos(cartonesGratisTotales)} cartones gratis`;
+          }
+          if(cartonesGratisPorGanador<=0){
+            cartonesItem.classList.add('ganador-premio-item--sin-premio');
+            cartonesValor.classList.add('sin-premio');
+          }
+          cartonesItem.appendChild(cartonesLabel);
+          cartonesItem.appendChild(cartonesValor);
+          premiosCol.appendChild(cartonesItem);
+
+          card.appendChild(premiosCol);
+          modalListaEl.appendChild(card);
+        });
+        if(modalSinGanadoresPreviewEl){
+          modalSinGanadoresPreviewEl.style.display='none';
+          modalSinGanadoresPreviewEl.innerHTML='';
+        }
+      }
+    }finally{
+      if(restaurarSimulacion){
+        modoSimulacionCartones=true;
       }
     }
     actualizarModalGanadoresConExtras([]);
     modalGanadores.classList.add('activa');
+    modalGanadores.setAttribute('aria-hidden','false');
+    modalCerrarBtn?.focus({ preventScroll: true });
   }
+
 
   function cerrarModal(){
     modalGanadores.classList.remove('activa');
