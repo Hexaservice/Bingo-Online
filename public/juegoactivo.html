@@ -5206,7 +5206,7 @@
     if(Number.isFinite(directo) && directo>=0){
       return Math.max(0, Math.round(directo));
     }
-    const mapaGanadores = modoSimulacionCartones ? cartonesGanadoresSimuladosPorForma : cartonesGanadoresPorForma;
+    const mapaGanadores = cartonesGanadoresPorForma;
     const idx=Number(forma?.idx ?? forma);
     if(!Number.isInteger(idx) || !(mapaGanadores instanceof Map)){
       return 0;
@@ -6522,15 +6522,19 @@
       numeroSpan.className='carton-mini-numero';
       const numeroCarton=obtenerNumeroCarton(carton);
       const aliasCarton=(carton.alias || carton.nombre || '').toString().trim();
+      const nombreGuardado=(carton.nombreGuardado || carton.nombre || '').toString().trim();
       const etiquetaSimulada = aliasCarton || (numeroCarton==='--'?'Cartón guardado':`#${numeroCarton}`);
+      const etiquetaGuardado = nombreGuardado
+        ? `CartonGuardado>${nombreGuardado}`
+        : etiquetaSimulada;
       numeroSpan.textContent=modoSimulacionCartones
-        ? etiquetaSimulada
+        ? etiquetaGuardado
         : numeroCarton==='--'?'--':`#${numeroCarton}`;
       const tipoSpan=document.createElement('div');
       const tipoCartonTexto=tipoCarton==='gratis'?'GRATIS':'PAGADO';
       tipoSpan.className=`carton-mini-tipo carton-mini-tipo--${tipoCarton}`;
       tipoSpan.textContent = modoSimulacionCartones
-        ? etiquetaSimulada
+        ? etiquetaGuardado
         : `Tipo: ${tipoCartonTexto}`;
       infoMini.appendChild(numeroSpan);
       infoMini.appendChild(tipoSpan);
@@ -8203,8 +8207,7 @@
 
   function abrirModalGanadores(forma){
     if(!forma) return;
-    const mapaGanadores = modoSimulacionCartones ? cartonesGanadoresSimuladosPorForma : cartonesGanadoresPorForma;
-    const info=mapaGanadores.get(forma.idx);
+    const info=cartonesGanadoresPorForma.get(forma.idx);
     const ganadores=info&&Array.isArray(info.cartones)?info.cartones:[];
     modalTituloEl.textContent=`Ganadores Forma ${String(forma.idx).padStart(2,'0')}`;
     actualizarModalPremioForma(forma);
@@ -9051,6 +9054,8 @@
           id:doc.id,
           userId:data.userId||'',
           alias:data.alias||data.nombre||'',
+          nombre:data.nombre||data.alias||'',
+          nombreGuardado:data.nombre||data.alias||'',
           cartonNum:data.cartonNum ?? data.Ncarton ?? data.numero ?? data.numeroCarton,
           posiciones,
           valorPorPos
