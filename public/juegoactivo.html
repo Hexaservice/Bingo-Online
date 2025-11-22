@@ -8566,19 +8566,34 @@
     const resultadoReal=calcularGanadoresEnMapa(cartonesSorteo);
     cartonesGanadoresPorForma=resultadoReal.cartonesGanadoresPorForma;
     formasPorCarton=resultadoReal.formasPorCarton;
-    const formasBloqueadasSimulacion=new Set();
-    resultadoReal.cartonesGanadoresPorForma.forEach((info, idx)=>{
-      const total=Array.isArray(info?.cartones)?info.cartones.length:0;
-      if(total>0){
-        const indiceNormalizado=Number(idx);
-        if(Number.isFinite(indiceNormalizado)){
-          formasBloqueadasSimulacion.add(indiceNormalizado);
-        }
-      }
-    });
     let resultadoSimulado={cartonesGanadoresPorForma:new Map(), formasPorCarton:new Map()};
     if(simulacionSorteoActiva){
-      resultadoSimulado=calcularGanadoresEnMapa(cartonesSimulacionActiva, formasBloqueadasSimulacion);
+      const mapaCompetencia=new Map(cartonesSorteo);
+      cartonesSimulacionActiva.forEach((carton,id)=>{
+        if(!mapaCompetencia.has(id)){
+          mapaCompetencia.set(id,carton);
+        }
+      });
+      const resultadoCompleto=calcularGanadoresEnMapa(mapaCompetencia);
+      const formasSimuladas=new Map();
+      resultadoCompleto.formasPorCarton.forEach((lista,cartonId)=>{
+        if(cartonesSimulacionActiva.has(cartonId)){
+          formasSimuladas.set(cartonId,lista);
+        }
+      });
+      const ganadoresSimulados=new Map();
+      resultadoCompleto.cartonesGanadoresPorForma.forEach((registro, idx)=>{
+        const cartonesSimulados=Array.isArray(registro?.cartones)
+          ? registro.cartones.filter(c=>cartonesSimulacionActiva.has(c.id))
+          : [];
+        if(cartonesSimulados.length){
+          ganadoresSimulados.set(idx,{
+            ...registro,
+            cartones:cartonesSimulados
+          });
+        }
+      });
+      resultadoSimulado={cartonesGanadoresPorForma:ganadoresSimulados, formasPorCarton:formasSimuladas};
     }
     cartonesGanadoresSimuladosPorForma=resultadoSimulado.cartonesGanadoresPorForma || new Map();
     formasPorCartonSimulados=resultadoSimulado.formasPorCarton || new Map();
