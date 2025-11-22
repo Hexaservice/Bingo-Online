@@ -261,54 +261,52 @@
       }
 
       #contadores-sorteos {
-          position: absolute;
-          top: calc(100% + 6px);
-          left: 50%;
-          transform: translateX(-50%);
+          position: static;
           display: none;
           flex-direction: column;
-          gap: 6px;
+          gap: 4px;
           align-items: center;
           pointer-events: none;
-          z-index: 1200;
-          width: min(90vw, 520px);
+          width: 100%;
+          margin-top: 4px;
       }
 
       .contador-linea {
-          display: flex;
+          display: inline-flex;
           flex-wrap: wrap;
           gap: 6px;
           align-items: center;
           justify-content: center;
           font-family: 'Poppins', sans-serif;
-          font-size: 0.9rem;
-          font-weight: 600;
-          padding: 6px 12px;
-          background: rgba(0, 0, 0, 0.6);
-          border-radius: 12px;
-          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
-      }
-
-      .contador-etiqueta {
+          font-size: 0.92rem;
           font-weight: 700;
-          text-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+          padding: 2px 6px;
+          background: transparent;
+          border-radius: 0;
+          box-shadow: none;
       }
 
-      .contador-valor {
-          color: #fff;
-          -webkit-text-stroke: 3px #000;
-          paint-order: stroke fill;
-          text-shadow: 0 0 6px rgba(0, 0, 0, 0.55);
-          font-weight: 700;
+      .contador-titulo {
+          color: #e6e6e6;
+          border: 3px solid #000;
+          padding: 2px 8px;
+          border-radius: 6px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
       }
-
-      .contador-especial .contador-etiqueta { color: #ff8c00; }
-      .contador-diario .contador-etiqueta { color: #00aa44; }
 
       .contador-nombre {
-          font-weight: 700;
-          color: #fff;
+          font-weight: 800;
+      }
+
+      .contador-nombre--diario { color: #1faa59; }
+      .contador-nombre--especial { color: #ff8c00; }
+
+      .contador-dias,
+      .contador-tiempo {
+          color: #ffffff;
           -webkit-text-stroke: 1px #000;
+          paint-order: stroke fill;
           text-shadow: 0 0 6px rgba(0, 0, 0, 0.55);
       }
 
@@ -803,15 +801,7 @@
     const dias = Math.floor(totalSegundos / 86400);
     const horas = Math.floor((totalSegundos % 86400) / 3600);
     const minutos = Math.floor((totalSegundos % 3600) / 60);
-    const partes = [];
-    if(dias > 0){
-      partes.push({ etiqueta: 'Días:', valor: formatearDosDigitos(dias) });
-    }
-    if(horas > 0){
-      partes.push({ etiqueta: 'Horas:', valor: formatearDosDigitos(horas) });
-    }
-    partes.push({ etiqueta: 'Min:', valor: formatearDosDigitos(minutos), sufijo: 'min' });
-    return partes;
+    return { dias, horas, minutos };
   }
 
   function actualizarLineaContador(entrada){
@@ -833,33 +823,28 @@
 
     entrada.elemento.innerHTML = '';
 
-    if(entrada.tipo === 'DIARIO' && entrada.nombre){
-      const nombreSpan = document.createElement('span');
-      nombreSpan.className = 'contador-nombre';
-      nombreSpan.textContent = entrada.nombre;
-      entrada.elemento.appendChild(nombreSpan);
+    const tituloSpan = document.createElement('span');
+    tituloSpan.className = 'contador-titulo';
+    tituloSpan.textContent = 'Tiempo para:';
+    entrada.elemento.appendChild(tituloSpan);
+
+    const nombreSpan = document.createElement('span');
+    const nombreClase = entrada.tipo === 'ESPECIAL' ? 'contador-nombre--especial' : 'contador-nombre--diario';
+    nombreSpan.className = `contador-nombre ${nombreClase}`;
+    nombreSpan.textContent = entrada?.nombre || entrada.tipo || 'Sorteo';
+    entrada.elemento.appendChild(nombreSpan);
+
+    if(partes.dias > 0){
+      const diasSpan = document.createElement('span');
+      diasSpan.className = 'contador-dias';
+      diasSpan.textContent = `${formatearDosDigitos(partes.dias)} Días`;
+      entrada.elemento.appendChild(diasSpan);
     }
 
-    partes.forEach(parte => {
-      if(parte.valor === undefined || parte.valor === null) return;
-      const etiquetaSpan = document.createElement('span');
-      etiquetaSpan.className = 'contador-etiqueta';
-      etiquetaSpan.textContent = parte.etiqueta;
-
-      const valorSpan = document.createElement('span');
-      valorSpan.className = 'contador-valor';
-      valorSpan.textContent = parte.valor;
-
-      entrada.elemento.appendChild(etiquetaSpan);
-      entrada.elemento.appendChild(valorSpan);
-
-      if(parte.sufijo){
-        const sufijoSpan = document.createElement('span');
-        sufijoSpan.className = 'contador-etiqueta';
-        sufijoSpan.textContent = parte.sufijo;
-        entrada.elemento.appendChild(sufijoSpan);
-      }
-    });
+    const tiempoSpan = document.createElement('span');
+    tiempoSpan.className = 'contador-tiempo';
+    tiempoSpan.textContent = `${formatearDosDigitos(partes.horas)}:${formatearDosDigitos(partes.minutos)}`;
+    entrada.elemento.appendChild(tiempoSpan);
   }
 
   function prepararContadores(sorteos){
