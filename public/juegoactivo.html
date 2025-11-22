@@ -2891,19 +2891,18 @@
           text-align: center;
           font-family: 'Poppins', sans-serif;
       }
-      .ganador-info__carton {
-          font-weight: 700;
-          letter-spacing: 0.4px;
-      }
       .ganador-info__alias {
           font-weight: 700;
+          letter-spacing: 0.4px;
+          color: #0b1f70;
       }
-      .ganador-info__tipo {
+      .ganador-info__canto {
           font-weight: 700;
-          color: var(--color-bingo-pagado);
+          color: #0b8a35;
       }
-      .ganador-info__tipo--gratis {
-          color: var(--color-bingo-gratis);
+      .ganador-info__bolita {
+          font-weight: 700;
+          color: #6a1b9a;
       }
       .ganador-premios {
           grid-column: 2 / 3;
@@ -8316,20 +8315,21 @@
           infoBox.className='ganador-info';
           const numero=(carton.cartonNum ?? carton.Ncarton ?? '').toString();
           const numeroTexto=numero?`#${numero.padStart(4,'0')}`:'--';
-          const tipoCartonModal=normalizarTipoCarton(carton);
+          const aliasCarton=(carton.alias || carton.nombre || '').toString().trim();
+          const aliasMostrar=aliasCarton || numeroTexto;
           const cartonLabel=document.createElement('div');
-          cartonLabel.className='ganador-info__carton';
-          cartonLabel.textContent=`CARTÓN: ${numeroTexto}`;
+          cartonLabel.className='ganador-info__alias';
+          cartonLabel.textContent=`Alias: ${aliasMostrar}`;
           const formaCartonGanada=(formasPorCarton.get(carton.id)||[])
             .find(registro=>Number(registro?.forma?.idx)===Number(forma.idx));
           const pasoGanador=Number(formaCartonGanada?.paso);
           const numeroCanto=Number.isInteger(pasoGanador)?pasoGanador+1:null;
           const numeroBolita=Number.isInteger(pasoGanador)?cantosOrdenados[pasoGanador]:null;
           const cantoLabel=document.createElement('div');
-          cantoLabel.className='ganador-info__alias';
-          cantoLabel.textContent=`Ganado en Canto N° : ${numeroCanto??'--'}`;
+          cantoLabel.className='ganador-info__canto';
+          cantoLabel.textContent=`Canto N° : ${numeroCanto??'--'}`;
           const bolitaLabel=document.createElement('div');
-          bolitaLabel.className=`ganador-info__tipo ${tipoCartonModal==='gratis'?'ganador-info__tipo--gratis':''}`.trim();
+          bolitaLabel.className='ganador-info__bolita';
           const bolitaTexto=Number.isFinite(numeroBolita)?(obtenerEtiquetaCanto(numeroBolita)||numeroBolita):'--';
           bolitaLabel.textContent=`Bolita N° : ${bolitaTexto}`;
           infoBox.appendChild(cartonLabel);
