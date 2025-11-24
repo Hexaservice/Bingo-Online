@@ -1278,6 +1278,15 @@
       #contadores-sorteos-flotantes.activo {
           display: flex;
       }
+      #contadores-sorteos-titulo {
+          font-size: clamp(0.8rem, 2vw, 1rem);
+          font-weight: 700;
+          color: #6a1b9a;
+          letter-spacing: 0.8px;
+          text-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+          background: transparent;
+          animation: blinkTitulo 1.2s ease-in-out infinite;
+      }
       #contadores-sorteos-flotantes .contadores-flotantes__lista {
           display: flex;
           flex-direction: column;
@@ -1286,6 +1295,28 @@
           gap: clamp(8px, 1.8vw, 14px);
           width: 100%;
           max-width: 100%;
+      }
+      #publicidad-sorteos {
+          display: none;
+          align-items: center;
+          justify-content: center;
+          width: min(100%, var(--carton-contenido-ancho, var(--carton-destacado-max-width, 600px)));
+          aspect-ratio: 2 / 3;
+          background: rgba(0, 0, 0, 0.1);
+          border-radius: clamp(16px, 3vw, 28px);
+          overflow: hidden;
+          box-shadow: 0 10px 26px rgba(0,0,0,0.35);
+          backdrop-filter: blur(3px);
+          border: 2px solid rgba(255, 255, 255, 0.24);
+      }
+      #publicidad-sorteos.activo {
+          display: flex;
+      }
+      #publicidad-sorteos img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          display: block;
       }
       .contador-flotante {
           display: flex;
@@ -1318,6 +1349,11 @@
           color: #ffffff;
           letter-spacing: 0.6px;
           text-shadow: 0 0 12px rgba(0, 0, 0, 0.95), 0 0 18px rgba(0, 0, 0, 0.92);
+      }
+      @keyframes blinkTitulo {
+          0%, 100% { opacity: 1; }
+          45% { opacity: 0.28; }
+          70% { opacity: 1; }
       }
       .contador-flotante__tiempo--sellado {
           text-shadow: 0 0 12px rgba(255, 0, 0, 0.95), 0 0 18px rgba(255, 36, 36, 0.9);
@@ -3846,7 +3882,11 @@
       <div id="panel-columna-derecha">
         <div class="panel-columna-derecha__rejilla panel-columna-derecha__destacado">
           <div id="contadores-sorteos-flotantes" aria-live="polite" hidden>
+            <div id="contadores-sorteos-titulo">PRÓXIMOS SORTEOS:</div>
             <div id="contadores-sorteos-flotantes-lista" class="contadores-flotantes__lista"></div>
+            <div id="publicidad-sorteos" aria-hidden="true" hidden>
+              <img id="publicidad-sorteos-img" alt="Publicidad sorteos" loading="lazy">
+            </div>
           </div>
           <aside id="carton-destacado" aria-live="polite"></aside>
           <div id="carton-destacado-premio" class="carton-destacado-premio" hidden aria-hidden="true">
@@ -4003,6 +4043,9 @@
   const cartonDestacadoPremioGratisValorEl = document.getElementById('carton-destacado-premio-gratis-valor');
   const contadoresFlotantesEl = document.getElementById('contadores-sorteos-flotantes');
   const contadoresFlotantesListaEl = document.getElementById('contadores-sorteos-flotantes-lista');
+  const contadoresTituloEl = document.getElementById('contadores-sorteos-titulo');
+  const publicidadSorteosEl = document.getElementById('publicidad-sorteos');
+  const publicidadSorteosImgEl = document.getElementById('publicidad-sorteos-img');
   const modalGanadores = document.getElementById('modal-ganadores');
   const modalCerrarBtn = document.getElementById('modal-cerrar');
   const modalTituloEl = document.getElementById('modal-titulo');
@@ -4161,6 +4204,9 @@
   let contadoresFlotantesActivos = [];
   let contadoresFlotantesUnsubscribe = null;
   let contadoresOcultosPorFinalizado = false;
+  let publicidadSorteosLinkValor = '';
+  let publicidadSorteosLinkCargado = false;
+  let publicidadSorteosLinkPromesa = null;
 
   function mostrarModalWhatsapp(mensaje){
     if(!whatsappModalEl) return;
@@ -4228,11 +4274,57 @@
     return { dias, horas, minutos, segundos };
   }
 
+  function actualizarVisibilidadPublicidadSorteos(){
+    if(!publicidadSorteosEl) return;
+    const enlace = (publicidadSorteosLinkValor || '').toString().trim();
+    const puedeMostrar = !!enlace && !haySorteoJugando && !contadoresOcultosPorFinalizado && contadoresFlotantesActivos.length > 0;
+    publicidadSorteosEl.classList.toggle('activo', puedeMostrar);
+    publicidadSorteosEl.hidden = !puedeMostrar;
+    publicidadSorteosEl.setAttribute('aria-hidden', puedeMostrar ? 'false' : 'true');
+    if(publicidadSorteosImgEl){
+      publicidadSorteosImgEl.src = puedeMostrar ? enlace : '';
+      publicidadSorteosImgEl.alt = puedeMostrar ? 'Publicidad de sorteos' : '';
+    }
+  }
+
+  async function obtenerLinkPublicidadSorteos(){
+    if(publicidadSorteosLinkPromesa) return publicidadSorteosLinkPromesa;
+    publicidadSorteosLinkPromesa = (async ()=>{
+      try{
+        await initFirebase();
+      }catch(error){
+        console.error('No se pudo inicializar Firebase para la publicidad de sorteos', error);
+        publicidadSorteosLinkCargado = true;
+        return publicidadSorteosLinkValor;
+      }
+      try{
+        const doc = await db.collection('Variablesglobales').doc('Parametros').get();
+        if(doc.exists){
+          const data = doc.data() || {};
+          const enlace = (data.linkPublicidadSorteos ?? data.linkpublicidadsorteos ?? data.linkPublicidad ?? '').toString().trim();
+          if(enlace){
+            publicidadSorteosLinkValor = enlace;
+          }
+        }
+      }catch(error){
+        console.error('No se pudo obtener el enlace de publicidad para sorteos', error);
+      }
+      publicidadSorteosLinkCargado = true;
+      actualizarVisibilidadPublicidadSorteos();
+      return publicidadSorteosLinkValor;
+    })();
+    return publicidadSorteosLinkPromesa;
+  }
+
   function actualizarVisibilidadContadoresFlotantes(){
     if(!contadoresFlotantesEl) return;
     const activo = !haySorteoJugando && !contadoresOcultosPorFinalizado && contadoresFlotantesActivos.length > 0;
     contadoresFlotantesEl.classList.toggle('activo', activo);
     contadoresFlotantesEl.hidden = !activo;
+    if(contadoresTituloEl){
+      contadoresTituloEl.hidden = !activo;
+    }
+    actualizarVisibilidadPublicidadSorteos();
   }
 
   function limpiarContadoresFlotantes(){
@@ -9693,6 +9785,7 @@
         usuarioActual=user;
         suscribirCartonesGuardados(user.uid);
         iniciarContadoresSorteosProximos();
+        obtenerLinkPublicidadSorteos();
         iniciarSorteosListener();
       });
     })
