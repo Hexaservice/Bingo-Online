@@ -1263,7 +1263,7 @@
       }
       #contadores-sorteos-flotantes {
           position: absolute;
-          top: clamp(-8px, 1.2vw, 12px);
+          top: calc(clamp(-8px, 1.2vw, 12px) - 40px);
           left: clamp(4px, 1vw, 10px);
           right: clamp(4px, 1vw, 10px);
           display: none;
@@ -4364,9 +4364,12 @@
   }
 
   function actualizarVisibilidadPublicidadSorteos(){
-    if(!publicidadSorteosEl) return;
+    if(!publicidadSorteosEl){
+      publicidadSorteosImagenLista = false;
+      return;
+    }
     const hayImagenes = publicidadSorteosLinks.length > 0;
-    const puedeMostrar = hayImagenes && publicidadSorteosImagenLista && !haySorteoJugando && !contadoresOcultosPorFinalizado && contadoresFlotantesActivos.length > 0;
+    const puedeMostrar = hayImagenes && publicidadSorteosImagenLista && !contadoresOcultosPorFinalizado;
     publicidadSorteosEl.classList.toggle('activo', puedeMostrar);
     publicidadSorteosEl.hidden = !puedeMostrar;
     publicidadSorteosEl.setAttribute('aria-hidden', puedeMostrar ? 'false' : 'true');
@@ -4471,11 +4474,13 @@
 
   function actualizarVisibilidadContadoresFlotantes(){
     if(!contadoresFlotantesEl) return;
-    const activo = !haySorteoJugando && !contadoresOcultosPorFinalizado && contadoresFlotantesActivos.length > 0;
+    const hayPublicidadLista = publicidadSorteosLinks.length > 0 && publicidadSorteosImagenLista;
+    const contadoresActivos = !haySorteoJugando && !contadoresOcultosPorFinalizado && contadoresFlotantesActivos.length > 0;
+    const activo = contadoresActivos || hayPublicidadLista;
     contadoresFlotantesEl.classList.toggle('activo', activo);
     contadoresFlotantesEl.hidden = !activo;
     if(contadoresTituloEl){
-      contadoresTituloEl.hidden = !activo;
+      contadoresTituloEl.hidden = !contadoresActivos;
     }
     actualizarVisibilidadPublicidadSorteos();
   }
