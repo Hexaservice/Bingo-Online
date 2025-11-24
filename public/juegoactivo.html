@@ -1263,7 +1263,7 @@
       }
       #contadores-sorteos-flotantes {
           position: absolute;
-          top: clamp(2px, 2vw, 18px);
+          top: clamp(-8px, 1.2vw, 12px);
           left: clamp(4px, 1vw, 10px);
           right: clamp(4px, 1vw, 10px);
           display: none;
@@ -1275,7 +1275,7 @@
           box-sizing: border-box;
           text-align: center;
           z-index: 5;
-          gap: clamp(8px, 1.8vw, 14px);
+          gap: clamp(6px, 1.6vw, 10px);
       }
       #contadores-sorteos-flotantes.activo {
           display: flex;
@@ -1312,7 +1312,7 @@
           backdrop-filter: blur(3px);
           border: 2px solid rgba(255, 255, 255, 0.24);
           position: relative;
-          margin-top: clamp(8px, 1.8vw, 14px);
+          margin-top: clamp(4px, 1.2vw, 10px);
       }
       #publicidad-sorteos.activo {
           display: flex;
@@ -4291,11 +4291,34 @@
     return { dias, horas, minutos, segundos };
   }
 
+  function normalizarLinkPublicidadSorteos(link){
+    if(link === undefined || link === null) return '';
+    const texto = link.toString().trim();
+    if(!texto) return '';
+    if(/^https?:\/\//i.test(texto)) return texto;
+    if(texto.startsWith('//')) return `https:${texto}`;
+    if(/^www\./i.test(texto)) return `https://${texto}`;
+    const dominioCoincidente = texto.match(/[a-z0-9.-]+\.[a-z]{2,}(?:\/[^\s]*)?/i);
+    if(dominioCoincidente){
+      return `https://${dominioCoincidente[0]}`;
+    }
+    return '';
+  }
+
   function extraerLinksPublicidadSorteos(valor){
-    if(typeof valor !== 'string') return [];
-    const coincidencias = valor.match(/https?:\/\/[^\s,;]+/gi) || [];
-    const normalizados = coincidencias.map(link => link.trim()).filter(Boolean);
-    return Array.from(new Set(normalizados));
+    const origen = Array.isArray(valor) ? valor : [(valor ?? '').toString()];
+    const linksEncontrados = [];
+
+    origen.forEach(item => {
+      const texto = (item ?? '').toString();
+      const coincidencias = texto.match(/(?:https?:\/\/|www\.|\/\/)[^\s,;|]+/gi) || texto.split(/\s|,|;|\n|\|/);
+      coincidencias
+        .map(entry => normalizarLinkPublicidadSorteos(entry))
+        .filter(Boolean)
+        .forEach(url => linksEncontrados.push(url));
+    });
+
+    return Array.from(new Set(linksEncontrados));
   }
 
   function establecerLinksPublicidadSorteos(valor){
