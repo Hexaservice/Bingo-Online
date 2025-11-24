@@ -1263,7 +1263,7 @@
       }
       #contadores-sorteos-flotantes {
           position: absolute;
-          top: clamp(8px, 3vw, 28px);
+          top: clamp(2px, 2vw, 18px);
           left: clamp(4px, 1vw, 10px);
           right: clamp(4px, 1vw, 10px);
           display: none;
@@ -1275,6 +1275,7 @@
           box-sizing: border-box;
           text-align: center;
           z-index: 5;
+          gap: clamp(8px, 1.8vw, 14px);
       }
       #contadores-sorteos-flotantes.activo {
           display: flex;
@@ -1287,7 +1288,7 @@
           text-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
           background: transparent;
           animation: blinkTitulo 1.2s ease-in-out infinite;
-          margin-bottom: clamp(6px, 1.2vw, 10px);
+          margin-bottom: 0;
       }
       #contadores-sorteos-flotantes .contadores-flotantes__lista {
           display: flex;
@@ -1310,6 +1311,8 @@
           box-shadow: 0 10px 26px rgba(0,0,0,0.35);
           backdrop-filter: blur(3px);
           border: 2px solid rgba(255, 255, 255, 0.24);
+          position: relative;
+          margin-top: clamp(8px, 1.8vw, 14px);
       }
       #publicidad-sorteos.activo {
           display: flex;
@@ -1319,6 +1322,12 @@
           height: 100%;
           object-fit: contain;
           display: block;
+          opacity: 1;
+          transition: opacity 0.8s ease-in-out;
+      }
+
+      #publicidad-sorteos img.publicidad-sorteos__imagen--cambiando {
+          opacity: 0;
       }
       .contador-flotante {
           display: flex;
@@ -4211,6 +4220,10 @@
   let publicidadSorteosLinkPromesa = null;
   let publicidadSorteosImagenLista = false;
   let publicidadSorteosImagenCargando = false;
+  let publicidadSorteosLinks = [];
+  let publicidadSorteosIndiceActual = 0;
+  let publicidadSorteosIntervalo = null;
+  const PUBLICIDAD_SORTEOS_DURACION_MS = 6000;
 
   function mostrarModalWhatsapp(mensaje){
     if(!whatsappModalEl) return;
@@ -4278,21 +4291,83 @@
     return { dias, horas, minutos, segundos };
   }
 
+  function extraerLinksPublicidadSorteos(valor){
+    if(typeof valor !== 'string') return [];
+    const coincidencias = valor.match(/https?:\/\/[^\s,;]+/gi) || [];
+    const normalizados = coincidencias.map(link => link.trim()).filter(Boolean);
+    return Array.from(new Set(normalizados));
+  }
+
+  function establecerLinksPublicidadSorteos(valor){
+    publicidadSorteosLinkValor = (valor || '').toString();
+    publicidadSorteosLinks = extraerLinksPublicidadSorteos(publicidadSorteosLinkValor);
+    publicidadSorteosIndiceActual = 0;
+    detenerCarruselPublicidadSorteos();
+  }
+
+  function detenerCarruselPublicidadSorteos(){
+    if(publicidadSorteosIntervalo){
+      clearInterval(publicidadSorteosIntervalo);
+      publicidadSorteosIntervalo = null;
+    }
+  }
+
+  function iniciarCarruselPublicidadSorteos(){
+    detenerCarruselPublicidadSorteos();
+    if(publicidadSorteosLinks.length <= 1) return;
+    publicidadSorteosIntervalo = setInterval(()=>{
+      if(!publicidadSorteosEl?.classList.contains('activo')) return;
+      mostrarSiguientePublicidadSorteos();
+    }, PUBLICIDAD_SORTEOS_DURACION_MS);
+  }
+
+  function mostrarSiguientePublicidadSorteos(){
+    if(publicidadSorteosLinks.length === 0) return;
+    publicidadSorteosIndiceActual = (publicidadSorteosIndiceActual + 1) % publicidadSorteosLinks.length;
+    const siguiente = publicidadSorteosLinks[publicidadSorteosIndiceActual];
+    cargarPublicidadSorteosImagen(siguiente);
+  }
+
+  function aplicarTransicionPublicidadSorteos(url){
+    if(!publicidadSorteosImgEl) return;
+    publicidadSorteosImgEl.classList.add('publicidad-sorteos__imagen--cambiando');
+    setTimeout(()=>{
+      publicidadSorteosImgEl.src = url;
+      publicidadSorteosImgEl.alt = 'Publicidad de sorteos';
+      requestAnimationFrame(()=>{
+        publicidadSorteosImgEl.classList.remove('publicidad-sorteos__imagen--cambiando');
+      });
+    }, 160);
+  }
+
   function actualizarVisibilidadPublicidadSorteos(){
     if(!publicidadSorteosEl) return;
-    const enlace = (publicidadSorteosLinkValor || '').toString().trim();
-    const puedeMostrar = !!enlace && publicidadSorteosImagenLista && !haySorteoJugando && !contadoresOcultosPorFinalizado && contadoresFlotantesActivos.length > 0;
+    const hayImagenes = publicidadSorteosLinks.length > 0;
+    const puedeMostrar = hayImagenes && publicidadSorteosImagenLista && !haySorteoJugando && !contadoresOcultosPorFinalizado && contadoresFlotantesActivos.length > 0;
     publicidadSorteosEl.classList.toggle('activo', puedeMostrar);
     publicidadSorteosEl.hidden = !puedeMostrar;
     publicidadSorteosEl.setAttribute('aria-hidden', puedeMostrar ? 'false' : 'true');
     if(publicidadSorteosImgEl){
-      publicidadSorteosImgEl.src = puedeMostrar ? enlace : '';
-      publicidadSorteosImgEl.alt = puedeMostrar ? 'Publicidad de sorteos' : '';
+      if(puedeMostrar){
+        const imagenActual = publicidadSorteosLinks[publicidadSorteosIndiceActual];
+        if(imagenActual && !publicidadSorteosImgEl.src){
+          aplicarTransicionPublicidadSorteos(imagenActual);
+        }
+      }else{
+        publicidadSorteosImgEl.src = '';
+        publicidadSorteosImgEl.alt = '';
+      }
+    }
+    if(puedeMostrar && publicidadSorteosLinks.length > 1){
+      iniciarCarruselPublicidadSorteos();
+    } else {
+      detenerCarruselPublicidadSorteos();
     }
   }
 
   async function cargarPublicidadSorteosImagen(enlace){
     if(!publicidadSorteosImgEl){
+      publicidadSorteosImagenLista = false;
       return false;
     }
     const urlLimpia = (enlace || '').toString().trim();
@@ -4316,6 +4391,7 @@
       });
     }
     publicidadSorteosImagenCargando = true;
+    publicidadSorteosImagenLista = false;
     return new Promise(resolve=>{
       const preloader = new Image();
       preloader.referrerPolicy = 'no-referrer';
@@ -4323,13 +4399,15 @@
       preloader.onload = ()=>{
         publicidadSorteosImagenLista = true;
         publicidadSorteosImagenCargando = false;
-        publicidadSorteosImgEl.src = urlLimpia;
+        aplicarTransicionPublicidadSorteos(urlLimpia);
+        actualizarVisibilidadPublicidadSorteos();
         resolve(true);
       };
       preloader.onerror = ()=>{
         publicidadSorteosImagenLista = false;
         publicidadSorteosImagenCargando = false;
         publicidadSorteosImgEl.removeAttribute('src');
+        actualizarVisibilidadPublicidadSorteos();
         resolve(false);
       };
       preloader.src = urlLimpia;
@@ -4351,9 +4429,9 @@
         if(doc.exists){
           const data = doc.data() || {};
           const enlace = (data.linkPublicidadSorteos ?? data.linkpublicidadsorteos ?? data.linkPublicidad ?? '').toString().trim();
-          if(enlace){
-            publicidadSorteosLinkValor = enlace;
-            publicidadSorteosImagenLista = await cargarPublicidadSorteosImagen(enlace);
+          establecerLinksPublicidadSorteos(enlace);
+          if(publicidadSorteosLinks.length > 0){
+            publicidadSorteosImagenLista = await cargarPublicidadSorteosImagen(publicidadSorteosLinks[0]);
           }else{
             publicidadSorteosImagenLista = false;
           }
