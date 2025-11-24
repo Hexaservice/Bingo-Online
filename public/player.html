@@ -260,56 +260,6 @@
           align-items: center;
       }
 
-      #contadores-sorteos {
-          position: static;
-          display: none;
-          flex-direction: column;
-          gap: 2px;
-          align-items: center;
-          pointer-events: none;
-          width: 100%;
-          margin-top: 4px;
-      }
-
-      .contador-linea {
-          display: inline-flex;
-          flex-wrap: wrap;
-          gap: 4px;
-          align-items: center;
-          justify-content: center;
-          font-family: 'Poppins', sans-serif;
-          font-size: 0.92rem;
-          font-weight: 700;
-          padding: 2px 6px;
-          background: transparent;
-          border-radius: 0;
-          box-shadow: none;
-          line-height: 1.2;
-      }
-
-      .contador-titulo {
-          color: #000;
-          padding: 2px 8px;
-          border-radius: 6px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-      }
-
-      .contador-nombre {
-          font-weight: 800;
-      }
-
-      .contador-nombre--diario { color: #1faa59; }
-      .contador-nombre--especial { color: #ff8c00; }
-
-      .contador-dias,
-      .contador-tiempo {
-          color: #ffffff;
-          -webkit-text-stroke: 1px #000;
-          paint-order: stroke fill;
-          text-shadow: 0 0 6px rgba(0, 0, 0, 0.55);
-      }
-
       #menu-tabla-wrapper {
           width: 100%;
           padding: clamp(8px, 1.8vw, 16px);
@@ -653,13 +603,12 @@
   <button id="salir-super-btn" class="menu-btn back-btn" style="display:none;">Salir</button>
 
   <div id="main-menu" class="view">
-      <div id="menu-buttons">
-        <img id="menu-logo" src="img/Logo-BingOnline-nuevo500p.png" alt="Logo de BingOnline" />
-        <div id="menu-heading">
-          <h3>Menú Jugador</h3>
-          <div id="contadores-sorteos" aria-live="polite"></div>
-        </div>
-      <div id="menu-tabla-wrapper">
+        <div id="menu-buttons">
+          <img id="menu-logo" src="img/Logo-BingOnline-nuevo500p.png" alt="Logo de BingOnline" />
+          <div id="menu-heading">
+            <h3>Menú Jugador</h3>
+          </div>
+        <div id="menu-tabla-wrapper">
         <table class="menu-tabla" aria-label="Accesos del menú principal">
           <colgroup>
             <col class="col-24" />
@@ -735,188 +684,9 @@
   const whatsappModalMensajeEl = document.getElementById('modal-whatsapp-mensaje');
   const whatsappModalAceptarBtn = document.getElementById('modal-whatsapp-aceptar');
   const sorteoImagen = document.getElementById('boton-sorteo');
-  const contenedoresSorteosEl = document.getElementById('contadores-sorteos');
   const whatsappState = { enlace:'', cargado:false };
   let firestoreRef = null;
   let sorteoUnsubscribe = null;
-  let contadoresUnsubscribe = null;
-  let contadoresIntervalo = null;
-  let contadoresActivos = [];
-
-  function limpiarContadores(){
-    if(contadoresIntervalo){
-      clearInterval(contadoresIntervalo);
-      contadoresIntervalo = null;
-    }
-    contadoresActivos = [];
-    if(contenedoresSorteosEl){
-      contenedoresSorteosEl.innerHTML = '';
-      contenedoresSorteosEl.style.display = 'none';
-    }
-  }
-
-  function construirFechaObjetivo(sorteo){
-    if(!sorteo) return null;
-    const { fecha, hora } = sorteo;
-    if(typeof fecha !== 'string' || typeof hora !== 'string') return null;
-    const [anio, mes, dia] = fecha.split('-').map(numero => parseInt(numero, 10));
-    const [horas, minutos] = hora.split(':').map(numero => parseInt(numero, 10));
-    if([anio, mes, dia, horas].some(v => Number.isNaN(v))) return null;
-    const offset = typeof serverTime?.offsetMinutos === 'number' ? serverTime.offsetMinutos : 0;
-    const objetivoUtc = Date.UTC(anio, (mes || 1) - 1, dia || 1, horas || 0, Number.isNaN(minutos) ? 0 : minutos);
-    return objetivoUtc + (offset * 60000);
-  }
-
-  function normalizarTipoSorteo(valor){
-    if(typeof valor !== 'string') return '';
-    const limpio = valor.toLowerCase();
-    if(limpio.includes('especial')) return 'ESPECIAL';
-    if(limpio.includes('diario')) return 'DIARIO';
-    return valor.toUpperCase();
-  }
-
-  function seleccionarSorteosProximos(lista){
-    const proximos = { ESPECIAL: null, DIARIO: null };
-    const ahora = typeof obtenerEpochActual === 'function' ? obtenerEpochActual() : Date.now();
-    lista.forEach(item => {
-      const tipo = normalizarTipoSorteo(item?.tipo);
-      if(tipo !== 'ESPECIAL' && tipo !== 'DIARIO') return;
-      const objetivo = construirFechaObjetivo(item);
-      if(!objetivo || objetivo <= ahora) return;
-      const actual = proximos[tipo];
-      if(!actual || objetivo < actual.objetivo){
-        proximos[tipo] = { ...item, tipo, objetivo };
-      }
-    });
-    return Object.values(proximos).filter(Boolean);
-  }
-
-  function formatearDosDigitos(valor){
-    return String(valor).padStart(2, '0');
-  }
-
-  function construirPartesTiempo(restanteMs){
-    if(restanteMs <= 0) return null;
-    const totalSegundos = Math.floor(restanteMs / 1000);
-    const dias = Math.floor(totalSegundos / 86400);
-    const horas = Math.floor((totalSegundos % 86400) / 3600);
-    const minutos = Math.floor((totalSegundos % 3600) / 60);
-    const segundos = totalSegundos % 60;
-    return { dias, horas, minutos, segundos };
-  }
-
-  function actualizarLineaContador(entrada){
-    if(!entrada?.elemento) return;
-    const ahora = typeof obtenerEpochActual === 'function' ? obtenerEpochActual() : Date.now();
-    const restante = entrada.objetivo - ahora;
-    if(restante <= 0){
-      entrada.elemento.remove();
-      entrada.activo = false;
-      return;
-    }
-
-    const partes = construirPartesTiempo(restante);
-    if(!partes){
-      entrada.elemento.remove();
-      entrada.activo = false;
-      return;
-    }
-
-    entrada.elemento.innerHTML = '';
-
-    const tituloSpan = document.createElement('span');
-    tituloSpan.className = 'contador-titulo';
-    tituloSpan.textContent = 'Próximo:';
-    entrada.elemento.appendChild(tituloSpan);
-
-    const nombreSpan = document.createElement('span');
-    const nombreClase = entrada.tipo === 'ESPECIAL' ? 'contador-nombre--especial' : 'contador-nombre--diario';
-    nombreSpan.className = `contador-nombre ${nombreClase}`;
-    nombreSpan.textContent = entrada?.nombre || entrada.tipo || 'Sorteo';
-    entrada.elemento.appendChild(nombreSpan);
-
-    if(partes.dias > 0){
-      const diasSpan = document.createElement('span');
-      diasSpan.className = 'contador-dias';
-      diasSpan.textContent = `${formatearDosDigitos(partes.dias)} Días`;
-      entrada.elemento.appendChild(diasSpan);
-    }
-
-    const tiempoSpan = document.createElement('span');
-    tiempoSpan.className = 'contador-tiempo';
-    tiempoSpan.textContent = `${formatearDosDigitos(partes.horas)}:${formatearDosDigitos(partes.minutos)}:${formatearDosDigitos(partes.segundos)}`;
-    entrada.elemento.appendChild(tiempoSpan);
-  }
-
-  function prepararContadores(sorteos){
-    limpiarContadores();
-    if(!contenedoresSorteosEl) return;
-    if(!Array.isArray(sorteos) || sorteos.length === 0) return;
-
-    contadoresActivos = sorteos.map(sorteo => {
-      const tipoNormalizado = normalizarTipoSorteo(sorteo.tipo);
-      const elemento = document.createElement('div');
-      const claseTipo = tipoNormalizado === 'ESPECIAL' ? 'contador-especial' : 'contador-diario';
-      elemento.className = `contador-linea ${claseTipo}`;
-      contenedoresSorteosEl.appendChild(elemento);
-      return { ...sorteo, tipo: tipoNormalizado, elemento, activo: true };
-    });
-
-    contenedoresSorteosEl.style.display = 'flex';
-
-    contadoresActivos.forEach(actualizarLineaContador);
-
-    contadoresIntervalo = setInterval(() => {
-      contadoresActivos = contadoresActivos.filter(entrada => {
-        actualizarLineaContador(entrada);
-        return entrada.activo !== false;
-      });
-      if(contadoresActivos.length === 0){
-        limpiarContadores();
-      }
-    }, 1000);
-  }
-
-  async function iniciarContadoresSorteos(){
-    if(!firestoreRef || !contenedoresSorteosEl) return;
-    if(typeof initServerTime === 'function'){
-      try {
-        await initServerTime();
-      } catch (error) {
-        console.error('No se pudo sincronizar la hora del servidor para los contadores', error);
-      }
-    }
-
-    if(contadoresUnsubscribe){
-      contadoresUnsubscribe();
-      contadoresUnsubscribe = null;
-    }
-
-    try {
-      contadoresUnsubscribe = firestoreRef.collection('sorteos')
-        .where('estado', '==', 'Activo')
-        .onSnapshot(snapshot => {
-          if(!snapshot){
-            limpiarContadores();
-            return;
-          }
-          const sorteos = [];
-          snapshot.forEach(doc => sorteos.push({ id: doc.id, ...doc.data() }));
-          const proximos = seleccionarSorteosProximos(sorteos);
-          if(proximos.length > 0){
-            prepararContadores(proximos);
-          } else {
-            limpiarContadores();
-          }
-        }, error => {
-          console.error('Error al observar los sorteos activos para contadores', error);
-          limpiarContadores();
-        });
-    } catch (error) {
-      console.error('No se pudo iniciar la observación de sorteos activos', error);
-    }
-  }
-
   function asignarFotoUsuario(elemento, url){
     if(!elemento) return;
     const aplicarFallback = ()=>{
@@ -1061,7 +831,6 @@
       });
     }
 
-    iniciarContadoresSorteos();
     observarEstadoSorteo();
   }
 
