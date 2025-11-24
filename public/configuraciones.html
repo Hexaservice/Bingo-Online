@@ -556,12 +556,52 @@
     #link-live-tiktok:focus {
       outline: 2px solid rgba(255,146,60,0.55);
     }
-    #link-publicidad-sorteos {
-      border-color: #2563eb;
-      box-shadow: none;
+    .publicidad-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
     }
-    #link-publicidad-sorteos:focus {
+    .publicidad-row label {
+      color: #1d4ed8;
+      font-weight: 600;
+      min-width: 140px;
+      text-align: right;
+    }
+    .publicidad-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+    }
+    .publicidad-control input {
+      flex: 1;
+      min-height: 38px;
+      border-radius: 8px;
+      border: 1px solid #2563eb;
+      padding: 8px 10px;
+      box-sizing: border-box;
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 0.85rem;
+      color: #0f172a;
+    }
+    .publicidad-control input:focus {
       outline: 2px solid rgba(37,99,235,0.45);
+    }
+    .publicidad-control button {
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 0.82rem;
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid #1d4ed8;
+      background: linear-gradient(135deg,#60a5fa,#1d4ed8);
+      color: #ffffff;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+      min-width: 96px;
+    }
+    .publicidad-control button:hover {
+      transform: scale(1.02);
     }
     .whatsapp-actions {
       margin-top: 8px;
@@ -599,25 +639,6 @@
       transition: transform 0.2s ease;
     }
     .live-link-actions button:hover {
-      transform: scale(1.02);
-    }
-    .publicidad-actions {
-      margin-top: 8px;
-      display: flex;
-      justify-content: flex-end;
-    }
-    .publicidad-actions button {
-      font-family: Calibri, Arial, sans-serif;
-      font-size: 0.8rem;
-      padding: 6px 14px;
-      border-radius: 6px;
-      border: 1px solid #2563eb;
-      background: linear-gradient(135deg,#60a5fa,#1d4ed8);
-      color: #ffffff;
-      cursor: pointer;
-      transition: transform 0.2s ease;
-    }
-    .publicidad-actions button:hover {
       transform: scale(1.02);
     }
     @media (orientation: portrait) {
@@ -1008,10 +1029,19 @@
     <div class="whatsapp-actions">
       <button type="button" id="guardar-link-whatsapp">Guardar</button>
     </div>
-    <label for="link-publicidad-sorteos" class="publicidad-label">Link publicidad Sorteos</label>
-    <textarea id="link-publicidad-sorteos" placeholder="https://mis-imagenes.com/publicidad.jpg" spellcheck="false"></textarea>
-    <div class="publicidad-actions">
-      <button type="button" id="guardar-link-publicidad-sorteos">Guardar</button>
+    <div class="publicidad-row">
+      <label for="link-publicidad-sorteos" class="publicidad-label">Link publicidad 1</label>
+      <div class="publicidad-control">
+        <input type="text" id="link-publicidad-sorteos" placeholder="https://mis-imagenes.com/publicidad1.jpg" spellcheck="false">
+        <button type="button" id="guardar-link-publicidad-sorteos">Guardar</button>
+      </div>
+    </div>
+    <div class="publicidad-row">
+      <label for="link-publicidad-sorteos-2" class="publicidad-label">Link publicidad 2</label>
+      <div class="publicidad-control">
+        <input type="text" id="link-publicidad-sorteos-2" placeholder="https://mis-imagenes.com/publicidad2.jpg" spellcheck="false">
+        <button type="button" id="guardar-link-publicidad-sorteos-2">Guardar</button>
+      </div>
     </div>
     <label for="link-live-tiktok">Link de Live Tiktok/Youtube</label>
     <textarea id="link-live-tiktok" placeholder="https://www.tiktok.com/@cuenta/live o https://youtube.com/watch?v=..." spellcheck="false"></textarea>
@@ -1250,7 +1280,9 @@
     const campoLinkWhatsapp=document.getElementById('link-whatsapp');
     const botonGuardarLink=document.getElementById('guardar-link-whatsapp');
     const campoLinkPublicidadSorteos=document.getElementById('link-publicidad-sorteos');
+    const campoLinkPublicidadSorteosDos=document.getElementById('link-publicidad-sorteos-2');
     const botonGuardarLinkPublicidad=document.getElementById('guardar-link-publicidad-sorteos');
+    const botonGuardarLinkPublicidadDos=document.getElementById('guardar-link-publicidad-sorteos-2');
     const campoLinkLiveTiktok=document.getElementById('link-live-tiktok');
     const botonGuardarLinkLive=document.getElementById('guardar-link-live-tiktok');
     const modalOverlay=document.getElementById('whatsapp-modal-overlay');
@@ -1488,9 +1520,13 @@
           if(linkGuardado){
             campoLinkWhatsapp.value=linkGuardado;
           }
-          const linkPublicidadGuardado=(data.linkPublicidadSorteos??data.linkpublicidadsorteos??data.linkPublicidad??'').toString();
-          if(linkPublicidadGuardado){
-            campoLinkPublicidadSorteos.value=linkPublicidadGuardado;
+          const linkPublicidadPrimario=(data.linkPublicidadSorteos1??data.linkPublicidadSorteos??data.linkpublicidadsorteos??data.linkPublicidad??'').toString();
+          const linkPublicidadSecundario=(data.linkPublicidadSorteos2??data.linkpublicidadsorteos2??data.linkPublicidad2??'').toString();
+          if(linkPublicidadPrimario){
+            campoLinkPublicidadSorteos.value=linkPublicidadPrimario;
+          }
+          if(linkPublicidadSecundario){
+            campoLinkPublicidadSorteosDos.value=linkPublicidadSecundario;
           }
           const linkLiveGuardado=data.linkLiveTiktok??data.linklivetiktok??data.link_live_tiktok??'';
           if(linkLiveGuardado){
@@ -1589,19 +1625,33 @@
         alert('Ocurrió un error al guardar el link de WhatsApp. Inténtalo nuevamente.');
       }
     });
-    botonGuardarLinkPublicidad.addEventListener('click',async ()=>{
-      const valor=(campoLinkPublicidadSorteos.value||'').trim();
-      const confirmacionTexto=valor? '¿Deseas guardar este link de publicidad para los sorteos próximos?' : '¿Deseas eliminar la publicidad de sorteos guardada?';
+    async function guardarLinkPublicidad(campo, propiedad, descripcion){
+      const valor=(campo?.value||'').trim();
+      const confirmacionTexto=valor? `¿Deseas guardar este link de publicidad (${descripcion})?` : `¿Deseas eliminar el link de publicidad (${descripcion}) guardado?`;
       const confirmar=await confirm(confirmacionTexto);
       if(!confirmar) return;
       try {
-        await db.collection('Variablesglobales').doc('Parametros').set({linkPublicidadSorteos:valor},{merge:true});
-        alert(valor?'Link de publicidad guardado correctamente.':'Se eliminó el link de publicidad de sorteos.');
+        const payload={[propiedad]:valor};
+        if(propiedad==='linkPublicidadSorteos1'){
+          payload.linkPublicidadSorteos=valor;
+        }
+        await db.collection('Variablesglobales').doc('Parametros').set(payload,{merge:true});
+        alert(valor?`Link de publicidad ${descripcion} guardado correctamente.`:`Se eliminó el link de publicidad ${descripcion}.`);
       } catch(err){
-        console.error('No se pudo guardar el link de publicidad de sorteos',err);
+        console.error(`No se pudo guardar el link de publicidad (${descripcion})`,err);
         alert('Ocurrió un error al guardar el link de publicidad. Inténtalo nuevamente.');
       }
+    }
+
+    botonGuardarLinkPublicidad.addEventListener('click',()=>{
+      guardarLinkPublicidad(campoLinkPublicidadSorteos,'linkPublicidadSorteos1','1');
     });
+
+    if(botonGuardarLinkPublicidadDos){
+      botonGuardarLinkPublicidadDos.addEventListener('click',()=>{
+        guardarLinkPublicidad(campoLinkPublicidadSorteosDos,'linkPublicidadSorteos2','2');
+      });
+    }
     botonGuardarLinkLive.addEventListener('click',async ()=>{
       const valor=campoLinkLiveTiktok.value.trim();
       const confirmar=await confirm(valor ? '¿Deseas guardar este enlace para la transmisión en vivo?' : '¿Deseas eliminar el link guardado para transmisiones en vivo?');
