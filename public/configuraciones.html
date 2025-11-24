@@ -535,6 +535,9 @@
       color: #ff7a00;
       text-shadow: none;
     }
+    .whatsapp-section label.publicidad-label {
+      color: #1d4ed8;
+    }
     .whatsapp-section textarea {
       width: 100%;
       min-height: 72px;
@@ -552,6 +555,13 @@
     }
     #link-live-tiktok:focus {
       outline: 2px solid rgba(255,146,60,0.55);
+    }
+    #link-publicidad-sorteos {
+      border-color: #2563eb;
+      box-shadow: none;
+    }
+    #link-publicidad-sorteos:focus {
+      outline: 2px solid rgba(37,99,235,0.45);
     }
     .whatsapp-actions {
       margin-top: 8px;
@@ -589,6 +599,25 @@
       transition: transform 0.2s ease;
     }
     .live-link-actions button:hover {
+      transform: scale(1.02);
+    }
+    .publicidad-actions {
+      margin-top: 8px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .publicidad-actions button {
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 0.8rem;
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid #2563eb;
+      background: linear-gradient(135deg,#60a5fa,#1d4ed8);
+      color: #ffffff;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    .publicidad-actions button:hover {
       transform: scale(1.02);
     }
     @media (orientation: portrait) {
@@ -979,6 +1008,11 @@
     <div class="whatsapp-actions">
       <button type="button" id="guardar-link-whatsapp">Guardar</button>
     </div>
+    <label for="link-publicidad-sorteos" class="publicidad-label">Link publicidad Sorteos</label>
+    <textarea id="link-publicidad-sorteos" placeholder="https://mis-imagenes.com/publicidad.jpg" spellcheck="false"></textarea>
+    <div class="publicidad-actions">
+      <button type="button" id="guardar-link-publicidad-sorteos">Guardar</button>
+    </div>
     <label for="link-live-tiktok">Link de Live Tiktok/Youtube</label>
     <textarea id="link-live-tiktok" placeholder="https://www.tiktok.com/@cuenta/live o https://youtube.com/watch?v=..." spellcheck="false"></textarea>
     <div class="live-link-actions">
@@ -1215,6 +1249,8 @@
     const etiquetaNumeroWhatsapp=document.getElementById('numero-whatsapp-label');
     const campoLinkWhatsapp=document.getElementById('link-whatsapp');
     const botonGuardarLink=document.getElementById('guardar-link-whatsapp');
+    const campoLinkPublicidadSorteos=document.getElementById('link-publicidad-sorteos');
+    const botonGuardarLinkPublicidad=document.getElementById('guardar-link-publicidad-sorteos');
     const campoLinkLiveTiktok=document.getElementById('link-live-tiktok');
     const botonGuardarLinkLive=document.getElementById('guardar-link-live-tiktok');
     const modalOverlay=document.getElementById('whatsapp-modal-overlay');
@@ -1452,6 +1488,10 @@
           if(linkGuardado){
             campoLinkWhatsapp.value=linkGuardado;
           }
+          const linkPublicidadGuardado=(data.linkPublicidadSorteos??data.linkpublicidadsorteos??data.linkPublicidad??'').toString();
+          if(linkPublicidadGuardado){
+            campoLinkPublicidadSorteos.value=linkPublicidadGuardado;
+          }
           const linkLiveGuardado=data.linkLiveTiktok??data.linklivetiktok??data.link_live_tiktok??'';
           if(linkLiveGuardado){
             campoLinkLiveTiktok.value=linkLiveGuardado;
@@ -1547,6 +1587,19 @@
       } catch(err){
         console.error('No se pudo guardar el link de WhatsApp',err);
         alert('Ocurrió un error al guardar el link de WhatsApp. Inténtalo nuevamente.');
+      }
+    });
+    botonGuardarLinkPublicidad.addEventListener('click',async ()=>{
+      const valor=(campoLinkPublicidadSorteos.value||'').trim();
+      const confirmacionTexto=valor? '¿Deseas guardar este link de publicidad para los sorteos próximos?' : '¿Deseas eliminar la publicidad de sorteos guardada?';
+      const confirmar=await confirm(confirmacionTexto);
+      if(!confirmar) return;
+      try {
+        await db.collection('Variablesglobales').doc('Parametros').set({linkPublicidadSorteos:valor},{merge:true});
+        alert(valor?'Link de publicidad guardado correctamente.':'Se eliminó el link de publicidad de sorteos.');
+      } catch(err){
+        console.error('No se pudo guardar el link de publicidad de sorteos',err);
+        alert('Ocurrió un error al guardar el link de publicidad. Inténtalo nuevamente.');
       }
     });
     botonGuardarLinkLive.addEventListener('click',async ()=>{
