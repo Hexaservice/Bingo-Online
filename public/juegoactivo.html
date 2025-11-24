@@ -4369,7 +4369,7 @@
       return;
     }
     const hayImagenes = publicidadSorteosLinks.length > 0;
-    const puedeMostrar = hayImagenes && publicidadSorteosImagenLista && !contadoresOcultosPorFinalizado;
+    const puedeMostrar = hayImagenes && publicidadSorteosImagenLista && !contadoresOcultosPorFinalizado && !haySorteoJugando;
     publicidadSorteosEl.classList.toggle('activo', puedeMostrar);
     publicidadSorteosEl.hidden = !puedeMostrar;
     publicidadSorteosEl.setAttribute('aria-hidden', puedeMostrar ? 'false' : 'true');
@@ -4457,8 +4457,10 @@
         const doc = await db.collection('Variablesglobales').doc('Parametros').get();
         if(doc.exists){
           const data = doc.data() || {};
-          const enlace = (data.linkPublicidadSorteos ?? data.linkpublicidadsorteos ?? data.linkPublicidad ?? '').toString().trim();
-          establecerLinksPublicidadSorteos(enlace);
+          const enlacePrincipal = (data.linkPublicidadSorteos1 ?? data.linkPublicidadSorteos ?? data.linkpublicidadsorteos ?? data.linkPublicidad ?? '').toString().trim();
+          const enlaceSecundario = (data.linkPublicidadSorteos2 ?? data.linkpublicidadsorteos2 ?? data.linkPublicidad2 ?? '').toString().trim();
+          const enlaces = [enlacePrincipal, enlaceSecundario].filter(Boolean);
+          establecerLinksPublicidadSorteos(enlaces);
           if(publicidadSorteosLinks.length > 0){
             publicidadSorteosImagenLista = await cargarPublicidadSorteosImagen(publicidadSorteosLinks[0]);
           }else{
@@ -4478,8 +4480,9 @@
   function actualizarVisibilidadContadoresFlotantes(){
     if(!contadoresFlotantesEl) return;
     const hayPublicidadLista = publicidadSorteosLinks.length > 0 && publicidadSorteosImagenLista;
-    const contadoresActivos = !haySorteoJugando && !contadoresOcultosPorFinalizado && contadoresFlotantesActivos.length > 0;
-    const activo = contadoresActivos || hayPublicidadLista;
+    const bloqueadoPorSorteo = haySorteoJugando || contadoresOcultosPorFinalizado;
+    const contadoresActivos = !bloqueadoPorSorteo && contadoresFlotantesActivos.length > 0;
+    const activo = !bloqueadoPorSorteo && (contadoresActivos || hayPublicidadLista);
     contadoresFlotantesEl.classList.toggle('activo', activo);
     contadoresFlotantesEl.hidden = !activo;
     if(contadoresTituloEl){
@@ -4488,6 +4491,15 @@
     if(contadoresFlotantesListaEl){
       contadoresFlotantesListaEl.hidden = !contadoresActivos;
       contadoresFlotantesListaEl.setAttribute('aria-hidden', contadoresActivos ? 'false' : 'true');
+    }
+    if(!activo){
+      detenerCarruselPublicidadSorteos();
+      if(publicidadSorteosEl){
+        publicidadSorteosEl.classList.remove('activo');
+        publicidadSorteosEl.hidden = true;
+        publicidadSorteosEl.setAttribute('aria-hidden','true');
+      }
+      return;
     }
     if(hayPublicidadLista && publicidadSorteosLinks.length > 1){
       iniciarCarruselPublicidadSorteos();
