@@ -1261,6 +1261,65 @@
           position: relative;
           min-height: 0;
       }
+      #contadores-sorteos-flotantes {
+          position: absolute;
+          inset: clamp(4px, 1vw, 10px);
+          display: none;
+          align-items: center;
+          justify-content: center;
+          pointer-events: none;
+          padding: clamp(8px, 2vw, 16px);
+          box-sizing: border-box;
+          text-align: center;
+          z-index: 5;
+      }
+      #contadores-sorteos-flotantes.activo {
+          display: flex;
+      }
+      #contadores-sorteos-flotantes .contadores-flotantes__lista {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: clamp(8px, 1.8vw, 14px);
+          width: 100%;
+          max-width: min(92%, 780px);
+      }
+      .contador-flotante {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: clamp(2px, 0.8vw, 10px);
+          padding: clamp(8px, 1.6vw, 18px);
+          width: min(100%, 760px);
+          background: rgba(0, 0, 0, 0.32);
+          border-radius: clamp(10px, 2vw, 18px);
+          backdrop-filter: blur(2px);
+          box-shadow: 0 0 14px rgba(0, 0, 0, 0.28);
+      }
+      .contador-flotante__nombre {
+          font-size: clamp(1.1rem, 2.8vw, 2rem);
+          font-weight: 800;
+          color: #ffffff;
+          text-shadow: 0 0 6px rgba(0, 0, 0, 0.92), 0 0 14px rgba(0, 0, 0, 0.9);
+      }
+      .contador-flotante__tiempo {
+          font-size: clamp(1.5rem, 4.6vw, 3.1rem);
+          font-weight: 900;
+          color: #ffffff;
+          letter-spacing: 0.6px;
+          text-shadow: 0 0 12px rgba(0, 0, 0, 0.95), 0 0 18px rgba(0, 0, 0, 0.92);
+      }
+      .contador-flotante__tiempo--sellado {
+          text-shadow: 0 0 12px rgba(255, 0, 0, 0.95), 0 0 18px rgba(255, 36, 36, 0.9);
+      }
+      .contador-flotante__dias {
+          font-size: clamp(1rem, 2.4vw, 1.7rem);
+          font-weight: 700;
+          color: #f5f5f5;
+          text-shadow: 0 0 10px rgba(0, 0, 0, 0.92), 0 0 16px rgba(0, 0, 0, 0.85);
+      }
       .panel-columna-derecha__destacado > #carton-destacado,
       .panel-columna-derecha__destacado > .sin-cartones-activos {
           flex: 1 1 auto;
@@ -3777,6 +3836,9 @@
       <div id="formas-mensaje" class="mensaje"></div>
       <div id="panel-columna-derecha">
         <div class="panel-columna-derecha__rejilla panel-columna-derecha__destacado">
+          <div id="contadores-sorteos-flotantes" aria-live="polite" hidden>
+            <div id="contadores-sorteos-flotantes-lista" class="contadores-flotantes__lista"></div>
+          </div>
           <aside id="carton-destacado" aria-live="polite"></aside>
           <div id="carton-destacado-premio" class="carton-destacado-premio" hidden aria-hidden="true">
             <span id="carton-destacado-premio-label" class="carton-destacado-premio__badge">Premios:</span>
@@ -3930,6 +3992,8 @@
   const cartonDestacadoPremioLabelEl = document.getElementById('carton-destacado-premio-label');
   const cartonDestacadoPremioPlusEl = document.getElementById('carton-destacado-premio-plus');
   const cartonDestacadoPremioGratisValorEl = document.getElementById('carton-destacado-premio-gratis-valor');
+  const contadoresFlotantesEl = document.getElementById('contadores-sorteos-flotantes');
+  const contadoresFlotantesListaEl = document.getElementById('contadores-sorteos-flotantes-lista');
   const modalGanadores = document.getElementById('modal-ganadores');
   const modalCerrarBtn = document.getElementById('modal-cerrar');
   const modalTituloEl = document.getElementById('modal-titulo');
@@ -4084,6 +4148,9 @@
   let formasSinGanadoresAlertaClave = '';
   let celebracionModalActiva = false;
   let unsubscribeCartonesGuardados = null;
+  let contadoresFlotantesIntervalo = null;
+  let contadoresFlotantesActivos = [];
+  let contadoresFlotantesUnsubscribe = null;
 
   function mostrarModalWhatsapp(mensaje){
     if(!whatsappModalEl) return;
@@ -4099,6 +4166,185 @@
     if(!whatsappModalEl) return;
     whatsappModalEl.classList.remove('activa');
     whatsappModalEl.setAttribute('aria-hidden','true');
+  }
+
+  function formatearDosDigitos(valor){
+    return String(valor).padStart(2, '0');
+  }
+
+  function construirFechaObjetivoSorteo(sorteo){
+    if(!sorteo) return null;
+    const { fecha, hora } = sorteo;
+    if(typeof fecha !== 'string' || typeof hora !== 'string') return null;
+    const [anio, mes, dia] = fecha.split('-').map(num => parseInt(num, 10));
+    const [horas, minutos] = hora.split(':').map(num => parseInt(num, 10));
+    if([anio, mes, dia, horas].some(v => Number.isNaN(v))) return null;
+    const offset = typeof serverTime?.offsetMinutos === 'number' ? serverTime.offsetMinutos : 0;
+    const objetivoUtc = Date.UTC(anio, (mes || 1) - 1, dia || 1, horas || 0, Number.isNaN(minutos) ? 0 : minutos);
+    return objetivoUtc + (offset * 60000);
+  }
+
+  function normalizarTipoSorteo(valor){
+    if(typeof valor !== 'string') return '';
+    const limpio = valor.toLowerCase();
+    if(limpio.includes('especial')) return 'ESPECIAL';
+    if(limpio.includes('diario')) return 'DIARIO';
+    return valor.toUpperCase();
+  }
+
+  function seleccionarSorteosProximos(lista){
+    const proximos = { ESPECIAL: null, DIARIO: null };
+    const ahora = typeof obtenerEpochActual === 'function' ? obtenerEpochActual() : Date.now();
+    lista.forEach(item => {
+      const tipo = normalizarTipoSorteo(item?.tipo);
+      if(tipo !== 'ESPECIAL' && tipo !== 'DIARIO') return;
+      const objetivo = construirFechaObjetivoSorteo(item);
+      if(!objetivo || objetivo <= ahora) return;
+      const actual = proximos[tipo];
+      if(!actual || objetivo < actual.objetivo){
+        proximos[tipo] = { ...item, tipo, objetivo };
+      }
+    });
+    return Object.values(proximos).filter(Boolean);
+  }
+
+  function construirPartesTiempo(restanteMs){
+    if(restanteMs <= 0) return null;
+    const totalSegundos = Math.floor(restanteMs / 1000);
+    const dias = Math.floor(totalSegundos / 86400);
+    const horas = Math.floor((totalSegundos % 86400) / 3600);
+    const minutos = Math.floor((totalSegundos % 3600) / 60);
+    const segundos = totalSegundos % 60;
+    return { dias, horas, minutos, segundos };
+  }
+
+  function actualizarVisibilidadContadoresFlotantes(){
+    if(!contadoresFlotantesEl) return;
+    const activo = !haySorteoJugando && contadoresFlotantesActivos.length > 0;
+    contadoresFlotantesEl.classList.toggle('activo', activo);
+    contadoresFlotantesEl.hidden = !activo;
+  }
+
+  function limpiarContadoresFlotantes(){
+    if(contadoresFlotantesIntervalo){
+      clearInterval(contadoresFlotantesIntervalo);
+      contadoresFlotantesIntervalo = null;
+    }
+    contadoresFlotantesActivos = [];
+    if(contadoresFlotantesListaEl){
+      contadoresFlotantesListaEl.innerHTML = '';
+    }
+    actualizarVisibilidadContadoresFlotantes();
+  }
+
+  function actualizarLineaContadorFlotante(entrada){
+    if(!entrada?.elemento) return;
+    const ahora = typeof obtenerEpochActual === 'function' ? obtenerEpochActual() : Date.now();
+    const restante = entrada.objetivo - ahora;
+    if(restante <= 0){
+      entrada.elemento.remove();
+      entrada.activo = false;
+      return;
+    }
+    const partes = construirPartesTiempo(restante);
+    if(!partes){
+      entrada.elemento.remove();
+      entrada.activo = false;
+      return;
+    }
+
+    const estadoSellado = (entrada.estado || '').toString().toLowerCase() === 'sellado';
+    const diasTexto = formatearDosDigitos(partes.dias);
+    const horasTexto = `${formatearDosDigitos(partes.horas)}:${formatearDosDigitos(partes.minutos)}:${formatearDosDigitos(partes.segundos)}`;
+
+    entrada.elemento.innerHTML = '';
+
+    const nombreEl = document.createElement('div');
+    nombreEl.className = 'contador-flotante__nombre';
+    nombreEl.textContent = entrada?.nombre || entrada.tipo || 'Sorteo';
+    entrada.elemento.appendChild(nombreEl);
+
+    const tiempoEl = document.createElement('div');
+    tiempoEl.className = 'contador-flotante__tiempo';
+    if(estadoSellado){
+      tiempoEl.classList.add('contador-flotante__tiempo--sellado');
+    }
+    const diasSpan = document.createElement('span');
+    diasSpan.className = 'contador-flotante__dias';
+    diasSpan.textContent = `Días: ${diasTexto}`;
+    const horaSpan = document.createElement('span');
+    horaSpan.textContent = ` ${horasTexto}`;
+    tiempoEl.appendChild(diasSpan);
+    tiempoEl.appendChild(horaSpan);
+    entrada.elemento.appendChild(tiempoEl);
+  }
+
+  function prepararContadoresFlotantes(sorteos){
+    limpiarContadoresFlotantes();
+    if(!contadoresFlotantesListaEl) return;
+    if(!Array.isArray(sorteos) || sorteos.length === 0) return;
+
+    contadoresFlotantesActivos = sorteos.map(sorteo => {
+      const tipoNormalizado = normalizarTipoSorteo(sorteo.tipo);
+      const elemento = document.createElement('div');
+      elemento.className = 'contador-flotante';
+      contadoresFlotantesListaEl.appendChild(elemento);
+      return { ...sorteo, tipo: tipoNormalizado, elemento, activo: true };
+    });
+
+    contadoresFlotantesActivos.forEach(actualizarLineaContadorFlotante);
+    actualizarVisibilidadContadoresFlotantes();
+
+    contadoresFlotantesIntervalo = setInterval(() => {
+      contadoresFlotantesActivos = contadoresFlotantesActivos.filter(entrada => {
+        actualizarLineaContadorFlotante(entrada);
+        return entrada.activo !== false;
+      });
+      if(contadoresFlotantesActivos.length === 0){
+        limpiarContadoresFlotantes();
+      }
+      actualizarVisibilidadContadoresFlotantes();
+    }, 1000);
+  }
+
+  async function iniciarContadoresSorteosProximos(){
+    if(!db || !contadoresFlotantesEl || !contadoresFlotantesListaEl) return;
+    if(typeof initServerTime === 'function'){
+      try {
+        await initServerTime();
+      } catch (error) {
+        console.error('No se pudo sincronizar la hora del servidor para los contadores de sorteos', error);
+      }
+    }
+
+    if(contadoresFlotantesUnsubscribe){
+      contadoresFlotantesUnsubscribe();
+      contadoresFlotantesUnsubscribe = null;
+    }
+
+    try {
+      contadoresFlotantesUnsubscribe = db.collection('sorteos')
+        .where('estado', 'in', ['Activo', 'Sellado'])
+        .onSnapshot(snapshot => {
+          if(!snapshot){
+            limpiarContadoresFlotantes();
+            return;
+          }
+          const sorteos = [];
+          snapshot.forEach(doc => sorteos.push({ id: doc.id, ...doc.data() }));
+          const proximos = seleccionarSorteosProximos(sorteos);
+          if(proximos.length > 0){
+            prepararContadoresFlotantes(proximos);
+          } else {
+            limpiarContadoresFlotantes();
+          }
+        }, error => {
+          console.error('Error al observar sorteos próximos', error);
+          limpiarContadoresFlotantes();
+        });
+    } catch (error) {
+      console.error('No se pudo iniciar la observación de sorteos próximos', error);
+    }
   }
 
   function normalizarEnlaceWhatsapp(link){
@@ -9153,6 +9399,7 @@
   function seleccionarSorteo(activos){
     const lista=Array.isArray(activos)?activos:[];
     haySorteoJugando=lista.length>0;
+    actualizarVisibilidadContadoresFlotantes();
     cartonesRealesCargados=false;
     if(haySorteoJugando){
       sorteoManualSeleccionadoId=null;
@@ -9353,6 +9600,7 @@
       }
       sorteoManualSeleccionadoId=info.id;
       haySorteoJugando=false;
+      actualizarVisibilidadContadoresFlotantes();
       actualizarSinSorteoUI();
       reiniciarAlertaFormasSinGanadores();
       activeSorteo={id:info.id,...data};
@@ -9413,6 +9661,7 @@
         }
         usuarioActual=user;
         suscribirCartonesGuardados(user.uid);
+        iniciarContadoresSorteosProximos();
         iniciarSorteosListener();
       });
     })
