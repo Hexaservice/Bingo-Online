@@ -1263,7 +1263,7 @@
       }
       #contadores-sorteos-flotantes {
           position: absolute;
-          top: clamp(28px, 6vw, 52px);
+          top: clamp(8px, 3vw, 28px);
           left: clamp(4px, 1vw, 10px);
           right: clamp(4px, 1vw, 10px);
           display: none;
@@ -3887,7 +3887,7 @@
             <div id="contadores-sorteos-titulo">PRÓXIMOS SORTEOS:</div>
             <div id="contadores-sorteos-flotantes-lista" class="contadores-flotantes__lista"></div>
             <div id="publicidad-sorteos" aria-hidden="true" hidden>
-              <img id="publicidad-sorteos-img" alt="Publicidad sorteos" loading="lazy">
+              <img id="publicidad-sorteos-img" alt="Publicidad sorteos" loading="lazy" referrerpolicy="no-referrer" decoding="async">
             </div>
           </div>
           <aside id="carton-destacado" aria-live="polite"></aside>
@@ -4209,6 +4209,8 @@
   let publicidadSorteosLinkValor = '';
   let publicidadSorteosLinkCargado = false;
   let publicidadSorteosLinkPromesa = null;
+  let publicidadSorteosImagenLista = false;
+  let publicidadSorteosImagenCargando = false;
 
   function mostrarModalWhatsapp(mensaje){
     if(!whatsappModalEl) return;
@@ -4279,7 +4281,7 @@
   function actualizarVisibilidadPublicidadSorteos(){
     if(!publicidadSorteosEl) return;
     const enlace = (publicidadSorteosLinkValor || '').toString().trim();
-    const puedeMostrar = !!enlace && !haySorteoJugando && !contadoresOcultosPorFinalizado && contadoresFlotantesActivos.length > 0;
+    const puedeMostrar = !!enlace && publicidadSorteosImagenLista && !haySorteoJugando && !contadoresOcultosPorFinalizado && contadoresFlotantesActivos.length > 0;
     publicidadSorteosEl.classList.toggle('activo', puedeMostrar);
     publicidadSorteosEl.hidden = !puedeMostrar;
     publicidadSorteosEl.setAttribute('aria-hidden', puedeMostrar ? 'false' : 'true');
@@ -4287,6 +4289,51 @@
       publicidadSorteosImgEl.src = puedeMostrar ? enlace : '';
       publicidadSorteosImgEl.alt = puedeMostrar ? 'Publicidad de sorteos' : '';
     }
+  }
+
+  async function cargarPublicidadSorteosImagen(enlace){
+    if(!publicidadSorteosImgEl){
+      return false;
+    }
+    const urlLimpia = (enlace || '').toString().trim();
+    if(!urlLimpia){
+      publicidadSorteosImagenLista = false;
+      return false;
+    }
+    if(publicidadSorteosImagenLista && publicidadSorteosImgEl.src === urlLimpia){
+      return true;
+    }
+    if(publicidadSorteosImagenCargando){
+      return new Promise(resolve=>{
+        const verificar = ()=>{
+          if(!publicidadSorteosImagenCargando){
+            resolve(publicidadSorteosImagenLista);
+          }else{
+            setTimeout(verificar,50);
+          }
+        };
+        verificar();
+      });
+    }
+    publicidadSorteosImagenCargando = true;
+    return new Promise(resolve=>{
+      const preloader = new Image();
+      preloader.referrerPolicy = 'no-referrer';
+      preloader.decoding = 'async';
+      preloader.onload = ()=>{
+        publicidadSorteosImagenLista = true;
+        publicidadSorteosImagenCargando = false;
+        publicidadSorteosImgEl.src = urlLimpia;
+        resolve(true);
+      };
+      preloader.onerror = ()=>{
+        publicidadSorteosImagenLista = false;
+        publicidadSorteosImagenCargando = false;
+        publicidadSorteosImgEl.removeAttribute('src');
+        resolve(false);
+      };
+      preloader.src = urlLimpia;
+    });
   }
 
   async function obtenerLinkPublicidadSorteos(){
@@ -4306,6 +4353,9 @@
           const enlace = (data.linkPublicidadSorteos ?? data.linkpublicidadsorteos ?? data.linkPublicidad ?? '').toString().trim();
           if(enlace){
             publicidadSorteosLinkValor = enlace;
+            publicidadSorteosImagenLista = await cargarPublicidadSorteosImagen(enlace);
+          }else{
+            publicidadSorteosImagenLista = false;
           }
         }
       }catch(error){
