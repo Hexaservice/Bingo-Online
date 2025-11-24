@@ -1285,7 +1285,7 @@
           justify-content: center;
           gap: clamp(8px, 1.8vw, 14px);
           width: 100%;
-          max-width: min(92%, 820px);
+          max-width: 100%;
       }
       .contador-flotante {
           display: flex;
@@ -1293,8 +1293,8 @@
           align-items: center;
           justify-content: center;
           gap: clamp(2px, 0.8vw, 10px);
-          padding: clamp(8px, 1.6vw, 18px);
-          width: min(100%, 800px);
+          padding: 3px;
+          width: 100%;
           background: rgba(0, 0, 0, 0.32);
           border-radius: clamp(10px, 2vw, 18px);
           backdrop-filter: blur(2px);
@@ -4266,15 +4266,12 @@
     const estadoSellado = (entrada.estado || '').toString().toLowerCase() === 'sellado';
     const diasTexto = formatearDosDigitos(partes.dias);
     const bloquesTiempo = [];
-    if(partes.horas > 0){
-      bloquesTiempo.push(formatearDosDigitos(partes.horas));
-    }
-    if(partes.minutos > 0){
-      bloquesTiempo.push(formatearDosDigitos(partes.minutos));
-    }
-    if(partes.segundos > 0){
-      bloquesTiempo.push(formatearDosDigitos(partes.segundos));
-    }
+    const unidades = [partes.horas, partes.minutos, partes.segundos];
+    const inicio = unidades.findIndex(valor => valor > 0);
+    const indiceInicio = inicio === -1 ? unidades.length - 1 : inicio;
+    unidades.slice(indiceInicio).forEach(valor => {
+      bloquesTiempo.push(formatearDosDigitos(valor));
+    });
 
     entrada.elemento.innerHTML = '';
 
