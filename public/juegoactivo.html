@@ -1263,7 +1263,9 @@
       }
       #contadores-sorteos-flotantes {
           position: absolute;
-          inset: clamp(4px, 1vw, 10px);
+          top: clamp(28px, 6vw, 52px);
+          left: clamp(4px, 1vw, 10px);
+          right: clamp(4px, 1vw, 10px);
           display: none;
           align-items: center;
           justify-content: center;
@@ -1283,7 +1285,7 @@
           justify-content: center;
           gap: clamp(8px, 1.8vw, 14px);
           width: 100%;
-          max-width: min(92%, 780px);
+          max-width: min(92%, 820px);
       }
       .contador-flotante {
           display: flex;
@@ -1292,7 +1294,7 @@
           justify-content: center;
           gap: clamp(2px, 0.8vw, 10px);
           padding: clamp(8px, 1.6vw, 18px);
-          width: min(100%, 760px);
+          width: min(100%, 800px);
           background: rgba(0, 0, 0, 0.32);
           border-radius: clamp(10px, 2vw, 18px);
           backdrop-filter: blur(2px);
@@ -1303,6 +1305,12 @@
           font-weight: 800;
           color: #ffffff;
           text-shadow: 0 0 6px rgba(0, 0, 0, 0.92), 0 0 14px rgba(0, 0, 0, 0.9);
+      }
+      .contador-flotante__nombre--diario {
+          color: #b7ffba;
+      }
+      .contador-flotante__nombre--especial {
+          color: #ffd1a1;
       }
       .contador-flotante__tiempo {
           font-size: clamp(1.5rem, 4.6vw, 3.1rem);
@@ -4255,13 +4263,28 @@
 
     const estadoSellado = (entrada.estado || '').toString().toLowerCase() === 'sellado';
     const diasTexto = formatearDosDigitos(partes.dias);
-    const horasTexto = `${formatearDosDigitos(partes.horas)}:${formatearDosDigitos(partes.minutos)}:${formatearDosDigitos(partes.segundos)}`;
+    const bloquesTiempo = [];
+    if(partes.horas > 0){
+      bloquesTiempo.push(formatearDosDigitos(partes.horas));
+    }
+    if(partes.minutos > 0){
+      bloquesTiempo.push(formatearDosDigitos(partes.minutos));
+    }
+    if(partes.segundos > 0){
+      bloquesTiempo.push(formatearDosDigitos(partes.segundos));
+    }
 
     entrada.elemento.innerHTML = '';
 
     const nombreEl = document.createElement('div');
     nombreEl.className = 'contador-flotante__nombre';
     nombreEl.textContent = entrada?.nombre || entrada.tipo || 'Sorteo';
+    const tipoEntrada = (entrada?.tipo || '').toString().toUpperCase();
+    if(tipoEntrada === 'DIARIO'){
+      nombreEl.classList.add('contador-flotante__nombre--diario');
+    } else if(tipoEntrada === 'ESPECIAL'){
+      nombreEl.classList.add('contador-flotante__nombre--especial');
+    }
     entrada.elemento.appendChild(nombreEl);
 
     const tiempoEl = document.createElement('div');
@@ -4269,13 +4292,18 @@
     if(estadoSellado){
       tiempoEl.classList.add('contador-flotante__tiempo--sellado');
     }
-    const diasSpan = document.createElement('span');
-    diasSpan.className = 'contador-flotante__dias';
-    diasSpan.textContent = `Días: ${diasTexto}`;
-    const horaSpan = document.createElement('span');
-    horaSpan.textContent = ` ${horasTexto}`;
-    tiempoEl.appendChild(diasSpan);
-    tiempoEl.appendChild(horaSpan);
+    if(partes.dias > 0){
+      const diasSpan = document.createElement('span');
+      diasSpan.className = 'contador-flotante__dias';
+      diasSpan.textContent = `Días: ${diasTexto}`;
+      tiempoEl.appendChild(diasSpan);
+    }
+
+    if(bloquesTiempo.length > 0){
+      const horaSpan = document.createElement('span');
+      horaSpan.textContent = bloquesTiempo.join(':');
+      tiempoEl.appendChild(horaSpan);
+    }
     entrada.elemento.appendChild(tiempoEl);
   }
 
