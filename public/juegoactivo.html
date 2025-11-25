@@ -1891,6 +1891,7 @@
           white-space: normal;
           width: auto;
           min-width: 0;
+          max-width: clamp(180px, calc(var(--panel-botones-col-min, 180px) + 32px), 260px);
       }
       #panel-botones-formas .carton-forma-accion {
           align-self: center;
@@ -1903,6 +1904,7 @@
           gap: 6px;
           overflow: hidden;
           min-width: 0;
+          max-width: clamp(150px, 42vw, 220px);
       }
       .carton-forma-etiqueta {
           color: #0c0c0c;
@@ -1915,8 +1917,10 @@
           position: relative;
           overflow: hidden;
           min-width: 0;
-          max-width: min(360px, 64vw);
+          max-width: none;
+          width: 100%;
           align-items: center;
+          flex: 1 1 auto;
       }
       .carton-forma-marquesina--activa {
           display: inline-flex;
@@ -1925,10 +1929,26 @@
           display: inline-block;
           white-space: nowrap;
           font-family: 'Poppins', sans-serif;
-          color: #00ff57;
-          text-shadow: 2px 2px 0 #000000;
+          color: var(--marquesina-alias-color, #1f1f1f);
+          text-shadow: none;
           animation: marquesinaGanadores var(--marquesina-duracion, 10s) linear infinite;
           padding-left: 10px;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+      }
+      .carton-forma-marquesina__etiqueta {
+          font-family: 'Bangers', cursive;
+          color: #000000;
+          text-shadow: none;
+          letter-spacing: 0.6px;
+      }
+      .carton-forma-marquesina__alias,
+      .carton-forma-marquesina__separador {
+          font-family: 'Poppins', sans-serif;
+          color: var(--marquesina-alias-color, #1f1f1f);
+          text-shadow: none;
+          font-weight: 600;
       }
       .carton-forma-accion .carton-forma-contador {
           font-size: calc(0.9em * var(--panel-botones-escala-limitada, 1));
@@ -1941,7 +1961,7 @@
           min-width: calc(1.8em * var(--panel-botones-escala-limitada, 1));
       }
       .carton-forma-accion.con-ganadores {
-          animation: none;
+          animation: botonGanadoresResaltar 2.8s ease-in-out infinite;
       }
       .carton-forma-accion.con-ganadores .carton-forma-contador {
           animation: contadorPulse 0.9s ease-in-out infinite;
@@ -3211,6 +3231,12 @@
       @keyframes marquesinaGanadores {
           0% { transform: translateX(0); }
           100% { transform: translateX(-100%); }
+      }
+      @keyframes botonGanadoresResaltar {
+          0% { box-shadow: 0 4px 10px rgba(0,0,0,0.18); transform: translateY(0); }
+          35% { box-shadow: 0 8px 16px rgba(0,0,0,0.26); transform: translateY(-1px) scale(1.02); }
+          70% { box-shadow: 0 4px 10px rgba(0,0,0,0.18); transform: translateY(0); }
+          100% { box-shadow: 0 4px 10px rgba(0,0,0,0.18); transform: translateY(0); }
       }
       @keyframes formaTemporalFade {
           0% { opacity: 0.95; }
@@ -5870,12 +5896,41 @@
     const marquesina=textoBoton?.querySelector('.carton-forma-marquesina');
     const contenido=textoBoton?.querySelector('.carton-forma-marquesina__contenido');
     if(!textoBoton || !etiqueta || !marquesina || !contenido) return;
+    const colorForma=boton.style.getPropertyValue('--forma-color') || obtenerColorParaForma(idxNumero);
+    const colorAlias=obtenerColorOscurecido(colorForma,0.55);
+    boton.style.setProperty('--marquesina-alias-color', colorAlias);
     const hayGanadores=totalGanadores>0 && Array.isArray(aliases) && aliases.length>0;
     if(hayGanadores){
-      const textoBase=`GANADORES F${idxNumero}: ${aliases.join(' - ')}`;
-      const repeticion=`${textoBase} • ${textoBase}`;
-      contenido.textContent=repeticion;
-      const duracion=Math.max(6, Math.min(14, Math.round(repeticion.length/7)));
+      contenido.innerHTML='';
+      const construirSecuencia=()=>{
+        const fragmento=document.createDocumentFragment();
+        const etiquetaSpan=document.createElement('span');
+        etiquetaSpan.className='carton-forma-marquesina__etiqueta';
+        etiquetaSpan.textContent=`GANADORES F${idxNumero}:`;
+        fragmento.appendChild(etiquetaSpan);
+        aliases.forEach((alias, indice)=>{
+          const aliasSpan=document.createElement('span');
+          aliasSpan.className='carton-forma-marquesina__alias';
+          aliasSpan.textContent=alias;
+          fragmento.appendChild(aliasSpan);
+          if(indice<aliases.length-1){
+            const separador=document.createElement('span');
+            separador.className='carton-forma-marquesina__separador';
+            separador.textContent=' - ';
+            fragmento.appendChild(separador);
+          }
+        });
+        return fragmento;
+      };
+      // Duplicar la secuencia para un desplazamiento continuo
+      contenido.appendChild(construirSecuencia());
+      const separadorCiclo=document.createElement('span');
+      separadorCiclo.className='carton-forma-marquesina__separador';
+      separadorCiclo.textContent=' • ';
+      contenido.appendChild(separadorCiclo);
+      contenido.appendChild(construirSecuencia());
+      const textoTotal=[`GANADORES F${idxNumero}:`, ...aliases].join(' - ');
+      const duracion=Math.max(8, Math.min(16, Math.round(textoTotal.length/4)));
       marquesina.style.setProperty('--marquesina-duracion', `${duracion}s`);
     }else{
       contenido.textContent='';
