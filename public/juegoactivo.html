@@ -4222,6 +4222,8 @@
   let liveStreamIconInterval = null;
   let liveStreamMostrarTexto = true;
   const LIVE_ICON_INTERVAL_MS = 3000;
+  let ventanaEnFoco = document.visibilityState === 'visible' && document.hasFocus();
+  let cantosRecientesSinAnimacion = false;
 
   let cartonSeleccionadoId = null;
   const animacionesCartones = new Map();
@@ -4292,6 +4294,21 @@
   let publicidadSorteosIndiceActual = 0;
   let publicidadSorteosIntervalo = null;
   const PUBLICIDAD_SORTEOS_DURACION_MS = 6000;
+
+  function obtenerEstadoVentanaActiva(){
+    return document.visibilityState === 'visible' && document.hasFocus();
+  }
+
+  function manejarCambioVisibilidadVentana(){
+    ventanaEnFoco = obtenerEstadoVentanaActiva();
+    if(ventanaEnFoco){
+      cantosRecientesSinAnimacion = false;
+    }
+  }
+
+  function manejarPerdidaFocoVentana(){
+    ventanaEnFoco = false;
+  }
 
   function mostrarModalWhatsapp(mensaje){
     if(!whatsappModalEl) return;
@@ -6849,7 +6866,7 @@
     conductoActualizacionProgramada=false;
   }
 
-  function actualizarConductoEsferas(nuevosCantos=[], forzar=false){
+  function actualizarConductoEsferas(nuevosCantos=[], forzar=false, permitirAnimacion=true){
     if(!cantosConductoEl || !cantosConductoGridEl) return;
     crearConductoTabla();
     const numerosActivos=new Set(cantosOrdenados);
@@ -6892,7 +6909,7 @@
       actualizarAspectoSphere(sphere, numero);
     });
     conductoSyncPendiente=true;
-    if(vistaConductoActiva && !forzar && nuevosSet.size){
+    if(vistaConductoActiva && permitirAnimacion && !forzar && nuevosSet.size){
       nuevosSet.forEach(numero=>{
         if(conductoSpheresMap.has(numero)){
           programarAnimacionIngresoConducto(numero);
@@ -6900,7 +6917,7 @@
       });
     }
     if(vistaConductoActiva){
-      requestAnimationFrame(()=>actualizarPosicionesConducto(true));
+      requestAnimationFrame(()=>actualizarPosicionesConducto(permitirAnimacion));
     }
   }
 
@@ -9253,6 +9270,10 @@
     }
   });
 
+  document.addEventListener('visibilitychange', manejarCambioVisibilidadVentana);
+  window.addEventListener('focus', manejarCambioVisibilidadVentana);
+  window.addEventListener('blur', manejarPerdidaFocoVentana);
+
   actualizarSinSorteoUI();
   document.addEventListener('keydown',evento=>{
     if(evento.key!=='Escape') return;
@@ -9660,10 +9681,14 @@
     cantosEtiquetas=etiquetas;
     actualizarMensajeAvisoComplementarios(cantosOrdenados.length);
     const nuevosCantos=normalizados.filter(num=>!cantosPrevios.has(num));
+    if(!ventanaEnFoco && nuevosCantos.length){
+      cantosRecientesSinAnimacion=true;
+    }
+    const permitirAnimacionConducto=ventanaEnFoco && !cantosRecientesSinAnimacion;
     calcularGanadores();
     actualizarMapaColoresConducto();
     renderCantos();
-    actualizarConductoEsferas(nuevosCantos, cantosPrevios.size===0);
+    actualizarConductoEsferas(nuevosCantos, cantosPrevios.size===0, permitirAnimacionConducto);
     if(nuevosPenalizados.length){
       resaltarCeldasPenalizadasTemporalmente(nuevosPenalizados);
     }
