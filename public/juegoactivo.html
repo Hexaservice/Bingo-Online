@@ -4354,6 +4354,8 @@
     const proximos = { ESPECIAL: null, DIARIO: null };
     const ahora = typeof obtenerEpochActual === 'function' ? obtenerEpochActual() : Date.now();
     lista.forEach(item => {
+      const estado = (item?.estado || '').toString().toLowerCase();
+      if(estado !== 'activo') return;
       const tipo = normalizarTipoSorteo(item?.tipo);
       if(tipo !== 'ESPECIAL' && tipo !== 'DIARIO') return;
       const objetivo = construirFechaObjetivoSorteo(item);
@@ -4712,7 +4714,7 @@
 
     try {
       contadoresFlotantesUnsubscribe = db.collection('sorteos')
-        .where('estado', 'in', ['Activo', 'Sellado'])
+        .where('estado', '==', 'Activo')
         .onSnapshot(snapshot => {
           if(!snapshot){
             limpiarContadoresFlotantes();
