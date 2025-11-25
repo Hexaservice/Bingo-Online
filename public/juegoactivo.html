@@ -4353,19 +4353,26 @@
   function seleccionarSorteosProximos(lista){
     const proximos = { ESPECIAL: null, DIARIO: null };
     const ahora = typeof obtenerEpochActual === 'function' ? obtenerEpochActual() : Date.now();
+
     lista.forEach(item => {
-      const estado = (item?.estado || '').toString().toLowerCase();
+      const estado = (item?.estado || '').toString().toLowerCase().trim();
       if(estado !== 'activo') return;
+
       const tipo = normalizarTipoSorteo(item?.tipo);
       if(tipo !== 'ESPECIAL' && tipo !== 'DIARIO') return;
+
       const objetivo = construirFechaObjetivoSorteo(item);
       if(!objetivo || objetivo <= ahora) return;
+
       const actual = proximos[tipo];
       if(!actual || objetivo < actual.objetivo){
         proximos[tipo] = { ...item, tipo, objetivo };
       }
     });
-    return Object.values(proximos).filter(Boolean);
+
+    return Object.values(proximos)
+      .filter(Boolean)
+      .sort((a,b)=>a.objetivo - b.objetivo);
   }
 
   function construirPartesTiempo(restanteMs){
