@@ -1900,6 +1900,35 @@
           align-items: center;
           justify-content: center;
           line-height: 1.1;
+          gap: 6px;
+          overflow: hidden;
+          min-width: 0;
+      }
+      .carton-forma-etiqueta {
+          color: #0c0c0c;
+      }
+      .carton-forma-etiqueta--oculta {
+          display: none;
+      }
+      .carton-forma-marquesina {
+          display: none;
+          position: relative;
+          overflow: hidden;
+          min-width: 0;
+          max-width: min(360px, 64vw);
+          align-items: center;
+      }
+      .carton-forma-marquesina--activa {
+          display: inline-flex;
+      }
+      .carton-forma-marquesina__contenido {
+          display: inline-block;
+          white-space: nowrap;
+          font-family: 'Poppins', sans-serif;
+          color: #00ff57;
+          text-shadow: 2px 2px 0 #000000;
+          animation: marquesinaGanadores var(--marquesina-duracion, 10s) linear infinite;
+          padding-left: 10px;
       }
       .carton-forma-accion .carton-forma-contador {
           font-size: calc(0.9em * var(--panel-botones-escala-limitada, 1));
@@ -1912,7 +1941,10 @@
           min-width: calc(1.8em * var(--panel-botones-escala-limitada, 1));
       }
       .carton-forma-accion.con-ganadores {
-          animation: zoomPulse 1.8s ease-in-out infinite;
+          animation: none;
+      }
+      .carton-forma-accion.con-ganadores .carton-forma-contador {
+          animation: contadorPulse 0.9s ease-in-out infinite;
       }
       .carton-forma-accion:hover,
       .carton-forma-accion:focus-visible {
@@ -3170,6 +3202,15 @@
           0% { transform: scale(1); }
           48% { transform: scale(1.24); }
           100% { transform: scale(1); }
+      }
+      @keyframes contadorPulse {
+          0% { transform: scale(1); }
+          45% { transform: scale(1.38); }
+          100% { transform: scale(1); }
+      }
+      @keyframes marquesinaGanadores {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-100%); }
       }
       @keyframes formaTemporalFade {
           0% { opacity: 0.95; }
@@ -5799,6 +5840,52 @@
     return 0;
   }
 
+  function obtenerAliasGanadoresForma(forma){
+    const idx=Number(forma?.idx ?? forma);
+    if(!Number.isInteger(idx) || !(cartonesGanadoresPorForma instanceof Map)) return [];
+    const registro=cartonesGanadoresPorForma.get(idx);
+    const cartones=Array.isArray(registro?.cartones)?registro.cartones:[];
+    const aliasLista=cartones
+      .map(carton=>{
+        const alias=(carton.alias || carton.nombre || '').toString().trim();
+        const numero=(carton.cartonNum ?? carton.Ncarton ?? carton.numero ?? carton.numeroCarton ?? '').toString().trim();
+        if(alias) return alias;
+        if(numero) return `Cartón #${numero.padStart(4,'0')}`;
+        return '';
+      })
+      .filter(Boolean);
+    const unicos=[];
+    aliasLista.forEach(alias=>{
+      if(!unicos.includes(alias)){
+        unicos.push(alias);
+      }
+    });
+    return unicos;
+  }
+
+  function configurarTextoBotonGanadores({boton, totalGanadores, aliases, idxNumero}){
+    if(!boton) return;
+    const textoBoton=boton.querySelector('.carton-forma-texto');
+    const etiqueta=textoBoton?.querySelector('.carton-forma-etiqueta');
+    const marquesina=textoBoton?.querySelector('.carton-forma-marquesina');
+    const contenido=textoBoton?.querySelector('.carton-forma-marquesina__contenido');
+    if(!textoBoton || !etiqueta || !marquesina || !contenido) return;
+    const hayGanadores=totalGanadores>0 && Array.isArray(aliases) && aliases.length>0;
+    if(hayGanadores){
+      const textoBase=`GANADORES F${idxNumero}: ${aliases.join(' - ')}`;
+      const repeticion=`${textoBase} • ${textoBase}`;
+      contenido.textContent=repeticion;
+      const duracion=Math.max(6, Math.min(14, Math.round(repeticion.length/7)));
+      marquesina.style.setProperty('--marquesina-duracion', `${duracion}s`);
+    }else{
+      contenido.textContent='';
+      marquesina.style.removeProperty('--marquesina-duracion');
+    }
+    etiqueta.classList.toggle('carton-forma-etiqueta--oculta', hayGanadores);
+    marquesina.classList.toggle('carton-forma-marquesina--activa', hayGanadores);
+    boton.classList.toggle('carton-forma-accion--marquesina-activa', hayGanadores);
+  }
+
   function crearBotonGanadoresForma(forma, totalGanadoresAlterno){
     const idxNumero=Number(forma?.idx ?? forma);
     if(!Number.isInteger(idxNumero) || idxNumero<=0){
@@ -5812,7 +5899,16 @@
     boton.dataset.formaIdx=String(idxNumero).padStart(2,'0');
     const textoBoton=document.createElement('span');
     textoBoton.className='carton-forma-texto';
-    textoBoton.textContent=`GANADORES F${idxNumero}`;
+    const textoEtiqueta=document.createElement('span');
+    textoEtiqueta.className='carton-forma-etiqueta';
+    textoEtiqueta.textContent=`GANADORES F${idxNumero}`;
+    const marquesina=document.createElement('span');
+    marquesina.className='carton-forma-marquesina';
+    const marquesinaContenido=document.createElement('span');
+    marquesinaContenido.className='carton-forma-marquesina__contenido';
+    marquesina.appendChild(marquesinaContenido);
+    textoBoton.appendChild(textoEtiqueta);
+    textoBoton.appendChild(marquesina);
     const contadorBoton=document.createElement('span');
     contadorBoton.className='carton-forma-contador';
     contadorBoton.textContent=String(totalGanadores);
@@ -5831,6 +5927,13 @@
     boton.setAttribute('aria-label',`Ver cartones ganadores de la forma ${String(idxNumero).padStart(2,'0')}${referenciaNombre}, ${descripcionGanadores}`);
     const tituloBase=nombre?`Ganadores ${nombre}`:`Ganadores Forma ${String(idxNumero).padStart(2,'0')}`;
     boton.title=`${tituloBase} (${descripcionGanadores})`;
+    const aliasGanadores=obtenerAliasGanadoresForma(formaReferencia);
+    configurarTextoBotonGanadores({
+      boton,
+      totalGanadores,
+      aliases:aliasGanadores,
+      idxNumero
+    });
     boton.addEventListener('click',evento=>{
       evento.stopPropagation();
       abrirModalGanadores(formaReferencia);
