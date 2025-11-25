@@ -614,7 +614,7 @@
     .mini-num{color:purple;}
     .mini-carton-wrapper{background:linear-gradient(green,yellow);padding:3px;border-radius:10px;box-shadow:0 0 5px rgba(0,0,0,0.5);}
     .mini-carton{border-collapse:separate;border-spacing:0;background:linear-gradient(#ffffff,#cccccc);border-radius:8px;}
-    .mini-carton th,.mini-carton td{border:1px solid gray;width:20px;height:20px;text-align:center;font-weight:bold;font-size:0.6rem;aspect-ratio:1/1;}
+    .mini-carton th,.mini-carton td{border:1px solid gray;width:20px;height:20px;text-align:center;font-weight:bold;font-size:0.85rem;line-height:1.05;padding:0;vertical-align:middle;aspect-ratio:1/1;}
     .mini-carton th{font-size:0.8rem;color:#ff6600;background:radial-gradient(circle,#ffffff,#ffffff 60%,#00aa00);text-shadow:1px 1px 0 #000;}
     .mini-carton-wrapper.gratis{background:linear-gradient(#0000ff,yellow);}
     .mini-carton-wrapper.gratis .mini-carton th{background:radial-gradient(circle,#ffffff,#ffffff 60%,#0000ff);}
@@ -2697,6 +2697,21 @@ function toggleForma(idx){
       const r=parseInt(td.dataset.row);const c=parseInt(td.dataset.col);
       if(!(r===2&&c===2)) posiciones.push({r,c,valor:td.dataset.value||''});
     });
+    await cargarCartonesGuardados();
+    const firmaActual=generarFirmaPosiciones(posiciones);
+    const cartonDuplicadoGuardado=Object.values(cartonesGuardados||{}).some(data=>{
+      const firmaGuardado=generarFirmaPosiciones(data.posiciones||[]);
+      return firmaGuardado===firmaActual;
+    });
+    if(cartonDuplicadoGuardado){
+      mostrarModalCarton({
+        caseType:'error',
+        message:'Ya tienes un cartón guardado con esas mismas jugadas, para poder guardarlo debes cambiar alguna de las jugadas',
+        showCancel:false,
+        acceptLabel:'Aceptar'
+      });
+      return;
+    }
     await db.collection('CartonGuardado').add({userId:user.uid,alias,nombre,posiciones});
     await cargarCartonesGuardados();
     alert('Cartón guardado');
