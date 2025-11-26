@@ -3861,66 +3861,112 @@
       }
       @media (min-width: 1200px) {
           main {
-              max-width: min(100%, 980px);
+              max-width: min(100%, 1080px);
               padding-left: clamp(12px, 2.4vw, 26px);
               padding-right: clamp(12px, 2.4vw, 26px);
           }
+          #panel-superior {
+              grid-template-columns: minmax(calc(var(--canto-cell-size) * 5 + clamp(6px, 1.2vw, 18px) * 2), clamp(420px, 52vw, 680px)) minmax(var(--panel-columna-derecha-min, clamp(320px, 32vw, 640px)), clamp(420px, 44vw, 720px));
+          }
       }
-        @media (orientation: landscape) and (max-width: 900px) {
-            :root {
-                --canto-size: clamp(24px, 7vw, 34px);
-                --mini-cell-size: clamp(18px, 4.8vw, 22px);
-            }
-            main {
-                padding-top: 46px;
-            }
-            #panel-superior {
-                column-gap: clamp(4px, 1.4vw, 12px);
-                row-gap: clamp(6px, 1.2vw, 12px);
-                grid-template-columns: minmax(calc(var(--canto-cell-size) * 5 + clamp(6px, 1.6vw, 16px) * 2), 1fr) minmax(var(--panel-columna-derecha-min, clamp(220px, 44vw, 520px)), clamp(320px, 58vw, 560px));
-                grid-template-areas:
-                    "cantos carton"
-                    "mensaje carton";
-            }
-            #panel-columna-derecha {
-                margin-left: 0;
-            }
-            #carton-destacado {
-                --carton-contenido-ancho: clamp(320px, 90vw, 520px);
-                --carton-contenido-alto: clamp(320px, 78vh, 420px);
-                --carton-principal-padding: clamp(4px, 1vw, 8px);
-                margin-inline: auto;
-            }
-            #carton-destacado .carton-wrapper {
-                --carton-wrapper-altura: var(--carton-contenido-alto);
-            }
-            #carton-destacado .carton-front,
-            #carton-destacado .carton-back {
-                border-radius: clamp(10px, 3vw, 16px);
-            }
-            #carton-destacado .carton-front {
-                justify-content: center;
-                padding: clamp(4px, 1vw, 8px);
-            }
-            #carton-destacado .carton-front .carton-visual {
-                justify-content: center;
-                padding: clamp(4px, 1vw, 8px);
-                gap: clamp(0px, 0.6vw, 4px);
-            }
-            #carton-destacado .carton-tabla--principal thead th {
-                font-size: calc(var(--principal-cell-size, var(--cell-size)) * 0.78);
-            }
-            #carton-destacado .carton-tabla--principal tbody td {
-                font-size: calc(var(--principal-cell-size, var(--cell-size)) * 0.62);
-            }
-            #mis-cartones-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-                gap: 8px;
-            }
-            #carton-destacado {
-                --destacado-cell-size: clamp(40px, 10.4vw, 100px);
-            }
-        }
+      @media (orientation: landscape) and (max-width: 900px) {
+          :root {
+              --canto-size: clamp(24px, 7vw, 34px);
+              --mini-cell-size: clamp(18px, 4.8vw, 22px);
+          }
+          main {
+              padding-top: 52px;
+              max-width: min(100%, 1080px);
+          }
+          #panel-superior {
+              column-gap: clamp(6px, 1.6vw, 14px);
+              row-gap: clamp(8px, 1.6vw, 14px);
+              grid-template-columns: 1fr;
+              grid-template-areas:
+                  "cantos"
+                  "carton"
+                  "mensaje";
+              align-content: start;
+              justify-items: stretch;
+              padding-inline: clamp(8px, 2vw, 16px);
+          }
+          #panel-columna-derecha {
+              margin-left: 0;
+              grid-area: carton;
+              width: 100%;
+              max-width: min(100%, 820px);
+              justify-self: center;
+              padding-inline: clamp(10px, 2.4vw, 18px);
+          }
+          #panel-columna-derecha .panel-columna-derecha__rejilla {
+              width: 100%;
+          }
+          #panel-columna-derecha .panel-columna-derecha__modales {
+              display: flex;
+              justify-content: center;
+          }
+          #carton-destacado {
+              --carton-contenido-ancho: clamp(340px, 88vw, 560px);
+              --carton-contenido-alto: clamp(320px, 78vh, 440px);
+              --carton-principal-padding: clamp(6px, 1.2vw, 10px);
+              margin-inline: auto;
+              width: 100%;
+              max-width: var(--carton-contenido-ancho);
+          }
+          #carton-destacado .carton-wrapper {
+              --carton-wrapper-altura: var(--carton-contenido-alto);
+          }
+          #carton-destacado .carton-front,
+          #carton-destacado .carton-back {
+              border-radius: clamp(10px, 3vw, 16px);
+          }
+          #carton-destacado .carton-front {
+              justify-content: center;
+              padding: clamp(4px, 1vw, 8px);
+          }
+          #carton-destacado .carton-front .carton-visual {
+              justify-content: center;
+              padding: clamp(4px, 1vw, 8px);
+              gap: clamp(0px, 0.6vw, 4px);
+          }
+          #carton-destacado .carton-tabla--principal thead th {
+              font-size: calc(var(--principal-cell-size, var(--cell-size)) * 0.78);
+          }
+          #carton-destacado .carton-tabla--principal tbody td {
+              font-size: calc(var(--principal-cell-size, var(--cell-size)) * 0.62);
+          }
+          #cantos-panel {
+              grid-area: cantos;
+              width: 100%;
+              max-width: min(100%, 780px);
+              justify-self: center;
+          }
+          #cantos-conducto-grid {
+              margin-inline: auto;
+              width: 100%;
+          }
+          #mis-cartones-grid {
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+              gap: 8px;
+          }
+          #carton-destacado {
+              --destacado-cell-size: clamp(40px, 10.4vw, 100px);
+          }
+          #formas-mensaje {
+              grid-area: mensaje;
+              width: 100%;
+              max-width: min(100%, 820px);
+              justify-self: center;
+              padding: clamp(10px, 2vw, 16px);
+              box-sizing: border-box;
+          }
+          #panel-botones-formas {
+              width: 100%;
+              max-width: min(100%, 820px);
+              justify-content: center;
+              align-items: stretch;
+          }
+      }
         @media (min-width: 900px) and (orientation: landscape) {
             #panel-superior {
                 column-gap: clamp(6px, 1.4vw, 18px);
