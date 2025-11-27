@@ -6056,6 +6056,24 @@
     return unicos;
   }
 
+  function obtenerFormasGanadasPorUsuarioActual(){
+    const formasUsuario=new Set();
+    if(!usuarioActual || !(cartonesSorteo instanceof Map) || !(formasPorCarton instanceof Map)){
+      return formasUsuario;
+    }
+    formasPorCarton.forEach((lista, cartonId)=>{
+      const carton=cartonesSorteo.get(cartonId);
+      if(!carton || carton.userId!==usuarioActual.uid || !Array.isArray(lista)) return;
+      lista.forEach(item=>{
+        const idx=Number(item?.forma?.idx ?? item?.idx);
+        if(Number.isInteger(idx)){
+          formasUsuario.add(idx);
+        }
+      });
+    });
+    return formasUsuario;
+  }
+
   function configurarTextoBotonGanadores({boton, totalGanadores, aliases, idxNumero}){
     if(!boton) return;
     const textoBoton=boton.querySelector('.carton-forma-texto');
@@ -6118,14 +6136,21 @@
       });
       return;
     }
+    const formasUsuario=obtenerFormasGanadasPorUsuarioActual();
     const indiceNormalizado=Number(formaActivaIdx);
     const indiceObjetivo=Number.isInteger(indiceNormalizado)?indiceNormalizado:null;
+    const activarSoloFormaUsuario=formasUsuario.size>0 && indiceObjetivo!==null && formasUsuario.has(indiceObjetivo);
     botones.forEach(boton=>{
       const contenido=boton.querySelector('.carton-forma-marquesina__contenido');
       if(!contenido) return;
+      if(!activarSoloFormaUsuario){
+        contenido.style.animationPlayState='';
+        return;
+      }
       const idxBoton=Number(boton.dataset.formaIdx);
-      const mantenerActivo=Number.isInteger(idxBoton) && idxBoton===indiceObjetivo;
-      const playState=indiceObjetivo===null?'' : (mantenerActivo?'running':'paused');
+      const esFormaActiva=Number.isInteger(idxBoton) && idxBoton===indiceObjetivo;
+      const esFormaJugador=formasUsuario.has(idxBoton);
+      const playState=esFormaActiva && esFormaJugador ? 'running' : 'paused';
       contenido.style.animationPlayState=playState;
     });
   }
