@@ -6118,14 +6118,14 @@
       });
       return;
     }
-    const indiceObjetivo=Number(formaActivaIdx);
-    const idxValido=Number.isInteger(indiceObjetivo);
+    const indiceNormalizado=Number(formaActivaIdx);
+    const indiceObjetivo=Number.isInteger(indiceNormalizado)?indiceNormalizado:null;
     botones.forEach(boton=>{
       const contenido=boton.querySelector('.carton-forma-marquesina__contenido');
       if(!contenido) return;
       const idxBoton=Number(boton.dataset.formaIdx);
-      const mantenerActivo=idxValido && Number.isInteger(idxBoton) && idxBoton===indiceObjetivo;
-      const playState=formaActivaIdx===null?'' : (mantenerActivo?'running':'paused');
+      const mantenerActivo=Number.isInteger(idxBoton) && idxBoton===indiceObjetivo;
+      const playState=indiceObjetivo===null?'' : (mantenerActivo?'running':'paused');
       contenido.style.animationPlayState=playState;
     });
   }
