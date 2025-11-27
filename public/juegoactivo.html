@@ -6130,6 +6130,11 @@
     });
   }
 
+  function sincronizarMarquesinasConFormaActiva(formaActivaIdx){
+    const idxValido = Number.isInteger(formaActivaIdx) ? formaActivaIdx : null;
+    controlarMarquesinasDuranteCelebracion(idxValido);
+  }
+
   function crearBotonGanadoresForma(forma, totalGanadoresAlterno){
     const idxNumero=Number(forma?.idx ?? forma);
     if(!Number.isInteger(idxNumero) || idxNumero<=0){
@@ -7916,6 +7921,7 @@
       soloBorde:true,
       bordeOscuro:true
     });
+    sincronizarMarquesinasConFormaActiva(idx);
   }
 
   function limpiarFormaDestacada(){
@@ -7929,6 +7935,7 @@
     aplicarResumenCarton(cartonPrincipalInfo.info);
     evitarReaplicarFormaDestacada=false;
     actualizarEncabezadoForma(cartonPrincipalInfo.info,null);
+    sincronizarMarquesinasConFormaActiva(null);
   }
 
   function toggleFormaDestacada(indice){
@@ -7986,10 +7993,10 @@
       const actual=secuencias[indice];
       const duracion=actual.tipo==='forma'?3000:3000;
       if(actual.tipo==='forma'){
-        controlarMarquesinasDuranteCelebracion(actual?.data?.indice ?? null);
+        sincronizarMarquesinasConFormaActiva(actual?.data?.indice ?? null);
         tablasInfo.forEach(info=>aplicarFormaCarton(info,actual.data));
       }else{
-        controlarMarquesinasDuranteCelebracion(null);
+        sincronizarMarquesinasConFormaActiva(null);
         tablasInfo.forEach(aplicarResumenCarton);
       }
       registro.timer=setTimeout(()=>{
