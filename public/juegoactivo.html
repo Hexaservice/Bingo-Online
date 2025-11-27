@@ -6074,6 +6074,24 @@
     return formasUsuario;
   }
 
+  function obtenerFormasGanadasEnCartonDestacado(){
+    const formasDestacadas=new Set();
+    if(!cartonPrincipalInfo || !(cartonesSorteo instanceof Map)) return formasDestacadas;
+    const {cartonId}=cartonPrincipalInfo;
+    if(!cartonId) return formasDestacadas;
+    const mapaFormas=obtenerFormasPorCartonActivo();
+    if(!(mapaFormas instanceof Map)) return formasDestacadas;
+    const lista=mapaFormas.get(cartonId) || [];
+    if(!Array.isArray(lista)) return formasDestacadas;
+    lista.forEach(item=>{
+      const idx=Number(item?.forma?.idx ?? item?.idx);
+      if(Number.isInteger(idx)){
+        formasDestacadas.add(idx);
+      }
+    });
+    return formasDestacadas;
+  }
+
   function configurarTextoBotonGanadores({boton, totalGanadores, aliases, idxNumero}){
     if(!boton) return;
     const textoBoton=boton.querySelector('.carton-forma-texto');
@@ -6136,7 +6154,7 @@
       });
       return;
     }
-    const formasUsuario=obtenerFormasGanadasPorUsuarioActual();
+    const formasUsuario=obtenerFormasGanadasEnCartonDestacado();
     const indiceNormalizado=Number(formaActivaIdx);
     const indiceObjetivo=Number.isInteger(indiceNormalizado)?indiceNormalizado:null;
     const activarSoloFormaUsuario=formasUsuario.size>0 && indiceObjetivo!==null && formasUsuario.has(indiceObjetivo);
