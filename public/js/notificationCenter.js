@@ -16,15 +16,25 @@
       etiqueta: 'Colaborador',
       items: [
         { clave: 'depositosPendientes', titulo: 'Notificación Depósitos Pendientes', descripcion: 'Se repite cada 10 minutos si hay depósitos por gestionar.' },
-        { clave: 'retirosPendientes', titulo: 'Notificación Retiros Pendientes', descripcion: 'Se repite cada 10 minutos si hay retiros por gestionar.' }
+        { clave: 'retirosPendientes', titulo: 'Notificación Retiros Pendientes', descripcion: 'Se repite cada 10 minutos si hay retiros por gestionar.' },
+        { clave: 'mensajeDepositoAprobado', titulo: 'Redacción de mensajes DEPÓSITO APROBADO', descripcion: 'Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Depósito', color: '#0b6b27' },
+        { clave: 'mensajeRetiroAprobado', titulo: 'Redacción de mensajes RETIRO APROBADO', descripcion: 'Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Retiro', color: '#8b0000' },
+        { clave: 'mensajeDepositoAnulado', titulo: 'Redacción de mensajes DEPÓSITO ANULADO', descripcion: 'Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Depósito Anulado', color: '#d32f2f' },
+        { clave: 'mensajeRetiroAnulado', titulo: 'Redacción de mensajes RETIRO ANULADO', descripcion: 'Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Retiro Anulado', color: '#d32f2f' }
       ]
     },
     Administrador: {
       etiqueta: 'Administrador',
       items: [
+        { clave: 'depositosPendientes', titulo: 'Notificación Depósitos Pendientes', descripcion: 'Se repite cada 10 minutos si hay depósitos por gestionar.' },
+        { clave: 'retirosPendientes', titulo: 'Notificación Retiros Pendientes', descripcion: 'Se repite cada 10 minutos si hay retiros por gestionar.' },
         { clave: 'selladoSorteo', titulo: 'Notificación Sellado Sorteo', descripcion: 'Cuando llega la hora de sellado de un sorteo.' },
         { clave: 'juegoEnVivoSorteo', titulo: 'Notificación Juego en vivo Sorteo', descripcion: 'Cuando llega la hora de inicio de un sorteo.' },
-        { clave: 'gestionPagos', titulo: 'Notificación Gestión Pagos', descripcion: 'Recordatorio cada 10 minutos si hay gestiones de pagos pendientes.' }
+        { clave: 'gestionPagos', titulo: 'Notificación Gestión Pagos', descripcion: 'Aviso único si hay gestiones de pagos pendientes.' },
+        { clave: 'mensajeDepositoAprobado', titulo: 'Redacción de mensajes DEPÓSITO APROBADO', descripcion: 'Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Depósito', color: '#0b6b27' },
+        { clave: 'mensajeRetiroAprobado', titulo: 'Redacción de mensajes RETIRO APROBADO', descripcion: 'Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Retiro', color: '#8b0000' },
+        { clave: 'mensajeDepositoAnulado', titulo: 'Redacción de mensajes DEPÓSITO ANULADO', descripcion: 'Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Depósito Anulado', color: '#d32f2f' },
+        { clave: 'mensajeRetiroAnulado', titulo: 'Redacción de mensajes RETIRO ANULADO', descripcion: 'Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Retiro Anulado', color: '#d32f2f' }
       ]
     }
   };
@@ -72,6 +82,7 @@
     }
     if(role === 'Administrador'){
       GRUPOS_NOTIFICACIONES.Administrador.items.forEach(item => claves.add(item.clave));
+      GRUPOS_NOTIFICACIONES.Colaborador.items.forEach(item => claves.add(item.clave));
       GRUPOS_NOTIFICACIONES.Jugador.items.forEach(item => claves.add(item.clave));
       return Array.from(claves);
     }
@@ -512,7 +523,7 @@
         return [GRUPOS_NOTIFICACIONES.Colaborador, GRUPOS_NOTIFICACIONES.Jugador].filter(Boolean);
       }
       if(role === 'Administrador'){
-        return [GRUPOS_NOTIFICACIONES.Administrador, GRUPOS_NOTIFICACIONES.Jugador].filter(Boolean);
+        return [GRUPOS_NOTIFICACIONES.Administrador, GRUPOS_NOTIFICACIONES.Colaborador, GRUPOS_NOTIFICACIONES.Jugador].filter(Boolean);
       }
       return [GRUPOS_NOTIFICACIONES.Jugador];
     }
@@ -521,7 +532,7 @@
       if(!this.usuario) return;
       const roles = new Set();
       roles.add('Jugador');
-      if(this.rol === 'Colaborador' || this.rol === 'Superadmin') roles.add('Colaborador');
+      if(this.rol === 'Colaborador' || this.rol === 'Superadmin' || this.rol === 'Administrador') roles.add('Colaborador');
       if(this.rol === 'Administrador' || this.rol === 'Superadmin') roles.add('Administrador');
       roles.forEach(role => this.iniciarRol(role));
     }
@@ -733,12 +744,12 @@
       const historial = this.config.historial[clave];
       if(!historial || typeof historial.ultimoEnvio !== 'number') return true;
       const ahora = Date.now();
-      if(esNuevo){
+      const ultimo = historial.ultimoEnvio || 0;
+      if(esNuevo && !ultimo){
         historial.ultimoEnvio = ahora;
         this.programarGuardadoHistorial();
         return true;
       }
-      const ultimo = historial.ultimoEnvio || 0;
       const intervalo = INTERVALOS_REPETICION[clave] || 600000;
       if(!ultimo || (ahora - ultimo) >= intervalo){
         historial.ultimoEnvio = ahora;
@@ -824,16 +835,20 @@
     gestionarPagosPendientes(){
       const total = (this.cache.resumenPagos.premios || 0) + (this.cache.resumenPagos.pagos || 0);
       this.cache.pendientes.gestionPagos = total;
+      const historial = this.config.historial.gestionPagos;
       if(total>0){
-        const generarMensaje = cantidad => cantidad>0 ? `Existen ${cantidad} gestión(es) de pago pendientes en Centro de Pagos.` : '';
-        const mensaje = generarMensaje(total);
-        const esNuevo = this.config.historial.gestionPagos.ultimoEnvio === 0;
-        this.notificarRepeticion('gestionPagos', mensaje, esNuevo);
-        this.configurarTemporizador('gestionPagos', cantidad => generarMensaje(cantidad));
+        const mensaje = total>0 ? `Existen ${total} gestión(es) de pago pendientes en Centro de Pagos.` : '';
+        if(historial && historial.ultimoEnvio === 0 && this.puedeNotificar('gestionPagos')){
+          historial.ultimoEnvio = Date.now();
+          this.programarGuardadoHistorial();
+          this.emitirNotificacion('gestionPagos', mensaje);
+        }
       }else{
         this.detenerTemporizador('gestionPagos');
-        this.config.historial.gestionPagos.ultimoEnvio = 0;
-        this.programarGuardadoHistorial();
+        if(historial){
+          historial.ultimoEnvio = 0;
+          this.programarGuardadoHistorial();
+        }
       }
     }
 

@@ -344,6 +344,7 @@ function setupSuperadminExit(buttonSelector = '#salir-super-btn', redirect = 'su
 }
 
 function ensureAuth(roleExpected){
+  const rolesEsperados = Array.isArray(roleExpected) ? roleExpected : (roleExpected ? [roleExpected] : []);
   initFirebase()
     .then(() => {
       auth.onAuthStateChanged(async user => {
@@ -360,7 +361,7 @@ function ensureAuth(roleExpected){
           window.location.href = 'registrarse.html';
           return;
         }
-        if(roleExpected && role !== roleExpected && role !== 'Superadmin'){
+        if(rolesEsperados.length && !rolesEsperados.includes(role) && role !== 'Superadmin'){
           redirectByRole(role);
           return;
         }

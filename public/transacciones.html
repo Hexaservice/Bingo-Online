@@ -177,6 +177,16 @@
     const datosRec = [];
     const datosRet = [];
     let unsubscribeTransacciones = null;
+    const MAPEO_PREFERENCIAS_WHATSAPP={
+      deposito:{
+        APROBADO:'mensajeDepositoAprobado',
+        ANULADO:'mensajeDepositoAnulado'
+      },
+      retiro:{
+        APROBADO:'mensajeRetiroAprobado',
+        ANULADO:'mensajeRetiroAnulado'
+      }
+    };
 
     function volverConFallback(){
       const role=(window.currentRole||'').trim();
@@ -644,6 +654,10 @@
     }
     async function notificarWhatsappTransacciones(lista,estadoFinal,nota){
       for(const transaccion of lista){
+        const permitir=await permitirRedaccionWhatsapp(transaccion,estadoFinal);
+        if(!permitir){
+          continue;
+        }
         const numero=await obtenerNumeroWhatsappDestino(transaccion.IDbilletera);
         if(!numero){
           console.warn('La transacción no tiene número de WhatsApp disponible',transaccion.IDbilletera);
@@ -655,6 +669,23 @@
           window.open(enlace,'_blank');
         }
       }
+    }
+
+    async function permitirRedaccionWhatsapp(transaccion,estadoFinal){
+      const claveEstado=(estadoFinal||'').toUpperCase();
+      const tipo=((transaccion.tipotrans||'').toLowerCase()==='retiro')?'retiro':'deposito';
+      const clavePreferencia=(MAPEO_PREFERENCIAS_WHATSAPP[tipo]||{})[claveEstado];
+      if(!clavePreferencia) return false;
+      if(!window.notificationCenter || typeof window.notificationCenter.cuandoListo!=='function') return false;
+      try{
+        await window.notificationCenter.cuandoListo();
+      }catch(err){
+        console.warn('No se pudo sincronizar preferencias de notificaciones',err);
+        return false;
+      }
+      const config=window.notificationCenter.obtenerConfiguracion();
+      if(!config || !config.global || !config.preferencias) return false;
+      return Boolean(config.preferencias[clavePreferencia]);
     }
 
     async function actualizar(ids,estado,nota,ref,condicion){
@@ -950,13 +981,13 @@
       });
     }
 
-    initFirebase()
-      .then(()=>{
-        ensureAuth('Colaborador');
-        initServerTime();
-        transRef=db.collection('transacciones');
-        iniciarApp();
-      })
+  initFirebase()
+    .then(()=>{
+        ensureAuth(['Colaborador','Administrador']);
+      initServerTime();
+      transRef=db.collection('transacciones');
+      iniciarApp();
+    })
       .catch(err=>{
         console.error('No se pudo iniciar la vista de transacciones',err);
         alert('Error al conectar con los servicios. Intente nuevamente más tarde.');
