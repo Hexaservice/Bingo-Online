@@ -17,10 +17,10 @@
       items: [
         { clave: 'depositosPendientes', titulo: 'Notificación Depósitos Pendientes', descripcion: 'Se repite cada 10 minutos si hay depósitos por gestionar.' },
         { clave: 'retirosPendientes', titulo: 'Notificación Retiros Pendientes', descripcion: 'Se repite cada 10 minutos si hay retiros por gestionar.' },
-        { clave: 'mensajeDepositoAprobado', titulo: 'Redacción de mensajes DEPÓSITO APROBADO', descripcion: 'Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Depósito', color: '#0b6b27' },
-        { clave: 'mensajeRetiroAprobado', titulo: 'Redacción de mensajes RETIRO APROBADO', descripcion: 'Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Retiro', color: '#8b0000' },
-        { clave: 'mensajeDepositoAnulado', titulo: 'Redacción de mensajes DEPÓSITO ANULADO', descripcion: 'Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Depósito Anulado', color: '#d32f2f' },
-        { clave: 'mensajeRetiroAnulado', titulo: 'Redacción de mensajes RETIRO ANULADO', descripcion: 'Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Retiro Anulado', color: '#d32f2f' }
+        { clave: 'mensajeDepositoAprobado', titulo: 'Redacción de mensajes DEPÓSITO APROBADO', descripcion: '✅ Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Depósito', color: '#0b6b27' },
+        { clave: 'mensajeRetiroAprobado', titulo: 'Redacción de mensajes RETIRO APROBADO', descripcion: '✅ Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Retiro', color: '#8b0000' },
+        { clave: 'mensajeDepositoAnulado', titulo: 'Redacción de mensajes DEPÓSITO ANULADO', descripcion: '🚫 Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Depósito Anulado', color: '#0a8800' },
+        { clave: 'mensajeRetiroAnulado', titulo: 'Redacción de mensajes RETIRO ANULADO', descripcion: '🚫 Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Retiro Anulado', color: '#d32f2f' }
       ]
     },
     Administrador: {
@@ -31,10 +31,10 @@
         { clave: 'selladoSorteo', titulo: 'Notificación Sellado Sorteo', descripcion: 'Cuando llega la hora de sellado de un sorteo.' },
         { clave: 'juegoEnVivoSorteo', titulo: 'Notificación Juego en vivo Sorteo', descripcion: 'Cuando llega la hora de inicio de un sorteo.' },
         { clave: 'gestionPagos', titulo: 'Notificación Gestión Pagos', descripcion: 'Aviso único si hay gestiones de pagos pendientes.' },
-        { clave: 'mensajeDepositoAprobado', titulo: 'Redacción de mensajes DEPÓSITO APROBADO', descripcion: 'Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Depósito', color: '#0b6b27' },
-        { clave: 'mensajeRetiroAprobado', titulo: 'Redacción de mensajes RETIRO APROBADO', descripcion: 'Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Retiro', color: '#8b0000' },
-        { clave: 'mensajeDepositoAnulado', titulo: 'Redacción de mensajes DEPÓSITO ANULADO', descripcion: 'Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Depósito Anulado', color: '#d32f2f' },
-        { clave: 'mensajeRetiroAnulado', titulo: 'Redacción de mensajes RETIRO ANULADO', descripcion: 'Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Retiro Anulado', color: '#d32f2f' }
+        { clave: 'mensajeDepositoAprobado', titulo: 'Redacción de mensajes DEPÓSITO APROBADO', descripcion: '✅ Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Depósito', color: '#0b6b27' },
+        { clave: 'mensajeRetiroAprobado', titulo: 'Redacción de mensajes RETIRO APROBADO', descripcion: '✅ Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Retiro', color: '#8b0000' },
+        { clave: 'mensajeDepositoAnulado', titulo: 'Redacción de mensajes DEPÓSITO ANULADO', descripcion: '🚫 Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Depósito Anulado', color: '#0a8800' },
+        { clave: 'mensajeRetiroAnulado', titulo: 'Redacción de mensajes RETIRO ANULADO', descripcion: '🚫 Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Retiro Anulado', color: '#d32f2f' }
       ]
     }
   };
