@@ -2,6 +2,19 @@
   if (typeof window === 'undefined') return;
   if (window.setupNotificationPanel) return;
 
+  const ROLES_CANONICOS = {
+    jugador: 'Jugador',
+    colaborador: 'Colaborador',
+    administrador: 'Administrador',
+    superadmin: 'Superadmin'
+  };
+
+  function normalizarRol(valor){
+    if(!valor) return 'Jugador';
+    const clave = valor.toString().trim().toLowerCase();
+    return ROLES_CANONICOS[clave] || valor;
+  }
+
   function buscarSwitchAsociado(contenedor){
     if (!contenedor) return null;
     const identificador = contenedor.dataset ? contenedor.dataset.switch : null;
@@ -206,7 +219,7 @@
 
   window.setupNotificationPanel = function setupNotificationPanel(options = {}){
     const {
-      rol = 'Jugador',
+      rol: rolEntrada = 'Jugador',
       panelSelector = '#notificaciones-panel',
       globalSelector = '#notificaciones-global',
       contenidoSelector = '#notificaciones-contenido',
@@ -214,6 +227,8 @@
       tituloSelector = '#notificaciones-titulo',
       encabezadoSelector = '#notificaciones-panel .notificaciones-fila-titulo'
     } = options;
+
+    const rol = normalizarRol(rolEntrada);
 
     const panel = typeof panelSelector === 'string' ? document.querySelector(panelSelector) : panelSelector;
     const globalInput = typeof globalSelector === 'string' ? document.querySelector(globalSelector) : globalSelector;
