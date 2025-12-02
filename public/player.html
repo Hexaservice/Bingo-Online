@@ -500,6 +500,106 @@
               text-align: right;
           }
       }
+
+      /* Controles del modo tutorial */
+      #tutorial-controls {
+          position: fixed;
+          left: 14px;
+          bottom: 18px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          z-index: 1300;
+      }
+
+      #tutorial-toggle {
+          width: 76px;
+          height: 76px;
+          border-radius: 50%;
+          border: 3px solid #1f1f1f;
+          background: #7a7a7a;
+          color: #ffffff;
+          font-family: 'Poppins', sans-serif;
+          font-weight: 700;
+          font-size: 11px;
+          text-shadow: 1px 1px 2px #000000;
+          cursor: pointer;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+          transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      }
+
+      #tutorial-toggle.activo {
+          background: #0b9a2e;
+          box-shadow: 0 10px 18px rgba(0, 128, 0, 0.35);
+      }
+
+      #tutorial-toggle:hover {
+          transform: scale(1.05);
+      }
+
+      #tutorial-nav {
+          display: none;
+          gap: 8px;
+          align-items: center;
+      }
+
+      #tutorial-toggle.activo + #tutorial-nav,
+      #tutorial-nav.activo {
+          display: flex;
+      }
+
+      .tutorial-nav-btn {
+          width: 48px;
+          height: 48px;
+          border-radius: 50%;
+          border: 2px solid #1f1f1f;
+          background: #ffffff;
+          color: #1f1f1f;
+          font-size: 20px;
+          cursor: pointer;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+          display: grid;
+          place-items: center;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .tutorial-nav-btn:hover {
+          transform: scale(1.08);
+          box-shadow: 0 10px 18px rgba(0, 0, 0, 0.25);
+      }
+
+      .tutorial-nav-btn:active {
+          transform: scale(0.95);
+      }
+
+      #tutorial-overlay {
+          position: fixed;
+          inset: 0;
+          pointer-events: none;
+          z-index: 1250;
+      }
+
+      #tutorial-hand {
+          position: absolute;
+          width: 88px;
+          height: auto;
+          display: none;
+          filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35));
+      }
+
+      #tutorial-label {
+          position: absolute;
+          display: none;
+          padding: 4px 8px;
+          background: rgba(255, 255, 255, 0.95);
+          border-radius: 8px;
+          font-family: 'Poppins', sans-serif;
+          font-size: 11px;
+          font-weight: 600;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+          white-space: nowrap;
+          transform: translate(-50%, -100%);
+      }
       @supports (-webkit-touch-callout: none) {
           body {
               min-height: 100dvh;
@@ -657,7 +757,18 @@
     </div>
   </div>
 
+  <div id="tutorial-overlay" aria-hidden="true">
+    <img id="tutorial-hand" alt="Guía visual del tutorial" loading="lazy" />
+    <div id="tutorial-label" role="status"></div>
+  </div>
 
+  <div id="tutorial-controls" aria-label="Controles del modo tutorial">
+    <button id="tutorial-toggle" type="button">MODO<br/>TUTO</button>
+    <div id="tutorial-nav" aria-hidden="true">
+      <button id="tutorial-prev" class="tutorial-nav-btn" type="button" aria-label="Paso anterior del tutorial">⏪</button>
+      <button id="tutorial-next" class="tutorial-nav-btn" type="button" aria-label="Siguiente paso del tutorial">⏩</button>
+    </div>
+  </div>
 
   <div id="fecha-hora"></div>
   <div id="derechos">Todos los derechos reservados ® Hexaservice 2025</div>
@@ -684,9 +795,54 @@
   const whatsappModalMensajeEl = document.getElementById('modal-whatsapp-mensaje');
   const whatsappModalAceptarBtn = document.getElementById('modal-whatsapp-aceptar');
   const sorteoImagen = document.getElementById('boton-sorteo');
+  const tutorialToggle = document.getElementById('tutorial-toggle');
+  const tutorialNav = document.getElementById('tutorial-nav');
+  const tutorialPrev = document.getElementById('tutorial-prev');
+  const tutorialNext = document.getElementById('tutorial-next');
+  const tutorialHand = document.getElementById('tutorial-hand');
+  const tutorialLabel = document.getElementById('tutorial-label');
+  const tutorialOverlay = document.getElementById('tutorial-overlay');
   const whatsappState = { enlace:'', cargado:false };
   let firestoreRef = null;
   let sorteoUnsubscribe = null;
+  const tutorialSteps = [
+    {
+      elementId: 'boton-perfil',
+      hand: 'img/Mano-arri-izq.png',
+      corner: 'bottom-right',
+      color: '#663300',
+      label: 'Abre tu perfil y ajusta tus datos.',
+    },
+    {
+      elementId: 'boton-billetera',
+      hand: 'img/Mano-arri-der.png',
+      corner: 'bottom-left',
+      color: '#0b7a33',
+      label: 'Consulta tu billetera y recargas.',
+    },
+    {
+      elementId: 'boton-jugar',
+      hand: 'img/Mano-aba-izq.png',
+      corner: 'top-right',
+      color: '#003399',
+      label: 'Ingresa para jugar tus cartones.',
+    },
+    {
+      elementId: 'boton-sorteo',
+      hand: 'img/Mano-arri-der.png',
+      corner: 'top-right',
+      color: '#20004d',
+      label: 'Mira el sorteo en vivo al instante.',
+    },
+    {
+      elementId: 'boton-mensajes',
+      hand: 'img/Mano-arri-der.png',
+      corner: 'bottom-left',
+      color: '#b34700',
+      label: 'Abre los mensajes y el grupo.',
+    },
+  ];
+  const tutorialState = { activo: false, indice: 0 };
   function asignarFotoUsuario(elemento, url){
     if(!elemento) return;
     const aplicarFallback = ()=>{
@@ -799,6 +955,127 @@
     }
   }
 
+  function ocultarIndicadoresTutorial(){
+    if(tutorialHand){
+      tutorialHand.style.display = 'none';
+    }
+    if(tutorialLabel){
+      tutorialLabel.style.display = 'none';
+    }
+    if(tutorialOverlay){
+      tutorialOverlay.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  function calcularPosicionMano(corner, rect, manoWidth = 88, manoHeight = 88){
+    const base = { x: rect.left, y: rect.top };
+    switch(corner){
+      case 'bottom-right':
+        return { x: rect.right - manoWidth * 0.75, y: rect.bottom - manoHeight * 0.55 };
+      case 'bottom-left':
+        return { x: rect.left - manoWidth * 0.25, y: rect.bottom - manoHeight * 0.55 };
+      case 'top-right':
+        return { x: rect.right - manoWidth * 0.75, y: rect.top - manoHeight * 0.35 };
+      case 'top-left':
+        return { x: rect.left - manoWidth * 0.25, y: rect.top - manoHeight * 0.35 };
+      default:
+        return base;
+    }
+  }
+
+  function actualizarPasoTutorial(){
+    if(!tutorialState.activo){
+      ocultarIndicadoresTutorial();
+      return;
+    }
+    const paso = tutorialSteps[tutorialState.indice];
+    const objetivo = document.getElementById(paso.elementId);
+    if(!paso || !objetivo){
+      ocultarIndicadoresTutorial();
+      return;
+    }
+
+    const rect = objetivo.getBoundingClientRect();
+    const manoWidth = tutorialHand ? tutorialHand.width || 88 : 88;
+    const manoHeight = tutorialHand ? tutorialHand.height || 88 : 88;
+    const posicion = calcularPosicionMano(paso.corner, rect, manoWidth, manoHeight);
+    if(tutorialHand){
+      tutorialHand.src = paso.hand;
+      tutorialHand.style.left = `${posicion.x}px`;
+      tutorialHand.style.top = `${posicion.y}px`;
+      tutorialHand.style.display = 'block';
+    }
+    if(tutorialLabel){
+      tutorialLabel.textContent = paso.label;
+      tutorialLabel.style.color = paso.color;
+      const labelTop = Math.max(10, rect.top - 12);
+      tutorialLabel.style.left = `${rect.left + rect.width / 2}px`;
+      tutorialLabel.style.top = `${labelTop}px`;
+      tutorialLabel.style.display = 'block';
+    }
+    if(tutorialOverlay){
+      tutorialOverlay.setAttribute('aria-hidden', 'false');
+    }
+  }
+
+  function cambiarPasoTutorial(delta){
+    const total = tutorialSteps.length;
+    tutorialState.indice = (tutorialState.indice + delta + total) % total;
+    actualizarPasoTutorial();
+  }
+
+  function activarTutorial(){
+    tutorialState.activo = true;
+    tutorialState.indice = 0;
+    if(tutorialToggle){
+      tutorialToggle.classList.add('activo');
+    }
+    if(tutorialNav){
+      tutorialNav.classList.add('activo');
+      tutorialNav.setAttribute('aria-hidden', 'false');
+    }
+    window.addEventListener('resize', actualizarPasoTutorial);
+    actualizarPasoTutorial();
+  }
+
+  function desactivarTutorial(){
+    tutorialState.activo = false;
+    if(tutorialToggle){
+      tutorialToggle.classList.remove('activo');
+    }
+    if(tutorialNav){
+      tutorialNav.classList.remove('activo');
+      tutorialNav.setAttribute('aria-hidden', 'true');
+    }
+    window.removeEventListener('resize', actualizarPasoTutorial);
+    ocultarIndicadoresTutorial();
+  }
+
+  function configurarTutorial(){
+    if(!tutorialToggle || !tutorialNav || !tutorialPrev || !tutorialNext){
+      return;
+    }
+    tutorialToggle.addEventListener('click', ()=>{
+      if(tutorialState.activo){
+        desactivarTutorial();
+      } else {
+        activarTutorial();
+      }
+    });
+    tutorialPrev.addEventListener('click', ()=>{
+      if(tutorialState.activo){
+        cambiarPasoTutorial(-1);
+      }
+    });
+    tutorialNext.addEventListener('click', ()=>{
+      if(!tutorialState.activo){
+        activarTutorial();
+        return;
+      }
+      cambiarPasoTutorial(1);
+    });
+  }
+
   async function inicializarVistaJugador(){
     try {
       await initFirebase();
@@ -814,6 +1091,7 @@
 
     firestoreRef = firebase.firestore();
 
+    configurarTutorial();
     configurarAccionImagen('boton-jugar', ()=>{ window.location.href = 'jugarcartones.html'; });
     configurarAccionImagen('boton-sorteo', ()=>{ window.location.href = 'juegoactivo.html'; });
     configurarAccionImagen('boton-billetera', ()=>{ window.location.href = 'billetera.html'; });
