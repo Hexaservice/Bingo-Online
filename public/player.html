@@ -508,49 +508,54 @@
           bottom: 18px;
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
           z-index: 1300;
       }
 
       #tutorial-toggle {
-          width: 64px;
-          height: 64px;
+          width: 62px;
+          height: 62px;
           border-radius: 50%;
-          border: 2px solid #1f1f1f;
-          background: linear-gradient(140deg, #8d82e2, #5546c0);
-          color: #f5f5f5;
+          border: 2px solid #0f0f0f;
+          background: radial-gradient(circle at 30% 30%, #aab2ff, #4b3fae 65%);
+          color: #f7f9ff;
           font-family: 'Poppins', sans-serif;
           font-weight: 800;
-          font-size: 10px;
-          line-height: 1.2;
-          text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.45);
+          font-size: 8.5px;
+          line-height: 1.1;
+          letter-spacing: 0.4px;
+          text-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
           display: flex;
           align-items: center;
           justify-content: center;
           text-align: center;
           cursor: pointer;
-          box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
-          transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+          transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
       }
 
       #tutorial-toggle.activo {
-          background: #0b9a2e;
-          box-shadow: 0 10px 18px rgba(0, 128, 0, 0.35);
+          background: radial-gradient(circle at 30% 30%, #63e68a, #0b9a2e 70%);
+          box-shadow: 0 12px 20px rgba(0, 128, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
       }
 
       #tutorial-toggle:hover {
-          transform: scale(1.05);
+          transform: translateY(-1px) scale(1.03);
+          box-shadow: 0 12px 22px rgba(0, 0, 0, 0.4);
       }
 
       #tutorial-nav {
           display: none;
           gap: 8px;
           align-items: center;
+          opacity: 0;
+          transform: translateX(-8px);
       }
 
       #tutorial-toggle.activo + #tutorial-nav,
       #tutorial-nav.activo {
           display: flex;
+          animation: tutorial-nav-surge 0.42s ease forwards;
       }
 
       .tutorial-nav-btn {
@@ -566,6 +571,15 @@
           place-items: center;
           padding: 6px 4px;
           transition: transform 0.2s ease, color 0.2s ease;
+          animation: tutorial-nav-surge 0.42s ease forwards;
+      }
+
+      #tutorial-nav.activo .tutorial-nav-btn:nth-child(1) {
+          animation-delay: 0.05s;
+      }
+
+      #tutorial-nav.activo .tutorial-nav-btn:nth-child(2) {
+          animation-delay: 0.12s;
       }
 
       .tutorial-nav-btn:hover {
@@ -595,18 +609,33 @@
       #tutorial-label {
           position: absolute;
           display: none;
-          padding: 8px 10px;
-          background: rgba(255, 255, 255, 0.9);
-          border-radius: 6px;
+          inline-size: 210px;
+          aspect-ratio: 1 / 1;
+          padding: 12px;
+          background: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(237, 241, 255, 0.96));
+          border: 2px solid rgba(85, 70, 192, 0.35);
+          border-radius: 12px;
           font-family: 'Poppins', sans-serif;
-          font-size: 12px;
-          font-weight: 600;
-          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
-          white-space: normal;
-          max-width: 240px;
-          text-align: justify;
-          text-justify: inter-word;
+          font-size: 13px;
+          font-weight: 700;
+          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.28);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          line-height: 1.35;
           transform: translate(-50%, -100%);
+      }
+
+      @keyframes tutorial-nav-surge {
+          0% {
+              opacity: 0;
+              transform: translateX(-10px);
+          }
+          100% {
+              opacity: 1;
+              transform: translateX(0);
+          }
       }
       @supports (-webkit-touch-callout: none) {
           body {
@@ -771,7 +800,7 @@
   </div>
 
   <div id="tutorial-controls" aria-label="Controles del modo tutorial">
-    <button id="tutorial-toggle" type="button">MODO<br/>TUTO</button>
+    <button id="tutorial-toggle" type="button">MODO<br/>TUTORIAL</button>
     <div id="tutorial-nav" aria-hidden="true">
       <button id="tutorial-prev" class="tutorial-nav-btn" type="button" aria-label="Paso anterior del tutorial">⏪</button>
       <button id="tutorial-next" class="tutorial-nav-btn" type="button" aria-label="Siguiente paso del tutorial">⏩</button>
