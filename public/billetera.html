@@ -546,6 +546,11 @@
       return numeroWhatsappDestino;
     }
 
+    const ICONOS_WHATSAPP={
+      solicitudDeposito:'🪙',
+      solicitudRetiro:'💰'
+    };
+
     function construirMensajeWhatsapp(tipo,info){
       const correo=auth.currentUser?.email||'';
       const nombre=obtenerNombreUsuario();
@@ -553,7 +558,7 @@
       const formatearEnteroSeguro=valor=>Math.trunc(toNumberSafe(valor,0)).toString();
 
       if(tipo==='deposito'){
-        lineas.push('🪙 *SOLICITUD DE DEPÓSITO*');
+        lineas.push(`${ICONOS_WHATSAPP.solicitudDeposito} *SOLICITUD DE DEPÓSITO*`);
         if(correo) lineas.push(`Correo: ${correo}`);
         if(nombre) lineas.push(`Usuario: ${nombre}`);
         lineas.push(`Banco receptor: ${info?.banco||'N/D'}`);
@@ -561,7 +566,7 @@
         lineas.push(`Referencia: *${info?.referencia||'N/D'}*`);
         if(info?.comentario){ lineas.push(`Comentario: ${info.comentario}`); }
       }else if(tipo==='retiro'){
-        lineas.push('💰 *SOLICITUD DE RETIRO*');
+        lineas.push(`${ICONOS_WHATSAPP.solicitudRetiro} *SOLICITUD DE RETIRO*`);
         if(correo) lineas.push(`Correo: ${correo}`);
         if(nombre) lineas.push(`Usuario: ${nombre}`);
         lineas.push(`Banco receptor: ${info?.banco||'N/D'}`);
