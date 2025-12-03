@@ -936,7 +936,15 @@
   function configurarAccionImagen(id, accion){
     const elemento = document.getElementById(id);
     if(!elemento || typeof accion !== 'function') return;
-    const ejecutarAccion = ()=>accion();
+    const esPasoEnfocado = ()=>{
+      if(!tutorialState.activo) return true;
+      const paso = tutorialSteps[tutorialState.indice];
+      return paso && paso.elementId === id;
+    };
+    const ejecutarAccion = ()=>{
+      if(!esPasoEnfocado()) return;
+      accion();
+    };
     elemento.addEventListener('click', ejecutarAccion);
     elemento.addEventListener('keydown', evento=>{
       if(evento.key === 'Enter' || evento.key === ' '){
@@ -1083,51 +1091,64 @@
       tutorialHand.style.display = 'block';
     }
     if(tutorialLabel){
+      const colocarEtiqueta = () => {
+        tutorialLabel.style.visibility = 'hidden';
+        const labelRect = tutorialLabel.getBoundingClientRect();
+        const margen = 12;
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const mitadAncho = labelRect.width / 2;
+        const centroDeseado = rect.left + rect.width / 2;
+        const centroLimitado = Math.min(
+          viewportWidth - margen - mitadAncho,
+          Math.max(margen + mitadAncho, centroDeseado)
+        );
+
+        const espacioArriba = rect.top - margen;
+        const espacioAbajo = viewportHeight - rect.bottom - margen;
+        let labelTop;
+        let desplazamientoY = '-100%';
+
+        if(espacioArriba >= labelRect.height + margen){
+          labelTop = rect.top - margen;
+          desplazamientoY = '-100%';
+        } else if(espacioAbajo >= labelRect.height + margen){
+          labelTop = rect.bottom + margen;
+          desplazamientoY = '0%';
+        } else {
+          labelTop = rect.top + rect.height / 2;
+          desplazamientoY = '-50%';
+        }
+
+        const alturaTransform = desplazamientoY === '-100%'
+          ? labelRect.height
+          : desplazamientoY === '-50%'
+            ? labelRect.height / 2
+            : 0;
+
+        const limiteSuperior = margen + alturaTransform;
+        const limiteInferior = viewportHeight - margen - alturaTransform;
+        labelTop = Math.max(limiteSuperior, Math.min(limiteInferior, labelTop));
+
+        tutorialLabel.style.left = `${centroLimitado}px`;
+        tutorialLabel.style.top = `${labelTop}px`;
+        tutorialLabel.style.transform = `translate(-50%, ${desplazamientoY})`;
+        tutorialLabel.style.visibility = 'visible';
+      };
+
       tutorialLabel.textContent = paso.label;
       tutorialLabel.style.color = paso.color;
       tutorialLabel.style.display = 'block';
-      tutorialLabel.style.visibility = 'hidden';
-      const labelRect = tutorialLabel.getBoundingClientRect();
-      const margen = 12;
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      const mitadAncho = labelRect.width / 2;
-      const centroDeseado = rect.left + rect.width / 2;
-      const centroLimitado = Math.min(
-        viewportWidth - margen - mitadAncho,
-        Math.max(margen + mitadAncho, centroDeseado)
-      );
-
-      const espacioArriba = rect.top - margen;
-      const espacioAbajo = viewportHeight - rect.bottom - margen;
-      let labelTop;
-      let desplazamientoY = '-100%';
-
-      if(espacioArriba >= labelRect.height + margen){
-        labelTop = rect.top - margen;
-        desplazamientoY = '-100%';
-      } else if(espacioAbajo >= labelRect.height + margen){
-        labelTop = rect.bottom + margen;
-        desplazamientoY = '0%';
-      } else {
-        labelTop = rect.top + rect.height / 2;
-        desplazamientoY = '-50%';
-      }
-
-      const alturaTransform = desplazamientoY === '-100%'
-        ? labelRect.height
-        : desplazamientoY === '-50%'
-          ? labelRect.height / 2
-          : 0;
-
-      const limiteSuperior = margen + alturaTransform;
-      const limiteInferior = viewportHeight - margen - alturaTransform;
-      labelTop = Math.max(limiteSuperior, Math.min(limiteInferior, labelTop));
-
-      tutorialLabel.style.left = `${centroLimitado}px`;
-      tutorialLabel.style.top = `${labelTop}px`;
-      tutorialLabel.style.transform = `translate(-50%, ${desplazamientoY})`;
-      tutorialLabel.style.visibility = 'visible';
+      colocarEtiqueta();
+      requestAnimationFrame(()=>{
+        const pasoActual = tutorialSteps[tutorialState.indice];
+        if(!pasoActual || pasoActual.elementId !== paso.elementId){
+          return;
+        }
+        const rectRefrescado = objetivo.getBoundingClientRect();
+        Object.assign(rect, rectRefrescado);
+        colocarEtiqueta();
+      });
     }
     if(tutorialOverlay){
       tutorialOverlay.setAttribute('aria-hidden', 'false');
