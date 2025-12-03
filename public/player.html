@@ -548,14 +548,18 @@
           display: none;
           gap: 8px;
           align-items: center;
-          opacity: 0;
-          transform: translateX(-8px);
+          transform: translateX(-10px);
       }
 
       #tutorial-toggle.activo + #tutorial-nav,
       #tutorial-nav.activo {
           display: flex;
           animation: tutorial-nav-surge 0.42s ease forwards;
+      }
+
+      #tutorial-nav.saliendo {
+          display: flex;
+          animation: tutorial-nav-exit 0.32s ease forwards;
       }
 
       .tutorial-nav-btn {
@@ -572,6 +576,10 @@
           padding: 6px 4px;
           transition: transform 0.2s ease, color 0.2s ease;
           animation: tutorial-nav-surge 0.42s ease forwards;
+      }
+
+      #tutorial-nav.saliendo .tutorial-nav-btn {
+          animation: tutorial-nav-exit 0.32s ease forwards;
       }
 
       #tutorial-nav.activo .tutorial-nav-btn:nth-child(1) {
@@ -642,12 +650,19 @@
 
       @keyframes tutorial-nav-surge {
           0% {
-              opacity: 0;
-              transform: translateX(-10px);
+              transform: translateX(-12px);
           }
           100% {
-              opacity: 1;
               transform: translateX(0);
+          }
+      }
+
+      @keyframes tutorial-nav-exit {
+          0% {
+              transform: translateX(0);
+          }
+          100% {
+              transform: translateX(-16px);
           }
       }
       @supports (-webkit-touch-callout: none) {
@@ -870,28 +885,28 @@
       hand: 'img/Mano-arri-der.png',
       corner: 'bottom-left',
       color: '#0b7a33',
-      label: 'Consulta tu billetera y recargas.',
+      label: 'Consulta tu billetera, solicita recargas o retiros',
     },
     {
       elementId: 'boton-jugar',
       hand: 'img/Mano-aba-izq.png',
       corner: 'top-right',
       color: '#003399',
-      label: 'Jugar cartón:\nabre y participa.',
+      label: 'Entra y juega cartones en los sorteos disponibles',
     },
     {
       elementId: 'boton-sorteo',
       hand: 'img/Mano-arri-der.png',
       corner: 'bottom-left',
       color: '#20004d',
-      label: 'Mira el sorteo en vivo al instante.',
+      label: 'Entra a los sorteos en vivo o consulta sorteos finalizados',
     },
     {
       elementId: 'boton-mensajes',
       hand: 'img/Mano-arri-der.png',
       corner: 'bottom-left',
       color: '#b34700',
-      label: 'Abre los mensajes y el grupo.',
+      label: 'Entra aqui y unete al grupo de Whatsapp',
     },
   ];
   const tutorialState = {
@@ -1050,6 +1065,23 @@
       tutorialOverlay.style.background = 'transparent';
       tutorialOverlay.style.clipPath = 'none';
     }
+  }
+
+  function animarSalidaControlesTutorial(){
+    if(!tutorialNav) return;
+    const estabaActivo = tutorialNav.classList.contains('activo');
+    const limpiarAnimacion = () => {
+      clearTimeout(temporizadorFallback);
+      tutorialNav.classList.remove('saliendo');
+    };
+    tutorialNav.classList.remove('activo');
+    if(!estabaActivo){
+      tutorialNav.classList.remove('saliendo');
+      return;
+    }
+    tutorialNav.classList.add('saliendo');
+    const temporizadorFallback = setTimeout(limpiarAnimacion, 360);
+    tutorialNav.addEventListener('animationend', limpiarAnimacion, { once: true });
   }
 
   function calcularPosicionMano(corner, rect, manoWidth = 44, manoHeight = 44){
@@ -1251,6 +1283,7 @@
       tutorialToggle.classList.add('activo');
     }
     if(tutorialNav){
+      tutorialNav.classList.remove('saliendo');
       tutorialNav.classList.add('activo');
       tutorialNav.setAttribute('aria-hidden', 'false');
     }
@@ -1264,8 +1297,8 @@
       tutorialToggle.classList.remove('activo');
     }
     if(tutorialNav){
-      tutorialNav.classList.remove('activo');
       tutorialNav.setAttribute('aria-hidden', 'true');
+      animarSalidaControlesTutorial();
     }
     window.removeEventListener('resize', actualizarPasoTutorial);
     limpiarAutoPlay();
