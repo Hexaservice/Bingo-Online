@@ -816,6 +816,7 @@
     <button id="tutorial-toggle" type="button">MODO<br/>TUTORIAL</button>
     <div id="tutorial-nav" aria-hidden="true">
       <button id="tutorial-prev" class="tutorial-nav-btn" type="button" aria-label="Paso anterior del tutorial">⏪</button>
+      <button id="tutorial-play" class="tutorial-nav-btn" type="button" aria-label="Reproducir tutorial automáticamente">▶️</button>
       <button id="tutorial-next" class="tutorial-nav-btn" type="button" aria-label="Siguiente paso del tutorial">⏩</button>
     </div>
   </div>
@@ -848,6 +849,7 @@
   const tutorialToggle = document.getElementById('tutorial-toggle');
   const tutorialNav = document.getElementById('tutorial-nav');
   const tutorialPrev = document.getElementById('tutorial-prev');
+  const tutorialPlay = document.getElementById('tutorial-play');
   const tutorialNext = document.getElementById('tutorial-next');
   const tutorialHand = document.getElementById('tutorial-hand');
   const tutorialLabel = document.getElementById('tutorial-label');
@@ -861,7 +863,7 @@
       hand: 'img/Mano-arri-izq.png',
       corner: 'bottom-right',
       color: '#663300',
-      label: 'Abre tu perfil y ajusta tus datos.',
+      label: 'Perfil del jugador:\najusta tus datos.',
     },
     {
       elementId: 'boton-billetera',
@@ -875,7 +877,7 @@
       hand: 'img/Mano-aba-izq.png',
       corner: 'top-right',
       color: '#003399',
-      label: 'Ingresa para jugar tus cartones.',
+      label: 'Jugar cartón:\nabre y participa.',
     },
     {
       elementId: 'boton-sorteo',
@@ -892,7 +894,30 @@
       label: 'Abre los mensajes y el grupo.',
     },
   ];
-  const tutorialState = { activo: false, indice: 0 };
+  const tutorialState = {
+    activo: false,
+    indice: 0,
+    auto: { reproduciendo: false, intervalId: null, ciclos: 0, indiceInicio: 0, iniciado: false },
+  };
+
+  const TUTORIAL_COOKIE = 'tutorialIndice';
+
+  function guardarIndiceTutorial(indice){
+    if(Number.isInteger(indice)){
+      const dias = 30;
+      const maxAge = dias * 24 * 60 * 60;
+      document.cookie = `${TUTORIAL_COOKIE}=${indice};path=/;max-age=${maxAge}`;
+    }
+  }
+
+  function obtenerIndiceTutorial(){
+    const pares = document.cookie.split(';').map(par => par.trim());
+    const encontrado = pares.find(par => par.startsWith(`${TUTORIAL_COOKIE}=`));
+    if(!encontrado) return null;
+    const valor = encontrado.split('=')[1];
+    const numero = Number.parseInt(valor, 10);
+    return Number.isNaN(numero) ? null : numero;
+  }
   function asignarFotoUsuario(elemento, url){
     if(!elemento) return;
     const aplicarFallback = ()=>{
@@ -1112,6 +1137,8 @@
       const halo = radio + 160;
       tutorialOverlay.style.background = `radial-gradient(circle at ${centroX}px ${centroY}px, rgba(0, 0, 0, 0) ${radio}px, rgba(0, 0, 0, 0.58) ${halo}px)`;
     }
+
+    guardarIndiceTutorial(tutorialState.indice);
   }
 
   function cambiarPasoTutorial(delta){
@@ -1120,9 +1147,85 @@
     actualizarPasoTutorial();
   }
 
+  function actualizarBotonPlay(){
+    if(!tutorialPlay) return;
+    tutorialPlay.textContent = tutorialState.auto.reproduciendo ? '⏸️' : '▶️';
+    const etiqueta = tutorialState.auto.reproduciendo
+      ? 'Pausar avance automático del tutorial'
+      : 'Reproducir tutorial automáticamente';
+    tutorialPlay.setAttribute('aria-label', etiqueta);
+  }
+
+  function limpiarAutoPlay(){
+    if(tutorialState.auto.intervalId){
+      clearInterval(tutorialState.auto.intervalId);
+    }
+    tutorialState.auto.intervalId = null;
+    tutorialState.auto.reproduciendo = false;
+    tutorialState.auto.ciclos = 0;
+    tutorialState.auto.iniciado = false;
+    tutorialState.auto.indiceInicio = tutorialState.indice;
+    actualizarBotonPlay();
+  }
+
+  function pausarAutoPlay(){
+    if(tutorialState.auto.intervalId){
+      clearInterval(tutorialState.auto.intervalId);
+    }
+    tutorialState.auto.intervalId = null;
+    tutorialState.auto.reproduciendo = false;
+    actualizarBotonPlay();
+  }
+
+  function iniciarAutoPlay(){
+    if(!tutorialState.activo){
+      activarTutorial();
+    }
+    if(!tutorialState.auto.iniciado){
+      tutorialState.auto.indiceInicio = tutorialState.indice;
+      tutorialState.auto.iniciado = true;
+    }
+    if(tutorialState.auto.intervalId){
+      clearInterval(tutorialState.auto.intervalId);
+    }
+    tutorialState.auto.reproduciendo = true;
+    actualizarBotonPlay();
+    tutorialState.auto.intervalId = setInterval(()=>{
+      if(!tutorialState.activo){
+        limpiarAutoPlay();
+        return;
+      }
+      const indicePrevio = tutorialState.indice;
+      cambiarPasoTutorial(1);
+      const volvioAlInicio =
+        tutorialState.auto.iniciado &&
+        indicePrevio !== tutorialState.indice &&
+        tutorialState.indice === tutorialState.auto.indiceInicio;
+      if(volvioAlInicio){
+        tutorialState.auto.ciclos += 1;
+        if(tutorialState.auto.ciclos >= 3){
+          limpiarAutoPlay();
+          desactivarTutorial();
+        }
+      }
+    }, 6000);
+  }
+
+  function alternarAutoPlay(){
+    if(tutorialState.auto.reproduciendo){
+      pausarAutoPlay();
+      return;
+    }
+    iniciarAutoPlay();
+  }
+
   function activarTutorial(){
     tutorialState.activo = true;
-    tutorialState.indice = 0;
+    const indiceGuardado = obtenerIndiceTutorial();
+    const total = tutorialSteps.length;
+    tutorialState.indice = Number.isInteger(indiceGuardado)
+      ? Math.max(0, Math.min(total - 1, indiceGuardado))
+      : 0;
     if(tutorialToggle){
       tutorialToggle.classList.add('activo');
     }
@@ -1144,13 +1247,15 @@
       tutorialNav.setAttribute('aria-hidden', 'true');
     }
     window.removeEventListener('resize', actualizarPasoTutorial);
+    limpiarAutoPlay();
     ocultarIndicadoresTutorial();
   }
 
   function configurarTutorial(){
-    if(!tutorialToggle || !tutorialNav || !tutorialPrev || !tutorialNext){
+    if(!tutorialToggle || !tutorialNav || !tutorialPrev || !tutorialNext || !tutorialPlay){
       return;
     }
+    actualizarBotonPlay();
     tutorialToggle.addEventListener('click', ()=>{
       if(tutorialState.activo){
         desactivarTutorial();
@@ -1162,6 +1267,9 @@
       if(tutorialState.activo){
         cambiarPasoTutorial(-1);
       }
+    });
+    tutorialPlay.addEventListener('click', ()=>{
+      alternarAutoPlay();
     });
     tutorialNext.addEventListener('click', ()=>{
       if(!tutorialState.activo){
