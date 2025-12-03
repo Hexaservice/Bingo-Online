@@ -596,6 +596,8 @@
           inset: 0;
           pointer-events: none;
           z-index: 1250;
+          background: transparent;
+          transition: background 0.25s ease;
       }
 
       #tutorial-hand {
@@ -604,6 +606,8 @@
           height: auto;
           display: none;
           filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35));
+          animation: tutorial-hand-pulse 0.65s ease-in-out infinite;
+          transform-origin: center;
       }
 
       #tutorial-label {
@@ -614,7 +618,7 @@
           border: 2px solid rgba(85, 70, 192, 0.35);
           border-radius: 12px;
           font-family: 'Poppins', sans-serif;
-          font-size: 12px;
+          font-size: clamp(11px, 1.7vw, 14px);
           font-weight: 700;
           box-shadow: 0 10px 20px rgba(0, 0, 0, 0.28);
           display: flex;
@@ -624,10 +628,16 @@
           line-height: 1.25;
           transform: translate(-50%, -100%);
           width: fit-content;
-          max-width: min(240px, 78vw);
+          max-width: min(280px, 80vw);
           min-width: 120px;
           word-break: break-word;
           hyphens: auto;
+      }
+
+      @keyframes tutorial-hand-pulse {
+          0% { transform: scale(1); }
+          45% { transform: scale(1.17); }
+          100% { transform: scale(1); }
       }
 
       @keyframes tutorial-nav-surge {
@@ -1004,6 +1014,8 @@
     }
     if(tutorialOverlay){
       tutorialOverlay.setAttribute('aria-hidden', 'true');
+      tutorialOverlay.style.background = 'transparent';
+      tutorialOverlay.style.clipPath = 'none';
     }
   }
 
@@ -1052,19 +1064,53 @@
       tutorialLabel.style.visibility = 'hidden';
       const labelRect = tutorialLabel.getBoundingClientRect();
       const margen = 12;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
       const mitadAncho = labelRect.width / 2;
       const centroDeseado = rect.left + rect.width / 2;
       const centroLimitado = Math.min(
-        window.innerWidth - margen - mitadAncho,
+        viewportWidth - margen - mitadAncho,
         Math.max(margen + mitadAncho, centroDeseado)
       );
-      const labelTop = Math.max(labelRect.height + margen, rect.top - 12);
+
+      const espacioArriba = rect.top - margen;
+      const espacioAbajo = viewportHeight - rect.bottom - margen;
+      let labelTop;
+      let desplazamientoY = '-100%';
+
+      if(espacioArriba >= labelRect.height + margen){
+        labelTop = rect.top - margen;
+        desplazamientoY = '-100%';
+      } else if(espacioAbajo >= labelRect.height + margen){
+        labelTop = rect.bottom + margen;
+        desplazamientoY = '0%';
+      } else {
+        labelTop = rect.top + rect.height / 2;
+        desplazamientoY = '-50%';
+      }
+
+      const alturaTransform = desplazamientoY === '-100%'
+        ? labelRect.height
+        : desplazamientoY === '-50%'
+          ? labelRect.height / 2
+          : 0;
+
+      const limiteSuperior = margen + alturaTransform;
+      const limiteInferior = viewportHeight - margen - alturaTransform;
+      labelTop = Math.max(limiteSuperior, Math.min(limiteInferior, labelTop));
+
       tutorialLabel.style.left = `${centroLimitado}px`;
       tutorialLabel.style.top = `${labelTop}px`;
+      tutorialLabel.style.transform = `translate(-50%, ${desplazamientoY})`;
       tutorialLabel.style.visibility = 'visible';
     }
     if(tutorialOverlay){
       tutorialOverlay.setAttribute('aria-hidden', 'false');
+      const centroX = rect.left + rect.width / 2;
+      const centroY = rect.top + rect.height / 2;
+      const radio = Math.sqrt((rect.width ** 2 + rect.height ** 2)) / 2 + 26;
+      const halo = radio + 160;
+      tutorialOverlay.style.background = `radial-gradient(circle at ${centroX}px ${centroY}px, rgba(0, 0, 0, 0) ${radio}px, rgba(0, 0, 0, 0.58) ${halo}px)`;
     }
   }
 
