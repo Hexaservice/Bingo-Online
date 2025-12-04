@@ -270,16 +270,13 @@
     /* Controles del modo tutorial */
     #tutorial-controls {
       position: fixed;
-      right: 16px;
-      bottom: 16px;
-      left: auto;
+      left: 14px;
+      bottom: 14px;
       display: flex;
       align-items: center;
       gap: 10px;
       z-index: 1400;
-      pointer-events: none;
     }
-    #tutorial-controls > * { pointer-events: auto; }
     #tutorial-toggle {
       width: 66px;
       height: 66px;
@@ -864,38 +861,35 @@
       return `${h}:${min} ${ampm}`;
     }
 
-      function normalizarTipoTransaccion(data){
-        const tipoCrudo = (data.tipotrans || '').toString().trim().toLowerCase();
-        const origen = (data.origen || '').toString().trim().toLowerCase();
-        const referencia = (data.referencia || '').toString().trim().toUpperCase();
-        const sorteoNombre = (data.sorteoNombre || '').toString().trim().toLowerCase();
-        const rolInterno = (data.rolInterno || data.rolinterno || '').toString().trim().toLowerCase();
-        const esRolEspecial = ['desarrolladores','desarrollador','agencia'].includes(rolInterno);
+    function normalizarTipoTransaccion(data){
+      const tipoCrudo = (data.tipotrans || '').toString().trim().toLowerCase();
+      const origen = (data.origen || '').toString().trim().toLowerCase();
+      const referencia = (data.referencia || '').toString().trim().toUpperCase();
+      const sorteoNombre = (data.sorteoNombre || '').toString().trim().toLowerCase();
+      const rolInterno = (data.rolInterno || data.rolinterno || '').toString().trim().toLowerCase();
+      const esRolEspecial = ['desarrolladores','desarrollador','agencia'].includes(rolInterno);
 
-        if(['retiro','deposito','ajuste_colaborador'].includes(tipoCrudo)){
-          return tipoCrudo;
-        }
-
-        let tipo = tipoCrudo;
-
-        if(origen === 'pagos_administracion' && tipo !== 'ajuste_colaborador'){
-          tipo = 'pago';
-        } else if(origen === 'premios_jugadores'){
-          if(!tipo || tipo === 'pago'){
-            tipo = 'premio';
-          }
-        }
-
-        if(esRolEspecial && tipo !== 'ajuste_colaborador'){
-          if(!tipo || tipo === 'premio' || tipo === 'pago' || !tipoCrudo){
-            if(!origen || origen === 'pagos_administracion' || sorteoNombre.includes('pago') || referencia === 'PAGO'){
-              tipo = 'pago';
-            }
-          }
-        }
-
-        return tipo;
+      if(['retiro','deposito','ajuste_colaborador'].includes(tipoCrudo)){
+        return tipoCrudo;
       }
+
+      let tipo = tipoCrudo;
+
+      if(origen === 'pagos_administracion' && tipo !== 'ajuste_colaborador'){
+        tipo = 'pago';
+      } else if(origen === 'premios_jugadores'){
+        if(!tipo || tipo === 'pago'){
+          tipo = 'premio';
+        }
+      }
+
+      if(esRolEspecial && tipo !== 'ajuste_colaborador'){
+        if(!tipo || tipo === 'premio' || tipo === 'pago' || !tipoCrudo){
+          if(!origen || origen === 'pagos_administracion' || sorteoNombre.includes('pago') || referencia === 'PAGO'){
+            tipo = 'pago';
+        }
+      }
+    }
 
     const tutorialUI = {
       overlay: document.getElementById('tutorial-overlay'),
