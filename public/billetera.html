@@ -266,6 +266,69 @@
       width:200px;
       cursor:pointer;
     }
+
+    /* Controles del modo tutorial */
+    #tutorial-controls {
+      position: fixed;
+      left: 14px;
+      bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 1400;
+    }
+    #tutorial-toggle {
+      width: 66px;
+      height: 66px;
+      border-radius: 50%;
+      border: 2px solid #0f0f0f;
+      background: radial-gradient(circle at 30% 30%, #aab2ff, #4b3fae 65%);
+      color: #f7f9ff;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 800;
+      font-size: 8.5px;
+      line-height: 1.1;
+      letter-spacing: 0.4px;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      cursor: pointer;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+      transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+    }
+    #tutorial-toggle.activo {
+      background: radial-gradient(circle at 30% 30%, #63e68a, #0b9a2e 70%);
+      box-shadow: 0 12px 20px rgba(0, 128, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    }
+    #tutorial-toggle:hover { transform: translateY(-1px) scale(1.03); box-shadow: 0 12px 22px rgba(0, 0, 0, 0.4); }
+    #tutorial-nav { display: none; gap: 8px; align-items: center; transform: translateX(-10px); opacity: 0; }
+    #tutorial-toggle.activo + #tutorial-nav,
+    #tutorial-nav.activo { display: flex; animation: tutorial-nav-surge 0.42s ease forwards; }
+    #tutorial-nav.saliendo { display: flex; animation: tutorial-nav-exit 0.32s ease forwards; }
+    .tutorial-nav-btn { min-width: 38px; height: auto; border: none; background: transparent; color: #1f1f1f; font-size: 26px; cursor: pointer; box-shadow: none; display: grid; place-items: center; padding: 6px 4px; transition: transform 0.2s ease, color 0.2s ease; animation: tutorial-nav-surge 0.42s ease forwards; opacity: 0; }
+    #tutorial-nav.saliendo .tutorial-nav-btn { animation: tutorial-nav-exit 0.32s ease forwards; }
+    #tutorial-nav.activo .tutorial-nav-btn:nth-child(1) { animation-delay: 0.05s; }
+    #tutorial-nav.activo .tutorial-nav-btn:nth-child(2) { animation-delay: 0.12s; }
+    .tutorial-nav-btn:hover { transform: scale(1.08); color: #5546c0; }
+    .tutorial-nav-btn:active { transform: scale(0.95); }
+    #tutorial-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 1250; background: rgba(0, 0, 0, 0.65); transition: opacity 0.25s ease; opacity: 0; }
+    #tutorial-overlay.activo { opacity: 1; }
+    #tutorial-hand { position: absolute; width: 44px; height: auto; display: none; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35)); animation: tutorial-hand-pulse 0.65s ease-in-out infinite; transform-origin: center; z-index: 1450; }
+    #tutorial-label { position: fixed; left: 50%; display: none; padding: 10px 16px; background: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(237, 241, 255, 0.96)); border: 2px solid rgba(85, 70, 192, 0.35); border-radius: 12px; font-family: 'Poppins', sans-serif; font-size: clamp(11px, 1.7vw, 14px); font-weight: 700; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.28); text-align: center; line-height: 1.3; transform: translate(-50%, -100%); width: fit-content; max-width: min(320px, 82vw); min-width: 140px; z-index: 1450; }
+    .tutorial-elemento-activo { position: relative; z-index: 1405 !important; filter: none !important; }
+    body.tutorial-activo * { pointer-events: none !important; filter: brightness(0.45); }
+    body.tutorial-activo #tutorial-controls *,
+    body.tutorial-activo #tutorial-controls,
+    body.tutorial-activo #tutorial-overlay,
+    body.tutorial-activo #tutorial-hand,
+    body.tutorial-activo #tutorial-label,
+    body.tutorial-activo .tutorial-elemento-activo,
+    body.tutorial-activo .tutorial-elemento-activo * { pointer-events: auto !important; filter: none; }
+    @keyframes tutorial-hand-pulse { 0% { transform: scale(1); } 45% { transform: scale(1.17); } 100% { transform: scale(1); } }
+    @keyframes tutorial-nav-surge { 0% { transform: translateX(-12px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
+    @keyframes tutorial-nav-exit { 0% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(-16px); opacity: 0; } }
   </style>
 </head>
 <body>
@@ -288,7 +351,7 @@
   <div id="mis-datos">
     <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
       <h3 style="margin:0;">Mis datos bancarios</h3>
-      <label class="switch">
+      <label class="switch" id="switch-datos-wrapper">
         <input type="checkbox" id="toggle-datos">
         <span class="slider"></span>
       </label>
@@ -304,7 +367,9 @@
       </div>
       <div id="tipo-cuenta">
         <label><input type="radio" name="tipo-cuenta" value="Ahorro"> Ahorro</label>
-        <label><input type="radio" name="tipo-cuenta" value="Corriente"> Corriente</label>
+        <label for="tipo-cuenta-corriente-input" id="tipo-cuenta-corriente">
+          <input id="tipo-cuenta-corriente-input" type="radio" name="tipo-cuenta" value="Corriente"> Corriente
+        </label>
       </div>
       <div id="datos-pm">
         <div class="campo">
@@ -320,8 +385,8 @@
 
   <div class="tabs">
     <div class="tab-buttons">
-      <button data-tab="depositar" class="active">DEPÓSITOS</button>
-      <button data-tab="retirar">RETIROS</button>
+      <button id="tab-depositar" data-tab="depositar" class="active">DEPÓSITOS</button>
+      <button id="tab-retirar" data-tab="retirar">RETIROS</button>
     </div>
     <div id="depositar" class="tab-content active">
       <h3>Bancos habilitados para depósitos</h3>
@@ -358,7 +423,7 @@
   <div id="transacciones-section">
     <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
       <h3 style="margin:0;">Mis transacciones</h3>
-      <label class="switch">
+      <label class="switch" id="switch-transacciones-wrapper">
         <input type="checkbox" id="toggle-transacciones">
         <span class="slider"></span>
       </label>
@@ -394,6 +459,20 @@
   </div>
 
   <div id="modal-detalle"><div class="contenido"></div></div>
+
+  <div id="tutorial-overlay" aria-hidden="true">
+    <img id="tutorial-hand" alt="Guía visual del tutorial" loading="lazy" />
+    <div id="tutorial-label" role="status"></div>
+  </div>
+
+  <div id="tutorial-controls" aria-label="Controles del modo tutorial">
+    <button id="tutorial-toggle" type="button">MODO<br/>TUTORIAL</button>
+    <div id="tutorial-nav" aria-hidden="true">
+      <button id="tutorial-prev" class="tutorial-nav-btn" type="button" aria-label="Paso anterior del tutorial">⏪</button>
+      <button id="tutorial-play" class="tutorial-nav-btn" type="button" aria-label="Reproducir tutorial automáticamente">▶️</button>
+      <button id="tutorial-next" class="tutorial-nav-btn" type="button" aria-label="Siguiente paso del tutorial">⏩</button>
+    </div>
+  </div>
 
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
@@ -699,6 +778,12 @@
           document.getElementById('banco-retiro').textContent='Banco donde recibirás:';
         }
         cargarTransacciones();
+        const estadoTutorialActivo = (doc.exists && doc.data()?.tutorialBilleteraEstado === 'Activo');
+        tutorialState.datosCargados=true;
+        configurarControlesTutorial();
+        if(estadoTutorialActivo){
+          setTimeout(()=>{ reanudarTutorialSiAplica(true); },50);
+        }
       });
     });
 
@@ -802,9 +887,349 @@
         if(!tipo || tipo === 'premio' || tipo === 'pago' || !tipoCrudo){
           if(!origen || origen === 'pagos_administracion' || sorteoNombre.includes('pago') || referencia === 'PAGO'){
             tipo = 'pago';
-          }
         }
       }
+    }
+
+    const tutorialUI = {
+      overlay: document.getElementById('tutorial-overlay'),
+      hand: document.getElementById('tutorial-hand'),
+      label: document.getElementById('tutorial-label'),
+      toggleBtn: document.getElementById('tutorial-toggle'),
+      nav: document.getElementById('tutorial-nav'),
+      prev: document.getElementById('tutorial-prev'),
+      play: document.getElementById('tutorial-play'),
+      next: document.getElementById('tutorial-next'),
+      tabDepositar: document.getElementById('tab-depositar'),
+      tabRetirar: document.getElementById('tab-retirar'),
+      toggleDatos: document.getElementById('toggle-datos'),
+      toggleTransacciones: document.getElementById('toggle-transacciones'),
+      datosContent: document.getElementById('datos-content'),
+      transaccionesContent: document.getElementById('transacciones-content'),
+    };
+
+    const tutorialState = {
+      activo:false,
+      indice:0,
+      auto:{reproduciendo:false, intervalId:null, ciclos:0, indiceInicio:0, iniciado:false},
+      estadoGuardado:'Inactivo',
+      datosCargados:false,
+    };
+
+    let tutorialControlesListos=false;
+
+    const TUTORIAL_KEY = 'billeteraTutorialIndice';
+
+    const PASOS_MIS_DATOS = [
+      { id:'banco-select', elementId:'banco', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Elige el Banco que usas', color:'#0b4c8c', requisitoTab:null },
+      { id:'cuenta-input', elementId:'cuenta', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Escribe el número completo de tu cuenta bancaria', color:'#0a8800', requisitoTab:null },
+      { id:'tipo-cuenta-corriente', elementId:'tipo-cuenta', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Elige tu tipo de Cuenta: Ahorro o Corriente', color:'#8b0000', requisitoTab:null, selectorPersonalizado:"#tipo-cuenta-corriente" },
+      { id:'cedula-input', elementId:'cedula', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Escribe tu número de Cédula', color:'#4b0082', requisitoTab:null },
+      { id:'pago-movil', elementId:'pagomovil', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Escribe tu número usado para tus pagos moviles', color:'#e67e22', requisitoTab:null },
+      { id:'guardar-datos', elementId:'guardar-datos', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Una vez coloques todos tus datos puedes guardar o actualizar tus datos presionando este boton', color:'#0b9a2e', requisitoTab:null },
+    ];
+
+    const PASOS_DEPOSITOS = [
+      { id:'tabla-bancos', elementId:'tabla-bancos', mano:'img/Mano-arriba.png', posicion:'debajo-centro', mensaje:'Estos son los datos de los bancos habilitados donde deberas transferir tus pagos moviles', color:'#0a4c6a', tab:'depositar' },
+      { id:'banco-deposito', elementId:'banco-deposito', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'elige el banco donde transferiste tu pago móvil', color:'#005b99', tab:'depositar' },
+      { id:'monto-deposito', elementId:'monto-deposito', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Coloca el monto que transferiste. Es IMPORTANTE  que coloques el monto exacto para que no sea anulado', color:'#0b9a2e', tab:'depositar' },
+      { id:'referencia', elementId:'referencia', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Colocalos últimos 5 dígitos de la referencia. Es IMPORTANTE  que coloques el los digitos correctos, de lo contrario será anulado', color:'#6a0dad', tab:'depositar' },
+      { id:'comentario-deposito', elementId:'comentario-deposito', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Aquí puedes colocar un comentario referente al depósito, este comentario es opcional', color:'#b34700', tab:'depositar' },
+      { id:'btn-depositar', elementId:'btn-depositar', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Una vez coloques todos los datos del depósito, puedes solicitar presionando este botón. Seras dirigido automaticamente a tu WhatsApp con el mensaje de solicitud para enviarlo', color:'#0a8800', tab:'depositar' },
+    ];
+
+    const PASOS_RETIROS = [
+      { id:'banco-retiro', elementId:'banco-retiro', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Aquí verás el banco donde recibirás tu retiro y los datos asociados', color:'#004d66', tab:'retirar' },
+      { id:'monto-retiro', elementId:'monto-retiro', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Ingresa el monto que deseas retirar', color:'#0b9a2e', tab:'retirar' },
+      { id:'monto-retiro-neto', elementId:'monto-retiro-neto', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Verifica el monto aproximado a recibir luego de los descuentos aplicados', color:'#8b4513', tab:'retirar' },
+      { id:'comentario-retiro', elementId:'comentario-retiro', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Agrega un comentario opcional para tu retiro', color:'#6a0dad', tab:'retirar' },
+      { id:'btn-retirar', elementId:'btn-retirar', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Cuando revises los datos puedes solicitar el retiro presionando este botón', color:'#cc0000', tab:'retirar' },
+    ];
+
+    const PASOS_TRANSACCIONES = [
+      { id:'toggle-transacciones', elementId:'switch-transacciones-wrapper', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Activa este interruptor para desplegar los datos de tus transacciones', color:'#0b4c8c', tab:null },
+      { id:'tabla-transacciones', elementId:'filtro-tipo', mano:'img/Mano-abajo.png', posicion:'encima-centro', mensaje:'En esta tabla se listan tus transacciones, puedes usar los filtros en la primera fila TIPO, MONTO, FECHA, ESTADO', color:'#4b0082', tab:null },
+    ];
+
+    function guardarIndiceTutorial(indice){
+      if(Number.isInteger(indice)){
+        const dias=30;
+        const maxAge=dias*24*60*60;
+        document.cookie=`${TUTORIAL_KEY}=${indice};path=/;max-age=${maxAge}`;
+      }
+    }
+
+    function obtenerIndiceTutorial(){
+      const pares=document.cookie.split(';').map(p=>p.trim());
+      const encontrado=pares.find(p=>p.startsWith(`${TUTORIAL_KEY}=`));
+      if(!encontrado) return null;
+      const valor=encontrado.split('=')[1];
+      const numero=Number.parseInt(valor,10);
+      return Number.isInteger(numero)?numero:null;
+    }
+
+    function activarTab(tab){
+      const btn=tab==='retirar'?tutorialUI.tabRetirar:tutorialUI.tabDepositar;
+      if(!btn) return;
+      document.querySelectorAll('.tab-buttons button').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+      btn.classList.add('active');
+      const contenido=document.getElementById(btn.dataset.tab);
+      if(contenido){ contenido.classList.add('active'); }
+    }
+
+    function obtenerElementoPaso(paso){
+      if(paso.selectorPersonalizado){
+        return document.querySelector(paso.selectorPersonalizado);
+      }
+      return document.getElementById(paso.elementId);
+    }
+
+    function construirPasosTutorial(){
+      const pasos=[];
+      pasos.push({ id:'toggle-datos', elementId:'switch-datos-wrapper', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Activa este interruptor para desplegar y modificar tus datos bancarios', color:'#0b4c8c', tab:null });
+      if(tutorialUI.toggleDatos?.checked){
+        pasos.push(...PASOS_MIS_DATOS);
+      }
+      pasos.push(...PASOS_DEPOSITOS);
+      pasos.push(...PASOS_RETIROS);
+      pasos.push(...PASOS_TRANSACCIONES);
+      return pasos;
+    }
+
+    function aplicarEstadoInteraccion(elemento){
+      document.querySelectorAll('.tutorial-elemento-activo').forEach(el=>el.classList.remove('tutorial-elemento-activo'));
+      if(elemento){
+        elemento.classList.add('tutorial-elemento-activo');
+      }
+    }
+
+    function calcularPosicionMano(paso, rect){
+      const manoWidth=tutorialUI.hand?.width||44;
+      const manoHeight=tutorialUI.hand?.height||44;
+      const offset=20;
+      switch(paso.posicion){
+        case 'derecha':
+          return { x: rect.right - offset, y: rect.top + rect.height/2 - manoHeight/2 };
+        case 'izquierda':
+          return { x: rect.left - manoWidth + offset, y: rect.top + rect.height/2 - manoHeight/2 };
+        case 'arriba':
+          return { x: rect.left + rect.width/2 - manoWidth/2, y: rect.top - manoHeight + offset };
+        case 'abajo':
+          return { x: rect.left + rect.width/2 - manoWidth/2, y: rect.bottom - offset };
+        case 'debajo-centro':
+          return { x: rect.left + rect.width/2 - manoWidth/2, y: rect.bottom - offset };
+        case 'encima-centro':
+          return { x: rect.left + rect.width/2 - manoWidth/2, y: rect.top - manoHeight + offset };
+        default:
+          return { x: rect.right - offset, y: rect.top };
+      }
+    }
+
+    function posicionarEtiqueta(rect, mensaje, color){
+      if(!tutorialUI.label) return;
+      const viewportHeight=window.innerHeight;
+      const estaArriba=rect.top < viewportHeight/2;
+      const margen=24;
+      const topDeseado=estaArriba?Math.min(viewportHeight - margen, Math.max(rect.bottom + margen, viewportHeight*0.62)):Math.max(margen, Math.min(rect.top - margen, viewportHeight*0.38));
+      tutorialUI.label.textContent=mensaje;
+      tutorialUI.label.style.color=color||'#1f1f1f';
+      tutorialUI.label.style.top=`${topDeseado}px`;
+      tutorialUI.label.style.left='50%';
+      tutorialUI.label.style.transform='translate(-50%, -50%)';
+      tutorialUI.label.style.display='block';
+    }
+
+    function enfocarPaso(){
+      if(!tutorialState.activo){
+        if(tutorialUI.overlay){ tutorialUI.overlay.classList.remove('activo'); }
+        if(tutorialUI.hand) tutorialUI.hand.style.display='none';
+        if(tutorialUI.label) tutorialUI.label.style.display='none';
+        document.body.classList.remove('tutorial-activo');
+        return;
+      }
+
+      const pasos=construirPasosTutorial();
+      if(!pasos.length){
+        return;
+      }
+      tutorialState.indice=Math.max(0, Math.min(pasos.length-1, tutorialState.indice));
+      const paso=pasos[tutorialState.indice];
+      if(paso.tab){
+        activarTab(paso.tab);
+      }
+      if(paso.id==='toggle-datos' && tutorialUI.toggleDatos && !tutorialUI.toggleDatos.checked){
+        tutorialUI.datosContent.style.display='none';
+      }
+      if(paso.id==='toggle-transacciones' && tutorialUI.toggleTransacciones && !tutorialUI.toggleTransacciones.checked){
+        tutorialUI.transaccionesContent.style.display='none';
+      }
+      const elemento=obtenerElementoPaso(paso);
+      if(!elemento){
+        return;
+      }
+      const rect=elemento.getBoundingClientRect();
+      aplicarEstadoInteraccion(elemento);
+      document.body.classList.add('tutorial-activo');
+      if(tutorialUI.overlay){
+        tutorialUI.overlay.setAttribute('aria-hidden','false');
+        tutorialUI.overlay.classList.add('activo');
+      }
+      if(tutorialUI.hand){
+        tutorialUI.hand.src=paso.mano;
+        const pos=calcularPosicionMano(paso, rect);
+        tutorialUI.hand.style.left=`${pos.x}px`;
+        tutorialUI.hand.style.top=`${pos.y}px`;
+        tutorialUI.hand.style.display='block';
+      }
+      posicionarEtiqueta(rect, paso.mensaje, paso.color);
+      guardarIndiceTutorial(tutorialState.indice);
+    }
+
+    function cambiarPaso(delta){
+      const pasos=construirPasosTutorial();
+      if(!pasos.length) return;
+      const pasoActual=pasos[tutorialState.indice];
+      if(delta>0 && pasoActual?.id==='guardar-datos'){
+        if(tutorialUI.toggleDatos){ tutorialUI.toggleDatos.checked=false; }
+        if(tutorialUI.datosContent){ tutorialUI.datosContent.style.display='none'; }
+        activarTab('depositar');
+      }
+      tutorialState.indice=(tutorialState.indice + delta + pasos.length)%pasos.length;
+      enfocarPaso();
+    }
+
+    function actualizarBotonPlay(){
+      if(!tutorialUI.play) return;
+      tutorialUI.play.textContent=tutorialState.auto.reproduciendo?'⏸️':'▶️';
+      const etiqueta=tutorialState.auto.reproduciendo?'Pausar avance automático del tutorial':'Reproducir tutorial automáticamente';
+      tutorialUI.play.setAttribute('aria-label',etiqueta);
+    }
+
+    function limpiarAuto(){
+      if(tutorialState.auto.intervalId){ clearInterval(tutorialState.auto.intervalId); }
+      tutorialState.auto.intervalId=null;
+      tutorialState.auto.reproduciendo=false;
+      tutorialState.auto.ciclos=0;
+      tutorialState.auto.iniciado=false;
+      tutorialState.auto.indiceInicio=tutorialState.indice;
+      actualizarBotonPlay();
+    }
+
+    function pausarAuto(){
+      if(tutorialState.auto.intervalId){ clearInterval(tutorialState.auto.intervalId); }
+      tutorialState.auto.intervalId=null;
+      tutorialState.auto.reproduciendo=false;
+      actualizarBotonPlay();
+    }
+
+    function iniciarAuto(){
+      if(!tutorialState.activo){ activarTutorial(); }
+      if(!tutorialState.auto.iniciado){
+        tutorialState.auto.indiceInicio=tutorialState.indice;
+        tutorialState.auto.iniciado=true;
+      }
+      if(tutorialState.auto.intervalId){ clearInterval(tutorialState.auto.intervalId); }
+      tutorialState.auto.reproduciendo=true;
+      actualizarBotonPlay();
+      tutorialState.auto.intervalId=setInterval(()=>{
+        if(!tutorialState.activo){ limpiarAuto(); return; }
+        const previo=tutorialState.indice;
+        cambiarPaso(1);
+        const pasos=construirPasosTutorial();
+        const volvio= tutorialState.auto.iniciado && tutorialState.indice!==previo && tutorialState.indice===tutorialState.auto.indiceInicio;
+        if(volvio){
+          tutorialState.auto.ciclos+=1;
+          if(tutorialState.auto.ciclos>=3){ limpiarAuto(); desactivarTutorial(); }
+        }
+      },6000);
+    }
+
+    function alternarAuto(){
+      if(tutorialState.auto.reproduciendo){ pausarAuto(); return; }
+      iniciarAuto();
+    }
+
+    async function guardarEstadoTutorialFirestore(activo){
+      const user=auth?.currentUser;
+      if(!user||!db) return;
+      try{
+        await db.collection('Billetera').doc(user.email).set({ tutorialBilleteraEstado: activo?'Activo':'Inactivo' },{merge:true});
+        tutorialState.estadoGuardado=activo?'Activo':'Inactivo';
+      }catch(error){
+        console.error('No se pudo guardar el estado del modo tutorial',error);
+      }
+    }
+
+    function desactivarTutorial(){
+      tutorialState.activo=false;
+      if(tutorialUI.toggleBtn){ tutorialUI.toggleBtn.classList.remove('activo'); }
+      if(tutorialUI.nav){ tutorialUI.nav.setAttribute('aria-hidden','true'); tutorialUI.nav.classList.add('saliendo'); tutorialUI.nav.classList.remove('activo'); }
+      document.body.classList.remove('tutorial-activo');
+      window.removeEventListener('resize', enfocarPaso);
+      limpiarAuto();
+      enfocarPaso();
+      guardarEstadoTutorialFirestore(false);
+    }
+
+    function activarTutorial(){
+      const pasos=construirPasosTutorial();
+      const guardado=obtenerIndiceTutorial();
+      tutorialState.indice=Number.isInteger(guardado)?Math.max(0, Math.min((pasos.length||1)-1, guardado)):0;
+      tutorialState.activo=true;
+      if(tutorialUI.toggleBtn){ tutorialUI.toggleBtn.classList.add('activo'); }
+      if(tutorialUI.nav){ tutorialUI.nav.classList.remove('saliendo'); tutorialUI.nav.classList.add('activo'); tutorialUI.nav.setAttribute('aria-hidden','false'); }
+      window.addEventListener('resize', enfocarPaso);
+      enfocarPaso();
+      guardarEstadoTutorialFirestore(true);
+    }
+
+    function irAlPaso(id){
+      const pasos=construirPasosTutorial();
+      const idx=pasos.findIndex(p=>p.id===id);
+      if(idx>=0){
+        tutorialState.indice=idx;
+        enfocarPaso();
+      }
+    }
+
+    function configurarControlesTutorial(){
+      if(tutorialControlesListos) return;
+      if(!tutorialUI.toggleBtn||!tutorialUI.nav||!tutorialUI.prev||!tutorialUI.next||!tutorialUI.play){ return; }
+      tutorialControlesListos=true;
+      actualizarBotonPlay();
+      tutorialUI.toggleBtn.addEventListener('click',()=>{
+        if(tutorialState.activo){ desactivarTutorial(); }
+        else { activarTutorial(); }
+      });
+      tutorialUI.prev.addEventListener('click',()=>{ if(tutorialState.activo) cambiarPaso(-1); });
+      tutorialUI.next.addEventListener('click',()=>{ if(!tutorialState.activo){ activarTutorial(); return; } cambiarPaso(1); });
+      tutorialUI.play.addEventListener('click',alternarAuto);
+      if(tutorialUI.toggleDatos){
+        tutorialUI.toggleDatos.addEventListener('change',()=>{
+          if(!tutorialState.activo) return;
+          if(!tutorialUI.toggleDatos.checked){
+            tutorialUI.datosContent.style.display='none';
+            irAlPaso('tabla-bancos');
+          }else{
+            irAlPaso('banco-select');
+          }
+        });
+      }
+      if(tutorialUI.toggleTransacciones){
+        tutorialUI.toggleTransacciones.addEventListener('change',()=>{
+          if(!tutorialState.activo) return;
+          if(!tutorialUI.toggleTransacciones.checked){ tutorialUI.transaccionesContent.style.display='none'; }
+          enfocarPaso();
+        });
+      }
+    }
+
+    async function reanudarTutorialSiAplica(estadoBD){
+      tutorialState.estadoGuardado=estadoBD?'Activo':'Inactivo';
+      if(estadoBD){ activarTutorial(); }
+    }
+
 
       if((!tipo || tipo === 'premio' || tipo === 'pago')){
         if(referencia === 'PAGO' && tipo !== 'pago'){
