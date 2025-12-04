@@ -45,6 +45,24 @@
     gestionPagos: 600000
   };
 
+  const MAPA_ROLES = {
+    jugador: 'Jugador',
+    user: 'Jugador',
+    colaborador: 'Colaborador',
+    collab: 'Colaborador',
+    admin: 'Administrador',
+    administrador: 'Administrador',
+    administrator: 'Administrador',
+    superadmin: 'Superadmin',
+    super: 'Superadmin'
+  };
+
+  function normalizarRolEntrada(valor){
+    if(!valor) return 'Jugador';
+    const clave = valor.toString().trim().toLowerCase();
+    return MAPA_ROLES[clave] || valor;
+  }
+
   const HISTORIAL_FABRICAS = {
     sorteoNuevo: () => ({ ids: {} }),
     sorteoJugando: () => ({ ids: {} }),
@@ -70,6 +88,7 @@
   }
 
   function clavesPorRol(role){
+    role = normalizarRolEntrada(role);
     const claves = new Set();
     if(role === 'Superadmin'){
       Object.values(GRUPOS_NOTIFICACIONES).forEach(grupo => grupo.items.forEach(item => claves.add(item.clave)));
@@ -239,7 +258,7 @@
       this.desvincularUsuario();
       this.resetReady(true);
       this.usuario = user;
-      this.rol = role;
+      this.rol = normalizarRolEntrada(role);
       try{
         if(typeof initFirebase === 'function'){
           await initFirebase();
@@ -304,7 +323,7 @@
 
     async cargarConfiguracion(rawUsuario){
       const raw = rawUsuario && rawUsuario.notificationSettings ? rawUsuario.notificationSettings : {};
-      const claves = clavesPorRol(this.rol);
+      const claves = clavesPorRol(normalizarRolEntrada(this.rol));
       const preferencias = {};
       const origenPreferencias = raw.preferencias || {};
       let requiereGuardado = false;
@@ -516,6 +535,7 @@
     }
 
     obtenerGruposUI(role){
+      role = normalizarRolEntrada(role);
       if(role === 'Superadmin'){
         return [GRUPOS_NOTIFICACIONES.Colaborador, GRUPOS_NOTIFICACIONES.Jugador, GRUPOS_NOTIFICACIONES.Administrador].filter(Boolean);
       }
