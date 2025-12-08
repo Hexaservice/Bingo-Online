@@ -275,7 +275,16 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      z-index: 1400;
+      z-index: 1500;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(10px);
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+    #tutorial-controls.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
     }
     #tutorial-toggle {
       width: 62px;
@@ -315,10 +324,10 @@
     .tutorial-nav-btn:active { transform: scale(0.95); }
     #tutorial-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 1250; background: rgba(0, 0, 0, 0.65); transition: opacity 0.25s ease; opacity: 0; }
     #tutorial-overlay.activo { opacity: 1; }
-    #tutorial-hand { position: absolute; width: 44px; height: auto; display: none; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35)); transform-origin: center; z-index: 1450; }
+    #tutorial-hand { position: absolute; width: 44px; height: auto; display: none; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35)); transform-origin: center; z-index: 1700; pointer-events: none; }
     .tutorial-hand-pulse { animation: tutorial-hand-pulse 0.65s ease-in-out infinite; }
-    #tutorial-label { position: fixed; left: 50%; display: none; padding: 10px 16px; background: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(237, 241, 255, 0.96)); border: 2px solid rgba(85, 70, 192, 0.35); border-radius: 12px; font-family: 'Poppins', sans-serif; font-size: clamp(11px, 1.7vw, 14px); font-weight: 700; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.28); text-align: center; line-height: 1.3; transform: translate(-50%, -100%); width: fit-content; max-width: min(320px, 82vw); min-width: 140px; z-index: 1450; }
-    .tutorial-elemento-activo { position: relative; z-index: 1405 !important; filter: none !important; }
+    #tutorial-label { position: fixed; left: 50%; display: none; padding: 10px 16px; background: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(237, 241, 255, 0.96)); border: 2px solid rgba(85, 70, 192, 0.35); border-radius: 12px; font-family: 'Poppins', sans-serif; font-size: clamp(11px, 1.7vw, 14px); font-weight: 700; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.28); text-align: center; line-height: 1.3; transform: translate(-50%, -100%); width: fit-content; max-width: min(320px, 82vw); min-width: 140px; z-index: 1700; pointer-events: none; }
+    .tutorial-elemento-activo { position: relative; z-index: 1600 !important; filter: none !important; }
     body.tutorial-activo * { pointer-events: none !important; filter: none; }
     body.tutorial-activo #tutorial-controls *,
     body.tutorial-activo #tutorial-controls,
@@ -784,6 +793,7 @@
         const estadoTutorialActivo = (doc.exists && doc.data()?.tutorialBilleteraEstado === 'Activo');
         tutorialState.datosCargados=true;
         configurarControlesTutorial();
+        mostrarControlesTutorial();
         if(estadoTutorialActivo){
           setTimeout(()=>{ reanudarTutorialSiAplica(true); },50);
         }
@@ -928,9 +938,11 @@
       auto:{reproduciendo:false, intervalId:null, ciclos:0, indiceInicio:0, iniciado:false},
       estadoGuardado:'Inactivo',
       datosCargados:false,
+      alturaBaseViewport: window.innerHeight,
+      viewportAltura: (window.visualViewport?.height)||window.innerHeight,
     };
 
-    const animacionTabla = { intervalo:null, posiciones:[], indice:0, direccion:1 };
+    const animacionTabla = { frameId:null, limites:null, posicionX:0, direccion:1, pausaHasta:0, ultimaMarca:0 };
 
     let tutorialControlesListos=false;
 
@@ -964,8 +976,29 @@
 
     const PASOS_TRANSACCIONES = [
       { id:'toggle-transacciones', elementId:'switch-transacciones-wrapper', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Activa este interruptor para desplegar los datos de tus transacciones', color:'#0b4c8c', tab:null },
-      { id:'tabla-transacciones', elementId:'filtro-tipo', mano:'img/Mano-abajo.png', posicion:'encima-centro', mensaje:'En esta tabla se listan tus transacciones, puedes usar los filtros en la primera fila TIPO, MONTO, FECHA, ESTADO', color:'#4b0082', tab:null },
+      { id:'tabla-transacciones', elementId:'tabla-transacciones', mano:'img/Mano-abajo.png', posicion:'encima-centro', mensaje:'En esta tabla se listan tus transacciones, puedes usar los filtros en la primera fila TIPO, MONTO, FECHA, ESTADO', color:'#4b0082', tab:null },
     ];
+
+    function obtenerAlturaViewport(){
+      return tutorialState.viewportAltura || window.innerHeight;
+    }
+
+    function actualizarAlturaViewport(){
+      const alturaActual=window.visualViewport?.height || window.innerHeight;
+      tutorialState.viewportAltura=alturaActual;
+      if(!tutorialState.alturaBaseViewport || alturaActual>tutorialState.alturaBaseViewport){
+        tutorialState.alturaBaseViewport=alturaActual;
+      }
+      if(tutorialState.activo){
+        enfocarPaso();
+      }
+    }
+
+    if(window.visualViewport){
+      window.visualViewport.addEventListener('resize',actualizarAlturaViewport);
+      window.visualViewport.addEventListener('scroll',actualizarAlturaViewport);
+    }
+    window.addEventListener('orientationchange',actualizarAlturaViewport);
 
     function guardarIndiceTutorial(indice){
       if(Number.isInteger(indice)){
@@ -1025,8 +1058,9 @@
       const padding=14;
       const izquierda=Math.max(0, rect.left - padding);
       const derecha=Math.min(window.innerWidth, rect.right + padding);
+      const viewportHeight=obtenerAlturaViewport();
       const arriba=Math.max(0, rect.top - padding);
-      const abajo=Math.min(window.innerHeight, rect.bottom + padding);
+      const abajo=Math.min(viewportHeight, rect.bottom + padding);
       tutorialUI.overlay.style.background='rgba(0, 0, 0, 0.6)';
       tutorialUI.overlay.style.clipPath=`polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 0, 0 0, ${izquierda}px 0, ${izquierda}px ${arriba}px, ${derecha}px ${arriba}px, ${derecha}px ${abajo}px, ${izquierda}px ${abajo}px, ${izquierda}px 0, 0 0)`;
     }
@@ -1044,58 +1078,66 @@
       tutorialUI.hand.style.display='block';
     }
 
-    function recolectarPosicionesTabla(elemento){
-      if(!elemento) return [];
-      const filas=elemento.querySelectorAll('tbody tr');
-      const posiciones=[];
+    function calcularLimitesTabla(elemento){
+      if(!elemento) return null;
+      const rect=elemento.getBoundingClientRect();
       const manoWidth=tutorialUI.hand?.width||44;
       const manoHeight=tutorialUI.hand?.height||44;
-      if(filas.length){
-        filas.forEach(fila=>{
-          const celdas=Array.from(fila.cells);
-          celdas.forEach(celda=>{
-            const rect=celda.getBoundingClientRect();
-            posiciones.push({ x: rect.left + rect.width/2 - manoWidth/2, y: rect.top + rect.height/2 - manoHeight/2 });
-          });
-        });
-      }
-      if(!posiciones.length){
-        const rect=elemento.getBoundingClientRect();
-        posiciones.push({ x: rect.left + rect.width/2 - manoWidth/2, y: rect.top + rect.height/2 - manoHeight/2 });
-      }
-      return posiciones;
+      const padding=8;
+      return {
+        inicioX: rect.left + padding,
+        finX: Math.max(rect.left + padding, rect.right - manoWidth - padding),
+        y: rect.top + rect.height/2 - manoHeight/2
+      };
     }
 
     function detenerAnimacionTabla(){
-      if(animacionTabla.intervalo){
-        clearInterval(animacionTabla.intervalo);
+      if(animacionTabla.frameId){
+        cancelAnimationFrame(animacionTabla.frameId);
       }
-      animacionTabla.intervalo=null;
-      animacionTabla.posiciones=[];
-      animacionTabla.indice=0;
-      animacionTabla.direccion=1;
+      animacionTabla.frameId=null;
+      animacionTabla.limites=null;
+      animacionTabla.pausaHasta=0;
+      animacionTabla.ultimaMarca=0;
     }
 
     function iniciarAnimacionTabla(elemento){
       if(!tutorialUI.hand || !elemento) return;
       detenerAnimacionTabla();
-      animacionTabla.posiciones=recolectarPosicionesTabla(elemento);
-      if(!animacionTabla.posiciones.length) return;
-      posicionarMano(animacionTabla.posiciones[0]);
-      const velocidad=240;
-      animacionTabla.intervalo=setInterval(()=>{
-        if(!tutorialState.activo || animacionTabla.posiciones.length<=1){ return; }
-        let siguiente=animacionTabla.indice + animacionTabla.direccion;
-        if(siguiente>=animacionTabla.posiciones.length){
-          animacionTabla.direccion=-1;
-          siguiente=Math.max(animacionTabla.posiciones.length-2, 0);
-        } else if(siguiente<0){
-          animacionTabla.direccion=1;
-          siguiente=Math.min(1, animacionTabla.posiciones.length-1);
+      const limites=calcularLimitesTabla(elemento);
+      if(!limites) return;
+      animacionTabla.limites=limites;
+      animacionTabla.posicionX=limites.inicioX;
+      animacionTabla.direccion=1;
+      const velocidadPxMs=0.18;
+      const duracionPausa=380;
+
+      const step=(timestamp)=>{
+        if(!tutorialState.activo || !animacionTabla.limites){ return; }
+        if(!animacionTabla.ultimaMarca){ animacionTabla.ultimaMarca=timestamp; }
+        const delta=timestamp-animacionTabla.ultimaMarca;
+        animacionTabla.ultimaMarca=timestamp;
+
+        if(animacionTabla.pausaHasta && timestamp<animacionTabla.pausaHasta){
+          animacionTabla.frameId=requestAnimationFrame(step);
+          return;
         }
-        animacionTabla.indice=siguiente;
-        posicionarMano(animacionTabla.posiciones[animacionTabla.indice]);
-      }, velocidad);
+
+        animacionTabla.posicionX+=animacionTabla.direccion*delta*velocidadPxMs;
+        if(animacionTabla.posicionX>=animacionTabla.limites.finX){
+          animacionTabla.posicionX=animacionTabla.limites.finX;
+          animacionTabla.direccion=-1;
+          animacionTabla.pausaHasta=timestamp+duracionPausa;
+        } else if(animacionTabla.posicionX<=animacionTabla.limites.inicioX){
+          animacionTabla.posicionX=animacionTabla.limites.inicioX;
+          animacionTabla.direccion=1;
+          animacionTabla.pausaHasta=timestamp+duracionPausa;
+        }
+        posicionarMano({ x: animacionTabla.posicionX, y: animacionTabla.limites.y });
+        animacionTabla.frameId=requestAnimationFrame(step);
+      };
+
+      animacionTabla.frameId=requestAnimationFrame(step);
     }
 
     function calcularPosicionMano(paso, rect){
@@ -1122,10 +1164,15 @@
 
     function posicionarEtiqueta(rect, mensaje, color){
       if(!tutorialUI.label) return;
-      const viewportHeight=window.innerHeight;
+      const viewportHeight=obtenerAlturaViewport();
+      const alturaBase=tutorialState.alturaBaseViewport||viewportHeight;
+      const desplazamientoTeclado=Math.max(0, alturaBase - viewportHeight);
+      const margenBase=24;
+      const margenExtra=Math.min(desplazamientoTeclado*0.6, viewportHeight*0.25);
+      const margen=margenBase+margenExtra;
       const estaArriba=rect.top < viewportHeight/2;
-      const margen=24;
-      const topDeseado=estaArriba?Math.min(viewportHeight - margen, Math.max(rect.bottom + margen, viewportHeight*0.62)):Math.max(margen, Math.min(rect.top - margen, viewportHeight*0.38));
+      const topBase=estaArriba?Math.min(viewportHeight - margen, Math.max(rect.bottom + margen, viewportHeight*0.62)):Math.max(margen, Math.min(rect.top - margen, viewportHeight*0.38));
+      const topDeseado=Math.max(margenBase, Math.min(viewportHeight - margenBase, topBase - margenExtra));
       tutorialUI.label.textContent=mensaje;
       tutorialUI.label.style.color=color||'#1f1f1f';
       tutorialUI.label.style.top=`${topDeseado}px`;
@@ -1207,6 +1254,12 @@
       tutorialUI.play.textContent=tutorialState.auto.reproduciendo?'⏸️':'▶️';
       const etiqueta=tutorialState.auto.reproduciendo?'Pausar avance automático del tutorial':'Reproducir tutorial automáticamente';
       tutorialUI.play.setAttribute('aria-label',etiqueta);
+    }
+
+    function mostrarControlesTutorial(){
+      const controles=document.getElementById('tutorial-controls');
+      if(!controles) return;
+      controles.classList.add('visible');
     }
 
     function limpiarAuto(){
@@ -1327,6 +1380,11 @@
         });
       }
     }
+
+    document.addEventListener('focusin',()=>{
+      if(!tutorialState.activo) return;
+      setTimeout(enfocarPaso,80);
+    });
 
     async function reanudarTutorialSiAplica(estadoBD){
       tutorialState.estadoGuardado=estadoBD?'Activo':'Inactivo';
