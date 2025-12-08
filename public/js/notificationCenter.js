@@ -165,6 +165,13 @@
     mensajeDepositoAnulado: 'mensajeRecargaAnulada'
   };
 
+  const TIPOS_RECARGA = new Set(['recarga','deposito','depósito']);
+
+  function normalizarTipoRecarga(tipo){
+    const limpio = (tipo || '').toLowerCase();
+    return TIPOS_RECARGA.has(limpio) ? 'recarga' : limpio;
+  }
+
   function aplicarRenombradoClaves(origen){
     if(!origen || typeof origen !== 'object') return {};
     const resultado = { ...origen };
@@ -616,8 +623,7 @@
             }
             snapshot.docChanges().forEach(cambio => {
               const data = cambio.doc.data() || {};
-              const tipoRaw = (data.tipotrans || '').toLowerCase();
-              const tipo = tipoRaw === 'deposito' ? 'recarga' : tipoRaw;
+              const tipo = normalizarTipoRecarga(data.tipotrans);
               const estado = (data.estado || '').toUpperCase();
               if(tipo === 'recarga' && (estado === 'APROBADO' || estado === 'ANULADO')){
                 this.notificarCambioRecarga(cambio.doc.id, { ...data, tipotrans: tipo }, estado);
@@ -644,8 +650,8 @@
             const retiros = new Set();
             snapshot.forEach(doc => {
               const data = doc.data() || {};
-              const tipo = (data.tipotrans || '').toLowerCase();
-              if(tipo === 'deposito' || tipo === 'recarga') recargas.add(doc.id);
+              const tipo = normalizarTipoRecarga(data.tipotrans);
+              if(tipo === 'recarga') recargas.add(doc.id);
               if(tipo === 'retiro') retiros.add(doc.id);
             });
             this.gestionarPendientes('recargasPendientes', recargas, conteo => `Tienes ${conteo} recarga(s) pendiente(s) por gestionar.`);
