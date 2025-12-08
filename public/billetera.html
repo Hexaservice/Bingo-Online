@@ -275,11 +275,12 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      z-index: 3800;
+      z-index: 6200;
       opacity: 0;
       pointer-events: none;
       transform: translateY(10px);
       transition: opacity 0.35s ease, transform 0.35s ease;
+      isolation: isolate;
     }
     #tutorial-controls.visible {
       opacity: 1;
@@ -324,10 +325,10 @@
     .tutorial-nav-btn:active { transform: scale(0.95); }
     #tutorial-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 3000; background: rgba(0, 0, 0, 0.65); transition: opacity 0.25s ease; opacity: 0; }
     #tutorial-overlay.activo { opacity: 1; }
-    #tutorial-hand { position: absolute; width: 44px; height: auto; display: none; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35)); transform-origin: center; z-index: 3600; pointer-events: none; }
+    #tutorial-hand { position: absolute; width: 44px; height: auto; display: none; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35)); transform-origin: center; z-index: 5800; pointer-events: none; }
     .tutorial-hand-pulse { animation: tutorial-hand-pulse 0.65s ease-in-out infinite; }
-    #tutorial-label { position: fixed; left: 50%; display: none; padding: 10px 16px; background: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(237, 241, 255, 0.96)); border: 2px solid rgba(85, 70, 192, 0.35); border-radius: 12px; font-family: 'Poppins', sans-serif; font-size: clamp(11px, 1.7vw, 14px); font-weight: 700; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.28); text-align: center; line-height: 1.3; transform: translate(-50%, -100%); width: fit-content; max-width: min(320px, 82vw); min-width: 140px; z-index: 3600; pointer-events: none; }
-    .tutorial-elemento-activo { position: relative; z-index: 3200 !important; filter: none !important; }
+    #tutorial-label { position: fixed; left: 50%; display: none; padding: 10px 16px; background: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(237, 241, 255, 0.96)); border: 2px solid rgba(85, 70, 192, 0.35); border-radius: 12px; font-family: 'Poppins', sans-serif; font-size: clamp(11px, 1.7vw, 14px); font-weight: 700; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.28); text-align: center; line-height: 1.3; transform: translate(-50%, -100%); width: fit-content; max-width: min(320px, 82vw); min-width: 140px; z-index: 5200; pointer-events: none; }
+    .tutorial-elemento-activo { position: relative; z-index: 3400 !important; filter: none !important; }
     body.tutorial-activo * { pointer-events: none !important; filter: none; }
     body.tutorial-activo #tutorial-controls *,
     body.tutorial-activo #tutorial-controls,
@@ -1085,10 +1086,11 @@
       const manoWidth=tutorialUI.hand?.width||44;
       const manoHeight=tutorialUI.hand?.height||44;
       const padding=8;
+      const margenInferior=6;
       return {
         inicioX: rect.left + padding,
         finX: Math.max(rect.left + padding, rect.right - manoWidth - padding),
-        y: rect.top + rect.height/2 - manoHeight/2
+        y: rect.bottom + margenInferior + manoHeight/2
       };
     }
 
