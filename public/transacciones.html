@@ -178,9 +178,9 @@
     const datosRet = [];
     let unsubscribeTransacciones = null;
     const MAPEO_PREFERENCIAS_WHATSAPP={
-      deposito:{
-        APROBADO:'mensajeDepositoAprobado',
-        ANULADO:'mensajeDepositoAnulado'
+      recarga:{
+        APROBADO:'mensajeRecargaAprobada',
+        ANULADO:'mensajeRecargaAnulada'
       },
       retiro:{
         APROBADO:'mensajeRetiroAprobado',
@@ -218,6 +218,13 @@
     let refCookies=loadRefCookies();
     let mostrarRecArch=false;
     let mostrarRetArch=false;
+
+    function normalizarTipoOperacion(transaccion){
+      const tipo=(transaccion.tipotrans||'').toLowerCase();
+      if(tipo==='retiro') return 'retiro';
+      if(tipo==='recarga' || tipo==='deposito') return 'recarga';
+      return tipo || 'recarga';
+    }
     function actualizarArchivarRecBtn(){
       const btn=document.getElementById('archivar-rec');
       const icon=btn.querySelector('.icon');
@@ -261,7 +268,7 @@
         aviso.textContent='Una vez ANULADO el registro no se puede revertir esta acción';
         aviso.style.fontWeight='bold';
         const sel=document.createElement('select');
-        sel.innerHTML='<option value="">Seleccione</option><option value="Monto de depósito no corresponde">Monto de depósito no corresponde</option><option value="No existe depósito solicitado">No existe depósito solicitado</option><option value="Otro">Otro</option>';
+        sel.innerHTML='<option value="">Seleccione</option><option value="Monto de recarga no corresponde">Monto de recarga no corresponde</option><option value="No existe recarga solicitada">No existe recarga solicitada</option><option value="Otro">Otro</option>';
         const inp=document.createElement('input');
         inp.type='text';inp.placeholder='Motivo';inp.style.display='none';
         const btnOk=document.createElement('button');btnOk.textContent='Aceptar';
@@ -322,9 +329,10 @@
       snap.forEach(d=>{
         const dt={id:d.id,...d.data()};
         dt.Condicion = dt.Condicion || (dt.estado==='ARCHIVADO'?'ARCHIVADA':'VISIBLE');
-        const tipo=(dt.tipotrans||'').toLowerCase();
-        if(tipo==='deposito') datosRec.push(dt);
-        else if(tipo==='retiro') datosRet.push(dt);
+        const tipo=normalizarTipoOperacion(dt);
+        const dtNormalizado={...dt, tipotrans:tipo};
+        if(tipo==='recarga') datosRec.push(dtNormalizado);
+        else if(tipo==='retiro') datosRet.push(dtNormalizado);
       });
       datosRec.sort(sortTrans);
       datosRet.sort(sortTrans);
@@ -612,7 +620,7 @@
       return normalizado;
     }
     function construirMensajeWhatsapp(transaccion,estadoFinal,nota){
-      const tipo=((transaccion.tipotrans||'').toLowerCase()==='retiro')?'retiro':'deposito';
+      const tipo=normalizarTipoOperacion(transaccion);
       const montoSolicitadoNum=toNumberSafe(transaccion.MontoSolicitado??transaccion.Monto,transaccion.Monto);
       const montoTransferidoNum=toNumberSafe(transaccion.Monto,transaccion.MontoSolicitado??transaccion.Monto);
       const formatearEnteroSeguro=valor=>Math.trunc(toNumberSafe(valor,0)).toString();
@@ -622,9 +630,9 @@
       const ICONO_WHATSAPP_ANULADO='🚫';
 
       if(estadoFinal==='APROBADO'){
-        if(tipo==='deposito'){
-          lineas.push('✅ *DEPÓSITO APROBADO*');
-          lineas.push(`Tu depósito por ${montoSolicitadoBold} Créditos en BingOnline ha sido aprobado.`);
+        if(tipo==='recarga'){
+          lineas.push('✅ *RECARGA APROBADA*');
+          lineas.push(`Tu recarga por ${montoSolicitadoBold} Créditos en BingOnline ha sido aprobada.`);
         }else{
           lineas.push('✅ *RETIRO APROBADO*');
           lineas.push(`Tu retiro por ${montoSolicitadoBold} Créditos en BingOnline ha sido aprobado.`);
@@ -634,9 +642,9 @@
           lineas.push(`Total transferidos: ${montoTransferido} Créditos`);
         }
       }else{
-        if(tipo==='deposito'){
-          lineas.push(`${ICONO_WHATSAPP_ANULADO} *DEPÓSITO ANULADO*`);
-          lineas.push(`Tu depósito por ${formatearMonto(montoSolicitadoNum)} Créditos en BingOnline fue anulado.`);
+        if(tipo==='recarga'){
+          lineas.push(`${ICONO_WHATSAPP_ANULADO} *RECARGA ANULADA*`);
+          lineas.push(`Tu recarga por ${formatearMonto(montoSolicitadoNum)} Créditos en BingOnline fue anulada.`);
         }else{
           lineas.push(`${ICONO_WHATSAPP_ANULADO} *RETIRO ANULADO*`);
           lineas.push(`Tu retiro por ${formatearMonto(montoSolicitadoNum)} Créditos en BingOnline fue anulado.`);
@@ -674,7 +682,7 @@
 
     async function permitirRedaccionWhatsapp(transaccion,estadoFinal){
       const claveEstado=(estadoFinal||'').toUpperCase();
-      const tipo=((transaccion.tipotrans||'').toLowerCase()==='retiro')?'retiro':'deposito';
+      const tipo=normalizarTipoOperacion(transaccion);
       const clavePreferencia=(MAPEO_PREFERENCIAS_WHATSAPP[tipo]||{})[claveEstado];
       if(!clavePreferencia) return false;
       if(!window.notificationCenter || typeof window.notificationCenter.cuandoListo!=='function') return false;
@@ -708,12 +716,12 @@
         else if(!data.Condicion)upd.Condicion='VISIBLE';
         await transRef.doc(id).update(upd);
         delete refCookies[id];
-        const tipo=((data && data.tipotrans)||'').toString().toLowerCase();
+        const tipo=normalizarTipoOperacion(data);
         const billeteraId=((data && data.IDbilletera)||'').toString();
         if(!billeteraId) continue;
         const esRetiro=tipo==='retiro';
-        const esDeposito=tipo==='deposito';
-        if((estado==='APROBADO' && (esDeposito||esRetiro)) || (estado==='ANULADO' && esRetiro)){
+        const esRecarga=tipo==='recarga';
+        if((estado==='APROBADO' && (esRecarga||esRetiro)) || (estado==='ANULADO' && esRetiro)){
           const billeteraRef=db.collection('Billetera').doc(billeteraId);
           await db.runTransaction(async t=>{
             const bdoc=await t.get(billeteraRef);
@@ -723,7 +731,7 @@
             const montoTransaccion=toNumberSafe((data.MontoSolicitado ?? data.Monto),0);
             const payload={};
             if(estado==='APROBADO'){
-              if(esDeposito){
+              if(esRecarga){
                 creditosActual+=toNumberSafe(data.Monto,0);
                 payload.creditos=creditosActual;
               }else if(esRetiro){

@@ -201,7 +201,7 @@
       font-size: 0.78rem;
       color: #fff;
     }
-    .tag.deposito { background: #22c55e; }
+    .tag.recarga { background: #22c55e; }
     .tag.retiro { background: #ef4444; }
     .tag.pendiente { background: #f59e0b; }
     .tag.aprobado { background: #22c55e; }
@@ -235,7 +235,7 @@
           <label for="tipo-movimiento">Tipo de movimiento</label>
           <select id="tipo-movimiento">
             <option value="todos">Todos</option>
-            <option value="deposito">Depósitos</option>
+            <option value="recarga">Recargas</option>
             <option value="retiro">Retiros</option>
           </select>
         </div>
@@ -307,12 +307,12 @@
     ];
 
     const movimientosDemo=[
-      { id:'DEP-1034', tipo:'deposito', monto:50000, estado:'aprobado', fecha:'2024-12-01' },
-      { id:'DEP-1042', tipo:'deposito', monto:28000, estado:'pendiente', fecha:'2024-12-08' },
+      { id:'REC-1034', tipo:'recarga', monto:50000, estado:'aprobado', fecha:'2024-12-01' },
+      { id:'REC-1042', tipo:'recarga', monto:28000, estado:'pendiente', fecha:'2024-12-08' },
       { id:'RET-2023', tipo:'retiro', monto:15000, estado:'aprobado', fecha:'2024-12-10' },
       { id:'RET-2028', tipo:'retiro', monto:8200, estado:'pendiente', fecha:'2024-12-12' },
       { id:'RET-2030', tipo:'retiro', monto:4600, estado:'rechazado', fecha:'2024-12-14' },
-      { id:'DEP-1050', tipo:'deposito', monto:18000, estado:'aprobado', fecha:'2024-12-15' },
+      { id:'REC-1050', tipo:'recarga', monto:18000, estado:'aprobado', fecha:'2024-12-15' },
       { id:'RET-2035', tipo:'retiro', monto:12500, estado:'aprobado', fecha:'2024-12-18' }
     ];
 
@@ -354,7 +354,10 @@
       const hasta=parseFecha(fechaHasta.value);
       const filtroTipo=tipoMovimiento.value;
 
-      const movimientosFiltrados=movimientosDemo.filter(mov=>{
+      const movimientosFiltrados=movimientosDemo.map(mov=>({
+        ...mov,
+        tipo: mov.tipo==='deposito'?'recarga':mov.tipo
+      })).filter(mov=>{
         const fecha=parseFecha(mov.fecha);
         const coincideTipo=filtroTipo==='todos' || mov.tipo===filtroTipo;
         return coincideTipo && estaEnRango(fecha,desde,hasta);
@@ -364,14 +367,14 @@
       const totalCreditos=billeterasDemo.reduce((acc,w)=>acc+w.creditos,0);
       const totalCartones=billeterasDemo.reduce((acc,w)=>acc+w.cartonesGratis,0);
       const totalRetiros=movimientosFiltrados.filter(m=>m.tipo==='retiro').reduce((acc,m)=>acc+m.monto,0);
-      const totalDepositos=movimientosFiltrados.filter(m=>m.tipo==='deposito').reduce((acc,m)=>acc+m.monto,0);
+      const totalRecargas=movimientosFiltrados.filter(m=>['recarga','deposito'].includes(m.tipo)).reduce((acc,m)=>acc+m.monto,0);
       const bloqueados=usuariosFiltrados.filter(u=>['bloqueado','inhabilitado'].includes(u.estado.toLowerCase())).length;
 
       const cards=[
         { label:'Créditos actuales (todas las billeteras)', value:`${formatearNumero(totalCreditos)} cr.` },
         { label:'Cartones gratis totales', value:formatearNumero(totalCartones) },
         { label:'Solicitudes de retiros', value:`${formatearNumero(totalRetiros)} cr.` },
-        { label:'Solicitudes de depósitos', value:`${formatearNumero(totalDepositos)} cr.` },
+        { label:'Solicitudes de recargas', value:`${formatearNumero(totalRecargas)} cr.` },
         { label:'Usuarios bloqueados / inhabilitados', value:bloqueados }
       ];
 
@@ -385,7 +388,7 @@
       tablaMovimientos.innerHTML=movimientosFiltrados.map(mov=>`
         <tr>
           <td>${mov.id}</td>
-          <td><span class="tag ${mov.tipo}">${mov.tipo==='deposito'?'Depósito':'Retiro'}</span></td>
+          <td><span class="tag ${mov.tipo}">${mov.tipo==='recarga'?'Recarga':'Retiro'}</span></td>
           <td>${formatearNumero(mov.monto)} cr.</td>
           <td><span class="tag ${mov.estado}">${mov.estado.charAt(0).toUpperCase()+mov.estado.slice(1)}</span></td>
           <td>${mov.fecha}</td>
