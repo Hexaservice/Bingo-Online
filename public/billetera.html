@@ -275,7 +275,7 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      z-index: 6200;
+      z-index: 14000;
       opacity: 0;
       pointer-events: none;
       transform: translateY(10px);
@@ -323,12 +323,12 @@
     #tutorial-nav.activo .tutorial-nav-btn:nth-child(2) { animation-delay: 0.12s; }
     .tutorial-nav-btn:hover { transform: scale(1.08); color: #5546c0; }
     .tutorial-nav-btn:active { transform: scale(0.95); }
-    #tutorial-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 3000; background: rgba(0, 0, 0, 0.65); transition: opacity 0.25s ease; opacity: 0; }
+    #tutorial-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 9000; background: rgba(0, 0, 0, 0.65); transition: opacity 0.25s ease; opacity: 0; }
     #tutorial-overlay.activo { opacity: 1; }
-    #tutorial-hand { position: absolute; width: 44px; height: auto; display: none; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35)); transform-origin: center; z-index: 5800; pointer-events: none; }
+    #tutorial-hand { position: fixed; width: 44px; height: auto; display: none; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35)); transform-origin: center; z-index: 15000; pointer-events: none; }
     .tutorial-hand-pulse { animation: tutorial-hand-pulse 0.65s ease-in-out infinite; }
-    #tutorial-label { position: fixed; left: 50%; display: none; padding: 10px 16px; background: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(237, 241, 255, 0.96)); border: 2px solid rgba(85, 70, 192, 0.35); border-radius: 12px; font-family: 'Poppins', sans-serif; font-size: clamp(11px, 1.7vw, 14px); font-weight: 700; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.28); text-align: center; line-height: 1.3; transform: translate(-50%, -100%); width: fit-content; max-width: min(320px, 82vw); min-width: 140px; z-index: 5200; pointer-events: none; }
-    .tutorial-elemento-activo { position: relative; z-index: 3400 !important; filter: none !important; }
+    #tutorial-label { position: fixed; left: 50%; display: none; padding: 10px 16px; background: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(237, 241, 255, 0.96)); border: 2px solid rgba(85, 70, 192, 0.35); border-radius: 12px; font-family: 'Poppins', sans-serif; font-size: clamp(11px, 1.7vw, 14px); font-weight: 700; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.28); text-align: center; line-height: 1.3; transform: translate(-50%, -100%); width: fit-content; max-width: min(320px, 82vw); min-width: 140px; z-index: 13000; pointer-events: none; }
+    .tutorial-elemento-activo { position: relative; z-index: 9400 !important; filter: none !important; }
     body.tutorial-activo * { pointer-events: none !important; filter: none; }
     body.tutorial-activo #tutorial-controls *,
     body.tutorial-activo #tutorial-controls,
@@ -959,7 +959,7 @@
     ];
 
     const PASOS_RECARGAS = [
-      { id:'tabla-bancos', elementId:'tabla-bancos', selectorPersonalizado:'#tabla-bancos tbody tr:first-child, #tabla-bancos tbody', mano:'img/Mano-arriba.png', posicion:'debajo-centro', mensaje:'Estos son los datos de los bancos habilitados donde deberas transferir tus pagos moviles', color:'#0a4c6a', tab:'depositar' },
+      { id:'tabla-bancos', elementId:'tabla-bancos', selectorPersonalizado:'#tabla-bancos', selectorAnimacion:'#tabla-bancos tbody tr:last-child', mano:'img/Mano-arriba.png', posicion:'debajo-centro', mensaje:'Estos son los datos de los bancos habilitados donde deberas transferir tus pagos moviles', color:'#0a4c6a', tab:'depositar' },
       { id:'banco-deposito', elementId:'banco-deposito', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'elige el banco donde transferiste tu pago móvil', color:'#005b99', tab:'depositar' },
       { id:'monto-deposito', elementId:'monto-deposito', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Coloca el monto que transferiste. Es IMPORTANTE  que coloques el monto exacto para que no sea anulado', color:'#0b9a2e', tab:'depositar' },
       { id:'referencia', elementId:'referencia', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Colocalos últimos 5 dígitos de la referencia. Es IMPORTANTE  que coloques el los digitos correctos, de lo contrario será anulado', color:'#6a0dad', tab:'depositar' },
@@ -1036,6 +1036,14 @@
       return document.getElementById(paso.elementId);
     }
 
+    function obtenerElementoAnimacion(paso, elementoBase){
+      if(paso.selectorAnimacion){
+        const objetivo=document.querySelector(paso.selectorAnimacion);
+        if(objetivo){ return objetivo; }
+      }
+      return elementoBase;
+    }
+
     function construirPasosTutorial(){
       const pasos=[];
       pasos.push({ id:'toggle-datos', elementId:'switch-datos-wrapper', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Activa este interruptor para desplegar y modificar tus datos bancarios', color:'#0b4c8c', tab:null });
@@ -1086,11 +1094,11 @@
       const manoWidth=tutorialUI.hand?.width||44;
       const manoHeight=tutorialUI.hand?.height||44;
       const padding=8;
-      const margenInferior=6;
+      const margenInferior=Math.min(18, rect.height*0.35);
       return {
         inicioX: rect.left + padding,
         finX: Math.max(rect.left + padding, rect.right - manoWidth - padding),
-        y: rect.bottom + margenInferior + manoHeight/2
+        y: rect.bottom - margenInferior
       };
     }
 
@@ -1227,7 +1235,8 @@
         tutorialUI.hand.src=paso.mano;
         if(paso.id==='tabla-bancos'){
           tutorialUI.hand.classList.remove('tutorial-hand-pulse');
-          iniciarAnimacionTabla(elemento);
+          const elementoAnimacion=obtenerElementoAnimacion(paso, elemento);
+          iniciarAnimacionTabla(elementoAnimacion);
         } else {
           detenerAnimacionTabla();
           const pos=calcularPosicionMano(paso, rect);
