@@ -385,11 +385,11 @@
 
   <div class="tabs">
     <div class="tab-buttons">
-      <button id="tab-depositar" data-tab="depositar" class="active">DEPÓSITOS</button>
+      <button id="tab-depositar" data-tab="depositar" class="active">RECARGAS</button>
       <button id="tab-retirar" data-tab="retirar">RETIROS</button>
     </div>
     <div id="depositar" class="tab-content active">
-      <h3>Bancos habilitados para depósitos</h3>
+      <h3>Bancos habilitados para recargas</h3>
       <table id="tabla-bancos">
         <thead>
           <tr><th>Banco</th><th>N° Pago Móvil</th><th>Cédula</th></tr>
@@ -402,7 +402,7 @@
       <input type="number" id="monto-deposito" placeholder="Monto">
         <input type="text" id="referencia" placeholder="Referencia (últimos 5 dígitos)" inputmode="numeric" pattern="\d*" maxlength="5" oninput="this.value=this.value.replace(/\D/g,"");">
       <textarea id="comentario-deposito" placeholder="Comentario (opcional)"></textarea>
-      <button id="btn-depositar">Solicitar Depósito</button>
+      <button id="btn-depositar">Solicitar Recarga</button>
     </div>
     <div id="retirar" class="tab-content">
       <label id="banco-retiro"></label>
@@ -436,7 +436,7 @@
             <th>
               <select id="filtro-tipo">
                 <option value="">TIPO</option>
-                <option value="deposito">DEPOSITO</option>
+                <option value="recarga">RECARGA</option>
                 <option value="retiro">RETIRO</option>
                 <option value="premio">PREMIO</option>
               </select>
@@ -627,7 +627,7 @@
 
     const ICONOS_WHATSAPP={
       // Se usan emojis ampliamente soportados para que se muestren correctamente en WhatsApp
-      solicitudDeposito:'💵',
+      solicitudRecarga:'💵',
       solicitudRetiro:'💰'
     };
 
@@ -637,15 +637,17 @@
       const lineas=[];
       const formatearEnteroSeguro=valor=>Math.trunc(toNumberSafe(valor,0)).toString();
 
-      if(tipo==='deposito'){
-        lineas.push(`${ICONOS_WHATSAPP.solicitudDeposito} *SOLICITUD DE DEPÓSITO*`);
+      const tipoNormalizado = tipo==='deposito'?'recarga':tipo;
+
+      if(tipoNormalizado==='recarga'){
+        lineas.push(`${ICONOS_WHATSAPP.solicitudRecarga} *SOLICITUD DE RECARGA*`);
         if(correo) lineas.push(`Correo: ${correo}`);
         if(nombre) lineas.push(`Usuario: ${nombre}`);
         lineas.push(`Banco receptor: ${info?.banco||'N/D'}`);
         lineas.push(`Monto: *${formatearEnteroSeguro(info?.monto)}*`);
         lineas.push(`Referencia: *${info?.referencia||'N/D'}*`);
         if(info?.comentario){ lineas.push(`Comentario: ${info.comentario}`); }
-      }else if(tipo==='retiro'){
+      }else if(tipoNormalizado==='retiro'){
         lineas.push(`${ICONOS_WHATSAPP.solicitudRetiro} *SOLICITUD DE RETIRO*`);
         if(correo) lineas.push(`Correo: ${correo}`);
         if(nombre) lineas.push(`Usuario: ${nombre}`);
@@ -869,8 +871,12 @@
       const rolInterno = (data.rolInterno || data.rolinterno || '').toString().trim().toLowerCase();
       const esRolEspecial = ['desarrolladores','desarrollador','agencia'].includes(rolInterno);
 
-      if(['retiro','deposito','ajuste_colaborador'].includes(tipoCrudo)){
+      if(['retiro','recarga','ajuste_colaborador'].includes(tipoCrudo)){
         return tipoCrudo;
+      }
+
+      if(tipoCrudo === 'deposito'){
+        return 'recarga';
       }
 
       let tipo = tipoCrudo;
@@ -887,8 +893,15 @@
         if(!tipo || tipo === 'premio' || tipo === 'pago' || !tipoCrudo){
           if(!origen || origen === 'pagos_administracion' || sorteoNombre.includes('pago') || referencia === 'PAGO'){
             tipo = 'pago';
+          }
         }
       }
+
+      if(!tipo){
+        tipo = 'premio';
+      }
+
+      return tipo;
     }
 
     const tutorialUI = {
@@ -929,13 +942,13 @@
       { id:'guardar-datos', elementId:'guardar-datos', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Una vez coloques todos tus datos puedes guardar o actualizar tus datos presionando este boton', color:'#0b9a2e', requisitoTab:null },
     ];
 
-    const PASOS_DEPOSITOS = [
+    const PASOS_RECARGAS = [
       { id:'tabla-bancos', elementId:'tabla-bancos', mano:'img/Mano-arriba.png', posicion:'debajo-centro', mensaje:'Estos son los datos de los bancos habilitados donde deberas transferir tus pagos moviles', color:'#0a4c6a', tab:'depositar' },
       { id:'banco-deposito', elementId:'banco-deposito', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'elige el banco donde transferiste tu pago móvil', color:'#005b99', tab:'depositar' },
       { id:'monto-deposito', elementId:'monto-deposito', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Coloca el monto que transferiste. Es IMPORTANTE  que coloques el monto exacto para que no sea anulado', color:'#0b9a2e', tab:'depositar' },
       { id:'referencia', elementId:'referencia', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Colocalos últimos 5 dígitos de la referencia. Es IMPORTANTE  que coloques el los digitos correctos, de lo contrario será anulado', color:'#6a0dad', tab:'depositar' },
-      { id:'comentario-deposito', elementId:'comentario-deposito', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Aquí puedes colocar un comentario referente al depósito, este comentario es opcional', color:'#b34700', tab:'depositar' },
-      { id:'btn-depositar', elementId:'btn-depositar', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Una vez coloques todos los datos del depósito, puedes solicitar presionando este botón. Seras dirigido automaticamente a tu WhatsApp con el mensaje de solicitud para enviarlo', color:'#0a8800', tab:'depositar' },
+      { id:'comentario-deposito', elementId:'comentario-deposito', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Aquí puedes colocar un comentario referente a la recarga, este comentario es opcional', color:'#b34700', tab:'depositar' },
+      { id:'btn-depositar', elementId:'btn-depositar', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Una vez coloques todos los datos de la recarga, puedes solicitar presionando este botón. Seras dirigido automaticamente a tu WhatsApp con el mensaje de solicitud para enviarlo', color:'#0a8800', tab:'depositar' },
     ];
 
     const PASOS_RETIROS = [
@@ -991,7 +1004,7 @@
       if(tutorialUI.toggleDatos?.checked){
         pasos.push(...PASOS_MIS_DATOS);
       }
-      pasos.push(...PASOS_DEPOSITOS);
+      pasos.push(...PASOS_RECARGAS);
       pasos.push(...PASOS_RETIROS);
       pasos.push(...PASOS_TRANSACCIONES);
       return pasos;
@@ -1294,12 +1307,12 @@
         const tr=document.createElement('tr');
         const montoFmt=parseFloat(t.Monto).toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
         const tipoTrans=(t.tipotrans||'').toLowerCase();
-        const esDeposito=tipoTrans==='deposito';
+        const esRecarga=tipoTrans==='recarga';
         const esRetiro=tipoTrans==='retiro';
         const esPremio=tipoTrans==='premio';
         const esPago=tipoTrans==='pago';
         const esResaltado=esPremio||esPago;
-        const colorTipo=esDeposito?'green':esRetiro?'red':'#1b5e20';
+        const colorTipo=esRecarga?'green':esRetiro?'red':'#1b5e20';
         const montoStyle=esResaltado?`background:#1b5e20;color:#fff;`:`color:${colorTipo};`;
         const fechaStyle=esResaltado?`color:#1b5e20;`:'';
         tr.innerHTML=`<td>${n}</td><td style="color:${colorTipo}">${tipoTrans.toUpperCase()}</td><td class="celda-monto" style="${montoStyle}">${montoFmt}</td><td class="celda-fecha" style="${fechaStyle}">${f}</td><td style="color:${estadoColor}">${t.estado}</td>`;
@@ -1378,7 +1391,7 @@
       if(d.banco && d.cuenta && d.cedula && d.pagomovil && d.tipoCuenta){
         return true;
       }
-      alert('Antes de realizar un Deposito o Retiro debes tener todos tus datos bancarios Registrados');
+      alert('Antes de solicitar una Recarga o Retiro debes tener todos tus datos bancarios registrados');
       const toggle=document.getElementById('toggle-datos');
       toggle.checked=true;
       document.getElementById('datos-content').style.display='block';
@@ -1391,7 +1404,7 @@
     }
 
     function limpiarCamposTransaccion(tipo){
-      if(tipo==='deposito'){
+      if(tipo==='recarga'){
         document.getElementById('banco-deposito').selectedIndex=0;
         document.getElementById('monto-deposito').value='';
         document.getElementById('referencia').value='';
@@ -1423,7 +1436,7 @@
       const ref=document.getElementById('referencia').value.trim();
       if(!/^[0-9]{5}$/.test(ref)){alert('Ingrese la referencia de 5 dígitos');document.getElementById('referencia').focus();return;}
       const data = {
-        tipotrans:'deposito',
+        tipotrans:'recarga',
         bancoreceptor:banco,
         Monto:monto,
         referencia:ref,
@@ -1440,13 +1453,13 @@
       };
       await db.collection('transacciones').add(data);
       alert('Bien, recibimos tu solicitud, una vez verificado el pago se recargará tu billetera');
-      await notificarSolicitudWhatsapp('deposito',{
+      await notificarSolicitudWhatsapp('recarga',{
         banco:banco,
         monto:monto,
         referencia:ref,
         comentario:data.comentario
       });
-      limpiarCamposTransaccion('deposito');
+      limpiarCamposTransaccion('recarga');
       cargarTransacciones();
     });
 

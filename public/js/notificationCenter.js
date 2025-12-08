@@ -8,39 +8,39 @@
       items: [
         { clave: 'sorteoNuevo', titulo: 'Notificación Sorteo Nuevo', descripcion: 'Se envía cuando se crea un sorteo.' },
         { clave: 'sorteoJugando', titulo: 'Notificación Sorteo Jugando', descripcion: 'Te avisa cuando un sorteo inicia la partida.' },
-        { clave: 'estatusDeposito', titulo: 'Notificación Estatus Depósito', descripcion: 'Recibe cambios de estado de tus depósitos.' },
+        { clave: 'estatusRecarga', titulo: 'Notificación Estatus Recarga', descripcion: 'Recibe cambios de estado de tus recargas.' },
         { clave: 'premio', titulo: 'Notificación Premio', descripcion: 'Recibe aviso cuando un premio se acredita en tu billetera.' }
       ]
     },
     Colaborador: {
       etiqueta: 'Colaborador',
       items: [
-        { clave: 'depositosPendientes', titulo: 'Notificación Depósitos Pendientes', descripcion: 'Se repite cada 10 minutos si hay depósitos por gestionar.' },
+        { clave: 'recargasPendientes', titulo: 'Notificación Recargas Pendientes', descripcion: 'Se repite cada 10 minutos si hay recargas por gestionar.' },
         { clave: 'retirosPendientes', titulo: 'Notificación Retiros Pendientes', descripcion: 'Se repite cada 10 minutos si hay retiros por gestionar.' },
-        { clave: 'mensajeDepositoAprobado', titulo: 'Redacción de mensajes DEPÓSITO APROBADO', descripcion: '✅ Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Depósito', color: '#0b6b27' },
+        { clave: 'mensajeRecargaAprobada', titulo: 'Redacción de mensajes RECARGA APROBADA', descripcion: '✅ Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Recarga', color: '#0b6b27' },
         { clave: 'mensajeRetiroAprobado', titulo: 'Redacción de mensajes RETIRO APROBADO', descripcion: '✅ Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Retiro', color: '#8b0000' },
-        { clave: 'mensajeDepositoAnulado', titulo: 'Redacción de mensajes DEPÓSITO ANULADO', descripcion: '🚫 Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Depósito Anulado', color: '#0a8800' },
+        { clave: 'mensajeRecargaAnulada', titulo: 'Redacción de mensajes RECARGA ANULADA', descripcion: '🚫 Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Recarga Anulada', color: '#0a8800' },
         { clave: 'mensajeRetiroAnulado', titulo: 'Redacción de mensajes RETIRO ANULADO', descripcion: '🚫 Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Retiro Anulado', color: '#d32f2f' }
       ]
     },
     Administrador: {
       etiqueta: 'Administrador',
       items: [
-        { clave: 'depositosPendientes', titulo: 'Notificación Depósitos Pendientes', descripcion: 'Se repite cada 10 minutos si hay depósitos por gestionar.' },
+        { clave: 'recargasPendientes', titulo: 'Notificación Recargas Pendientes', descripcion: 'Se repite cada 10 minutos si hay recargas por gestionar.' },
         { clave: 'retirosPendientes', titulo: 'Notificación Retiros Pendientes', descripcion: 'Se repite cada 10 minutos si hay retiros por gestionar.' },
         { clave: 'selladoSorteo', titulo: 'Notificación Sellado Sorteo', descripcion: 'Cuando llega la hora de sellado de un sorteo.' },
         { clave: 'juegoEnVivoSorteo', titulo: 'Notificación Juego en vivo Sorteo', descripcion: 'Cuando llega la hora de inicio de un sorteo.' },
         { clave: 'gestionPagos', titulo: 'Notificación Gestión Pagos', descripcion: 'Aviso único si hay gestiones de pagos pendientes.' },
-        { clave: 'mensajeDepositoAprobado', titulo: 'Redacción de mensajes DEPÓSITO APROBADO', descripcion: '✅ Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Depósito', color: '#0b6b27' },
+        { clave: 'mensajeRecargaAprobada', titulo: 'Redacción de mensajes RECARGA APROBADA', descripcion: '✅ Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Recarga', color: '#0b6b27' },
         { clave: 'mensajeRetiroAprobado', titulo: 'Redacción de mensajes RETIRO APROBADO', descripcion: '✅ Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Retiro', color: '#8b0000' },
-        { clave: 'mensajeDepositoAnulado', titulo: 'Redacción de mensajes DEPÓSITO ANULADO', descripcion: '🚫 Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Depósito Anulado', color: '#0a8800' },
+        { clave: 'mensajeRecargaAnulada', titulo: 'Redacción de mensajes RECARGA ANULADA', descripcion: '🚫 Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Recarga Anulada', color: '#0a8800' },
         { clave: 'mensajeRetiroAnulado', titulo: 'Redacción de mensajes RETIRO ANULADO', descripcion: '🚫 Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Retiro Anulado', color: '#d32f2f' }
       ]
     }
   };
 
   const INTERVALOS_REPETICION = {
-    depositosPendientes: 600000,
+    recargasPendientes: 600000,
     retirosPendientes: 600000,
     gestionPagos: 600000
   };
@@ -48,9 +48,9 @@
   const HISTORIAL_FABRICAS = {
     sorteoNuevo: () => ({ ids: {} }),
     sorteoJugando: () => ({ ids: {} }),
-    estatusDeposito: () => ({ ids: {} }),
+    estatusRecarga: () => ({ ids: {} }),
     premio: () => ({ ids: {} }),
-    depositosPendientes: () => ({ ultimoEnvio: 0 }),
+    recargasPendientes: () => ({ ultimoEnvio: 0 }),
     retirosPendientes: () => ({ ultimoEnvio: 0 }),
     gestionPagos: () => ({ ultimoEnvio: 0 }),
     selladoSorteo: () => ({ ids: {} }),
@@ -158,6 +158,24 @@
   }
 
   const CAMPO_CONSENTIMIENTO = 'aceptoNotificaciones';
+  const CLAVES_RENOMBRADAS = {
+    estatusDeposito: 'estatusRecarga',
+    depositosPendientes: 'recargasPendientes',
+    mensajeDepositoAprobado: 'mensajeRecargaAprobada',
+    mensajeDepositoAnulado: 'mensajeRecargaAnulada'
+  };
+
+  function aplicarRenombradoClaves(origen){
+    if(!origen || typeof origen !== 'object') return {};
+    const resultado = { ...origen };
+    Object.entries(CLAVES_RENOMBRADAS).forEach(([vieja,nueva]) => {
+      if(resultado[vieja] !== undefined && resultado[nueva] === undefined){
+        resultado[nueva] = resultado[vieja];
+      }
+      delete resultado[vieja];
+    });
+    return resultado;
+  }
 
   class CentroNotificaciones {
     constructor(){
@@ -181,7 +199,7 @@
       this.cache = {
         sorteos: new Map(),
         pendientes: {
-          depositosPendientes: new Set(),
+          recargasPendientes: new Set(),
           retirosPendientes: new Set(),
           gestionPagos: 0
         },
@@ -275,7 +293,7 @@
       this.cache = {
         sorteos: new Map(),
         pendientes: {
-          depositosPendientes: new Set(),
+          recargasPendientes: new Set(),
           retirosPendientes: new Set(),
           gestionPagos: 0
         },
@@ -306,7 +324,7 @@
       const raw = rawUsuario && rawUsuario.notificationSettings ? rawUsuario.notificationSettings : {};
       const claves = clavesPorRol(this.rol);
       const preferencias = {};
-      const origenPreferencias = raw.preferencias || {};
+      const origenPreferencias = aplicarRenombradoClaves(raw.preferencias || {});
       let requiereGuardado = false;
       claves.forEach(clave => {
         if(typeof origenPreferencias[clave] === 'boolean'){
@@ -324,7 +342,7 @@
         fechaUltimoPrompt: raw.fechaUltimoPrompt || raw.lastPromptAt || null,
         consentimiento: 'NO'
       };
-      const origenHistorial = raw.historial || raw.history || {};
+      const origenHistorial = aplicarRenombradoClaves(raw.historial || raw.history || {});
       Object.keys(this.config.historial).forEach(clave => {
         if(origenHistorial[clave]){
           this.config.historial[clave] = { ...this.config.historial[clave], ...origenHistorial[clave] };
@@ -590,7 +608,7 @@
         const correo = this.usuario.email;
         const unsubTrans = db.collection('transacciones')
           .where('IDbilletera','==', correo)
-          .where('tipotrans','in',['deposito','premio'])
+          .where('tipotrans','in',['recarga','premio','deposito'])
           .onSnapshot(snapshot => {
             if(!this.inicializaciones.transJugador){
               this.inicializaciones.transJugador = true;
@@ -598,10 +616,11 @@
             }
             snapshot.docChanges().forEach(cambio => {
               const data = cambio.doc.data() || {};
-              const tipo = (data.tipotrans || '').toLowerCase();
+              const tipoRaw = (data.tipotrans || '').toLowerCase();
+              const tipo = tipoRaw === 'deposito' ? 'recarga' : tipoRaw;
               const estado = (data.estado || '').toUpperCase();
-              if(tipo === 'deposito' && (estado === 'APROBADO' || estado === 'ANULADO')){
-                this.notificarCambioDeposito(cambio.doc.id, data, estado);
+              if(tipo === 'recarga' && (estado === 'APROBADO' || estado === 'ANULADO')){
+                this.notificarCambioRecarga(cambio.doc.id, { ...data, tipotrans: tipo }, estado);
               }
               if(tipo === 'premio' && estado === 'APROBADO'){
                 this.notificarPremio(cambio.doc.id, data);
@@ -619,17 +638,17 @@
       try{
         const unsub = db.collection('transacciones')
           .where('estado','==','PENDIENTE')
-          .where('tipotrans','in',['deposito','retiro'])
+          .where('tipotrans','in',['recarga','retiro','deposito'])
           .onSnapshot(snapshot => {
-            const depositos = new Set();
+            const recargas = new Set();
             const retiros = new Set();
             snapshot.forEach(doc => {
               const data = doc.data() || {};
               const tipo = (data.tipotrans || '').toLowerCase();
-              if(tipo === 'deposito') depositos.add(doc.id);
+              if(tipo === 'deposito' || tipo === 'recarga') recargas.add(doc.id);
               if(tipo === 'retiro') retiros.add(doc.id);
             });
-            this.gestionarPendientes('depositosPendientes', depositos, conteo => `Tienes ${conteo} depósito(s) pendiente(s) por gestionar.`);
+            this.gestionarPendientes('recargasPendientes', recargas, conteo => `Tienes ${conteo} recarga(s) pendiente(s) por gestionar.`);
             this.gestionarPendientes('retirosPendientes', retiros, conteo => `Tienes ${conteo} retiro(s) pendiente(s) por gestionar.`);
           }, err => console.error('Error escuchando transacciones pendientes', err));
         this.desuscriptores.push(unsub);
@@ -870,17 +889,17 @@
       this.registrarHistorial('sorteoJugando', id);
     }
 
-    notificarCambioDeposito(id, data, estado){
-      if(!this.puedeNotificar('estatusDeposito')) return;
+    notificarCambioRecarga(id, data, estado){
+      if(!this.puedeNotificar('estatusRecarga')) return;
       const clave = `${id}:${estado}`;
-      if(this.yaNotificado('estatusDeposito', clave)) return;
+      if(this.yaNotificado('estatusRecarga', clave)) return;
       const monto = parseFloat(data.Monto || data.MontoSolicitado || 0) || 0;
       const montoTxt = monto ? monto.toFixed(2) : '';
-      let mensaje = 'Tu solicitud de depósito cambió de estado.';
-      if(estado === 'APROBADO') mensaje = montoTxt ? `Tu depósito de ${montoTxt} fue aprobado.` : 'Tu depósito fue aprobado.';
-      if(estado === 'ANULADO') mensaje = montoTxt ? `Tu depósito de ${montoTxt} fue anulado.` : 'Tu depósito fue anulado.';
-      this.emitirNotificacion('estatusDeposito', mensaje, 'Actualización de depósito');
-      this.registrarHistorial('estatusDeposito', clave);
+      let mensaje = 'Tu solicitud de recarga cambió de estado.';
+      if(estado === 'APROBADO') mensaje = montoTxt ? `Tu recarga de ${montoTxt} fue aprobada.` : 'Tu recarga fue aprobada.';
+      if(estado === 'ANULADO') mensaje = montoTxt ? `Tu recarga de ${montoTxt} fue anulada.` : 'Tu recarga fue anulada.';
+      this.emitirNotificacion('estatusRecarga', mensaje, 'Actualización de recarga');
+      this.registrarHistorial('estatusRecarga', clave);
     }
 
     notificarPremio(id, data){
