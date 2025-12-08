@@ -271,15 +271,15 @@
     #tutorial-controls {
       position: fixed;
       left: 14px;
-      bottom: 14px;
+      bottom: 18px;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       z-index: 1400;
     }
     #tutorial-toggle {
-      width: 66px;
-      height: 66px;
+      width: 62px;
+      height: 62px;
       border-radius: 50%;
       border: 2px solid #0f0f0f;
       background: radial-gradient(circle at 30% 30%, #aab2ff, #4b3fae 65%);
@@ -315,10 +315,11 @@
     .tutorial-nav-btn:active { transform: scale(0.95); }
     #tutorial-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 1250; background: rgba(0, 0, 0, 0.65); transition: opacity 0.25s ease; opacity: 0; }
     #tutorial-overlay.activo { opacity: 1; }
-    #tutorial-hand { position: absolute; width: 44px; height: auto; display: none; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35)); animation: tutorial-hand-pulse 0.65s ease-in-out infinite; transform-origin: center; z-index: 1450; }
+    #tutorial-hand { position: absolute; width: 44px; height: auto; display: none; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35)); transform-origin: center; z-index: 1450; }
+    .tutorial-hand-pulse { animation: tutorial-hand-pulse 0.65s ease-in-out infinite; }
     #tutorial-label { position: fixed; left: 50%; display: none; padding: 10px 16px; background: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(237, 241, 255, 0.96)); border: 2px solid rgba(85, 70, 192, 0.35); border-radius: 12px; font-family: 'Poppins', sans-serif; font-size: clamp(11px, 1.7vw, 14px); font-weight: 700; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.28); text-align: center; line-height: 1.3; transform: translate(-50%, -100%); width: fit-content; max-width: min(320px, 82vw); min-width: 140px; z-index: 1450; }
     .tutorial-elemento-activo { position: relative; z-index: 1405 !important; filter: none !important; }
-    body.tutorial-activo * { pointer-events: none !important; filter: brightness(0.45); }
+    body.tutorial-activo * { pointer-events: none !important; filter: none; }
     body.tutorial-activo #tutorial-controls *,
     body.tutorial-activo #tutorial-controls,
     body.tutorial-activo #tutorial-overlay,
@@ -929,6 +930,8 @@
       datosCargados:false,
     };
 
+    const animacionTabla = { intervalo:null, posiciones:[], indice:0, direccion:1 };
+
     let tutorialControlesListos=false;
 
     const TUTORIAL_KEY = 'billeteraTutorialIndice';
@@ -1017,6 +1020,84 @@
       }
     }
 
+    function actualizarMascara(rect){
+      if(!tutorialUI.overlay || !rect) return;
+      const padding=14;
+      const izquierda=Math.max(0, rect.left - padding);
+      const derecha=Math.min(window.innerWidth, rect.right + padding);
+      const arriba=Math.max(0, rect.top - padding);
+      const abajo=Math.min(window.innerHeight, rect.bottom + padding);
+      tutorialUI.overlay.style.background='rgba(0, 0, 0, 0.6)';
+      tutorialUI.overlay.style.clipPath=`polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 0, 0 0, ${izquierda}px 0, ${izquierda}px ${arriba}px, ${derecha}px ${arriba}px, ${derecha}px ${abajo}px, ${izquierda}px ${abajo}px, ${izquierda}px 0, 0 0)`;
+    }
+
+    function limpiarMascara(){
+      if(!tutorialUI.overlay) return;
+      tutorialUI.overlay.style.clipPath='none';
+      tutorialUI.overlay.style.background='rgba(0, 0, 0, 0.6)';
+    }
+
+    function posicionarMano(pos){
+      if(!tutorialUI.hand || !pos) return;
+      tutorialUI.hand.style.left=`${pos.x}px`;
+      tutorialUI.hand.style.top=`${pos.y}px`;
+      tutorialUI.hand.style.display='block';
+    }
+
+    function recolectarPosicionesTabla(elemento){
+      if(!elemento) return [];
+      const filas=elemento.querySelectorAll('tbody tr');
+      const posiciones=[];
+      const manoWidth=tutorialUI.hand?.width||44;
+      const manoHeight=tutorialUI.hand?.height||44;
+      if(filas.length){
+        filas.forEach(fila=>{
+          const celdas=Array.from(fila.cells);
+          celdas.forEach(celda=>{
+            const rect=celda.getBoundingClientRect();
+            posiciones.push({ x: rect.left + rect.width/2 - manoWidth/2, y: rect.top + rect.height/2 - manoHeight/2 });
+          });
+        });
+      }
+      if(!posiciones.length){
+        const rect=elemento.getBoundingClientRect();
+        posiciones.push({ x: rect.left + rect.width/2 - manoWidth/2, y: rect.top + rect.height/2 - manoHeight/2 });
+      }
+      return posiciones;
+    }
+
+    function detenerAnimacionTabla(){
+      if(animacionTabla.intervalo){
+        clearInterval(animacionTabla.intervalo);
+      }
+      animacionTabla.intervalo=null;
+      animacionTabla.posiciones=[];
+      animacionTabla.indice=0;
+      animacionTabla.direccion=1;
+    }
+
+    function iniciarAnimacionTabla(elemento){
+      if(!tutorialUI.hand || !elemento) return;
+      detenerAnimacionTabla();
+      animacionTabla.posiciones=recolectarPosicionesTabla(elemento);
+      if(!animacionTabla.posiciones.length) return;
+      posicionarMano(animacionTabla.posiciones[0]);
+      const velocidad=240;
+      animacionTabla.intervalo=setInterval(()=>{
+        if(!tutorialState.activo || animacionTabla.posiciones.length<=1){ return; }
+        let siguiente=animacionTabla.indice + animacionTabla.direccion;
+        if(siguiente>=animacionTabla.posiciones.length){
+          animacionTabla.direccion=-1;
+          siguiente=Math.max(animacionTabla.posiciones.length-2, 0);
+        } else if(siguiente<0){
+          animacionTabla.direccion=1;
+          siguiente=Math.min(1, animacionTabla.posiciones.length-1);
+        }
+        animacionTabla.indice=siguiente;
+        posicionarMano(animacionTabla.posiciones[animacionTabla.indice]);
+      }, velocidad);
+    }
+
     function calcularPosicionMano(paso, rect){
       const manoWidth=tutorialUI.hand?.width||44;
       const manoHeight=tutorialUI.hand?.height||44;
@@ -1055,8 +1136,11 @@
 
     function enfocarPaso(){
       if(!tutorialState.activo){
-        if(tutorialUI.overlay){ tutorialUI.overlay.classList.remove('activo'); }
+        if(tutorialUI.overlay){ tutorialUI.overlay.classList.remove('activo'); tutorialUI.overlay.setAttribute('aria-hidden','true'); }
+        limpiarMascara();
+        detenerAnimacionTabla();
         if(tutorialUI.hand) tutorialUI.hand.style.display='none';
+        if(tutorialUI.hand) tutorialUI.hand.classList.remove('tutorial-hand-pulse');
         if(tutorialUI.label) tutorialUI.label.style.display='none';
         document.body.classList.remove('tutorial-activo');
         return;
@@ -1087,13 +1171,19 @@
       if(tutorialUI.overlay){
         tutorialUI.overlay.setAttribute('aria-hidden','false');
         tutorialUI.overlay.classList.add('activo');
+        actualizarMascara(rect);
       }
       if(tutorialUI.hand){
         tutorialUI.hand.src=paso.mano;
-        const pos=calcularPosicionMano(paso, rect);
-        tutorialUI.hand.style.left=`${pos.x}px`;
-        tutorialUI.hand.style.top=`${pos.y}px`;
-        tutorialUI.hand.style.display='block';
+        if(paso.id==='tabla-bancos'){
+          tutorialUI.hand.classList.remove('tutorial-hand-pulse');
+          iniciarAnimacionTabla(elemento);
+        } else {
+          detenerAnimacionTabla();
+          const pos=calcularPosicionMano(paso, rect);
+          posicionarMano(pos);
+          tutorialUI.hand.classList.add('tutorial-hand-pulse');
+        }
       }
       posicionarEtiqueta(rect, paso.mensaje, paso.color);
       guardarIndiceTutorial(tutorialState.indice);
