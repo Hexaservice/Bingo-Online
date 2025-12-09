@@ -270,17 +270,22 @@
     /* Controles del modo tutorial */
     #tutorial-controls {
       position: fixed;
-      left: 14px;
+      left: 18px;
       bottom: 18px;
+      right: auto;
+      top: auto;
       display: flex;
       align-items: center;
       gap: 12px;
+      flex-wrap: nowrap;
+      width: max-content;
       z-index: 14000;
       opacity: 0;
       pointer-events: none;
       transform: translateY(10px);
       transition: opacity 0.35s ease, transform 0.35s ease;
       isolation: isolate;
+      transform-origin: left bottom;
     }
     #tutorial-controls.visible {
       opacity: 1;
@@ -327,7 +332,8 @@
     #tutorial-overlay.activo { opacity: 1; }
     #tutorial-hand { position: fixed; width: 44px; height: auto; display: none; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35)); transform-origin: center; z-index: 16000; pointer-events: none; }
     .tutorial-hand-pulse { animation: tutorial-hand-pulse 0.65s ease-in-out infinite; }
-    #tutorial-label { position: fixed; left: 50%; display: none; padding: 10px 16px; background: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(237, 241, 255, 0.96)); border: 2px solid rgba(85, 70, 192, 0.35); border-radius: 12px; font-family: 'Poppins', sans-serif; font-size: clamp(11px, 1.7vw, 14px); font-weight: 700; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.28); text-align: center; line-height: 1.3; transform: translate(-50%, -100%); width: fit-content; max-width: min(320px, 82vw); min-width: 140px; z-index: 15000; pointer-events: none; }
+    #tutorial-label { position: fixed; left: 50%; display: none; padding: 14px 18px; background: linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(237, 241, 255, 0.98)); border: 2px solid rgba(85, 70, 192, 0.45); border-radius: 14px; font-family: 'Poppins', sans-serif; font-size: clamp(16px, 2.4vw, 22px); font-weight: 800; box-shadow: 0 12px 26px rgba(0, 0, 0, 0.3); text-align: center; line-height: 1.35; transform: translate(-50%, -100%); width: fit-content; max-width: min(480px, 90vw); min-width: 200px; z-index: 15000; pointer-events: none; }
+    #tutorial-label.adaptado { transition: top 0.2s ease, left 0.2s ease; }
     .tutorial-elemento-activo { position: relative; z-index: 13000 !important; filter: none !important; }
     body.tutorial-activo * { pointer-events: none !important; filter: none; }
     body.tutorial-activo #tutorial-controls *,
@@ -337,6 +343,9 @@
     body.tutorial-activo #tutorial-label,
     body.tutorial-activo .tutorial-elemento-activo,
     body.tutorial-activo .tutorial-elemento-activo * { pointer-events: auto !important; filter: none; }
+    body.tutorial-activo .tutorial-modal-activa,
+    body.tutorial-activo .tutorial-modal-activa * { pointer-events: auto !important; filter: none !important; }
+    #tipo-cuenta label.tutorial-glow { text-shadow: 0 0 8px #fff, 0 0 12px rgba(255,255,255,0.85); font-weight: 800; }
     @keyframes tutorial-hand-pulse { 0% { transform: scale(1); } 45% { transform: scale(1.17); } 100% { transform: scale(1); } }
     @keyframes tutorial-nav-surge { 0% { transform: translateX(-12px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
     @keyframes tutorial-nav-exit { 0% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(-16px); opacity: 0; } }
@@ -946,13 +955,14 @@
     const animacionTabla = { frameId:null, limites:null, posicionX:0, direccion:1, pausaHasta:0, ultimaMarca:0 };
 
     let tutorialControlesListos=false;
+    let tutorialScrollPendiente=false;
 
     const TUTORIAL_KEY = 'billeteraTutorialIndice';
 
     const PASOS_MIS_DATOS = [
       { id:'banco-select', elementId:'banco', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Elige el Banco que usas', color:'#0b4c8c', requisitoTab:null },
       { id:'cuenta-input', elementId:'cuenta', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Escribe el número completo de tu cuenta bancaria', color:'#0a8800', requisitoTab:null },
-      { id:'tipo-cuenta-corriente', elementId:'tipo-cuenta', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Elige tu tipo de Cuenta: Ahorro o Corriente', color:'#8b0000', requisitoTab:null, selectorPersonalizado:"#tipo-cuenta-corriente" },
+      { id:'tipo-cuenta-corriente', elementId:'tipo-cuenta', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Elige tu tipo de Cuenta: Ahorro o Corriente', color:'#8b0000', requisitoTab:null, selectorPersonalizado:"#tipo-cuenta" },
       { id:'cedula-input', elementId:'cedula', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Escribe tu número de Cédula', color:'#4b0082', requisitoTab:null },
       { id:'pago-movil', elementId:'pagomovil', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Escribe tu número usado para tus pagos moviles', color:'#e67e22', requisitoTab:null },
       { id:'guardar-datos', elementId:'guardar-datos', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Una vez coloques todos tus datos puedes guardar o actualizar tus datos presionando este boton', color:'#0b9a2e', requisitoTab:null },
@@ -993,6 +1003,20 @@
       if(tutorialState.activo){
         enfocarPaso();
       }
+    }
+
+    function resaltarTipoCuenta(activo){
+      document.querySelectorAll('#tipo-cuenta label').forEach(label=>{
+        if(activo){ label.classList.add('tutorial-glow'); }
+        else { label.classList.remove('tutorial-glow'); }
+      });
+    }
+
+    function marcarModalInteractiva(activo){
+      const modal=document.getElementById('modal-detalle');
+      if(!modal) return;
+      if(activo){ modal.classList.add('tutorial-modal-activa'); }
+      else { modal.classList.remove('tutorial-modal-activa'); }
     }
 
     if(window.visualViewport){
@@ -1056,10 +1080,18 @@
       return pasos;
     }
 
-    function aplicarEstadoInteraccion(elemento){
+    function aplicarEstadoInteraccion(elemento, paso){
       document.querySelectorAll('.tutorial-elemento-activo').forEach(el=>el.classList.remove('tutorial-elemento-activo'));
+      resaltarTipoCuenta(false);
       if(elemento){
         elemento.classList.add('tutorial-elemento-activo');
+      }
+      if(paso?.id==='tipo-cuenta-corriente'){
+        const contenedor=document.getElementById('tipo-cuenta');
+        if(contenedor && contenedor!==elemento){
+          contenedor.classList.add('tutorial-elemento-activo');
+        }
+        resaltarTipoCuenta(true);
       }
     }
 
@@ -1176,20 +1208,77 @@
     function posicionarEtiqueta(rect, mensaje, color){
       if(!tutorialUI.label) return;
       const viewportHeight=obtenerAlturaViewport();
-      const alturaBase=tutorialState.alturaBaseViewport||viewportHeight;
-      const desplazamientoTeclado=Math.max(0, alturaBase - viewportHeight);
-      const margenBase=24;
-      const margenExtra=Math.min(desplazamientoTeclado*0.6, viewportHeight*0.25);
-      const margen=margenBase+margenExtra;
-      const estaArriba=rect.top < viewportHeight/2;
-      const topBase=estaArriba?Math.min(viewportHeight - margen, Math.max(rect.bottom + margen, viewportHeight*0.62)):Math.max(margen, Math.min(rect.top - margen, viewportHeight*0.38));
-      const topDeseado=Math.max(margenBase, Math.min(viewportHeight - margenBase, topBase - margenExtra));
-      tutorialUI.label.textContent=mensaje;
-      tutorialUI.label.style.color=color||'#1f1f1f';
-      tutorialUI.label.style.top=`${topDeseado}px`;
-      tutorialUI.label.style.left='50%';
-      tutorialUI.label.style.transform='translate(-50%, -50%)';
-      tutorialUI.label.style.display='block';
+      const viewportWidth=window.innerWidth;
+      const label=tutorialUI.label;
+      const maxAncho=Math.min(480, viewportWidth*0.9);
+      const tamanoFuente=Math.max(16, Math.min(22, maxAncho/18));
+      label.style.maxWidth=`${maxAncho}px`;
+      label.style.minWidth='200px';
+      label.style.fontSize=`${tamanoFuente}px`;
+      label.style.padding=`${Math.max(16, tamanoFuente*0.75)}px ${Math.max(20, tamanoFuente*0.95)}px`;
+      label.textContent=mensaje;
+      label.style.color=color||'#1f1f1f';
+      label.style.display='block';
+      label.classList.add('adaptado');
+      label.style.visibility='hidden';
+      label.style.left='0px';
+      label.style.top='0px';
+      label.style.transform='none';
+
+      const medidas=label.getBoundingClientRect();
+      const ancho=medidas.width;
+      const alto=medidas.height;
+      const espacios={
+        arriba: Math.max(0, rect.top),
+        abajo: Math.max(0, viewportHeight - rect.bottom),
+        izquierda: Math.max(0, rect.left),
+        derecha: Math.max(0, viewportWidth - rect.right),
+      };
+      let direccion='abajo';
+      ['derecha','izquierda','abajo','arriba'].forEach(dir=>{
+        if(espacios[dir]>espacios[direccion]){ direccion=dir; }
+      });
+      const margen=Math.max(20, tamanoFuente*1.1);
+      let left=viewportWidth/2 - ancho/2;
+      let top=viewportHeight/2 - alto/2;
+      switch(direccion){
+        case 'derecha':
+          left=rect.right + margen;
+          top=rect.top + rect.height/2 - alto/2;
+          break;
+        case 'izquierda':
+          left=rect.left - ancho - margen;
+          top=rect.top + rect.height/2 - alto/2;
+          break;
+        case 'arriba':
+          top=rect.top - alto - margen;
+          left=rect.left + rect.width/2 - ancho/2;
+          break;
+        default:
+          top=rect.bottom + margen;
+          left=rect.left + rect.width/2 - ancho/2;
+          break;
+      }
+
+      left=Math.max(margen, Math.min(viewportWidth - ancho - margen, left));
+      top=Math.max(margen, Math.min(viewportHeight - alto - margen, top));
+
+      const manoRect=tutorialUI.hand?.getBoundingClientRect();
+      if(manoRect){
+        const solapa=!(left+ancho < manoRect.left || left > manoRect.right || top+alto < manoRect.top || top > manoRect.bottom);
+        if(solapa){
+          if(espacios.arriba>espacios.abajo){
+            top=Math.max(margen, manoRect.top - alto - margen);
+          }else{
+            top=Math.min(viewportHeight - alto - margen, manoRect.bottom + margen);
+          }
+        }
+      }
+
+      label.style.left=`${left}px`;
+      label.style.top=`${top}px`;
+      label.style.transform='none';
+      label.style.visibility='visible';
     }
 
     function enfocarPaso(){
@@ -1200,6 +1289,8 @@
         if(tutorialUI.hand) tutorialUI.hand.style.display='none';
         if(tutorialUI.hand) tutorialUI.hand.classList.remove('tutorial-hand-pulse');
         if(tutorialUI.label) tutorialUI.label.style.display='none';
+        resaltarTipoCuenta(false);
+        marcarModalInteractiva(false);
         document.body.classList.remove('tutorial-activo');
         return;
       }
@@ -1224,7 +1315,7 @@
         return;
       }
       const rect=elemento.getBoundingClientRect();
-      aplicarEstadoInteraccion(elemento);
+      aplicarEstadoInteraccion(elemento, paso);
       document.body.classList.add('tutorial-activo');
       if(tutorialUI.overlay){
         tutorialUI.overlay.setAttribute('aria-hidden','false');
@@ -1398,6 +1489,18 @@
       setTimeout(enfocarPaso,80);
     });
 
+    function sincronizarScrollTutorial(){
+      if(!tutorialState.activo) return;
+      if(tutorialScrollPendiente) return;
+      tutorialScrollPendiente=true;
+      requestAnimationFrame(()=>{
+        tutorialScrollPendiente=false;
+        enfocarPaso();
+      });
+    }
+
+    window.addEventListener('scroll',sincronizarScrollTutorial,{passive:true});
+
     async function reanudarTutorialSiAplica(estadoBD){
       tutorialState.estadoGuardado=estadoBD?'Activo':'Inactivo';
       if(estadoBD){ activarTutorial(); }
@@ -1490,7 +1593,11 @@
         }
         const modal=document.getElementById('modal-detalle');
         modal.style.display='flex';
-        document.getElementById('modal-ok').addEventListener('click',()=>{modal.style.display='none';},{once:true});
+        marcarModalInteractiva(true);
+        document.getElementById('modal-ok').addEventListener('click',()=>{
+          modal.style.display='none';
+          marcarModalInteractiva(false);
+        },{once:true});
       }
 
       function mostrarDetalleMonto(t){
@@ -1513,7 +1620,11 @@
         }
         const modal=document.getElementById('modal-detalle');
         modal.style.display='flex';
-        document.getElementById('modal-ok').addEventListener('click',()=>{modal.style.display='none';},{once:true});
+        marcarModalInteractiva(true);
+        document.getElementById('modal-ok').addEventListener('click',()=>{
+          modal.style.display='none';
+          marcarModalInteractiva(false);
+        },{once:true});
       }
 
       document.getElementById('filtro-tipo').addEventListener('change',filtrarTransacciones);
