@@ -337,6 +337,7 @@
       isolation: isolate;
       transform-origin: left bottom;
       will-change: transform, opacity;
+      inset: auto;
     }
     #tutorial-controls.visible {
       opacity: 1;
@@ -905,6 +906,8 @@
       if(!/^\d+$/.test(data.cedula)){ alert('La cédula solo debe contener números'); cedulaInput.focus();return; }
       if(!data.pagomovil){ alert('Ingrese su número de pago móvil'); pagoMovilInput.focus(); return; }
       if(!/^\+?\d+$/.test(data.pagomovil)){ alert('El pago móvil solo debe contener números y puede iniciar con +'); pagoMovilInput.focus(); return; }
+      const confirmar=await mostrarConfirmacionModal('¿Deseas guardar o actualizar tus datos bancarios?');
+      if(!confirmar){ return; }
       data.CartonesGratis=parseInt(document.getElementById('cartones-valor').textContent)||0;
       await db.collection('Billetera').doc(user.email).set(data, {merge:true});
       alert('Datos guardados');
@@ -1037,6 +1040,8 @@
       docStyle.setProperty('--tutorial-bottom', `calc(${offsetBottom}px + env(safe-area-inset-bottom, 0px))`);
     }
 
+    window.addEventListener('resize', actualizarOffsetsTutorial, {passive:true});
+
     function aplicarEnfasisPestana(tipo, activo){
       const boton = tipo==='recargas'?tutorialUI.tabDepositar:tutorialUI.tabRetirar;
       const contenedor = document.getElementById(tipo==='recargas'?'depositar':'retirar');
@@ -1051,7 +1056,7 @@
     function ajustarAmbientePaso(paso){
       const esRecargas = IDS_FOCO_RECARGAS.has(paso.id);
       const esRetiros = IDS_FOCO_RETIROS.has(paso.id);
-      tutorialMascaraSuavizada = esRecargas || esRetiros;
+      tutorialMascaraSuavizada = paso.sinMascara === true;
       aplicarEnfasisPestana('recargas', esRecargas);
       aplicarEnfasisPestana('retiros', esRetiros);
       if(tutorialUI.overlay){
@@ -1212,23 +1217,18 @@
       }
     }
 
-    function actualizarMascara(rect){
+    function actualizarMascara(rect, extraRect){
       if(!tutorialUI.overlay || !rect) return;
-      if(tutorialMascaraSuavizada){
-        tutorialUI.overlay.style.clipPath='none';
-        tutorialUI.overlay.style.background='transparent';
-        tutorialUI.overlay.classList.add('sin-mascara');
-        return;
-      }
       const padding=14;
-      const izquierda=Math.max(0, rect.left - padding);
-      const derecha=Math.min(window.innerWidth, rect.right + padding);
-      const viewportHeight=obtenerAlturaViewport();
-      const arriba=Math.max(0, rect.top - padding);
-      const abajo=Math.min(viewportHeight, rect.bottom + padding);
+      const union={
+        left: Math.max(0, Math.min(rect.left, extraRect?.left ?? rect.left) - padding),
+        right: Math.min(window.innerWidth, Math.max(rect.right, extraRect?.right ?? rect.right) + padding),
+        top: Math.max(0, Math.min(rect.top, extraRect?.top ?? rect.top) - padding),
+        bottom: Math.min(obtenerAlturaViewport(), Math.max(rect.bottom, extraRect?.bottom ?? rect.bottom) + padding),
+      };
       tutorialUI.overlay.classList.remove('sin-mascara');
       tutorialUI.overlay.style.background='rgba(0, 0, 0, 0.6)';
-      tutorialUI.overlay.style.clipPath=`polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 0, 0 0, ${izquierda}px 0, ${izquierda}px ${arriba}px, ${derecha}px ${arriba}px, ${derecha}px ${abajo}px, ${izquierda}px ${abajo}px, ${izquierda}px 0, 0 0)`;
+      tutorialUI.overlay.style.clipPath=`polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 0, 0 0, ${union.left}px 0, ${union.left}px ${union.top}px, ${union.right}px ${union.top}px, ${union.right}px ${union.bottom}px, ${union.left}px ${union.bottom}px, ${union.left}px 0, 0 0)`;
     }
 
     function limpiarMascara(){
@@ -1403,6 +1403,9 @@
         }
       }
 
+      if(window.innerHeight>window.innerWidth){
+        left = Math.max(margen, Math.min(viewportWidth - ancho - margen, (viewportWidth/2) - (ancho/2)));
+      }
       label.style.left=`${left}px`;
       label.style.top=`${top}px`;
       label.style.transform='none';
@@ -1445,16 +1448,22 @@
         return;
       }
       const rect=elemento.getBoundingClientRect();
+      let rectPestana=null;
+      if(IDS_FOCO_RECARGAS.has(paso.id)){
+        rectPestana=tutorialUI.tabDepositar?.getBoundingClientRect();
+      } else if(IDS_FOCO_RETIROS.has(paso.id)){
+        rectPestana=tutorialUI.tabRetirar?.getBoundingClientRect();
+      }
       aplicarEstadoInteraccion(elemento, paso);
       document.body.classList.add('tutorial-activo');
       if(tutorialUI.overlay){
         tutorialUI.overlay.setAttribute('aria-hidden','false');
         tutorialUI.overlay.classList.add('activo');
-        actualizarMascara(rect);
+        actualizarMascara(rect, rectPestana);
       }
       if(tutorialUI.hand){
         tutorialUI.hand.src=paso.mano;
-        if(paso.id==='tabla-bancos'){
+        if(paso.id==='tabla-bancos' || paso.id==='tabla-transacciones'){
           tutorialUI.hand.classList.remove('tutorial-hand-pulse');
           const elementoAnimacion=obtenerElementoAnimacion(paso, elemento);
           iniciarAnimacionTabla(elementoAnimacion);
@@ -1731,11 +1740,13 @@
           const texto=document.getElementById('modal-confirm-text');
           const btnAceptar=document.getElementById('modal-confirm-accept');
           const btnCancelar=document.getElementById('modal-confirm-cancel');
+          const restaurarTutorial=pausarTutorialTemporal();
           if(!modal||!texto||!btnAceptar||!btnCancelar){
-            resolve(window.confirm(mensaje));
+            const respuesta=window.confirm(mensaje);
+            restaurarTutorial();
+            resolve(respuesta);
             return;
           }
-          const restaurarTutorial=pausarTutorialTemporal();
           texto.textContent=mensaje;
           modal.style.display='flex';
           modal.setAttribute('aria-hidden','false');
@@ -1893,6 +1904,8 @@
         horagestion:'',
         nota:''
       };
+      const confirmar = await mostrarConfirmacionModal(`¿Confirmas la solicitud de recarga por ${monto.toFixed(2)}?`);
+      if(!confirmar){ return; }
       await db.collection('transacciones').add(data);
       alert('Bien, recibimos tu solicitud, una vez verificado el pago se recargará tu billetera');
       await notificarSolicitudWhatsapp('recarga',{
