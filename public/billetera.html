@@ -117,7 +117,7 @@
       display:none;
       align-items:center;
       justify-content:center;
-      z-index:2000;
+      z-index:20000;
       padding:18px;
       box-sizing:border-box;
       backdrop-filter: blur(1px);
@@ -329,7 +329,7 @@
       gap: 12px;
       flex-wrap: nowrap;
       width: max-content;
-      z-index: 14000;
+      z-index: 19000;
       opacity: 0;
       pointer-events: none;
       transform: translateY(10px);
@@ -386,7 +386,7 @@
     #tutorial-overlay.activo { opacity: 1; }
     #tutorial-hand { position: fixed; width: 44px; height: auto; display: none; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35)); transform-origin: center; z-index: 16000; pointer-events: none; }
     .tutorial-hand-pulse { animation: tutorial-hand-pulse 0.65s ease-in-out infinite; }
-    #tutorial-label { position: fixed; left: 50%; display: none; padding: 14px 18px; background: linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(237, 241, 255, 0.98)); border: 2px solid rgba(85, 70, 192, 0.45); border-radius: 14px; font-family: 'Poppins', sans-serif; font-size: clamp(16px, 2.4vw, 22px); font-weight: 800; box-shadow: 0 12px 26px rgba(0, 0, 0, 0.3); text-align: center; line-height: 1.35; transform: translate(-50%, -100%); width: fit-content; max-width: min(480px, 90vw); min-width: 200px; z-index: 15000; pointer-events: none; box-sizing: border-box; max-height: 78vh; overflow: auto; display: flex; align-items: center; justify-content: center; word-break: break-word; }
+    #tutorial-label { position: fixed; left: 50%; display: none; padding: 14px 18px; background: linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(237, 241, 255, 0.98)); border: 2px solid rgba(85, 70, 192, 0.45); border-radius: 14px; font-family: 'Poppins', sans-serif; font-size: clamp(16px, 2.4vw, 22px); font-weight: 800; box-shadow: 0 12px 26px rgba(0, 0, 0, 0.3); text-align: center; line-height: 1.35; transform: translate(-50%, -100%); width: fit-content; max-width: min(480px, 90vw); min-width: 200px; z-index: 15000; pointer-events: none; box-sizing: border-box; max-height: 78vh; overflow: auto; align-items: center; justify-content: center; word-break: break-word; }
     #tutorial-label.adaptado { transition: top 0.2s ease, left 0.2s ease; }
     .tutorial-elemento-activo { position: relative; z-index: 13000 !important; filter: none !important; }
     body.tutorial-activo * { pointer-events: none !important; filter: none; }
@@ -1132,8 +1132,7 @@
       });
     }
 
-    function marcarModalInteractiva(activo){
-      const modal=document.getElementById('modal-detalle');
+    function marcarModalInteractiva(activo, modal=document.getElementById('modal-detalle')){
       if(!modal) return;
       if(activo){ modal.classList.add('tutorial-modal-activa'); }
       else { modal.classList.remove('tutorial-modal-activa'); }
@@ -1343,7 +1342,7 @@
       label.style.padding=`${Math.max(16, tamanoFuente*0.75)}px ${Math.max(20, tamanoFuente*0.95)}px`;
       label.textContent=mensaje;
       label.style.color=color||'#1f1f1f';
-      label.style.display='block';
+      label.style.display='flex';
       label.classList.add('adaptado');
       label.style.visibility='hidden';
       label.style.left='0px';
@@ -1750,10 +1749,12 @@
           texto.textContent=mensaje;
           modal.style.display='flex';
           modal.setAttribute('aria-hidden','false');
+          marcarModalInteractiva(true, modal);
           btnCancelar.focus();
           const cerrar=(respuesta)=>{
             modal.style.display='none';
             modal.setAttribute('aria-hidden','true');
+            marcarModalInteractiva(false, modal);
             btnAceptar.onclick=null;
             btnCancelar.onclick=null;
             modal.removeEventListener('click', manejarFondo);
