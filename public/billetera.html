@@ -329,7 +329,7 @@
       gap: 12px;
       flex-wrap: nowrap;
       width: max-content;
-      z-index: 19000;
+      z-index: 25000;
       opacity: 0;
       pointer-events: none;
       transform: translateY(10px);
@@ -545,6 +545,16 @@
       <div class="modal-actions">
         <button id="modal-confirm-cancel" class="btn-secundario" type="button">Cancelar</button>
         <button id="modal-confirm-accept" class="btn-primario" type="button">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-alert" class="modal-overlay" aria-hidden="true" role="alertdialog" aria-label="Aviso importante">
+    <div class="modal-card">
+      <h4 id="modal-alert-title">Aviso</h4>
+      <p id="modal-alert-text"></p>
+      <div class="modal-actions" style="justify-content:center;">
+        <button id="modal-alert-accept" class="btn-primario" type="button">Entendido</button>
       </div>
     </div>
   </div>
@@ -1768,6 +1778,42 @@
         });
       }
 
+      function mostrarAlertaModal(mensaje, opciones={}){
+        return new Promise(resolve=>{
+          const modal=document.getElementById('modal-alert');
+          const texto=document.getElementById('modal-alert-text');
+          const titulo=document.getElementById('modal-alert-title');
+          const btnAceptar=document.getElementById('modal-alert-accept');
+          const restaurarTutorial=pausarTutorialTemporal();
+          if(!modal||!texto||!btnAceptar){
+            alert(mensaje);
+            restaurarTutorial();
+            resolve();
+            return;
+          }
+          if(titulo){
+            titulo.textContent=opciones.titulo||'Aviso';
+          }
+          texto.textContent=mensaje;
+          modal.style.display='flex';
+          modal.setAttribute('aria-hidden','false');
+          marcarModalInteractiva(true, modal);
+          btnAceptar.focus();
+          const cerrar=()=>{
+            modal.style.display='none';
+            modal.setAttribute('aria-hidden','true');
+            marcarModalInteractiva(false, modal);
+            btnAceptar.onclick=null;
+            modal.removeEventListener('click', manejarFondo);
+            restaurarTutorial();
+            resolve();
+          };
+          btnAceptar.onclick=cerrar;
+          function manejarFondo(e){ if(e.target===modal){ cerrar(); } }
+          modal.addEventListener('click', manejarFondo);
+        });
+      }
+
       function mostrarDetalle(t){
         const ref=t.referencia||'';
         const fs=formatearFecha(t.fechasolicitud||'');
@@ -1845,7 +1891,7 @@
       if(d.banco && d.cuenta && d.cedula && d.pagomovil && d.tipoCuenta){
         return true;
       }
-      alert('Antes de solicitar una Recarga o Retiro debes tener todos tus datos bancarios registrados');
+      await mostrarAlertaModal('Antes de solicitar una Recarga o Retiro debes tener todos tus datos bancarios registrados');
       const toggle=document.getElementById('toggle-datos');
       toggle.checked=true;
       document.getElementById('datos-content').style.display='block';
@@ -1883,12 +1929,12 @@
       await initServerTime();
       const user = auth.currentUser;
       const banco=document.getElementById('banco-deposito').value;
-      if(!banco){alert('Seleccione el banco donde transferiste');document.getElementById('banco-deposito').focus();return;}
+      if(!banco){await mostrarAlertaModal('Seleccione el banco donde transferiste');document.getElementById('banco-deposito').focus();return;}
       const montoStr=document.getElementById('monto-deposito').value.trim();
       const monto=parseFloat(montoStr);
-      if(!montoStr || isNaN(monto) || monto<=0){alert('Ingrese un monto válido');document.getElementById('monto-deposito').focus();return;}
+      if(!montoStr || isNaN(monto) || monto<=0){await mostrarAlertaModal('Ingrese un monto válido');document.getElementById('monto-deposito').focus();return;}
       const ref=document.getElementById('referencia').value.trim();
-      if(!/^[0-9]{5}$/.test(ref)){alert('Ingrese la referencia de 5 dígitos');document.getElementById('referencia').focus();return;}
+      if(!/^[0-9]{5}$/.test(ref)){await mostrarAlertaModal('Ingrese la referencia de 5 dígitos');document.getElementById('referencia').focus();return;}
       const data = {
         tipotrans:'recarga',
         bancoreceptor:banco,
@@ -1908,7 +1954,7 @@
       const confirmar = await mostrarConfirmacionModal(`¿Confirmas la solicitud de recarga por ${monto.toFixed(2)}?`);
       if(!confirmar){ return; }
       await db.collection('transacciones').add(data);
-      alert('Bien, recibimos tu solicitud, una vez verificado el pago se recargará tu billetera');
+      await mostrarAlertaModal('Bien, recibimos tu solicitud, una vez verificado el pago se recargará tu billetera');
       await notificarSolicitudWhatsapp('recarga',{
         banco:banco,
         monto:monto,
@@ -1968,7 +2014,7 @@
         throw error;
       }
       await refrescarResumenBilletera();
-      alert('Solicitud enviada, una vez validada se transferirá a tu pago móvil');
+      await mostrarAlertaModal('Solicitud enviada, una vez validada se transferirá a tu pago móvil');
       limpiarCamposTransaccion('retiro');
       cargarTransacciones();
       return { data, billetera: billeteraData };
@@ -1978,8 +2024,8 @@
       if(!await validarDatosBancarios()) return;
       const montoStr=document.getElementById('monto-retiro').value.trim();
       const monto=parseFloat(montoStr);
-      if(!montoStr || isNaN(monto) || monto<=0){alert('Ingrese un monto válido');document.getElementById('monto-retiro').focus();return;}
-      if(monto>creditosDisponibles){ alert(`El monto supera los créditos disponibles (${formatearMontoPantalla(creditosDisponibles)})`); return; }
+      if(!montoStr || isNaN(monto) || monto<=0){await mostrarAlertaModal('Ingrese un monto válido');document.getElementById('monto-retiro').focus();return;}
+      if(monto>creditosDisponibles){ await mostrarAlertaModal(`El monto supera los créditos disponibles (${formatearMontoPantalla(creditosDisponibles)})`); return; }
       const montoFinal=monto - (monto*porcentajeRetiro/100) - (monto*porcentajeAdministra/100);
       document.getElementById('monto-retiro-neto').value = montoFinal>0 ? montoFinal.toFixed(2) : '';
       const comentarioRetiro=document.getElementById('comentario-retiro').value.trim();
@@ -1999,9 +2045,9 @@
       }catch(error){
         if(error?.message==='CREDITOS_INSUFICIENTES'){
           await refrescarResumenBilletera();
-          alert('El saldo disponible cambió. Inténtalo nuevamente.');
+          await mostrarAlertaModal('El saldo disponible cambió. Inténtalo nuevamente.');
         }else{
-          alert('No se pudo registrar la solicitud de retiro. Inténtalo nuevamente.');
+          await mostrarAlertaModal('No se pudo registrar la solicitud de retiro. Inténtalo nuevamente.');
         }
       }finally{
         restaurarTutorial();
@@ -2027,6 +2073,7 @@
       const tituloBancos=document.getElementById('titulo-bancos');
 
       actualizarOffsetsTutorial();
+      mostrarControlesTutorial();
 
       function actualizarVisibilidad(){
         datos.style.display=toggle.checked?'block':'none';
