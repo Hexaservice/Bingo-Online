@@ -108,18 +108,57 @@
       border-top:8px solid red;
       border-right:8px solid transparent;
     }
-    #modal-detalle{
+    .modal-overlay{
       position:fixed;
-      top:0;left:0;width:100%;height:100%;
-      background:rgba(0,0,0,0.5);
-      display:none;align-items:center;justify-content:center;
+      inset:0;
+      width:100%;
+      height:100%;
+      background:rgba(0,0,0,0.6);
+      display:none;
+      align-items:center;
+      justify-content:center;
       z-index:2000;
+      padding:18px;
+      box-sizing:border-box;
+      backdrop-filter: blur(1px);
     }
-    #modal-detalle .contenido{
-      background:#fff;padding:15px;border-radius:8px;
-      font-family:Calibri, Arial, sans-serif;font-weight:bold;text-align:left;
+    .modal-card{
+      background:linear-gradient(160deg, #ffffff, #f3f5ff);
+      border:2px solid rgba(85, 70, 192, 0.45);
+      border-radius:14px;
+      box-shadow:0 14px 26px rgba(0,0,0,0.25);
+      font-family:'Poppins', sans-serif;
+      font-weight:800;
+      color:#1f1f1f;
+      text-align:center;
+      padding:18px 18px 14px;
+      min-width:260px;
+      max-width:min(520px, 94vw);
+      display:flex;
+      flex-direction:column;
+      gap:10px;
     }
-    #modal-detalle button{margin-top:10px;font-weight:bold;}
+    .modal-card h4{margin:0;color:#4936c2;font-size:1.05rem;letter-spacing:0.4px;}
+    .modal-card p{margin:0;font-size:0.95rem;font-weight:700;line-height:1.3;}
+    .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:6px;flex-wrap:wrap;}
+    .modal-actions button,
+    #modal-detalle button{
+      font-family:'Poppins', sans-serif;
+      font-weight:800;
+      border-radius:10px;
+      border:2px solid #ffb347;
+      padding:10px 14px;
+      cursor:pointer;
+      background:linear-gradient(160deg, #fff3df, #ffd699);
+      color:#8a4c00;
+      box-shadow:0 6px 14px rgba(0,0,0,0.18);
+      transition:transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+    .modal-actions button:hover,
+    #modal-detalle button:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(0,0,0,0.22);}
+    .modal-actions .btn-primario{background:linear-gradient(160deg, #ffe1b5, #ff9f1a);color:#5b2e00;border-color:#ff8c00;}
+    .modal-actions .btn-secundario{background:linear-gradient(160deg, #ecf1ff, #d9e1ff);color:#2d3c91;border-color:#5f73ff;}
+    #modal-detalle .contenido{display:flex;flex-direction:column;gap:8px;font-family:'Poppins',sans-serif;font-weight:800;text-align:left;color:#1f1f1f;}
     @media (max-width:480px) and (orientation:portrait){
       body{padding:2px;}
       #tabla-transacciones{margin:2px 0;width:100%;}
@@ -297,6 +336,7 @@
       transition: opacity 0.35s ease, transform 0.35s ease;
       isolation: isolate;
       transform-origin: left bottom;
+      will-change: transform, opacity;
     }
     #tutorial-controls.visible {
       opacity: 1;
@@ -329,17 +369,19 @@
       box-shadow: 0 12px 20px rgba(0, 128, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
     }
     #tutorial-toggle:hover { transform: translateY(-1px) scale(1.03); box-shadow: 0 12px 22px rgba(0, 0, 0, 0.4); }
+    #tutorial-toggle:active, #tutorial-toggle:focus-visible { outline: 3px solid orange; outline-offset: 2px; }
     #tutorial-nav { display: none; gap: 8px; align-items: center; transform: translateX(-10px); opacity: 0; }
     #tutorial-toggle.activo + #tutorial-nav,
     #tutorial-nav.activo { display: flex; animation: tutorial-nav-surge 0.42s ease forwards; }
     #tutorial-nav.saliendo { display: flex; animation: tutorial-nav-exit 0.32s ease forwards; }
-    .tutorial-nav-btn { min-width: 38px; height: auto; border: none; background: transparent; color: #1f1f1f; font-size: 26px; cursor: pointer; box-shadow: none; display: grid; place-items: center; padding: 6px 4px; transition: transform 0.2s ease, color 0.2s ease; animation: tutorial-nav-surge 0.42s ease forwards; opacity: 0; }
+    .tutorial-nav-btn { min-width: 38px; height: auto; border: 2px solid transparent; background: transparent; color: #1f1f1f; font-size: 26px; cursor: pointer; box-shadow: none; display: grid; place-items: center; padding: 6px 4px; transition: transform 0.2s ease, color 0.2s ease, border-color 0.2s ease; animation: tutorial-nav-surge 0.42s ease forwards; opacity: 0; border-radius: 12px; }
     #tutorial-nav.saliendo .tutorial-nav-btn { animation: tutorial-nav-exit 0.32s ease forwards; }
     #tutorial-nav.activo .tutorial-nav-btn:nth-child(1) { animation-delay: 0.05s; }
     #tutorial-nav.activo .tutorial-nav-btn:nth-child(2) { animation-delay: 0.12s; }
     .tutorial-nav-btn:hover { transform: scale(1.08); color: #5546c0; }
-    .tutorial-nav-btn:active { transform: scale(0.95); }
+    .tutorial-nav-btn:active, .tutorial-nav-btn:focus-visible { transform: scale(0.97); border-color: orange; box-shadow: 0 0 0 2px rgba(255,165,0,0.45); }
     #tutorial-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 12000; background: rgba(0, 0, 0, 0.65); transition: opacity 0.25s ease; opacity: 0; }
+    #tutorial-overlay.sin-mascara{ background: transparent; }
     #tutorial-overlay.activo { opacity: 1; }
     #tutorial-hand { position: fixed; width: 44px; height: auto; display: none; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35)); transform-origin: center; z-index: 16000; pointer-events: none; }
     .tutorial-hand-pulse { animation: tutorial-hand-pulse 0.65s ease-in-out infinite; }
@@ -490,7 +532,21 @@
     </div>
   </div>
 
-  <div id="modal-detalle"><div class="contenido"></div></div>
+  <div id="modal-detalle" class="modal-overlay" aria-hidden="true" role="dialog" aria-label="Detalle de transacción">
+    <div class="modal-card">
+      <div class="contenido"></div>
+    </div>
+  </div>
+  <div id="modal-confirm" class="modal-overlay" aria-hidden="true" role="dialog" aria-label="Confirmar acción">
+    <div class="modal-card">
+      <h4 id="modal-confirm-title">Confirmar acción</h4>
+      <p id="modal-confirm-text"></p>
+      <div class="modal-actions">
+        <button id="modal-confirm-cancel" class="btn-secundario" type="button">Cancelar</button>
+        <button id="modal-confirm-accept" class="btn-primario" type="button">Aceptar</button>
+      </div>
+    </div>
+  </div>
 
   <div id="tutorial-overlay" aria-hidden="true"></div>
   <img id="tutorial-hand" alt="Guía visual del tutorial" loading="lazy" />
@@ -974,11 +1030,42 @@
     function actualizarOffsetsTutorial(){
       const docStyle=document.documentElement?.style;
       if(!docStyle){ return; }
-      const margenBase=16;
+      const margenBase=18;
       const offsetLeft=Math.max(margenBase, Math.min(28, window.innerWidth*0.02));
-      const offsetBottom=Math.max(margenBase, Math.min(32, (window.visualViewport?.height||window.innerHeight)*0.025));
+      const offsetBottom=margenBase;
       docStyle.setProperty('--tutorial-left', `calc(${offsetLeft}px + env(safe-area-inset-left, 0px))`);
       docStyle.setProperty('--tutorial-bottom', `calc(${offsetBottom}px + env(safe-area-inset-bottom, 0px))`);
+    }
+
+    function aplicarEnfasisPestana(tipo, activo){
+      const boton = tipo==='recargas'?tutorialUI.tabDepositar:tutorialUI.tabRetirar;
+      const contenedor = document.getElementById(tipo==='recargas'?'depositar':'retirar');
+      if(boton){
+        boton.classList.toggle('tab-animada', !!activo);
+      }
+      if(contenedor){
+        contenedor.classList.toggle('tab-foco', !!activo);
+      }
+    }
+
+    function ajustarAmbientePaso(paso){
+      const esRecargas = IDS_FOCO_RECARGAS.has(paso.id);
+      const esRetiros = IDS_FOCO_RETIROS.has(paso.id);
+      tutorialMascaraSuavizada = esRecargas || esRetiros;
+      aplicarEnfasisPestana('recargas', esRecargas);
+      aplicarEnfasisPestana('retiros', esRetiros);
+      if(tutorialUI.overlay){
+        tutorialUI.overlay.classList.toggle('sin-mascara', tutorialMascaraSuavizada);
+      }
+    }
+
+    function limpiarAmbientePaso(){
+      tutorialMascaraSuavizada=false;
+      aplicarEnfasisPestana('recargas', false);
+      aplicarEnfasisPestana('retiros', false);
+      if(tutorialUI.overlay){
+        tutorialUI.overlay.classList.remove('sin-mascara');
+      }
     }
 
     const TUTORIAL_KEY = 'billeteraTutorialIndice';
@@ -1013,6 +1100,10 @@
       { id:'toggle-transacciones', elementId:'switch-transacciones-wrapper', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Activa este interruptor para desplegar los datos de tus transacciones', color:'#0b4c8c', tab:null },
       { id:'tabla-transacciones', elementId:'tabla-transacciones', mano:'img/Mano-abajo.png', posicion:'encima-centro', mensaje:'En esta tabla se listan tus transacciones, puedes usar los filtros en la primera fila TIPO, MONTO, FECHA, ESTADO', color:'#4b0082', tab:null },
     ];
+
+    const IDS_FOCO_RECARGAS = new Set(['titulo-bancos','tabla-bancos','banco-deposito','monto-deposito','referencia','comentario-deposito','btn-depositar']);
+    const IDS_FOCO_RETIROS = new Set(['banco-retiro','monto-retiro','monto-retiro-neto','comentario-retiro','btn-retirar']);
+    let tutorialMascaraSuavizada=false;
 
     function obtenerAlturaViewport(){
       return tutorialState.viewportAltura || window.innerHeight;
@@ -1123,12 +1214,19 @@
 
     function actualizarMascara(rect){
       if(!tutorialUI.overlay || !rect) return;
+      if(tutorialMascaraSuavizada){
+        tutorialUI.overlay.style.clipPath='none';
+        tutorialUI.overlay.style.background='transparent';
+        tutorialUI.overlay.classList.add('sin-mascara');
+        return;
+      }
       const padding=14;
       const izquierda=Math.max(0, rect.left - padding);
       const derecha=Math.min(window.innerWidth, rect.right + padding);
       const viewportHeight=obtenerAlturaViewport();
       const arriba=Math.max(0, rect.top - padding);
       const abajo=Math.min(viewportHeight, rect.bottom + padding);
+      tutorialUI.overlay.classList.remove('sin-mascara');
       tutorialUI.overlay.style.background='rgba(0, 0, 0, 0.6)';
       tutorialUI.overlay.style.clipPath=`polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 0, 0 0, ${izquierda}px 0, ${izquierda}px ${arriba}px, ${derecha}px ${arriba}px, ${derecha}px ${abajo}px, ${izquierda}px ${abajo}px, ${izquierda}px 0, 0 0)`;
     }
@@ -1136,7 +1234,8 @@
     function limpiarMascara(){
       if(!tutorialUI.overlay) return;
       tutorialUI.overlay.style.clipPath='none';
-      tutorialUI.overlay.style.background='rgba(0, 0, 0, 0.6)';
+      tutorialUI.overlay.style.background=tutorialMascaraSuavizada?'transparent':'rgba(0, 0, 0, 0.6)';
+      if(tutorialMascaraSuavizada){ tutorialUI.overlay.classList.add('sin-mascara'); }
     }
 
     function posicionarMano(pos){
@@ -1286,6 +1385,9 @@
           break;
       }
 
+      const centroHorizontal=viewportWidth/2 - ancho/2;
+      left=(left + centroHorizontal)/2;
+
       left=Math.max(margen, Math.min(viewportWidth - ancho - margen, left));
       top=Math.max(margen, Math.min(viewportHeight - alto - margen, top));
 
@@ -1317,6 +1419,7 @@
         if(tutorialUI.label) tutorialUI.label.style.display='none';
         resaltarTipoCuenta(false);
         marcarModalInteractiva(false);
+        limpiarAmbientePaso();
         document.body.classList.remove('tutorial-activo');
         return;
       }
@@ -1330,6 +1433,7 @@
       if(paso.tab){
         activarTab(paso.tab);
       }
+      ajustarAmbientePaso(paso);
       if(paso.id==='toggle-datos' && tutorialUI.toggleDatos && !tutorialUI.toggleDatos.checked){
         tutorialUI.datosContent.style.display='none';
       }
@@ -1621,6 +1725,37 @@
         tbody.appendChild(tr);n++;});
       }
 
+      function mostrarConfirmacionModal(mensaje){
+        return new Promise(resolve=>{
+          const modal=document.getElementById('modal-confirm');
+          const texto=document.getElementById('modal-confirm-text');
+          const btnAceptar=document.getElementById('modal-confirm-accept');
+          const btnCancelar=document.getElementById('modal-confirm-cancel');
+          if(!modal||!texto||!btnAceptar||!btnCancelar){
+            resolve(window.confirm(mensaje));
+            return;
+          }
+          const restaurarTutorial=pausarTutorialTemporal();
+          texto.textContent=mensaje;
+          modal.style.display='flex';
+          modal.setAttribute('aria-hidden','false');
+          btnCancelar.focus();
+          const cerrar=(respuesta)=>{
+            modal.style.display='none';
+            modal.setAttribute('aria-hidden','true');
+            btnAceptar.onclick=null;
+            btnCancelar.onclick=null;
+            modal.removeEventListener('click', manejarFondo);
+            restaurarTutorial();
+            resolve(respuesta);
+          };
+          btnCancelar.onclick=()=>cerrar(false);
+          btnAceptar.onclick=()=>cerrar(true);
+          function manejarFondo(e){ if(e.target===modal){ cerrar(false); } }
+          modal.addEventListener('click', manejarFondo);
+        });
+      }
+
       function mostrarDetalle(t){
         const ref=t.referencia||'';
         const fs=formatearFecha(t.fechasolicitud||'');
@@ -1645,9 +1780,11 @@
         const modal=document.getElementById('modal-detalle');
         const restaurarTutorial=pausarTutorialTemporal();
         modal.style.display='flex';
+        modal.setAttribute('aria-hidden','false');
         marcarModalInteractiva(true);
         document.getElementById('modal-ok').addEventListener('click',()=>{
           modal.style.display='none';
+          modal.setAttribute('aria-hidden','true');
           marcarModalInteractiva(false);
           restaurarTutorial();
         },{once:true});
@@ -1674,9 +1811,11 @@
         const modal=document.getElementById('modal-detalle');
         const restaurarTutorial=pausarTutorialTemporal();
         modal.style.display='flex';
+        modal.setAttribute('aria-hidden','false');
         marcarModalInteractiva(true);
         document.getElementById('modal-ok').addEventListener('click',()=>{
           modal.style.display='none';
+          modal.setAttribute('aria-hidden','true');
           marcarModalInteractiva(false);
           restaurarTutorial();
         },{once:true});
@@ -1830,9 +1969,9 @@
       const montoFinal=monto - (monto*porcentajeRetiro/100) - (monto*porcentajeAdministra/100);
       document.getElementById('monto-retiro-neto').value = montoFinal>0 ? montoFinal.toFixed(2) : '';
       const comentarioRetiro=document.getElementById('comentario-retiro').value.trim();
+      const continuar=await mostrarConfirmacionModal(`¿Confirmas la solicitud de retiro por ${montoFinal.toFixed(2)}?`);
+      if(!continuar){ return; }
       const restaurarTutorial=pausarTutorialTemporal();
-      const continuar=window.confirm(`¿Confirmas la solicitud de retiro por ${montoFinal.toFixed(2)}?`);
-      if(!continuar){ restaurarTutorial(); return; }
       try{
         const resultado=await ejecutarRetiro(monto,montoFinal, comentarioRetiro);
         await notificarSolicitudWhatsapp('retiro',{
@@ -1883,23 +2022,11 @@
       }
 
       function activarEnfasis(tab){
-        if(tab==='recargas'){
-          btnRecargas?.classList.add('tab-animada');
-          seccionRecargas?.classList.add('tab-foco');
-        }else if(tab==='retiros'){
-          btnRetiros?.classList.add('tab-animada');
-          seccionRetiros?.classList.add('tab-foco');
-        }
+        aplicarEnfasisPestana(tab, true);
       }
 
       function desactivarEnfasis(tab){
-        if(tab==='recargas'){
-          btnRecargas?.classList.remove('tab-animada');
-          seccionRecargas?.classList.remove('tab-foco');
-        }else if(tab==='retiros'){
-          btnRetiros?.classList.remove('tab-animada');
-          seccionRetiros?.classList.remove('tab-foco');
-        }
+        aplicarEnfasisPestana(tab, false);
       }
 
       if(seccionRecargas){
