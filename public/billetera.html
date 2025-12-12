@@ -313,16 +313,10 @@
     }
 
     /* Controles del modo tutorial */
-    :root {
-      --tutorial-left: calc(18px + env(safe-area-inset-left, 0px));
-      --tutorial-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
-    }
-
     #tutorial-controls {
       position: fixed;
-      inset: auto auto var(--tutorial-bottom) var(--tutorial-left);
-      left: var(--tutorial-left);
-      bottom: var(--tutorial-bottom);
+      left: 14px;
+      bottom: 18px;
       right: auto;
       top: auto;
       display: flex;
@@ -1037,22 +1031,10 @@
       enPausaTemporal:false,
     };
 
-    const animacionTabla = { frameId:null, limites:null, posicionX:0, direccion:1, pausaHasta:0, ultimaMarca:0 };
+    const animacionTabla = { frameId:null, puntos:[], posicionX:0, direccion:1, pausaHasta:0, ultimaMarca:0, indiceObjetivo:0, y:0 };
 
     let tutorialControlesListos=false;
     let tutorialScrollPendiente=false;
-
-    function actualizarOffsetsTutorial(){
-      const docStyle=document.documentElement?.style;
-      if(!docStyle){ return; }
-      const margenBase=18;
-      const offsetLeft=Math.max(margenBase, Math.min(28, window.innerWidth*0.02));
-      const offsetBottom=margenBase;
-      docStyle.setProperty('--tutorial-left', `calc(${offsetLeft}px + env(safe-area-inset-left, 0px))`);
-      docStyle.setProperty('--tutorial-bottom', `calc(${offsetBottom}px + env(safe-area-inset-bottom, 0px))`);
-    }
-
-    window.addEventListener('resize', actualizarOffsetsTutorial, {passive:true});
 
     function aplicarEnfasisPestana(tipo, activo){
       const boton = tipo==='recargas'?tutorialUI.tabDepositar:tutorialUI.tabRetirar;
@@ -1160,10 +1142,9 @@
     }
 
     if(window.visualViewport){
-      window.visualViewport.addEventListener('resize',()=>{actualizarAlturaViewport();actualizarOffsetsTutorial();});
+      window.visualViewport.addEventListener('resize',actualizarAlturaViewport);
     }
-    window.addEventListener('orientationchange',()=>{actualizarAlturaViewport();actualizarOffsetsTutorial();});
-    window.addEventListener('resize',actualizarOffsetsTutorial);
+    window.addEventListener('orientationchange',actualizarAlturaViewport);
 
     function guardarIndiceTutorial(indice){
       if(Number.isInteger(indice)){
@@ -1263,46 +1244,55 @@
       tutorialUI.hand.style.display='block';
     }
 
-    function calcularLimitesTabla(elemento){
-      if(!elemento) return null;
-      const rect=elemento.getBoundingClientRect();
-      const manoWidth=tutorialUI.hand?.width||44;
-      const manoHeight=tutorialUI.hand?.height||44;
-      const padding=8;
-      const margenInferior=Math.min(18, rect.height*0.35);
-      return {
-        inicioX: rect.left + padding,
-        finX: Math.max(rect.left + padding, rect.right - manoWidth - padding),
-        y: rect.bottom - margenInferior
-      };
-    }
-
     function detenerAnimacionTabla(){
       if(animacionTabla.frameId){
         cancelAnimationFrame(animacionTabla.frameId);
       }
       animacionTabla.frameId=null;
-      animacionTabla.limites=null;
+      animacionTabla.puntos=[];
       animacionTabla.pausaHasta=0;
       animacionTabla.ultimaMarca=0;
+      animacionTabla.indiceObjetivo=0;
+      animacionTabla.direccion=1;
+    }
+
+    function obtenerPuntosTabla(elemento){
+      if(!elemento) return null;
+      const fila=elemento.querySelector('tr')||elemento;
+      const celdas=Array.from(fila.querySelectorAll('th,td'));
+      const manoWidth=tutorialUI.hand?.width||44;
+      const objetivoColumnas=['tipo','monto','fecha','estado'];
+      let celdasObjetivo=celdas.filter(celda=>objetivoColumnas.includes((celda.textContent||'').trim().toLowerCase()));
+      if(!celdasObjetivo.length){
+        celdasObjetivo=celdas.slice(0,4);
+      }
+      const puntos=celdasObjetivo.map(celda=>{
+        const rect=celda.getBoundingClientRect();
+        return rect.left + rect.width/2 - manoWidth/2;
+      }).filter((valor)=>Number.isFinite(valor));
+      const filaRect=fila.getBoundingClientRect();
+      const margenInferior=Math.min(18, filaRect.height*0.35);
+      return { puntos, y: filaRect.bottom - margenInferior };
     }
 
     function iniciarAnimacionTabla(elemento){
       if(!tutorialUI.hand || !elemento) return;
       detenerAnimacionTabla();
-      const limites=calcularLimitesTabla(elemento);
-      if(!limites) return;
-      animacionTabla.limites=limites;
-      animacionTabla.posicionX=limites.inicioX;
-      animacionTabla.direccion=1;
+      const infoTabla=obtenerPuntosTabla(elemento);
+      if(!infoTabla || !infoTabla.puntos.length) return;
+      animacionTabla.puntos=infoTabla.puntos;
+      animacionTabla.posicionX=infoTabla.puntos[0];
+      animacionTabla.indiceObjetivo=Math.min(1, infoTabla.puntos.length-1);
+      animacionTabla.direccion=animacionTabla.indiceObjetivo===0?0:1;
+      animacionTabla.y=infoTabla.y;
       const velocidadPxMs=0.18;
       const duracionPausa=380;
 
       tutorialUI.hand.style.display='block';
-      posicionarMano({ x: animacionTabla.posicionX, y: animacionTabla.limites.y });
+      posicionarMano({ x: animacionTabla.posicionX, y: animacionTabla.y });
 
       const step=(timestamp)=>{
-        if(!tutorialState.activo || !animacionTabla.limites){ return; }
+        if(!tutorialState.activo || !animacionTabla.puntos.length){ return; }
         if(!animacionTabla.ultimaMarca){ animacionTabla.ultimaMarca=timestamp; }
         const delta=timestamp-animacionTabla.ultimaMarca;
         animacionTabla.ultimaMarca=timestamp;
@@ -1312,17 +1302,26 @@
           return;
         }
 
-        animacionTabla.posicionX+=animacionTabla.direccion*delta*velocidadPxMs;
-        if(animacionTabla.posicionX>=animacionTabla.limites.finX){
-          animacionTabla.posicionX=animacionTabla.limites.finX;
-          animacionTabla.direccion=-1;
-          animacionTabla.pausaHasta=timestamp+duracionPausa;
-        } else if(animacionTabla.posicionX<=animacionTabla.limites.inicioX){
-          animacionTabla.posicionX=animacionTabla.limites.inicioX;
-          animacionTabla.direccion=1;
+        const objetivo=animacionTabla.puntos[animacionTabla.indiceObjetivo] ?? animacionTabla.posicionX;
+        const diferencia=objetivo - animacionTabla.posicionX;
+        const direccionActual=diferencia===0? (animacionTabla.direccion||1) : Math.sign(diferencia);
+        const avance=Math.min(Math.abs(diferencia), delta*velocidadPxMs) * direccionActual;
+        animacionTabla.posicionX += avance;
+
+        if(Math.abs(diferencia) <= Math.abs(avance)){
+          animacionTabla.posicionX = objetivo;
+          if(animacionTabla.puntos.length>1){
+            if(animacionTabla.indiceObjetivo === animacionTabla.puntos.length-1){
+              animacionTabla.direccion = -1;
+            } else if(animacionTabla.indiceObjetivo === 0){
+              animacionTabla.direccion = 1;
+            }
+            animacionTabla.indiceObjetivo = Math.max(0, Math.min(animacionTabla.puntos.length-1, animacionTabla.indiceObjetivo + animacionTabla.direccion));
+          }
           animacionTabla.pausaHasta=timestamp+duracionPausa;
         }
-        posicionarMano({ x: animacionTabla.posicionX, y: animacionTabla.limites.y });
+
+        posicionarMano({ x: animacionTabla.posicionX, y: animacionTabla.y });
         animacionTabla.frameId=requestAnimationFrame(step);
       };
 
@@ -1522,7 +1521,6 @@
     function mostrarControlesTutorial(){
       const controles=document.getElementById('tutorial-controls');
       if(!controles) return;
-      actualizarOffsetsTutorial();
       controles.classList.add('visible');
     }
 
@@ -2084,7 +2082,6 @@
       const tablaBancos=document.getElementById('tabla-bancos');
       const tituloBancos=document.getElementById('titulo-bancos');
 
-      actualizarOffsetsTutorial();
       mostrarControlesTutorial();
 
       function actualizarVisibilidad(){
