@@ -333,12 +333,13 @@
       z-index: 25000;
       opacity: 0;
       pointer-events: none;
-      transform: translateY(10px);
+      transform: translate3d(0, 10px, 0);
       transition: opacity 0.35s ease, transform 0.35s ease;
       isolation: isolate;
       transform-origin: left bottom;
       will-change: transform, opacity;
       backface-visibility: hidden;
+      contain: layout paint;
     }
     #tutorial-controls.visible {
       opacity: 1;
@@ -1114,7 +1115,16 @@
 
     const PASOS_TRANSACCIONES = [
       { id:'toggle-transacciones', elementId:'switch-transacciones-wrapper', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Activa este interruptor para desplegar los datos de tus transacciones', color:'#0b4c8c', tab:null },
-      { id:'tabla-transacciones', elementId:'tabla-transacciones', mano:'img/Mano-abajo.png', posicion:'encima-centro', mensaje:'En esta tabla se listan tus transacciones, puedes usar los filtros en la primera fila TIPO, MONTO, FECHA, ESTADO', color:'#4b0082', tab:null },
+      {
+        id:'tabla-transacciones',
+        elementId:'tabla-transacciones',
+        selectorAnimacion:'#tabla-transacciones thead tr:first-child',
+        mano:'img/Mano-arriba.png',
+        posicion:'encima-centro',
+        mensaje:'En esta tabla se listan tus transacciones, puedes usar los filtros en la primera fila TIPO, MONTO, FECHA, ESTADO',
+        color:'#4b0082',
+        tab:null,
+      },
     ];
 
     const IDS_FOCO_RECARGAS = new Set(['titulo-bancos','tabla-bancos','banco-deposito','monto-deposito','referencia','comentario-deposito','btn-depositar']);
@@ -1287,6 +1297,9 @@
       animacionTabla.direccion=1;
       const velocidadPxMs=0.18;
       const duracionPausa=380;
+
+      tutorialUI.hand.style.display='block';
+      posicionarMano({ x: animacionTabla.posicionX, y: animacionTabla.limites.y });
 
       const step=(timestamp)=>{
         if(!tutorialState.activo || !animacionTabla.limites){ return; }
