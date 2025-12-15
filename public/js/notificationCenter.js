@@ -583,7 +583,18 @@
       try{
         const unsubSorteos = db.collection('sorteos').onSnapshot(snapshot => {
           if(!this.inicializaciones.sorteos){
-            snapshot.forEach(doc => this.cache.sorteos.set(doc.id, doc.data() || {}));
+            let historialActualizado = false;
+            snapshot.forEach(doc => {
+              this.cache.sorteos.set(doc.id, doc.data() || {});
+              const historial = this.config.historial.sorteoNuevo;
+              if(historial && historial.ids && !historial.ids[doc.id]){
+                historial.ids[doc.id] = true;
+                historialActualizado = true;
+              }
+            });
+            if(historialActualizado){
+              this.programarGuardadoHistorial();
+            }
             this.inicializaciones.sorteos = true;
             return;
           }
