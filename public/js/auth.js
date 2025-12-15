@@ -2,6 +2,9 @@ let app, auth, db, provider, appName = 'BingOnline';
 const DISABLED_MSG = "Tu cuenta ha sido deshabilitada, Motivado posiblemente a que has incumplido una o más clausulas en nuestros Terminos y condiciones. Contacta con un administrador del sistema si necesitas información.";
 let firebaseInitPromise = null;
 let firebaseConfigLoadPromise = null;
+const nativeAlert = hasWindow() ? window.alert.bind(window) : null;
+const nativeConfirm = hasWindow() ? window.confirm.bind(window) : null;
+const nativePrompt = hasWindow() ? window.prompt.bind(window) : null;
 
 function hasWindow(){
   return typeof window !== 'undefined';
@@ -100,87 +103,164 @@ async function initAppName(){
 }
 
 function overrideDialogs(){
-  const createOverlay = message => {
-    const overlay = document.createElement('div');
-    overlay.style.position = 'fixed';
-    overlay.style.top = '0';
-    overlay.style.left = '0';
-    overlay.style.width = '100%';
-    overlay.style.height = '100%';
-    overlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
-    overlay.style.display = 'flex';
-    overlay.style.alignItems = 'center';
-    overlay.style.justifyContent = 'center';
-    overlay.style.zIndex = '10000';
+  if(!hasWindow() || typeof document === 'undefined') return;
+  window.nativeDialogs = {
+    alert: nativeAlert,
+    confirm: nativeConfirm,
+    prompt: nativePrompt
+  };
 
-    const box = document.createElement('div');
-    box.style.background = '#fff';
-    box.style.padding = '20px';
-    box.style.borderRadius = '10px';
-    box.style.textAlign = 'center';
-    box.style.maxWidth = '80%';
-    box.style.fontFamily = 'Calibri, Arial, sans-serif';
+  const ensureStyles = () => {
+    if(document.getElementById('global-dialog-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'global-dialog-styles';
+    style.textContent = `
+      .global-dialog-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);z-index:12000;padding:16px;}
+      .global-dialog-card{background:#0f172a;color:#e2e8f0;border-radius:16px;box-shadow:0 20px 45px rgba(0,0,0,0.35);width:min(480px,100%);border:1px solid #334155;overflow:hidden;font-family:'Poppins',sans-serif;}
+      .global-dialog-header{background:linear-gradient(135deg,#9333ea,#2563eb);padding:14px 18px;color:#fff;display:flex;align-items:center;gap:10px;}
+      .global-dialog-header h3{margin:0;font-size:1.1rem;letter-spacing:0.02em;}
+      .global-dialog-body{padding:18px;font-size:0.95rem;line-height:1.5;color:#cbd5e1;}
+      .global-dialog-body p{margin:0;white-space:pre-wrap;}
+      .global-dialog-input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1224;color:#e2e8f0;margin-top:12px;font-size:0.95rem;box-sizing:border-box;}
+      .global-dialog-actions{display:flex;justify-content:flex-end;gap:10px;padding:0 18px 16px;}
+      .global-dialog-btn{border:none;border-radius:999px;padding:10px 16px;font-weight:600;font-size:0.95rem;cursor:pointer;transition:transform 0.15s ease,box-shadow 0.15s ease;}
+      .global-dialog-btn:focus{outline:2px solid #a855f7;outline-offset:2px;}
+      .global-dialog-btn.primary{background:linear-gradient(135deg,#22c55e,#16a34a);color:#0b1224;box-shadow:0 10px 25px rgba(34,197,94,0.35);}
+      .global-dialog-btn.secondary{background:#1f2937;color:#e2e8f0;border:1px solid #334155;}
+      .global-dialog-btn:hover{transform:translateY(-1px);}
+      @media (max-width:480px){.global-dialog-card{border-radius:12px;}.global-dialog-header{padding:12px 14px;}.global-dialog-actions{padding:0 14px 12px;}}
+    `;
+    document.head.appendChild(style);
+  };
 
-    const title = document.createElement('h3');
-    title.textContent = appName;
-    title.style.marginTop = '0';
+  const ensureDialog = () => {
+    ensureStyles();
+    let overlay = document.querySelector('.global-dialog-overlay');
+    if(overlay) return overlay;
+    overlay = document.createElement('div');
+    overlay.className = 'global-dialog-overlay';
+    overlay.setAttribute('role','dialog');
+    overlay.setAttribute('aria-modal','true');
 
-    const msg = document.createElement('p');
-    msg.textContent = message;
+    const card = document.createElement('div');
+    card.className = 'global-dialog-card';
 
-    box.appendChild(title);
-    box.appendChild(msg);
-    overlay.appendChild(box);
+    const header = document.createElement('div');
+    header.className = 'global-dialog-header';
+    const titleEl = document.createElement('h3');
+    header.appendChild(titleEl);
+
+    const body = document.createElement('div');
+    body.className = 'global-dialog-body';
+    const messageEl = document.createElement('p');
+    const inputEl = document.createElement('input');
+    inputEl.className = 'global-dialog-input';
+    inputEl.type = 'text';
+    inputEl.style.display = 'none';
+    body.appendChild(messageEl);
+    body.appendChild(inputEl);
+
+    const actions = document.createElement('div');
+    actions.className = 'global-dialog-actions';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'global-dialog-btn secondary';
+    cancelBtn.textContent = 'Cancelar';
+    const acceptBtn = document.createElement('button');
+    acceptBtn.className = 'global-dialog-btn primary';
+    acceptBtn.textContent = 'Aceptar';
+    actions.appendChild(cancelBtn);
+    actions.appendChild(acceptBtn);
+
+    card.appendChild(header);
+    card.appendChild(body);
+    card.appendChild(actions);
+    overlay.appendChild(card);
     document.body.appendChild(overlay);
-    return { overlay, box };
+
+    return overlay;
   };
 
-  window.alert = function(message){
-    const { overlay, box } = createOverlay(message);
-    const btn = document.createElement('button');
-    btn.textContent = 'Aceptar';
-    btn.style.marginTop = '10px';
-    btn.addEventListener('click', () => overlay.remove());
-    box.appendChild(btn);
-  };
+  const showDialog = (options) => {
+    const {
+      message = '',
+      type = 'alert',
+      placeholder = 'Escribe tu respuesta',
+      defaultValue = '',
+      acceptText = 'Aceptar',
+      cancelText = 'Cancelar',
+      title = appName
+    } = options;
 
-  window.confirm = function(message){
+    const overlay = ensureDialog();
+    if(!overlay){
+      const fallback = type === 'confirm' ? nativeConfirm : type === 'prompt' ? nativePrompt : nativeAlert;
+      return Promise.resolve(fallback ? fallback(message) : undefined);
+    }
+
+    const card = overlay.querySelector('.global-dialog-card');
+    const titleEl = overlay.querySelector('.global-dialog-header h3');
+    const messageEl = overlay.querySelector('.global-dialog-body p');
+    const inputEl = overlay.querySelector('.global-dialog-input');
+    const [cancelBtn, acceptBtn] = overlay.querySelectorAll('.global-dialog-btn');
+
+    titleEl.textContent = title || appName;
+    messageEl.textContent = message;
+    acceptBtn.textContent = acceptText;
+    cancelBtn.textContent = cancelText;
+    inputEl.style.display = type === 'prompt' ? 'block' : 'none';
+    inputEl.value = defaultValue || '';
+    inputEl.placeholder = placeholder;
+    cancelBtn.style.display = type === 'alert' ? 'none' : 'inline-flex';
+    overlay.style.display = 'flex';
+    overlay.dataset.type = type;
+    overlay.focus();
+
+    const focusTarget = type === 'prompt' ? inputEl : (type === 'alert' ? acceptBtn : cancelBtn);
+    setTimeout(()=>{ focusTarget.focus(); }, 30);
+
     return new Promise(resolve => {
-      const { overlay, box } = createOverlay(message);
-      const btnOk = document.createElement('button');
-      btnOk.textContent = 'Aceptar';
-      btnOk.style.margin = '10px';
-      btnOk.addEventListener('click', () => { overlay.remove(); resolve(true); });
-      const btnCancel = document.createElement('button');
-      btnCancel.textContent = 'Cancelar';
-      btnCancel.style.margin = '10px';
-      btnCancel.addEventListener('click', () => { overlay.remove(); resolve(false); });
-      box.appendChild(btnOk);
-      box.appendChild(btnCancel);
+      const cleanup = () => {
+        overlay.style.display = 'none';
+        overlay.dataset.type = '';
+        overlay.onclick = null;
+        document.removeEventListener('keydown', onKeyDown);
+        acceptBtn.onclick = null;
+        cancelBtn.onclick = null;
+      };
+
+      const close = (value) => {
+        cleanup();
+        resolve(value);
+      };
+
+      const onKeyDown = (ev) => {
+        if(ev.key === 'Escape'){
+          ev.preventDefault();
+          if(type === 'alert') close(undefined);
+          else close(type === 'prompt' ? null : false);
+        }
+        if(ev.key === 'Enter'){
+          if(document.activeElement === cancelBtn) return;
+          ev.preventDefault();
+          acceptBtn.click();
+        }
+      };
+
+      overlay.onclick = (e)=>{ if(e.target === overlay) close(type === 'alert' ? undefined : type === 'prompt' ? null : false); };
+      acceptBtn.onclick = ()=>{ const val = type === 'prompt' ? inputEl.value : true; close(val); };
+      cancelBtn.onclick = ()=> close(type === 'prompt' ? null : false);
+      document.addEventListener('keydown', onKeyDown);
+    }).then(val => {
+      if(type === 'confirm') return !!val;
+      if(type === 'alert') return undefined;
+      return val;
     });
   };
 
-  window.prompt = function(message, def=''){
-    return new Promise(resolve => {
-      const { overlay, box } = createOverlay(message);
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.style.marginTop = '10px';
-      input.value = def;
-      const btnOk = document.createElement('button');
-      btnOk.textContent = 'Aceptar';
-      btnOk.style.margin = '10px';
-      btnOk.addEventListener('click', () => { const val = input.value; overlay.remove(); resolve(val); });
-      const btnCancel = document.createElement('button');
-      btnCancel.textContent = 'Cancelar';
-      btnCancel.style.margin = '10px';
-      btnCancel.addEventListener('click', () => { overlay.remove(); resolve(null); });
-      box.appendChild(input);
-      box.appendChild(btnOk);
-      box.appendChild(btnCancel);
-      input.focus();
-    });
-  };
+  window.alert = (message) => showDialog({ message, type: 'alert' });
+  window.confirm = (message) => showDialog({ message, type: 'confirm' });
+  window.prompt = (message, def = '') => showDialog({ message, type: 'prompt', defaultValue: def });
+  window.modalDialogs = { alert: window.alert, confirm: window.confirm, prompt: window.prompt };
 }
 
 async function loginGoogle(){

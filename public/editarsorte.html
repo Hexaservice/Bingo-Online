@@ -969,14 +969,14 @@ firebase.auth().onAuthStateChanged(u=>{
     }
     cerrarFormasModal();
   });
-  document.getElementById('formas-cargar-btn').addEventListener('click',()=>{
+  document.getElementById('formas-cargar-btn').addEventListener('click',async()=>{
     const datos=obtenerFormaSeleccionada();
     if(!datos){alert('Selecciona una forma guardada');return;}
     const idx=modalFormaIdx;
     if(!idx){cerrarFormasModal();return;}
     const tab=document.getElementById(`forma${idx}`);
     if(tab){
-      const confirmar=confirm('La forma actual sera reemplazada por esta. ¿Deseas proceder ?');
+      const confirmar=await confirm('La forma actual sera reemplazada por esta. ¿Deseas proceder ?');
       if(confirmar){
         aplicarFormaATab(tab,datos,{asignarNombre:true});
         formaEdicionPorTab[idx]=null;
