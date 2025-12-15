@@ -61,6 +61,10 @@
     return JSON.parse(JSON.stringify(obj));
   }
 
+  function estadoNormalizado(estado){
+    return (estado || '').toString().trim().toUpperCase();
+  }
+
   function historialVacio(){
     const base = {};
     Object.keys(HISTORIAL_FABRICAS).forEach(clave => {
@@ -198,6 +202,8 @@
       };
       this.listeners = new Set();
       this.desuscriptores = [];
+      this.modalEstilosListo = false;
+      this.modalActivo = null;
       this.temporizadores = {};
       this.inicializaciones = {
         sorteos: false,
@@ -218,6 +224,96 @@
       this.timerHistorial = null;
       this.rolesActivos = new Set();
       this.resetReady();
+    }
+
+    asegurarEstilosModal(){
+      if(this.modalEstilosListo || typeof document === 'undefined') return;
+      const estilo = document.createElement('style');
+      estilo.id = 'notificacion-modal-estilos';
+      estilo.textContent = `
+        .notif-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;z-index:13000;padding:16px;box-sizing:border-box;}
+        .notif-modal{background:#fff;border-radius:18px;max-width:460px;width:100%;box-shadow:0 14px 36px rgba(0,0,0,0.3);font-family:'Poppins',sans-serif;overflow:hidden;animation:notif-modal-enter .22s ease-out;}
+        .notif-modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 10px 20px;background:linear-gradient(135deg,#0a3e7b,#0b6b27);color:#fff;}
+        .notif-modal-title{margin:0;font-size:1.1rem;font-weight:700;letter-spacing:.2px;}
+        .notif-modal-close{background:transparent;border:none;color:#fff;font-size:1.3rem;cursor:pointer;padding:4px;line-height:1;transition:transform .15s ease,opacity .15s ease;}
+        .notif-modal-close:hover{transform:scale(1.05);opacity:.9;}
+        .notif-modal-body{padding:14px 20px 10px 20px;color:#1f2d3d;font-size:0.98rem;line-height:1.5;}
+        .notif-modal-actions{display:flex;gap:10px;flex-wrap:wrap;padding:14px 20px 20px 20px;justify-content:flex-end;background:#f7f9fb;}
+        .notif-modal-btn{border:none;border-radius:12px;padding:10px 16px;font-size:0.95rem;cursor:pointer;font-weight:600;font-family:'Poppins',sans-serif;transition:transform .12s ease,box-shadow .12s ease,background .12s ease;color:#fff;box-shadow:0 6px 14px rgba(0,0,0,0.08);}
+        .notif-modal-btn:active{transform:translateY(1px);}
+        .notif-modal-btn.primary{background:#0a8800;}
+        .notif-modal-btn.primary:hover{background:#0b9a05;}
+        .notif-modal-btn.secondary{background:#0a3e7b;}
+        .notif-modal-btn.secondary:hover{background:#0b4f9b;}
+        @keyframes notif-modal-enter{from{transform:translateY(10px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+      `;
+      document.head.appendChild(estilo);
+      this.modalEstilosListo = true;
+    }
+
+    cerrarModalActivo(){
+      if(this.modalActivo){
+        try{ this.modalActivo.remove(); }
+        catch(err){ console.warn('No se pudo cerrar el modal de notificación', err); }
+      }
+      this.modalActivo = null;
+    }
+
+    mostrarModalNotificacion(titulo, mensaje){
+      if(typeof document === 'undefined') return;
+      this.asegurarEstilosModal();
+      this.cerrarModalActivo();
+      const overlay = document.createElement('div');
+      overlay.className = 'notif-modal-overlay';
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-modal', 'true');
+
+      const modal = document.createElement('div');
+      modal.className = 'notif-modal';
+
+      const header = document.createElement('div');
+      header.className = 'notif-modal-header';
+
+      const tituloElem = document.createElement('h3');
+      tituloElem.className = 'notif-modal-title';
+      tituloElem.textContent = titulo || 'Bingo Online';
+
+      const btnCerrar = document.createElement('button');
+      btnCerrar.className = 'notif-modal-close';
+      btnCerrar.setAttribute('aria-label', 'Cerrar notificación');
+      btnCerrar.innerHTML = '&times;';
+      btnCerrar.addEventListener('click', ()=> this.cerrarModalActivo());
+
+      header.appendChild(tituloElem);
+      header.appendChild(btnCerrar);
+
+      const cuerpo = document.createElement('div');
+      cuerpo.className = 'notif-modal-body';
+      cuerpo.textContent = mensaje || '';
+
+      const acciones = document.createElement('div');
+      acciones.className = 'notif-modal-actions';
+
+      const btnOk = document.createElement('button');
+      btnOk.className = 'notif-modal-btn primary';
+      btnOk.textContent = 'Entendido';
+      btnOk.addEventListener('click', ()=> this.cerrarModalActivo());
+
+      const btnCerrarSec = document.createElement('button');
+      btnCerrarSec.className = 'notif-modal-btn secondary';
+      btnCerrarSec.textContent = 'Cerrar';
+      btnCerrarSec.addEventListener('click', ()=> this.cerrarModalActivo());
+
+      acciones.appendChild(btnCerrarSec);
+      acciones.appendChild(btnOk);
+
+      modal.appendChild(header);
+      modal.appendChild(cuerpo);
+      modal.appendChild(acciones);
+
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+      this.modalActivo = overlay;
     }
 
     resetReady(pendiente = false){
@@ -608,14 +704,16 @@
             const anterior = this.cache.sorteos.get(id);
             this.cache.sorteos.set(id, data);
             if(cambio.type === 'added'){
-              if((data.estado || '').toUpperCase() === 'FINALIZADO'){
+              if(estadoNormalizado(data.estado) === 'FINALIZADO'){
                 this.registrarHistorial('sorteoNuevo', id);
                 return;
               }
               this.notificarSorteoNuevo(id, data);
             }
             if(cambio.type === 'modified'){
-              if(anterior && anterior.estado !== data.estado && data.estado === 'Jugando'){
+              const estadoAnterior = estadoNormalizado(anterior ? anterior.estado : '');
+              const estadoActual = estadoNormalizado(data.estado);
+              if(estadoAnterior !== estadoActual && estadoActual === 'JUGANDO'){
                 this.notificarSorteoJugando(id, data);
               }
             }
@@ -719,13 +817,14 @@
           const fecha = data.fecha;
           const hora = data.hora;
           const cierre = data.horacierre;
+          const estadoActual = estadoNormalizado(data.estado);
           if(!fecha) return;
           const momentoCierre = this.combinarFechaHora(fecha, cierre);
           const momentoInicio = this.combinarFechaHora(fecha, hora);
-          if(momentoCierre && ahora >= momentoCierre && (data.estado === 'Activo' || data.estado === 'Sellado')){
+          if(momentoCierre && ahora >= momentoCierre && (estadoActual === 'ACTIVO' || estadoActual === 'SELLADO')){
             this.notificarSellado(id, data);
           }
-          if(momentoInicio && ahora >= momentoInicio && data.estado !== 'Jugando' && data.estado !== 'Finalizado'){
+          if(momentoInicio && ahora >= momentoInicio && estadoActual !== 'JUGANDO' && estadoActual !== 'FINALIZADO'){
             this.notificarJuegoEnVivo(id, data);
           }
         });
@@ -815,8 +914,9 @@
           console.warn('No se pudo mostrar la notificación del navegador', err);
         }
       }
+      this.mostrarModalNotificacion(tituloFinal, mensaje);
       if(!mostrada){
-        try{ alert(mensaje); }
+        try{ console.warn('Mostrando notificación en modal interno por falta de permiso de navegador'); }
         catch(err){ console.warn('No se pudo mostrar alerta de notificación', err); }
       }
     }
@@ -893,8 +993,14 @@
     }
 
     notificarSorteoNuevo(id, data){
-      const estadoActual = (data.estado || '').toUpperCase();
+      const estadoActual = estadoNormalizado(data.estado);
       if(estadoActual === 'FINALIZADO'){
+        this.registrarHistorial('sorteoNuevo', id);
+        return;
+      }
+      const fechaInicio = this.combinarFechaHora(data.fecha, data.hora);
+      const ahora = typeof obtenerFechaServidor === 'function' ? obtenerFechaServidor() : new Date();
+      if(fechaInicio && ahora > fechaInicio && estadoActual !== 'ACTIVO' && estadoActual !== 'SELLADO' && estadoActual !== 'JUGANDO'){
         this.registrarHistorial('sorteoNuevo', id);
         return;
       }
