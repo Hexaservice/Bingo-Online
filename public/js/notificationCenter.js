@@ -608,6 +608,10 @@
             const anterior = this.cache.sorteos.get(id);
             this.cache.sorteos.set(id, data);
             if(cambio.type === 'added'){
+              if((data.estado || '').toUpperCase() === 'FINALIZADO'){
+                this.registrarHistorial('sorteoNuevo', id);
+                return;
+              }
               this.notificarSorteoNuevo(id, data);
             }
             if(cambio.type === 'modified'){
@@ -889,6 +893,11 @@
     }
 
     notificarSorteoNuevo(id, data){
+      const estadoActual = (data.estado || '').toUpperCase();
+      if(estadoActual === 'FINALIZADO'){
+        this.registrarHistorial('sorteoNuevo', id);
+        return;
+      }
       if(!this.puedeNotificar('sorteoNuevo')) return;
       if(this.yaNotificado('sorteoNuevo', id)) return;
       const nombre = data.nombre || 'Nuevo sorteo';
