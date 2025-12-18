@@ -1116,6 +1116,9 @@
       .live-stream-icon--tiktok {
           background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%2325F4EE' d='M16 4.5v3.3c1 .8 2.2 1.2 3.5 1.2v2.5c-1.6 0-3-.4-4.3-1.2v5.6c0 3.1-2.5 5.6-5.6 5.6-1.7 0-3.1-.7-4.2-1.8a5.6 5.6 0 0 1 4.2-9.3c.4 0 .9.05 1.3.15v2.6a3 3 0 1 0 2.9 3.1V4.5z'/><path fill='%23FF0050' d='M14.6 7.3a7 7 0 0 1-1.4-.5v5c0 3-2.4 5.4-5.4 5.4-.5 0-.9-.05-1.4-.15 1 1.1 2.4 1.8 4 1.8 3.1 0 5.6-2.5 5.6-5.6V7.3z'/><path fill='white' d='M13.2 5h2.8c.2 1.1 1 2 2.2 2.5v2.3c-1.2-.2-2.2-.7-3-1.5v5.5a4.5 4.5 0 1 1-4.5-4.5c.3 0 .6 0 .9.1V12a2 2 0 1 0 1.6 1.9z'/></svg>");
       }
+      .live-stream-icon--facebook {
+          background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='4' fill='%231877f2'/><path d='M15 7h-2c-.6 0-1 .4-1 1v2h3l-.4 3H12v7H9v-7H7V10h2V8c0-1.7 1.3-3 3-3h3v2z' fill='white'/></svg>");
+      }
       .sr-only {
           position: absolute;
           width: 1px;
@@ -4982,6 +4985,19 @@
           return `https://www.youtube.com/embed/${id}?autoplay=1`;
         }
       }
+      if(host.includes('facebook.com') || host.includes('fb.watch')){
+        if(url.pathname.includes('/plugins/video.php')){
+          if(!url.searchParams.has('autoplay')){
+            url.searchParams.set('autoplay','true');
+          }
+          if(!url.searchParams.has('show_text')){
+            url.searchParams.set('show_text','false');
+          }
+          return url.toString();
+        }
+        const href = encodeURIComponent(url.href);
+        return `https://www.facebook.com/plugins/video.php?href=${href}&autoplay=true&show_text=false`;
+      }
       return url.href;
     }catch(err){
       if(/^https?:\/\//i.test(valor)){
@@ -5142,6 +5158,7 @@
       const host = url.hostname.toLowerCase();
       if(host.includes('youtube') || host.includes('youtu.be')) return 'youtube';
       if(host.includes('tiktok')) return 'tiktok';
+      if(host.includes('facebook') || host.includes('fb.watch')) return 'facebook';
       return 'otro';
     }catch(err){
       return 'otro';
@@ -5156,6 +5173,10 @@
     }
     if(modo === 'tiktok'){
       liveStreamToggleBtn.innerHTML = "<span class=\"live-stream-icon live-stream-icon--tiktok\" aria-hidden=\"true\"></span><span class=\"sr-only\">Transmisión en TikTok</span>";
+      return;
+    }
+    if(modo === 'facebook'){
+      liveStreamToggleBtn.innerHTML = "<span class=\"live-stream-icon live-stream-icon--facebook\" aria-hidden=\"true\"></span><span class=\"sr-only\">Transmisión en Facebook</span>";
       return;
     }
     liveStreamToggleBtn.textContent = 'LIVE';
@@ -5173,7 +5194,7 @@
   function iniciarAlternanciaIconoLive(){
     detenerAlternanciaIconoLive();
     if(!liveStreamTieneTransmision) return;
-    if(liveStreamPlatform !== 'youtube' && liveStreamPlatform !== 'tiktok'){
+    if(liveStreamPlatform !== 'youtube' && liveStreamPlatform !== 'tiktok' && liveStreamPlatform !== 'facebook'){
       establecerContenidoBotonLive();
       return;
     }
