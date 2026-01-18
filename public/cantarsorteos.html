@@ -1893,6 +1893,8 @@
   let nuevosGanadoresModalActivo = false;
   let mostrarComplementariosPendiente = false;
   let evaluandoCantoActual = false;
+  const premiosAutomaticosProcesados = new Set();
+  const premiosAutomaticosEnCurso = new Set();
 
   function manejarAceptarConfirmacionCanto(){
     cerrarConfirmacionCanto(true);
@@ -2572,6 +2574,177 @@
     return null;
   }
 
+  function normalizarEmail(valor){
+    if(typeof valor !== 'string') return '';
+    return valor.trim().toLowerCase();
+  }
+
+  function sanitizarId(valor){
+    const texto = (valor || '').toString();
+    const limpio = texto.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+    const reemplazado = limpio.replace(/[^a-zA-Z0-9_-]+/g, '_');
+    return reemplazado.replace(/_{2,}/g, '_').replace(/^_+|_+$/g, '') || 'registro';
+  }
+
+  function formatearFechaCorta(fecha){
+    const base = fecha instanceof Date ? fecha : getServerNow();
+    const dia = String(base.getDate()).padStart(2,'0');
+    const mes = String(base.getMonth() + 1).padStart(2,'0');
+    const anio = base.getFullYear();
+    return `${dia}/${mes}/${anio}`;
+  }
+
+  function formatearHoraCorta(fecha){
+    const base = fecha instanceof Date ? fecha : getServerNow();
+    return base
+      .toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+      .toUpperCase();
+  }
+
+  const usuariosCache = {
+    porEmail: new Map(),
+    porAlias: new Map(),
+    porUserId: new Map(),
+    porDocId: new Map()
+  };
+
+  function normalizarInfoUsuario(id, data = {}){
+    const email = (data.email || id || '').toString();
+    let nombre = (data.nombre || data.name || '').toString().trim();
+    const apellido = (data.apellido || data.lastName || '').toString().trim();
+    if(!nombre && (data.name || data.apellido)){
+      nombre = [data.name, data.apellido].filter(Boolean).join(' ').trim();
+    } else if(nombre && apellido && !nombre.toLowerCase().includes(apellido.toLowerCase())){
+      nombre = `${nombre} ${apellido}`.trim();
+    }
+    return {
+      email: normalizarEmail(email),
+      alias: (data.alias || '').toString(),
+      nombre,
+      uid: (data.uid || data.userId || data.usuarioId || '').toString()
+    };
+  }
+
+  function almacenarUsuarioEnCaches(info){
+    if(!info) return;
+    if(info.email) usuariosCache.porEmail.set(info.email.toLowerCase(), info);
+    if(info.alias) usuariosCache.porAlias.set(info.alias.toLowerCase(), info);
+    if(info.uid) usuariosCache.porUserId.set(info.uid, info);
+  }
+
+  async function obtenerUsuarioPorDocId(id){
+    const clave = (id || '').toString().trim();
+    if(!clave) return null;
+    if(usuariosCache.porDocId.has(clave)){
+      return usuariosCache.porDocId.get(clave);
+    }
+    let info = null;
+    try {
+      await asegurarDbListo();
+      const doc = await db.collection('users').doc(clave).get();
+      if(doc.exists){
+        info = normalizarInfoUsuario(doc.id, doc.data() || {});
+        almacenarUsuarioEnCaches(info);
+      }
+    } catch (err) {
+      console.warn('No se pudo obtener usuario por ID', clave, err);
+    }
+    usuariosCache.porDocId.set(clave, info);
+    return info;
+  }
+
+  async function obtenerUsuarioPorUserId(userId){
+    const clave = (userId || '').toString().trim();
+    if(!clave) return null;
+    if(usuariosCache.porUserId.has(clave)){
+      return usuariosCache.porUserId.get(clave);
+    }
+    let info = null;
+    try {
+      await asegurarDbListo();
+      const snap = await db.collection('users').where('uid','==',clave).limit(1).get();
+      if(!snap.empty){
+        const doc = snap.docs[0];
+        info = normalizarInfoUsuario(doc.id, doc.data() || {});
+        almacenarUsuarioEnCaches(info);
+      }
+    } catch (err) {
+      console.warn('No se pudo obtener usuario por UID', err);
+    }
+    usuariosCache.porUserId.set(clave, info);
+    return info;
+  }
+
+  async function obtenerUsuarioPorAlias(alias){
+    const clave = (alias || '').toString().trim().toLowerCase();
+    if(!clave) return null;
+    if(usuariosCache.porAlias.has(clave)){
+      return usuariosCache.porAlias.get(clave);
+    }
+    let info = null;
+    try {
+      await asegurarDbListo();
+      const snap = await db.collection('users').where('alias','==',alias).limit(1).get();
+      if(!snap.empty){
+        const doc = snap.docs[0];
+        info = normalizarInfoUsuario(doc.id, doc.data() || {});
+        almacenarUsuarioEnCaches(info);
+      }
+    } catch (err) {
+      console.warn('No se pudo obtener usuario por alias', err);
+    }
+    usuariosCache.porAlias.set(clave, info);
+    return info;
+  }
+
+  async function resolverIdentidadPersona(datos = {}){
+    const aliasBase = (datos.alias || datos.aliasJugador || datos.aliascarton || '').toString().trim();
+    const emailBase = normalizarEmail(datos.email || datos.gmail || datos.IDbilletera || '');
+    const userIdBase = (datos.userId || datos.usuarioId || '').toString().trim();
+    if(emailBase && usuariosCache.porEmail.has(emailBase)){
+      const cacheado = usuariosCache.porEmail.get(emailBase);
+      if(cacheado){
+        return {
+          email: emailBase,
+          alias: aliasBase || cacheado.alias || '',
+          nombre: cacheado.nombre || '',
+          userId: cacheado.uid || userIdBase || ''
+        };
+      }
+      return { email: emailBase, alias: aliasBase, nombre: '', userId: userIdBase };
+    }
+    let info = null;
+    if(userIdBase){
+      info = await obtenerUsuarioPorUserId(userIdBase);
+    }
+    if(!info && emailBase){
+      info = await obtenerUsuarioPorDocId(emailBase);
+    }
+    if(!info && aliasBase){
+      info = await obtenerUsuarioPorAlias(aliasBase);
+    }
+    const resultado = {
+      email: normalizarEmail(info?.email || emailBase),
+      alias: aliasBase || (info?.alias || ''),
+      nombre: info?.nombre || info?.name || '',
+      userId: info?.uid || userIdBase || ''
+    };
+    if(!resultado.nombre && info){
+      const nombreInferido = [info.name, info.apellido].filter(Boolean).join(' ').trim();
+      if(nombreInferido) resultado.nombre = nombreInferido;
+    }
+    if(resultado.email){
+      almacenarUsuarioEnCaches({
+        ...(info || {}),
+        email: resultado.email,
+        alias: resultado.alias,
+        nombre: resultado.nombre,
+        uid: resultado.userId
+      });
+    }
+    return resultado;
+  }
+
   function esModoManual(){
     return modoManual === true;
   }
@@ -3061,6 +3234,8 @@
           id: doc.id,
           sorteoId: data?.sorteoId || '',
           userId: data?.userId || data?.usuarioId || '',
+          email: data?.email || data?.gmail || data?.IDbilletera || '',
+          gmail: data?.gmail || data?.email || data?.IDbilletera || '',
           alias: data?.alias || data?.aliascarton || data?.aliasCarton || '',
           cartonNum: data?.cartonNum ?? data?.Ncarton ?? data?.carton ?? null,
           tipocarton: data?.tipocarton ?? data?.tipoCarton ?? data?.tipo ?? '',
@@ -3079,6 +3254,9 @@
     cartonesDatosListos = true;
     actualizarNumerosNoJugados();
     calcularGanadores();
+    procesarPremiosAutomaticos().catch(err=>{
+      console.warn('No se pudieron procesar premios automáticos al cargar cartones', err);
+    });
   }
 
   function detenerCartones(){
@@ -4080,8 +4258,8 @@
     const anterior = Number(longitudAnterior) || 0;
     const actual = Number(longitudActual) || 0;
     if(actual <= anterior) return;
-    if(esPrimerProcesamiento) return;
     const nuevos = [];
+    const formasNuevas = new Set();
     cartonesGanadoresPorForma.forEach((registro, indice)=>{
       const idxNumero = Number(indice);
       if(!Number.isFinite(idxNumero)) return;
@@ -4093,10 +4271,153 @@
         const nombreForma = (forma?.nombre && forma.nombre.trim()) ? forma.nombre.trim() : `Forma ${String(idxNumero).padStart(2,'0')}`;
         const colorForma = obtenerColorParaForma(forma?.idx || idxNumero || 1);
         nuevos.push({ nombre: nombreForma, color: colorForma, total: totalActual });
+        formasNuevas.add(idxNumero);
       }
     });
-    if(!nuevos.length) return;
+    if(formasNuevas.size){
+      procesarPremiosAutomaticos({ formas: formasNuevas }).catch(err=>{
+        console.warn('No se pudieron procesar premios automáticos', err);
+      });
+    }
+    if(esPrimerProcesamiento || !nuevos.length) return;
     mostrarModalNuevosGanadores(nuevos);
+  }
+
+  function construirIdPremioAutomatico(sorteoId, formaIdx, cartonId){
+    const sorteoSeguro = sanitizarId(sorteoId || 'sorteo');
+    const formaSeguro = sanitizarId(`f${formaIdx ?? ''}` || 'forma');
+    const cartonSeguro = sanitizarId(cartonId || 'carton');
+    return `${sorteoSeguro}__${formaSeguro}__${cartonSeguro}`;
+  }
+
+  async function acreditarPremioAutomatico({ carton, forma, totalGanadores }){
+    if(!carton || !forma || !currentSorteoId) return;
+    const cartonReferencia = carton.id || carton.cartonId || carton.carton || carton.userId || carton.usuarioId || '';
+    const premioId = construirIdPremioAutomatico(currentSorteoId, forma?.idx, cartonReferencia);
+    if(premiosAutomaticosProcesados.has(premioId) || premiosAutomaticosEnCurso.has(premioId)) return;
+    premiosAutomaticosEnCurso.add(premioId);
+    try {
+      await asegurarDbListo();
+      const identidad = await resolverIdentidadPersona(carton);
+      const email = normalizarEmail(identidad.email);
+      if(!email){
+        return;
+      }
+      const premioTotal = obtenerCreditosForma(forma);
+      const ganadoresNumero = Math.max(1, Number(totalGanadores) || 1);
+      const creditos = ganadoresNumero > 0 ? Math.floor(Number(premioTotal) / ganadoresNumero) : 0;
+      const cartonesGratis = obtenerCartonesGratisPorGanador(forma, ganadoresNumero);
+      const sorteoNombre = (currentSorteoData?.nombre || '').toString();
+      const ahora = getServerNow();
+      const fechaGestion = formatearFechaCorta(ahora);
+      const horaGestion = formatearHoraCorta(ahora);
+      const timestamp = getServerTimestamp();
+      const premioRef = db.collection('PremiosSorteos').doc(premioId);
+      const transaccionRef = db.collection('transacciones').doc(`premio_${premioId}`);
+      const billeteraRef = db.collection('Billetera').doc(email);
+      await db.runTransaction(async tx => {
+        const premioSnap = await tx.get(premioRef);
+        if(premioSnap.exists){
+          const estadoActual = (premioSnap.data()?.estado || '').toString().trim().toUpperCase();
+          if(estadoActual === 'APROBADO'){
+            return;
+          }
+        }
+        const billeteraSnap = await tx.get(billeteraRef);
+        const datosBilletera = billeteraSnap.exists ? billeteraSnap.data() : {};
+        const nuevosCreditos = (Number(datosBilletera.creditos) || 0) + (Number(creditos) || 0);
+        const nuevosCartones = (Number(datosBilletera.CartonesGratis) || 0) + (Number(cartonesGratis) || 0);
+        const payloadPremio = {
+          sorteoId: currentSorteoId,
+          sorteoNombre,
+          gmail: email,
+          email,
+          alias: identidad.alias || carton.alias || '',
+          aliasJugador: identidad.alias || carton.alias || '',
+          aliasGanador: identidad.alias || carton.alias || '',
+          creditos: Number(creditos) || 0,
+          creditosGanados: Number(creditos) || 0,
+          cartonesGratis: Number(cartonesGratis) || 0,
+          cartonesGanados: 1,
+          formasGanadoras: [{
+            idx: Number(forma?.idx) || null,
+            nombre: forma?.nombre || '',
+            creditos: Number(creditos) || 0,
+            cartonesGratis: Number(cartonesGratis) || 0
+          }],
+          estado: 'APROBADO',
+          fechaGanado: timestamp,
+          fechaRegistro: timestamp,
+          creadoEn: timestamp,
+          actualizadoEn: timestamp,
+          fechaGestion,
+          horaGestion,
+          gestionadoPor: auth?.currentUser?.email || '',
+          rolGestor: window.currentRole || '',
+          tipoRegistro: 'GANADOR_SORTEO',
+          userIds: identidad.userId ? [identidad.userId] : [],
+          cartonId: carton.id || carton.cartonId || '',
+          formaIdx: Number(forma?.idx) || null,
+          generadoDesde: 'cantarsorteos'
+        };
+        if(email){ payloadPremio.idBilletera = email; }
+        tx.set(premioRef, payloadPremio, { merge: true });
+        if(Number(creditos) || Number(cartonesGratis)){
+          tx.set(billeteraRef, { creditos: nuevosCreditos, CartonesGratis: nuevosCartones }, { merge: true });
+        }
+        const transSnap = await tx.get(transaccionRef);
+        if(!transSnap.exists){
+          tx.set(transaccionRef, {
+            tipotrans: 'premio',
+            origen: 'premios_jugadores',
+            Monto: Number(creditos) || 0,
+            cartonesGratis: Number(cartonesGratis) || 0,
+            estado: 'APROBADO',
+            IDbilletera: email,
+            fechasolicitud: '',
+            horasolicitud: '',
+            fechagestion: fechaGestion,
+            horagestion: horaGestion,
+            usuariogestor: auth?.currentUser?.email || '',
+            rolusuario: window.currentRole || '',
+            referencia: 'PREMIO',
+            sorteoId: currentSorteoId,
+            sorteoNombre,
+            rolInterno: '',
+            rolinterno: ''
+          }, { merge: true });
+        }
+      });
+      premiosAutomaticosProcesados.add(premioId);
+    } catch (err) {
+      console.error('Error acreditando premio automático', err);
+    } finally {
+      premiosAutomaticosEnCurso.delete(premioId);
+    }
+  }
+
+  async function procesarPremiosAutomaticos({ formas } = {}){
+    if(!currentSorteoId || !cartonesGanadoresPorForma || !cartonesGanadoresPorForma.size) return;
+    const indices = formas instanceof Set ? formas : null;
+    const tareas = [];
+    cartonesGanadoresPorForma.forEach((registro, indice)=>{
+      const idxNumero = Number(indice);
+      if(!Number.isFinite(idxNumero)) return;
+      if(indices && !indices.has(idxNumero)) return;
+      const ganadores = Array.isArray(registro?.cartones) ? registro.cartones : [];
+      if(!ganadores.length) return;
+      const forma = registro?.forma || obtenerResumenForma(idxNumero) || { idx: idxNumero };
+      ganadores.forEach(carton=>{
+        tareas.push(acreditarPremioAutomatico({
+          carton,
+          forma,
+          totalGanadores: ganadores.length
+        }));
+      });
+    });
+    if(tareas.length){
+      await Promise.all(tareas);
+    }
   }
 
   function gestionarComplementariosPendientes(){
@@ -4149,6 +4470,8 @@
       clearTimeout(sincronizacionResultadosTimeout);
       sincronizacionResultadosTimeout = null;
     }
+    premiosAutomaticosProcesados.clear();
+    premiosAutomaticosEnCurso.clear();
     cerrarModalComplementarios();
     cerrarAvisoSimple();
     cantoCeldas.forEach(celda=>celda.classList.remove('no-jugado'));

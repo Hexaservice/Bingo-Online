@@ -1502,16 +1502,18 @@
       }
     }
 
-    async function cpRegistrarSolicitudes(ctx, ganadores, administrativos, colaboradores, totalCreditos, totalCartonesGratis){
+    async function cpRegistrarSolicitudes(ctx, ganadores, administrativos, colaboradores, totalCreditos, totalCartonesGratis, opciones = {}){
+      const incluirPremios = opciones.incluirPremios !== false;
       const timestamp = firebase.firestore.FieldValue.serverTimestamp();
       const sorteoNombre = (ctx.sorteoData?.nombre || '').toString();
       const operaciones = [];
 
-      ganadores.forEach(ganador=>{
-        const email = cpNormalizarEmail(ganador.gmail);
-        const alias = ganador.alias || '';
-        const docId = cpConstruirIdSolicitud(ctx.sorteoId, email || alias || 'ganador');
-        const payload = {
+      if(incluirPremios){
+        ganadores.forEach(ganador=>{
+          const email = cpNormalizarEmail(ganador.gmail);
+          const alias = ganador.alias || '';
+          const docId = cpConstruirIdSolicitud(ctx.sorteoId, email || alias || 'ganador');
+          const payload = {
           sorteoId: ctx.sorteoId,
           sorteoNombre,
           gmail: email || '',
@@ -1534,8 +1536,9 @@
           generadoDesde: 'centropagos'
         };
         if(email){ payload.idBilletera = email; }
-        operaciones.push(cpActualizarDocumentoCentroPagos(ctx, ctx.db.collection('PremiosSorteos').doc(docId), payload));
-      });
+          operaciones.push(cpActualizarDocumentoCentroPagos(ctx, ctx.db.collection('PremiosSorteos').doc(docId), payload));
+        });
+      }
 
       administrativos.forEach(administrativo=>{
         const email = cpNormalizarEmail(administrativo.gmail);
@@ -1566,18 +1569,18 @@
       const resumenPayload = {
         sorteoId: ctx.sorteoId,
         sorteoNombre,
-        totalGanadores: ganadores.length,
+        totalGanadores: incluirPremios ? ganadores.length : 0,
         totalAdministrativos: administrativos.length,
         totalColaboradores: colaboradores.length,
-        totalCreditosPremios: totalCreditos,
-        totalCartonesGratis,
-        ganadores: ganadores.map(item=>({
+        totalCreditosPremios: incluirPremios ? totalCreditos : 0,
+        totalCartonesGratis: incluirPremios ? totalCartonesGratis : 0,
+        ganadores: incluirPremios ? ganadores.map(item=>({
           gmail: cpNormalizarEmail(item.gmail || ''),
           alias: item.alias || '',
           creditos: Number(item.creditos) || 0,
           cartonesGratis: Number(item.cartonesGratis) || 0,
           cartonesGanadores: Number(item.cartonesGanadores) || 0
-        })),
+        })) : [],
         administrativos: administrativos.map(item=>({
           gmail: cpNormalizarEmail(item.gmail || ''),
           alias: item.alias || '',
@@ -1620,16 +1623,25 @@
       ]);
     }
 
-    async function cpGenerarSolicitudesParaSorteo(ctx){
+    async function cpGenerarSolicitudesParaSorteo(ctx, opciones = {}){
+      const incluirPremios = opciones.incluirPremios !== false;
       await ensureFirebaseListo();
-      await cpCargarFormas(ctx);
-      await cpCargarCartones(ctx);
-      await cpCargarCantos(ctx);
-      cpCalcularResultados(ctx);
-      const { lista: ganadores, totalCreditos, totalCartonesGratis } = await cpObtenerGanadoresAgrupados(ctx);
+      let ganadores = [];
+      let totalCreditos = 0;
+      let totalCartonesGratis = 0;
+      if(incluirPremios){
+        await cpCargarFormas(ctx);
+        await cpCargarCartones(ctx);
+        await cpCargarCantos(ctx);
+        cpCalcularResultados(ctx);
+        const premiosData = await cpObtenerGanadoresAgrupados(ctx);
+        ganadores = premiosData.lista || [];
+        totalCreditos = premiosData.totalCreditos || 0;
+        totalCartonesGratis = premiosData.totalCartonesGratis || 0;
+      }
       const administrativos = await cpObtenerAdministrativosProcesados(ctx);
       const colaboradores = await cpObtenerColaboradoresSistema(ctx);
-      await cpRegistrarSolicitudes(ctx, ganadores, administrativos, colaboradores, totalCreditos, totalCartonesGratis);
+      await cpRegistrarSolicitudes(ctx, ganadores, administrativos, colaboradores, totalCreditos, totalCartonesGratis, { incluirPremios });
       await cpMarcarSolicitudesGeneradas(ctx);
       return { ganadores: ganadores.length, administrativos: administrativos.length, colaboradores: colaboradores.length };
     }
@@ -1667,7 +1679,7 @@
         for(const sorteo of pendientes){
           try {
             const ctx = cpCrearContextoSorteo(sorteo.id, sorteo.data);
-            await cpGenerarSolicitudesParaSorteo(ctx);
+            await cpGenerarSolicitudesParaSorteo(ctx, { incluirPremios: false });
             procesados++;
           } catch (err) {
             errores++;
