@@ -1119,6 +1119,9 @@
       .live-stream-icon--facebook {
           background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='4' fill='%231877f2'/><path d='M15 7h-2c-.6 0-1 .4-1 1v2h3l-.4 3H12v7H9v-7H7V10h2V8c0-1.7 1.3-3 3-3h3v2z' fill='white'/></svg>");
       }
+      .live-stream-icon--twitch {
+          background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='4' fill='%239146ff'/><path fill='white' d='M6 5h13l-1.2 8.2-3.4 2.7h-3.1l-1.8 1.8H7v-1.8H4.9V5.9L6 5zm1.4 2.5v6.7h2.1v1.6l1.6-1.6h3.4l2.2-1.7.8-5H7.4zm4.2 1.2h1.4v3.3h-1.4V8.7zm3.3 0h1.4v3.3h-1.4V8.7z'/></svg>");
+      }
       .sr-only {
           position: absolute;
           width: 1px;
@@ -4967,6 +4970,7 @@
     try {
       const url = new URL(valor);
       const host = url.hostname.toLowerCase();
+      const twitchParent = window.location.hostname || 'localhost';
       if(host.includes('youtube.com')){
         const videoId = url.searchParams.get('v');
         if(videoId){
@@ -4998,6 +5002,30 @@
         }
         const href = encodeURIComponent(url.href);
         return `https://www.facebook.com/plugins/video.php?href=${href}&autoplay=true&show_text=false`;
+      }
+      if(host.includes('player.twitch.tv')){
+        if(!url.searchParams.has('parent')){
+          url.searchParams.set('parent', twitchParent);
+        }
+        if(!url.searchParams.has('autoplay')){
+          url.searchParams.set('autoplay','true');
+        }
+        return url.toString();
+      }
+      if(host.includes('clips.twitch.tv')){
+        const clipSlug = url.pathname.split('/').filter(Boolean)[0];
+        if(clipSlug){
+          return `https://clips.twitch.tv/embed?clip=${encodeURIComponent(clipSlug)}&parent=${encodeURIComponent(twitchParent)}&autoplay=true`;
+        }
+      }
+      if(host.includes('twitch.tv')){
+        const segmentos = url.pathname.split('/').filter(Boolean);
+        if(segmentos[0] === 'videos' && segmentos[1]){
+          return `https://player.twitch.tv/?video=${encodeURIComponent(segmentos[1])}&parent=${encodeURIComponent(twitchParent)}&autoplay=true`;
+        }
+        if(segmentos[0]){
+          return `https://player.twitch.tv/?channel=${encodeURIComponent(segmentos[0])}&parent=${encodeURIComponent(twitchParent)}&autoplay=true`;
+        }
       }
       return url.href;
     }catch(err){
@@ -5160,6 +5188,7 @@
       if(host.includes('youtube') || host.includes('youtu.be')) return 'youtube';
       if(host.includes('tiktok')) return 'tiktok';
       if(host.includes('facebook') || host.includes('fb.watch')) return 'facebook';
+      if(host.includes('twitch')) return 'twitch';
       return 'otro';
     }catch(err){
       return 'otro';
@@ -5180,6 +5209,10 @@
       liveStreamToggleBtn.innerHTML = "<span class=\"live-stream-icon live-stream-icon--facebook\" aria-hidden=\"true\"></span><span class=\"sr-only\">Transmisión en Facebook</span>";
       return;
     }
+    if(modo === 'twitch'){
+      liveStreamToggleBtn.innerHTML = "<span class=\"live-stream-icon live-stream-icon--twitch\" aria-hidden=\"true\"></span><span class=\"sr-only\">Transmisión en Twitch</span>";
+      return;
+    }
     liveStreamToggleBtn.textContent = 'LIVE';
   }
 
@@ -5195,7 +5228,7 @@
   function iniciarAlternanciaIconoLive(){
     detenerAlternanciaIconoLive();
     if(!liveStreamTieneTransmision) return;
-    if(liveStreamPlatform !== 'youtube' && liveStreamPlatform !== 'tiktok' && liveStreamPlatform !== 'facebook'){
+    if(liveStreamPlatform !== 'youtube' && liveStreamPlatform !== 'tiktok' && liveStreamPlatform !== 'facebook' && liveStreamPlatform !== 'twitch'){
       establecerContenidoBotonLive();
       return;
     }
