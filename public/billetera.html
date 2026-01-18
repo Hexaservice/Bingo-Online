@@ -400,7 +400,9 @@
     body.tutorial-activo .tutorial-elemento-activo * { pointer-events: auto !important; filter: none; }
     body.tutorial-activo .tutorial-modal-activa,
     body.tutorial-activo .tutorial-modal-activa * { pointer-events: auto !important; filter: none !important; }
-    #tipo-cuenta label.tutorial-glow { text-shadow: 0 0 8px #fff, 0 0 12px rgba(255,255,255,0.85); font-weight: 800; }
+    #tipo-cuenta label.tutorial-glow,
+    #mis-datos h3.tutorial-glow,
+    #transacciones-section h3.tutorial-glow { text-shadow: 0 0 8px #fff, 0 0 12px rgba(255,255,255,0.85); font-weight: 800; }
     @keyframes tutorial-hand-pulse { 0% { transform: scale(1); } 45% { transform: scale(1.17); } 100% { transform: scale(1); } }
     @keyframes tutorial-nav-surge { 0% { transform: translateX(-12px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
     @keyframes tutorial-nav-exit { 0% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(-16px); opacity: 0; } }
@@ -501,7 +503,7 @@
   </div>
   <div id="transacciones-section">
     <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
-      <h3 style="margin:0;">Mis transacciones</h3>
+      <h3 id="mis-transacciones-label" style="margin:0;">Mis transacciones</h3>
       <label class="switch" id="switch-transacciones-wrapper">
         <input type="checkbox" id="toggle-transacciones">
         <span class="slider"></span>
@@ -907,7 +909,7 @@
       const tipoCuentaInputs=document.querySelectorAll('input[name="tipo-cuenta"]');
       const habilitar=!!activa;
       cuentaInput.disabled=!habilitar;
-      tipoCuentaInputs.forEach(radio=>{ radio.disabled=!habilitar; if(!habilitar){ radio.checked=false; } });
+      tipoCuentaInputs.forEach(radio=>{ radio.disabled=!habilitar; });
       cuentaWrapper.classList.toggle('desactivado', !habilitar);
       tipoCuentaWrapper.classList.toggle('desactivado', !habilitar);
     }
@@ -1241,12 +1243,18 @@
     function aplicarEstadoInteraccion(elemento, paso){
       document.querySelectorAll('.tutorial-elemento-activo').forEach(el=>el.classList.remove('tutorial-elemento-activo'));
       resaltarTipoCuenta(false);
+      document.getElementById('mis-datos-label')?.classList.remove('tutorial-glow', 'tutorial-elemento-activo');
+      document.getElementById('mis-transacciones-label')?.classList.remove('tutorial-glow', 'tutorial-elemento-activo');
       if(elemento){
         elemento.classList.add('tutorial-elemento-activo');
       }
       if(paso?.id==='toggle-datos'){
         const etiqueta=document.getElementById('mis-datos-label');
-        if(etiqueta){ etiqueta.classList.add('tutorial-elemento-activo'); }
+        if(etiqueta){ etiqueta.classList.add('tutorial-elemento-activo','tutorial-glow'); }
+      }
+      if(paso?.id==='toggle-transacciones'){
+        const etiqueta=document.getElementById('mis-transacciones-label');
+        if(etiqueta){ etiqueta.classList.add('tutorial-elemento-activo','tutorial-glow'); }
       }
       if(paso?.id==='tipo-cuenta-corriente'){
         const contenedor=document.getElementById('tipo-cuenta');
