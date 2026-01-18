@@ -217,6 +217,11 @@
     #cedula{color:#4B0082;}
     #pagomovil{color:#FF8C00;}
     .campo{display:flex;flex-direction:column;align-items:center;width:260px;margin:0 auto;}
+    .cuenta-opcional{display:flex;align-items:center;gap:8px;width:100%;justify-content:center;}
+    .cuenta-opcional input[type="checkbox"]{width:auto;margin:0;}
+    .cuenta-opcional.desactivado input[type="text"]{background:#e0e0e0 !important;color:#888;}
+    #tipo-cuenta.desactivado{opacity:0.7;}
+    #tipo-cuenta.desactivado label{color:#888;}
     #session-info {
       position: fixed;
       top: 10px;
@@ -421,7 +426,7 @@
 
   <div id="mis-datos">
     <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
-      <h3 style="margin:0;">Mis datos bancarios</h3>
+      <h3 id="mis-datos-label" style="margin:0;">Mis datos bancarios</h3>
       <label class="switch" id="switch-datos-wrapper">
         <input type="checkbox" id="toggle-datos">
         <span class="slider"></span>
@@ -433,15 +438,6 @@
           <option value="" disabled selected>Banco</option>
         </select>
       </div>
-      <div class="campo">
-        <input type="text" id="cuenta" placeholder="N° Cuenta Bancaria" inputmode="numeric">
-      </div>
-      <div id="tipo-cuenta">
-        <label><input type="radio" name="tipo-cuenta" value="Ahorro"> Ahorro</label>
-        <label for="tipo-cuenta-corriente-input" id="tipo-cuenta-corriente">
-          <input id="tipo-cuenta-corriente-input" type="radio" name="tipo-cuenta" value="Corriente"> Corriente
-        </label>
-      </div>
       <div id="datos-pm">
         <div class="campo">
           <input type="text" id="cedula" placeholder="Cédula" inputmode="numeric">
@@ -449,6 +445,18 @@
         <div class="campo">
           <input type="text" id="pagomovil" placeholder="Número Pago móvil" inputmode="tel">
         </div>
+      </div>
+      <div class="campo">
+        <div class="cuenta-opcional desactivado" id="cuenta-opcional">
+          <input type="checkbox" id="cuenta-toggle" aria-label="Agregar cuenta bancaria">
+          <input type="text" id="cuenta" placeholder="N° Cuenta Bancaria" inputmode="numeric" disabled>
+        </div>
+      </div>
+      <div id="tipo-cuenta" class="desactivado">
+        <label><input type="radio" name="tipo-cuenta" value="Ahorro" disabled> Ahorro</label>
+        <label for="tipo-cuenta-corriente-input" id="tipo-cuenta-corriente">
+          <input id="tipo-cuenta-corriente-input" type="radio" name="tipo-cuenta" value="Corriente" disabled> Corriente
+        </label>
       </div>
       <button id="guardar-datos">Guardar Datos</button>
     </div>
@@ -867,12 +875,19 @@
             const r=document.querySelector(`input[name='tipo-cuenta'][value='${data.tipoCuenta}']`);
             if(r) r.checked=true;
           }
+          const cuentaToggle=document.getElementById('cuenta-toggle');
+          const cuentaActiva=Boolean((data.cuenta||'').toString().trim()) || Boolean((data.tipoCuenta||'').toString().trim());
+          cuentaToggle.checked=cuentaActiva;
+          actualizarEstadoCuentaOpcional(cuentaActiva);
           document.getElementById('banco-retiro').textContent = 'Banco donde recibirás: '+(data.banco||'');
         } else {
           await billeteraRef.set({creditos:0, CartonesGratis:0, creditostransito:0});
           actualizarResumenCreditos({creditos:0, creditostransito:0});
           document.getElementById('cartones-valor').textContent='0';
           document.getElementById('banco-retiro').textContent='Banco donde recibirás:';
+          const cuentaToggle=document.getElementById('cuenta-toggle');
+          cuentaToggle.checked=false;
+          actualizarEstadoCuentaOpcional(false);
         }
         cargarTransacciones();
         const estadoTutorialActivo = (doc.exists && doc.data()?.tutorialBilleteraEstado === 'Activo');
@@ -885,33 +900,54 @@
       });
     });
 
+    function actualizarEstadoCuentaOpcional(activa){
+      const cuentaInput=document.getElementById('cuenta');
+      const cuentaWrapper=document.getElementById('cuenta-opcional');
+      const tipoCuentaWrapper=document.getElementById('tipo-cuenta');
+      const tipoCuentaInputs=document.querySelectorAll('input[name="tipo-cuenta"]');
+      const habilitar=!!activa;
+      cuentaInput.disabled=!habilitar;
+      tipoCuentaInputs.forEach(radio=>{ radio.disabled=!habilitar; if(!habilitar){ radio.checked=false; } });
+      cuentaWrapper.classList.toggle('desactivado', !habilitar);
+      tipoCuentaWrapper.classList.toggle('desactivado', !habilitar);
+    }
+
+    document.getElementById('cuenta-toggle').addEventListener('change', (event) => {
+      actualizarEstadoCuentaOpcional(event.target.checked);
+    });
+
     document.getElementById('guardar-datos').addEventListener('click', async () => {
       const user = auth.currentUser;
       const bancoSelect=document.getElementById('banco');
       const cuentaInput=document.getElementById('cuenta');
       const cedulaInput=document.getElementById('cedula');
       const pagoMovilInput=document.getElementById('pagomovil');
+      const cuentaToggle=document.getElementById('cuenta-toggle');
       const tipoCuentaSeleccionada=document.querySelector('input[name="tipo-cuenta"]:checked');
       const data = {
         cedula: cedulaInput.value.trim(),
         pagomovil: pagoMovilInput.value.trim(),
         banco: bancoSelect.value,
-        cuenta: cuentaInput.value.trim(),
-        tipoCuenta: tipoCuentaSeleccionada?.value || ''
       };
-      if(!data.banco){ alert('Seleccione su banco'); bancoSelect.focus(); return; }
-      if(!data.cuenta){ alert('Ingrese su número de cuenta'); cuentaInput.focus(); return; }
-      if(!/^\d+$/.test(data.cuenta)){ alert('La cuenta solo debe contener números'); cuentaInput.focus();return; }
-      if(!data.tipoCuenta){
-        alert('Seleccione el tipo de cuenta');
-        const primerTipo=document.querySelector('input[name="tipo-cuenta"]');
-        if(primerTipo){ primerTipo.focus(); }
-        return;
+      if(cuentaToggle.checked){
+        data.cuenta=cuentaInput.value.trim();
+        data.tipoCuenta=tipoCuentaSeleccionada?.value || '';
       }
+      if(!data.banco){ alert('Seleccione su banco'); bancoSelect.focus(); return; }
       if(!data.cedula){ alert('Ingrese su cédula'); cedulaInput.focus(); return; }
       if(!/^\d+$/.test(data.cedula)){ alert('La cédula solo debe contener números'); cedulaInput.focus();return; }
       if(!data.pagomovil){ alert('Ingrese su número de pago móvil'); pagoMovilInput.focus(); return; }
       if(!/^\+?\d+$/.test(data.pagomovil)){ alert('El pago móvil solo debe contener números y puede iniciar con +'); pagoMovilInput.focus(); return; }
+      if(cuentaToggle.checked){
+        if(!data.cuenta){ alert('Ingrese su número de cuenta'); cuentaInput.focus(); return; }
+        if(!/^\d+$/.test(data.cuenta)){ alert('La cuenta solo debe contener números'); cuentaInput.focus();return; }
+        if(!data.tipoCuenta){
+          alert('Seleccione el tipo de cuenta');
+          const primerTipo=document.querySelector('input[name="tipo-cuenta"]');
+          if(primerTipo){ primerTipo.focus(); }
+          return;
+        }
+      }
       const confirmar=await mostrarConfirmacionModal('¿Deseas guardar o actualizar tus datos bancarios?');
       if(!confirmar){ return; }
       data.CartonesGratis=parseInt(document.getElementById('cartones-valor').textContent)||0;
@@ -1071,10 +1107,11 @@
 
     const PASOS_MIS_DATOS = [
       { id:'banco-select', elementId:'banco', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Elige el Banco que usas', color:'#0b4c8c', requisitoTab:null },
-      { id:'cuenta-input', elementId:'cuenta', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Escribe el número completo de tu cuenta bancaria', color:'#0a8800', requisitoTab:null },
-      { id:'tipo-cuenta-corriente', elementId:'tipo-cuenta', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Elige tu tipo de Cuenta: Ahorro o Corriente', color:'#8b0000', requisitoTab:null, selectorPersonalizado:"#tipo-cuenta" },
       { id:'cedula-input', elementId:'cedula', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Escribe tu número de Cédula', color:'#4b0082', requisitoTab:null },
       { id:'pago-movil', elementId:'pagomovil', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Escribe tu número usado para tus pagos moviles', color:'#e67e22', requisitoTab:null },
+      { id:'cuenta-toggle', elementId:'cuenta-toggle', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Si marcas esta casilla puedes agregar tus datos de Cuenta bancaria para tener mas opciones al recibir los montos de premios', color:'#0b4c8c', requisitoTab:null },
+      { id:'cuenta-input', elementId:'cuenta', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Escribe el número completo de tu cuenta bancaria', color:'#0a8800', requisitoTab:null },
+      { id:'tipo-cuenta-corriente', elementId:'tipo-cuenta-corriente', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Elige tu tipo de Cuenta: Ahorro o Corriente', color:'#8b0000', requisitoTab:null },
       { id:'guardar-datos', elementId:'guardar-datos', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Una vez coloques todos tus datos puedes guardar o actualizar tus datos presionando este boton', color:'#0b9a2e', requisitoTab:null },
     ];
 
@@ -1207,6 +1244,10 @@
       if(elemento){
         elemento.classList.add('tutorial-elemento-activo');
       }
+      if(paso?.id==='toggle-datos'){
+        const etiqueta=document.getElementById('mis-datos-label');
+        if(etiqueta){ etiqueta.classList.add('tutorial-elemento-activo'); }
+      }
       if(paso?.id==='tipo-cuenta-corriente'){
         const contenedor=document.getElementById('tipo-cuenta');
         if(contenedor && contenedor!==elemento){
@@ -1262,7 +1303,11 @@
       const celdas=Array.from(fila.querySelectorAll('th,td'));
       const manoWidth=tutorialUI.hand?.width||44;
       const objetivoColumnas=['tipo','monto','fecha','estado'];
+      const tabla=fila.closest('table');
       let celdasObjetivo=celdas.filter(celda=>objetivoColumnas.includes((celda.textContent||'').trim().toLowerCase()));
+      if(tabla?.id === 'tabla-bancos'){
+        celdasObjetivo=celdas.slice(0,3);
+      }
       if(!celdasObjetivo.length){
         celdasObjetivo=celdas.slice(1,5);
       }
@@ -1479,7 +1524,12 @@
       if(tutorialUI.overlay){
         tutorialUI.overlay.setAttribute('aria-hidden','false');
         tutorialUI.overlay.classList.add('activo');
-        actualizarMascara(rect, rectPestana);
+        let rectExtra=rectPestana;
+        if(paso.id==='toggle-datos'){
+          const etiqueta=document.getElementById('mis-datos-label');
+          if(etiqueta){ rectExtra=etiqueta.getBoundingClientRect(); }
+        }
+        actualizarMascara(rect, rectExtra);
       }
       if(tutorialUI.hand){
         tutorialUI.hand.src=paso.mano;
@@ -1905,11 +1955,23 @@
       const toggle=document.getElementById('toggle-datos');
       toggle.checked=true;
       document.getElementById('datos-content').style.display='block';
-      if(!d.banco){document.getElementById('banco').focus();}
-      else if(!d.cuenta){document.getElementById('cuenta').focus();}
-      else if(!d.cedula){document.getElementById('cedula').focus();}
-      else if(!d.pagomovil){document.getElementById('pagomovil').focus();}
-      else if(!d.tipoCuenta){document.querySelector('input[name="tipo-cuenta"]').focus();}
+      if(!d.banco){
+        document.getElementById('banco').focus();
+      } else if(!d.cuenta){
+        const cuentaToggle=document.getElementById('cuenta-toggle');
+        cuentaToggle.checked=true;
+        actualizarEstadoCuentaOpcional(true);
+        document.getElementById('cuenta').focus();
+      } else if(!d.cedula){
+        document.getElementById('cedula').focus();
+      } else if(!d.pagomovil){
+        document.getElementById('pagomovil').focus();
+      } else if(!d.tipoCuenta){
+        const cuentaToggle=document.getElementById('cuenta-toggle');
+        cuentaToggle.checked=true;
+        actualizarEstadoCuentaOpcional(true);
+        document.querySelector('input[name="tipo-cuenta"]').focus();
+      }
       return false;
     }
 
