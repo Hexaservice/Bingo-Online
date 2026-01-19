@@ -1389,6 +1389,7 @@
       const viewportHeight=obtenerAlturaViewport();
       const viewportWidth=window.innerWidth;
       const label=tutorialUI.label;
+      const clampValor=(valor, min, max)=>Math.max(min, Math.min(max, valor));
       const maxAncho=Math.min(480, viewportWidth*0.9);
       const tamanoFuente=Math.max(16, Math.min(22, maxAncho/18));
       label.style.maxWidth=`${maxAncho}px`;
@@ -1442,23 +1443,45 @@
       const centroHorizontal=viewportWidth/2 - ancho/2;
       left=(left + centroHorizontal)/2;
 
-      left=Math.max(margen, Math.min(viewportWidth - ancho - margen, left));
-      top=Math.max(margen, Math.min(viewportHeight - alto - margen, top));
+      left=clampValor(left, margen, viewportWidth - ancho - margen);
+      top=clampValor(top, margen, viewportHeight - alto - margen);
 
       const manoRect=tutorialUI.hand?.getBoundingClientRect();
       if(manoRect){
         const solapa=!(left+ancho < manoRect.left || left > manoRect.right || top+alto < manoRect.top || top > manoRect.bottom);
         if(solapa){
           if(espacios.arriba>espacios.abajo){
-            top=Math.max(margen, manoRect.top - alto - margen);
+            top=clampValor(manoRect.top - alto - margen, margen, viewportHeight - alto - margen);
           }else{
-            top=Math.min(viewportHeight - alto - margen, manoRect.bottom + margen);
+            top=clampValor(manoRect.bottom + margen, margen, viewportHeight - alto - margen);
           }
         }
       }
 
       if(window.innerHeight>window.innerWidth){
-        left = Math.max(margen, Math.min(viewportWidth - ancho - margen, (viewportWidth/2) - (ancho/2)));
+        left = clampValor((viewportWidth/2) - (ancho/2), margen, viewportWidth - ancho - margen);
+      }
+
+      const controlesRect=tutorialUI.controles?.getBoundingClientRect();
+      if(controlesRect){
+        const solapaControles=!(left+ancho < controlesRect.left || left > controlesRect.right || top+alto < controlesRect.top || top > controlesRect.bottom);
+        if(solapaControles){
+          const candidatos=[
+            { left, top: controlesRect.top - alto - margen },
+            { left, top: controlesRect.bottom + margen },
+            { left: controlesRect.right + margen, top },
+            { left: controlesRect.left - ancho - margen, top },
+          ];
+          const valido=candidatos.find((cand)=>{
+            const candLeft=clampValor(cand.left, margen, viewportWidth - ancho - margen);
+            const candTop=clampValor(cand.top, margen, viewportHeight - alto - margen);
+            return (candLeft+ancho < controlesRect.left || candLeft > controlesRect.right || candTop+alto < controlesRect.top || candTop > controlesRect.bottom);
+          });
+          if(valido){
+            left=clampValor(valido.left, margen, viewportWidth - ancho - margen);
+            top=clampValor(valido.top, margen, viewportHeight - alto - margen);
+          }
+        }
       }
       label.style.left=`${left}px`;
       label.style.top=`${top}px`;
