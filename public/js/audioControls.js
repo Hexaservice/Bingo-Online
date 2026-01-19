@@ -23,6 +23,7 @@
       audioId,
       storageKeyPrefix = 'bingoAudio',
       defaultVolume = DEFAULT_VOLUME,
+      unlockAudioIds = [],
     } = config;
 
     const container = document.getElementById(containerId);
@@ -39,6 +40,7 @@
     }
 
     let hideTimer = null;
+    let audioDesbloqueado = false;
 
     function actualizarUI() {
       container.classList.toggle('is-muted', estado.muted);
@@ -67,10 +69,41 @@
     async function intentarReproducir() {
       if (estado.muted) return;
       try {
+        audioEl.load();
         await audioEl.play();
       } catch (err) {
         // Bloqueado por el navegador hasta interacción del usuario.
       }
+    }
+
+    function desbloquearAudioEnInteraccion() {
+      if (audioDesbloqueado) return;
+      const audios = [audioEl]
+        .concat(
+          unlockAudioIds
+            .map((id) => document.getElementById(id))
+            .filter((el) => el)
+        );
+      audios.forEach((audio) => {
+        const mutedPrevio = audio.muted;
+        audio.muted = true;
+        const intento = audio.play();
+        if (intento && typeof intento.then === 'function') {
+          intento
+            .then(() => {
+              audio.pause();
+              audio.currentTime = 0;
+            })
+            .catch(() => {})
+            .finally(() => {
+              audio.muted = mutedPrevio;
+            });
+        } else {
+          audio.muted = mutedPrevio;
+        }
+      });
+      audioDesbloqueado = true;
+      intentarReproducir();
     }
 
     function aplicarEstadoInicial() {
@@ -106,13 +139,15 @@
       guardarEstadoAudio(storageKeyPrefix, estado);
     });
 
-    document.addEventListener(
-      'pointerdown',
-      () => {
-        intentarReproducir();
-      },
-      { once: true }
-    );
+    ['pointerdown', 'touchstart', 'keydown'].forEach((evento) => {
+      document.addEventListener(
+        evento,
+        () => {
+          desbloquearAudioEnInteraccion();
+        },
+        { once: true }
+      );
+    });
 
     aplicarEstadoInicial();
     if (!estado.muted) {
@@ -128,6 +163,7 @@
     const audioEl = document.getElementById(audioId);
     if (!audioEl) return;
     audioEl.currentTime = 0;
+    audioEl.load();
     audioEl.play().catch(() => {});
   }
 
