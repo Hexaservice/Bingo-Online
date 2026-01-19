@@ -41,6 +41,8 @@
 
     let hideTimer = null;
     let audioDesbloqueado = false;
+    let promptEl = null;
+    let promptBtn = null;
 
     function actualizarUI() {
       container.classList.toggle('is-muted', estado.muted);
@@ -66,13 +68,48 @@
       }, 5000);
     }
 
-    async function intentarReproducir() {
+    function crearPromptAudio() {
+      if (promptEl) return;
+      promptEl = document.createElement('div');
+      promptEl.className = 'audio-control__prompt';
+      promptEl.setAttribute('role', 'dialog');
+      promptEl.setAttribute('aria-live', 'polite');
+      promptEl.setAttribute('aria-hidden', 'true');
+      promptEl.innerHTML =
+        '<p>Para escuchar la música necesitamos tu interacción.</p>' +
+        '<button type="button" class="audio-control__prompt-btn">Activar audio</button>';
+      promptBtn = promptEl.querySelector('.audio-control__prompt-btn');
+      promptBtn?.addEventListener('click', async () => {
+        await intentarReproducir(true);
+        ocultarPromptAudio();
+      });
+      container.appendChild(promptEl);
+    }
+
+    function mostrarPromptAudio() {
+      crearPromptAudio();
+      if (!promptEl) return;
+      promptEl.classList.add('is-visible');
+      promptEl.removeAttribute('aria-hidden');
+    }
+
+    function ocultarPromptAudio() {
+      if (!promptEl) return;
+      promptEl.classList.remove('is-visible');
+      promptEl.setAttribute('aria-hidden', 'true');
+    }
+
+    async function intentarReproducir(desdePrompt = false) {
       if (estado.muted) return;
       try {
         audioEl.load();
         await audioEl.play();
+        ocultarPromptAudio();
       } catch (err) {
         // Bloqueado por el navegador hasta interacción del usuario.
+        if (!desdePrompt) {
+          mostrarPromptAudio();
+        }
       }
     }
 
