@@ -87,8 +87,7 @@
     #tabla-transacciones th:nth-child(3) input{width:100px;}
     #tabla-transacciones thead th{position:sticky;top:0;background:#f7f7f7;z-index:2;}
     #datos-content{display:none;}
-    #transacciones-content{overflow-x:auto;display:none;max-height:70vh;overflow-y:auto;position:relative;}
-    #transacciones-section .switch{margin-top:4px;visibility:hidden;}
+    #transacciones-content{overflow-x:auto;display:block;max-height:70vh;overflow-y:auto;position:relative;}
     #tabla-bancos{background:rgba(255,255,255,0.95);}
     #tabla-bancos th,#tabla-bancos td{
       font-weight:bold;
@@ -322,6 +321,8 @@
       position: fixed;
       left: 14px;
       bottom: 18px;
+      top: auto;
+      right: auto;
       display: flex;
       align-items: center;
       gap: 12px;
@@ -485,10 +486,6 @@
   <div id="transacciones-section">
     <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
       <h3 id="mis-transacciones-label" style="margin:0;">Mis transacciones</h3>
-      <label class="switch" id="switch-transacciones-wrapper">
-        <input type="checkbox" id="toggle-transacciones">
-        <span class="slider"></span>
-      </label>
     </div>
     <div id="transacciones-content">
       <table id="tabla-transacciones">
@@ -574,13 +571,6 @@
     let creditosTotales=0, creditosTransito=0, creditosDisponibles=0;
     let numeroWhatsappDestino='';
     let numeroWhatsappCargado=false;
-
-    function mostrarSwitchTransacciones(){
-      const contenedorSwitch=document.querySelector('#transacciones-section .switch');
-      if(contenedorSwitch){
-        contenedorSwitch.style.visibility='visible';
-      }
-    }
 
     function toNumberSafe(valor, defecto=0){
       const numero=parseFloat(valor);
@@ -1034,7 +1024,6 @@
       tabDepositar: document.getElementById('tab-depositar'),
       tabRetirar: document.getElementById('tab-retirar'),
       toggleDatos: document.getElementById('toggle-datos'),
-      toggleTransacciones: document.getElementById('toggle-transacciones'),
       datosContent: document.getElementById('datos-content'),
       transaccionesContent: document.getElementById('transacciones-content'),
     };
@@ -1116,7 +1105,6 @@
     ];
 
     const PASOS_TRANSACCIONES = [
-      { id:'toggle-transacciones', elementId:'switch-transacciones-wrapper', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Activa este interruptor para desplegar los datos de tus transacciones', color:'#0b4c8c', tab:null },
       {
         id:'tabla-transacciones',
         elementId:'tabla-transacciones',
@@ -1231,10 +1219,6 @@
       }
       if(paso?.id==='toggle-datos'){
         const etiqueta=document.getElementById('mis-datos-label');
-        if(etiqueta){ etiqueta.classList.add('tutorial-elemento-activo','tutorial-glow'); }
-      }
-      if(paso?.id==='toggle-transacciones'){
-        const etiqueta=document.getElementById('mis-transacciones-label');
         if(etiqueta){ etiqueta.classList.add('tutorial-elemento-activo','tutorial-glow'); }
       }
       if(paso?.id==='tipo-cuenta-corriente'){
@@ -1517,9 +1501,6 @@
       if(paso.id==='toggle-datos' && tutorialUI.toggleDatos && !tutorialUI.toggleDatos.checked){
         tutorialUI.datosContent.style.display='none';
       }
-      if(paso.id==='toggle-transacciones' && tutorialUI.toggleTransacciones && !tutorialUI.toggleTransacciones.checked){
-        tutorialUI.transaccionesContent.style.display='none';
-      }
       const elemento=obtenerElementoPaso(paso);
       if(!elemento){
         return;
@@ -1720,13 +1701,6 @@
           }
         });
       }
-      if(tutorialUI.toggleTransacciones){
-        tutorialUI.toggleTransacciones.addEventListener('change',()=>{
-          if(!tutorialState.activo) return;
-          if(!tutorialUI.toggleTransacciones.checked){ tutorialUI.transaccionesContent.style.display='none'; }
-          enfocarPaso();
-        });
-      }
     }
 
     document.addEventListener('focusin',()=>{
@@ -1769,7 +1743,6 @@
         return db-da;
       });
       filtrarTransacciones();
-      mostrarSwitchTransacciones();
     }
 
     function filtrarTransacciones(){
@@ -2147,7 +2120,6 @@
       document.addEventListener('DOMContentLoaded',()=>{
       const toggle=document.getElementById('toggle-datos');
       const datos=document.getElementById('datos-content');
-      const toggleT=document.getElementById('toggle-transacciones');
       const transDiv=document.getElementById('transacciones-content');
       const btnRecargas=document.getElementById('tab-depositar');
       const btnRetiros=document.getElementById('tab-retirar');
@@ -2160,9 +2132,6 @@
 
       function actualizarVisibilidad(){
         datos.style.display=toggle.checked?'block':'none';
-      }
-      function visTrans(){
-        transDiv.style.display=toggleT.checked?'block':'none';
       }
 
       function activarEnfasis(tab){
@@ -2203,7 +2172,6 @@
       }
 
       toggle.addEventListener('change',actualizarVisibilidad);
-      toggleT.addEventListener('change',visTrans);
       let debeAbrirDatos=false;
       try{
         if(sessionStorage.getItem('abrirDatosBancarios')==='1'){
@@ -2217,8 +2185,7 @@
         toggle.checked=true;
       }
       actualizarVisibilidad();
-      toggleT.checked=true;
-      visTrans();
+      transDiv.style.display='block';
       if(debeAbrirDatos){
         setTimeout(()=>{
           const primerCampo=document.getElementById('banco');
