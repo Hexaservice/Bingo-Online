@@ -12,6 +12,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Juego Activo</title>
   <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/audioControls.css">
   <style>
       :root {
           --panel-bg: rgba(255, 255, 255, 0.88);
@@ -4214,6 +4215,24 @@
     </div>
   </div>
 
+  <div id="audio-control-game" class="audio-control audio-control--left">
+    <div class="audio-control__volume" hidden aria-hidden="true">
+      <label class="sr-only" for="audio-volume-game">Volumen de música</label>
+      <input id="audio-volume-game" class="audio-control__range" type="range" min="0" max="1" step="0.05" value="0.22">
+    </div>
+    <button id="audio-toggle-game" class="audio-control__toggle" type="button" aria-pressed="true" aria-label="Silenciar música de fondo">
+      <svg class="audio-control__icon audio-control__icon--on" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="M14 3.23v17.54a1 1 0 0 1-1.54.84L7.5 18H4a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h3.5l4.96-3.61A1 1 0 0 1 14 3.23Zm4.5 8.77a4.5 4.5 0 0 1-2.2 3.88.75.75 0 1 0 .75 1.3 6 6 0 0 0 0-10.36.75.75 0 1 0-.75 1.3 4.5 4.5 0 0 1 2.2 3.88Z"/>
+      </svg>
+      <svg class="audio-control__icon audio-control__icon--off" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="M4 9v6a1 1 0 0 0 1 1h3.5l4.96 3.61A1 1 0 0 0 15 18.77V5.23a1 1 0 0 0-1.54-.84L8.5 8H5a1 1 0 0 0-1 1Zm13.59 3.41 2.7 2.7a1 1 0 0 1-1.42 1.42l-2.7-2.7-2.7 2.7a1 1 0 0 1-1.42-1.42l2.7-2.7-2.7-2.7a1 1 0 0 1 1.42-1.42l2.7 2.7 2.7-2.7a1 1 0 1 1 1.42 1.42Z"/>
+      </svg>
+    </button>
+  </div>
+
+  <audio id="bg-audio-game" preload="none" loop src="https://assets.mixkit.co/music/preview/mixkit-game-level-music-689.mp3"></audio>
+  <audio id="win-audio" preload="metadata" src="https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3"></audio>
+
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
@@ -4221,6 +4240,7 @@
   <script src="js/auth.js"></script>
   <script src="js/notificationCenter.js"></script>
   <script src="js/timezone.js"></script>
+  <script src="js/audioControls.js"></script>
   <script>
   ensureAuth();
   initFechaHora('fecha-hora');
@@ -4237,6 +4257,15 @@
   const sorteoHeaderEl = document.getElementById('sorteo-header');
   const sorteoResumenEl = document.getElementById('sorteo-resumen');
   const sorteoDetallesEl = document.getElementById('sorteo-detalles');
+
+  initBingoAudioControl({
+    containerId: 'audio-control-game',
+    toggleId: 'audio-toggle-game',
+    volumeId: 'audio-volume-game',
+    audioId: 'bg-audio-game',
+    storageKeyPrefix: 'bingoAudio',
+    defaultVolume: 0.22,
+  });
   const sinSorteoContenedorEl = document.getElementById('sin-sorteo-contenedor');
   const seleccionarFinalizadoBtn = document.getElementById('seleccionar-finalizado-btn');
   const sinSorteoMensajeEl = document.getElementById('sin-sorteo-mensaje');
@@ -9012,6 +9041,9 @@
     });
     if(detalles.length){
       mostrarModalCelebracionGanador(detalles, esSimulacion);
+      if(!esSimulacion){
+        reproducirSonidoGanador('win-audio', 'bingoAudio');
+      }
     }
   }
 
