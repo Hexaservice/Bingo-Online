@@ -24,6 +24,7 @@
       storageKeyPrefix = 'bingoAudio',
       defaultVolume = DEFAULT_VOLUME,
       unlockAudioIds = [],
+      mostrarPrompt = false,
     } = config;
 
     const container = document.getElementById(containerId);
@@ -69,6 +70,7 @@
     }
 
     function crearPromptAudio() {
+      if (!mostrarPrompt) return;
       if (promptEl) return;
       promptEl = document.createElement('div');
       promptEl.className = 'audio-control__prompt';
@@ -87,6 +89,7 @@
     }
 
     function mostrarPromptAudio() {
+      if (!mostrarPrompt) return;
       crearPromptAudio();
       if (!promptEl) return;
       promptEl.classList.add('is-visible');
