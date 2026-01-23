@@ -92,7 +92,8 @@
     .cartones-total{color:purple;font-size:1.2rem;}
     #nombre-sorteo{font-weight:bold;color:purple;}
     .toggle-group{display:flex;justify-content:center;gap:5px;margin:3px 0;}
-    .toggle-group button{flex:1;max-width:120px;padding:5px 10px;border-radius:20px;border:1px solid #ccc;font-family:'Bangers',cursive;font-size:1rem;cursor:pointer;background:#808080;color:#fff;text-shadow:1px 1px 2px #333;}
+    .toggle-group button{flex:0 0 auto;width:95px;padding:5px 10px;border-radius:20px;border:1px solid #ccc;font-family:'Bangers',cursive;font-size:1rem;cursor:pointer;background:#808080;color:#fff;text-shadow:1px 1px 2px #333;}
+    .toggle-group .premio-inicial-input{flex:1;max-width:160px;margin:0;width:auto;}
     .toggle-group button.active{filter:brightness(1.2);text-shadow:1px 1px 2px #000;}
     #tipo-sorteo-group button.active[data-value="Sorteo Especial"]{background:linear-gradient(#ff8c00,#ffd9a5);}
     #tipo-sorteo-group button.active[data-value="Sorteo Diario"]{background:linear-gradient(#009900,#66ff66);}
@@ -233,6 +234,7 @@
   <div id="tipo-sorteo-group" class="toggle-group">
     <button data-value="Sorteo Especial">Especial</button>
     <button data-value="Sorteo Diario">Diario</button>
+    <input id="premio-inicial" class="premio-inicial-input" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Premio Inicial">
   </div>
   <div class="row">
     <div class="input-wrapper"><span class="label-left" id="fecha-label">Fecha</span><input id="fecha-sorteo" type="date"></div>
@@ -363,9 +365,10 @@
     const maxcg=document.getElementById('max-carton-gratis').value;
     const valor=document.getElementById('valor-carton').value;
     const tipoBtn=document.querySelector('#tipo-sorteo-group button.active');
+    const premioInicial=document.getElementById('premio-inicial').value;
     const estadoBtn=document.querySelector('#estado-group button.active');
     const data={
-      nombre,tipo:tipoBtn?tipoBtn.dataset.value:'',fecha,hora,cierre,maxcg,valor,
+      nombre,tipo:tipoBtn?tipoBtn.dataset.value:'',fecha,hora,cierre,maxcg,valor,premioInicial,
       estado:estadoBtn?estadoBtn.dataset.value:'',
       formas:[]
     };
@@ -398,6 +401,7 @@
       document.getElementById('hora-cierre').value=data.cierre||'';
       document.getElementById('max-carton-gratis').value=data.maxcg||'';
       document.getElementById('valor-carton').value=data.valor||'';
+      document.getElementById('premio-inicial').value=data.premioInicial||'';
       if(data.tipo){
         document.querySelectorAll('#tipo-sorteo-group button').forEach(b=>b.classList.remove('active'));
         const tb=document.querySelector(`#tipo-sorteo-group button[data-value="${data.tipo}"]`);
@@ -452,6 +456,11 @@
     document.getElementById('hora-cierre').addEventListener('input',saveState);
     document.getElementById('max-carton-gratis').addEventListener('input',saveState);
     document.getElementById('valor-carton').addEventListener('input',saveState);
+    const premioInicialInput=document.getElementById('premio-inicial');
+    premioInicialInput.addEventListener('input',e=>{
+      e.target.value=e.target.value.replace(/[^\d]/g,'');
+      saveState();
+    });
     document.querySelectorAll('.tab-content .nombre-forma,.tab-content .porcentaje-forma,.tab-content .cartones-forma,.tab-content .imagen-url').forEach(i=>i.addEventListener('input',e=>{
       saveState();
       if(e.target.classList.contains('porcentaje-forma')||e.target.classList.contains('cartones-forma')) actualizarTotales();
@@ -1010,6 +1019,7 @@
     const cierreInput=document.getElementById('hora-cierre');
     const maxcgInput=document.getElementById('max-carton-gratis');
     const valorInput=document.getElementById('valor-carton');
+    const premioInicialInput=document.getElementById('premio-inicial');
     const nombre=nombreInput.value.trim();
     const tipoBtn=document.querySelector('#tipo-sorteo-group button.active');
     const estadoBtn=document.querySelector('#estado-group button.active');
@@ -1020,6 +1030,8 @@
     const cierreVal=cierreInput.value;
     const maxcgVal=maxcgInput.value.trim();
     const valorVal=valorInput.value;
+    const premioInicialRaw=premioInicialInput.value.trim();
+    const premioInicialVal=premioInicialRaw===''?null:parseInt(premioInicialRaw,10);
     if(!nombre){alert('Asigna un nombre al Sorteo');nombreInput.focus();return;}
     if(!tipo){alert('Elije un tipo de sorteo');return;}
     if(!fecha){alert('Elige una fecha para el Sorteo');fechaInput.focus();return;}
@@ -1029,6 +1041,11 @@
     if(cierreVal && hora && cierreVal>hora){
       alert('La hora de cierre no puede ser mayor a la hora del sorteo');
       cierreInput.focus();
+      return;
+    }
+    if(premioInicialVal!==null && (!Number.isFinite(premioInicialVal) || premioInicialVal<0)){
+      alert('El premio inicial debe ser un número válido igual o mayor a 0.');
+      premioInicialInput.focus();
       return;
     }
     const cierre=cierreVal;
@@ -1082,7 +1099,22 @@
     }
     if(conPorcentaje>0 && total!==100){alert('La suma de porcentajes debe ser exactamente 100%');return;}
     try{
-      const sorteoData={nombre,tipo,fecha,hora,horacierre:cierre,cartonesgratisjugando:0,valorCarton:valor,estado,condicion};
+      const premioInicialFinal=premioInicialVal??0;
+      const sorteoData={
+        nombre,
+        tipo,
+        fecha,
+        hora,
+        horacierre:cierre,
+        cartonesgratisjugando:0,
+        valorCarton:valor,
+        estado,
+        condicion,
+        totalPremios:premioInicialFinal
+      };
+      if(premioInicialVal!==null){
+        sorteoData.premioInicial=premioInicialVal;
+      }
       if(maxcartongratis!==null){
         sorteoData.maxcartongratis=maxcartongratis;
       }
