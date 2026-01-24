@@ -110,6 +110,35 @@
       width:100%;
       margin:5px 0;
     }
+    .small-label{
+      font-size:0.55rem;
+      font-family:'Poppins',sans-serif;
+      text-transform:uppercase;
+      color:#444;
+      letter-spacing:0.5px;
+      margin-top:6px;
+    }
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:80px;
+      transform:translateX(-50%);
+      background:rgba(0,128,0,0.92);
+      color:#fff;
+      padding:10px 16px;
+      border-radius:12px;
+      font-size:0.9rem;
+      font-family:'Poppins',sans-serif;
+      box-shadow:0 6px 18px rgba(0,0,0,0.35);
+      opacity:0;
+      pointer-events:none;
+      transition:opacity 0.3s ease, transform 0.3s ease;
+      z-index:12000;
+    }
+    .toast.mostrar{
+      opacity:1;
+      transform:translateX(-50%) translateY(-8px);
+    }
   </style>
 </head>
 <body>
@@ -124,6 +153,8 @@
   </div>
   <p class="nota-registro">Nota: Sólo tu Alias será visible para los otros Jugadores, Tu nombre, Apellido, Número celular o Gmail serán confidenciales.</p>
   <div id="email"></div>
+  <div class="small-label">CÓDIGO REFERIDO</div>
+  <input type="text" id="codigo-referido" placeholder="Opcional" maxlength="12" style="text-transform:uppercase;">
   <div id="terms-container"><input type="checkbox" id="accept-terms"> <label for="accept-terms">Acepto <a href="terminos.html" target="_blank">términos y condiciones</a></label></div>
   <button id="registrar" class="action-btn">Registrarse</button>
   <button id="cancelar" class="action-btn">Cancelar</button>
@@ -183,6 +214,110 @@
       return (prefijo||'')+local;
     }
 
+    function generarCodigoPromocional(email, telefono){
+      const local = (email || '').split('@')[0] || '';
+      const letras = local.replace(/[^a-zA-Z]/g,'');
+      let prefijo = letras.slice(0,2).toUpperCase();
+      if(prefijo.length < 2){
+        prefijo = (local.replace(/[^a-zA-Z0-9]/g,'').slice(0,2) || '').toUpperCase();
+      }
+      const digitos = (telefono || '').toString().replace(/\D/g,'');
+      const sufijo = digitos.slice(-4);
+      return `${prefijo}${sufijo}`.trim();
+    }
+
+    function parseFecha(valor){
+      if(!valor) return null;
+      const base = new Date(`${valor}T00:00:00`);
+      if(Number.isNaN(base.getTime())) return null;
+      return base;
+    }
+
+    function hoySinHora(){
+      const ahora = new Date();
+      return new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+    }
+
+    function mostrarToast(texto){
+      let toast = document.getElementById('toast-referral');
+      if(!toast){
+        toast = document.createElement('div');
+        toast.id = 'toast-referral';
+        toast.className = 'toast';
+        document.body.appendChild(toast);
+      }
+      toast.textContent = texto;
+      toast.classList.add('mostrar');
+      setTimeout(()=>toast.classList.remove('mostrar'), 3500);
+    }
+
+    async function obtenerCampanaActiva(){
+      const snapshot = await db.collection('campanasReferidos').where('estado','==','ACTIVA').get();
+      const hoy = hoySinHora();
+      let activa = null;
+      const batch = db.batch();
+      let cambios = 0;
+      snapshot.forEach(doc => {
+        const data = doc.data() || {};
+        const fin = parseFecha(data.fechaFin);
+        if(fin && fin < hoy){
+          batch.update(db.collection('campanasReferidos').doc(doc.id), { estado:'INACTIVA' });
+          cambios += 1;
+          return;
+        }
+        const inicio = parseFecha(data.fechaInicio);
+        if(inicio && fin && inicio <= hoy && hoy <= fin && !activa){
+          activa = { id: doc.id, ...data };
+        }
+      });
+      if(cambios){ await batch.commit(); }
+      return activa;
+    }
+
+    async function buscarUsuarioPorCodigo(codigo){
+      const snapshot = await db.collection('users').where('codigoPromocional','==',codigo).limit(1).get();
+      if(snapshot.empty) return null;
+      const doc = snapshot.docs[0];
+      return { id: doc.id, ...doc.data() };
+    }
+
+    async function actualizarBilletera(email, cartonesAgregar){
+      if(!cartonesAgregar || cartonesAgregar <= 0) return;
+      const ref = db.collection('Billetera').doc(email);
+      await db.runTransaction(async tx => {
+        const doc = await tx.get(ref);
+        const data = doc.exists ? doc.data() || {} : {};
+        const actuales = Number(data.CartonesGratis ?? data.cartonesGratis ?? 0) || 0;
+        const nuevos = actuales + cartonesAgregar;
+        tx.set(ref, { CartonesGratis: nuevos }, { merge:true });
+      });
+    }
+
+    async function registrarReferido({campana, nuevoEmail, referidoEmail}){
+      if(!campana || !referidoEmail || !nuevoEmail) return { premioReferidor: 0 };
+      const ref = db.collection('Referidos').doc(referidoEmail).collection('campanas').doc(campana.id);
+      let premioReferidor = 0;
+      await db.runTransaction(async tx => {
+        const doc = await tx.get(ref);
+        const data = doc.exists ? doc.data() || {} : {};
+        const total = Number(data.totalReferidos || 0) + 1;
+        const premiosEntregados = Number(data.premiosEntregados || 0);
+        const meta = Number(campana.referidosMin || 0);
+        const premiosNuevoTotal = meta > 0 ? Math.floor(total / meta) : 0;
+        const premiosPorDar = Math.max(premiosNuevoTotal - premiosEntregados, 0);
+        if(premiosPorDar > 0){
+          premioReferidor = premiosPorDar * (Number(campana.cartonesPremio || 0));
+        }
+        tx.set(ref, {
+          totalReferidos: total,
+          premiosEntregados: premiosEntregados + premiosPorDar,
+          ultimoReferido: nuevoEmail,
+          actualizadoEn: new Date().toISOString()
+        }, { merge:true });
+      });
+      return { premioReferidor };
+    }
+
     const selectCodigoPais=document.getElementById('codigo-pais');
     poblarSelectCodigos(selectCodigoPais);
 
@@ -225,6 +360,12 @@
     function validarTexto(txt,max){
       return txt && txt.length<=max && /^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]+$/.test(txt);
     }
+    const codigoReferidoInputEl = document.getElementById('codigo-referido');
+    if(codigoReferidoInputEl){
+      codigoReferidoInputEl.addEventListener('input', e=>{
+        e.target.value = (e.target.value || '').toUpperCase();
+      });
+    }
     document.getElementById('registrar').addEventListener('click', async ()=>{
       const nombre = document.getElementById('nombre').value.trim();
       if(!nombre){ alert('Debes llenar el campo nombre'); document.getElementById('nombre').focus(); return; }
@@ -249,6 +390,22 @@
         return;
       }
       const numeroCompleto=obtenerNumeroCompleto();
+      const codigoPromocional = generarCodigoPromocional(user.email, numeroCompleto);
+      const codigoReferido = (codigoReferidoInputEl?.value || '').trim().toUpperCase();
+      let campanaActiva = null;
+      let usuarioReferidor = null;
+      if(codigoReferido){
+        usuarioReferidor = await buscarUsuarioPorCodigo(codigoReferido);
+        if(!usuarioReferidor){
+          alert('Este código promocional no existe, coloca uno válido o deja en blanco');
+          return;
+        }
+        if(usuarioReferidor.email === user.email || usuarioReferidor.id === user.email){
+          alert('No puedes usar tu propio código promocional.');
+          return;
+        }
+        campanaActiva = await obtenerCampanaActiva();
+      }
       await db.collection('users').doc(user.email).set({
         name:nombre,
         apellido:apellido,
@@ -258,8 +415,32 @@
         email:user.email,
         photoURL:user.photoURL,
         role:'Jugador',
-        aceptoNotificaciones:'NO'
+        aceptoNotificaciones:'NO',
+        codigoPromocional,
+        codigoReferidoUsado: codigoReferido || '',
+        referidoPorEmail: usuarioReferidor ? (usuarioReferidor.email || usuarioReferidor.id || '') : '',
+        campanaReferidosId: campanaActiva ? campanaActiva.id : ''
       });
+      let delayRedirect = 0;
+      if(codigoReferido && usuarioReferidor && campanaActiva){
+        const cartonesNuevo = Number(campanaActiva.cartonesNuevo || 0) || 0;
+        if(cartonesNuevo > 0){
+          await actualizarBilletera(user.email, cartonesNuevo);
+          mostrarToast(`¡Código exitoso! ganaste ${cartonesNuevo} cartones GRATIS`);
+          delayRedirect = 1400;
+        }
+        const { premioReferidor } = await registrarReferido({
+          campana: campanaActiva,
+          nuevoEmail: user.email,
+          referidoEmail: usuarioReferidor.email || usuarioReferidor.id
+        });
+        if(premioReferidor > 0){
+          await actualizarBilletera(usuarioReferidor.email || usuarioReferidor.id, premioReferidor);
+        }
+      }
+      if(delayRedirect){
+        await new Promise(resolve => setTimeout(resolve, delayRedirect));
+      }
       window.location.href='player.html';
     });
     document.getElementById('cancelar').addEventListener('click', ()=>{ window.location.href='index.html'; });

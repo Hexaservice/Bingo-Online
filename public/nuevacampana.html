@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="img/android-chrome-192x192.png">
+  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
+  <link rel="icon" type="image/x-icon" sizes="16x16" href="img/favicon-16x16.ico">
+  <link rel="icon" type="image/x-icon" sizes="32x32" href="img/favicon-32x32.ico">
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nueva Campaña</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)),
+                  url('https://img.freepik.com/vectores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg');
+      background-repeat: repeat;
+      background-size: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      text-align: center;
+      font-family: 'Bangers', cursive;
+      padding-top: 5px;
+      margin: 0;
+    }
+    .menu-btn {
+      width: 250px;
+      height: 60px;
+      font-family: 'Bangers', cursive;
+      font-size: 1.4rem;
+      background: rgba(0, 170, 255, 0.8);
+      color: white;
+      border: 4px solid #FFD700;
+      border-radius: 10px;
+      text-shadow: 2px 2px 4px #000;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+      margin: 5px;
+    }
+    .menu-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+    }
+    .back-btn {
+      position: fixed;
+      top: 5px;
+      left: 5px;
+      width: 120px;
+      height: 40px;
+      background: orange;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:5px;
+    }
+    input {
+      font-size:1rem;
+      padding:5px;
+      text-align:center;
+      border-radius:5px;
+      border:1px solid #ccc;
+      width:250px;
+      display:block;
+      margin:3px auto;
+      color:black;
+      box-sizing:border-box;
+    }
+    .row{display:flex;justify-content:center;gap:5px;width:calc(100% - 12px);margin:3px 6px;}
+    .row input{flex:1;width:100%;}
+    .input-wrapper{display:flex;align-items:center;gap:4px;flex:1;}
+    .label-left{font-weight:bold;font-size:0.8rem;margin-right:3px;text-shadow:0 0 3px #fff;}
+    .label-right{font-weight:bold;font-size:0.8rem;margin-left:3px;text-shadow:0 0 3px #fff;}
+    .small-label{
+      font-size:0.55rem;
+      font-family:'Poppins', sans-serif;
+      text-transform:uppercase;
+      color:#444;
+      letter-spacing:0.5px;
+      margin-bottom:2px;
+    }
+    .field-block{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      flex:1;
+    }
+    #nombre-campana{font-weight:bold;color:purple;}
+    .toggle-group{display:flex;justify-content:center;gap:5px;margin:8px 0;}
+    .toggle-group button{flex:0 0 auto;width:95px;padding:5px 10px;border-radius:20px;border:1px solid #ccc;font-family:'Bangers',cursive;font-size:1rem;cursor:pointer;background:#808080;color:#fff;text-shadow:1px 1px 2px #333;}
+    .toggle-group button.active{filter:brightness(1.2);text-shadow:1px 1px 2px #000;}
+    #estado-group button.active[data-value="ACTIVA"]{background:linear-gradient(#00a000,#ffffff);}
+    #estado-group button.active[data-value="INACTIVA"]{background:linear-gradient(#ff0000,#ffffff);}
+    #estado-group button.active[data-value="ARCHIVADA"]{background:linear-gradient(#8b4513,#ffffff);}
+    #guardar-campana-btn{
+      font-family:'Bangers',cursive;
+      font-size:1.2rem;
+      background:#0a8800;
+      color:white;
+      border:3px solid #FFD700;
+      border-radius:8px;
+      text-shadow:2px 2px 4px #000;
+      width:200px;
+      cursor:pointer;
+      margin:5px auto;
+    }
+    @media (max-width:600px){
+      body{align-items:stretch;padding:5px 20px;}
+      .menu-btn,input,.row,.toggle-group{width:100%;max-width:none;margin-left:0;margin-right:0;}
+      .row{flex-direction:column;}
+      .input-wrapper{justify-content:center;}
+    }
+    @media (orientation:portrait){
+      #volver-btn{width:40px;}
+      #volver-btn .label{display:none;}
+    }
+  </style>
+</head>
+<body>
+  <button id="volver-btn" class="menu-btn back-btn" data-compact-back="true"><span class="icon">&#9664;</span><span class="label">Volver</span></button>
+  <h2 style="margin-top:0;" id="titulo-campana">NUEVA CAMPAÑA</h2>
+  <input id="nombre-campana" maxlength="70" placeholder="Nombre de Campaña">
+  <div class="row">
+    <div class="input-wrapper">
+      <span class="label-left">INICIO</span>
+      <input id="fecha-inicio" type="date">
+    </div>
+    <div class="input-wrapper">
+      <input id="fecha-fin" type="date">
+      <span class="label-right">FIN</span>
+    </div>
+  </div>
+  <div class="row">
+    <div class="field-block">
+      <div class="small-label">Numero de Cartones</div>
+      <input id="cartones-premio" type="number" inputmode="numeric" min="0" placeholder="Cartones">
+    </div>
+    <div class="field-block">
+      <div class="small-label">Numero de Referidos para obtener premio</div>
+      <input id="referidos-min" type="number" inputmode="numeric" min="1" placeholder="Referidos">
+    </div>
+  </div>
+  <div class="field-block" style="max-width:260px;">
+    <div class="small-label">Cartones gratis nuevo usuario</div>
+    <input id="cartones-nuevo" type="number" inputmode="numeric" min="0" placeholder="Cartones nuevo">
+  </div>
+  <div id="estado-group" class="toggle-group">
+    <button data-value="ACTIVA">ACTIVA</button>
+    <button data-value="INACTIVA">INACTIVA</button>
+    <button data-value="ARCHIVADA">ARCHIVADA</button>
+  </div>
+  <button id="guardar-campana-btn">Guardar</button>
+
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
+  <script src="js/logoSwitcher.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/notificationCenter.js"></script>
+  <script>
+    const estadoBtns = Array.from(document.querySelectorAll('#estado-group button'));
+    let estadoSeleccionado = 'ACTIVA';
+    let campanaEditId = null;
+
+    function setEstado(valor){
+      estadoSeleccionado = valor;
+      estadoBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.value === valor);
+      });
+    }
+
+    function parseFecha(valor){
+      if(!valor) return null;
+      const base = new Date(`${valor}T00:00:00`);
+      if(Number.isNaN(base.getTime())) return null;
+      return base;
+    }
+
+    function hoySinHora(){
+      const ahora = new Date();
+      return new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+    }
+
+    function esFechaVigente(inicio, fin){
+      const hoy = hoySinHora();
+      const fechaInicio = parseFecha(inicio);
+      const fechaFin = parseFecha(fin);
+      if(!fechaInicio || !fechaFin) return false;
+      return fechaInicio <= hoy && hoy <= fechaFin;
+    }
+
+    async function obtenerCampanaActiva(excluirId){
+      const snapshot = await db.collection('campanasReferidos').where('estado','==','ACTIVA').get();
+      let encontrada = null;
+      snapshot.forEach(doc => {
+        if(encontrada) return;
+        if(excluirId && doc.id === excluirId) return;
+        const data = doc.data() || {};
+        if(esFechaVigente(data.fechaInicio, data.fechaFin)){
+          encontrada = { id: doc.id, ...data };
+        }
+      });
+      return encontrada;
+    }
+
+    function toNumero(valor){
+      const num = parseInt(valor, 10);
+      return Number.isFinite(num) ? num : NaN;
+    }
+
+    async function cargarCampana(){
+      campanaEditId = localStorage.getItem('editCampanaId');
+      if(!campanaEditId) return;
+      try{
+        const doc = await db.collection('campanasReferidos').doc(campanaEditId).get();
+        if(!doc.exists){
+          campanaEditId = null;
+          return;
+        }
+        const data = doc.data() || {};
+        document.getElementById('titulo-campana').textContent = 'EDITAR CAMPAÑA';
+        document.getElementById('nombre-campana').value = data.nombre || '';
+        document.getElementById('fecha-inicio').value = data.fechaInicio || '';
+        document.getElementById('fecha-fin').value = data.fechaFin || '';
+        document.getElementById('cartones-premio').value = data.cartonesPremio ?? '';
+        document.getElementById('referidos-min').value = data.referidosMin ?? '';
+        document.getElementById('cartones-nuevo').value = data.cartonesNuevo ?? '';
+        setEstado((data.estado || 'INACTIVA').toUpperCase());
+      }catch(err){
+        console.error('No se pudo cargar la campaña', err);
+        campanaEditId = null;
+      }
+    }
+
+    estadoBtns.forEach(btn => {
+      btn.addEventListener('click', () => setEstado(btn.dataset.value));
+    });
+    setEstado(estadoSeleccionado);
+
+    document.getElementById('guardar-campana-btn').addEventListener('click', async ()=>{
+      const nombre = document.getElementById('nombre-campana').value.trim();
+      const fechaInicio = document.getElementById('fecha-inicio').value;
+      const fechaFin = document.getElementById('fecha-fin').value;
+      const cartonesPremio = toNumero(document.getElementById('cartones-premio').value);
+      const referidosMin = toNumero(document.getElementById('referidos-min').value);
+      const cartonesNuevo = toNumero(document.getElementById('cartones-nuevo').value);
+
+      if(!nombre){ alert('Debes colocar el nombre de la campaña'); return; }
+      if(!fechaInicio){ alert('Debes seleccionar la fecha de inicio'); return; }
+      if(!fechaFin){ alert('Debes seleccionar la fecha de fin'); return; }
+      const inicioDate = parseFecha(fechaInicio);
+      const finDate = parseFecha(fechaFin);
+      if(!inicioDate || !finDate){ alert('Las fechas no son válidas'); return; }
+      if(finDate < inicioDate){ alert('La fecha fin debe ser mayor o igual a la fecha inicio'); return; }
+      if(!Number.isFinite(cartonesPremio) || cartonesPremio < 0){ alert('El número de cartones debe ser válido'); return; }
+      if(!Number.isFinite(referidosMin) || referidosMin < 1){ alert('El número de referidos debe ser válido'); return; }
+      if(!Number.isFinite(cartonesNuevo) || cartonesNuevo < 0){ alert('El número de cartones para el nuevo usuario debe ser válido'); return; }
+
+      let estadoFinal = estadoSeleccionado;
+      const hoy = hoySinHora();
+      if(estadoFinal === 'ACTIVA' && finDate < hoy){
+        estadoFinal = 'INACTIVA';
+      }
+
+      try{
+        if(!campanaEditId){
+          const activa = await obtenerCampanaActiva();
+          if(activa){
+            alert(`No se puede crear una nueva campaña ya que existe activa la campaña ${activa.nombre || ''}`);
+            return;
+          }
+        }else if(estadoFinal === 'ACTIVA'){
+          const activa = await obtenerCampanaActiva(campanaEditId);
+          if(activa){
+            alert(`No se puede activar esta campaña ya que existe activa la campaña ${activa.nombre || ''}`);
+            return;
+          }
+        }
+      }catch(err){
+        console.error('No se pudo validar campañas activas', err);
+        alert('No se pudo validar la campaña activa. Intenta nuevamente.');
+        return;
+      }
+
+      const payload = {
+        nombre,
+        fechaInicio,
+        fechaFin,
+        cartonesPremio,
+        referidosMin,
+        cartonesNuevo,
+        estado: estadoFinal,
+        actualizadoEn: new Date().toISOString()
+      };
+
+      try{
+        if(campanaEditId){
+          await db.collection('campanasReferidos').doc(campanaEditId).set(payload, { merge:true });
+        }else{
+          payload.creadoEn = new Date().toISOString();
+          await db.collection('campanasReferidos').add(payload);
+        }
+        localStorage.removeItem('editCampanaId');
+        window.location.href='gestionreferidos.html';
+      }catch(err){
+        console.error('No se pudo guardar la campaña', err);
+        alert('No se pudo guardar la campaña. Intenta nuevamente.');
+      }
+    });
+
+    document.getElementById('volver-btn').addEventListener('click', ()=>{
+      localStorage.removeItem('editCampanaId');
+      window.location.href='gestionreferidos.html';
+    });
+
+    (async ()=>{
+      try{
+        await initFirebase();
+      }catch(err){
+        console.error('No se pudo inicializar Firebase en nuevacampana.html', err);
+        alert('No se pudo preparar la campaña.');
+        return;
+      }
+      ensureAuth('Administrador');
+      cargarCampana();
+    })();
+  </script>
+  <script src="js/backNavigation.js"></script>
+</body>
+</html>

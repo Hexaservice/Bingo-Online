@@ -375,6 +375,9 @@
       .menu-label--mensajes {
           text-shadow: 0 0 8px rgba(179, 71, 0, 0.85), 0 0 14px rgba(230, 115, 0, 0.9);
       }
+      .menu-label--referidos {
+          text-shadow: 0 0 8px rgba(0, 128, 0, 0.85), 0 0 14px rgba(0, 200, 0, 0.9);
+      }
 
       #carton-screen {
           position: relative;
@@ -815,7 +818,12 @@
                   <span class="menu-label menu-label--perfil">PERFIL</span>
                 </div>
               </td>
-              <td class="celda-vacia" aria-hidden="true"></td>
+              <td>
+                <div class="menu-opcion menu-opcion--referidos">
+                  <img id="boton-referidos" class="menu-imagen" src="img/boton-compartir-200p.png" alt="Compartir código promocional" role="button" tabindex="0" loading="lazy" />
+                  <span class="menu-label menu-label--referidos">CARTONES GRATIS</span>
+                </div>
+              </td>
               <td>
                 <div class="menu-opcion menu-opcion--mensajes">
                   <img id="boton-mensajes" class="menu-imagen" src="img/boton-mensajes300p.png" alt="Abrir el grupo de WhatsApp" role="button" tabindex="0" loading="lazy" />
@@ -1025,6 +1033,93 @@
       return `https://${enlace}`;
     }
     return `https://${enlace}`;
+  }
+
+  function generarCodigoPromocional(email, telefono){
+    const local = (email || '').split('@')[0] || '';
+    const letras = local.replace(/[^a-zA-Z]/g,'');
+    let prefijo = letras.slice(0,2).toUpperCase();
+    if(prefijo.length < 2){
+      prefijo = (local.replace(/[^a-zA-Z0-9]/g,'').slice(0,2) || '').toUpperCase();
+    }
+    const digitos = (telefono || '').toString().replace(/\D/g,'');
+    const sufijo = digitos.slice(-4);
+    return `${prefijo}${sufijo}`.trim();
+  }
+
+  function parseFecha(valor){
+    if(!valor) return null;
+    const base = new Date(`${valor}T00:00:00`);
+    if(Number.isNaN(base.getTime())) return null;
+    return base;
+  }
+
+  function hoySinHora(){
+    const ahora = new Date();
+    return new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+  }
+
+  async function obtenerCampanaActiva(){
+    if(!firestoreRef) return null;
+    const snapshot = await firestoreRef.collection('campanasReferidos').where('estado','==','ACTIVA').get();
+    const hoy = hoySinHora();
+    let activa = null;
+    const batch = firestoreRef.batch();
+    let cambios = 0;
+    snapshot.forEach(doc => {
+      const data = doc.data() || {};
+      const fin = parseFecha(data.fechaFin);
+      if(fin && fin < hoy){
+        batch.update(firestoreRef.collection('campanasReferidos').doc(doc.id), { estado:'INACTIVA' });
+        cambios += 1;
+        return;
+      }
+      const inicio = parseFecha(data.fechaInicio);
+      if(inicio && fin && inicio <= hoy && hoy <= fin && !activa){
+        activa = { id: doc.id, ...data };
+      }
+    });
+    if(cambios){ await batch.commit(); }
+    return activa;
+  }
+
+  async function manejarClickReferidos(){
+    if(!firestoreRef){
+      alert('No se pudo preparar el código promocional.');
+      return;
+    }
+    const usuario = auth.currentUser;
+    if(!usuario){
+      alert('Debes iniciar sesión para compartir tu código.');
+      return;
+    }
+    let telefono = '';
+    let codigo = '';
+    try{
+      const doc = await firestoreRef.collection('users').doc(usuario.email).get();
+      const data = doc.exists ? (doc.data() || {}) : {};
+      telefono = data.celular || data.numerocel || '';
+      codigo = data.codigoPromocional || generarCodigoPromocional(usuario.email, telefono);
+      if(!data.codigoPromocional && codigo){
+        await firestoreRef.collection('users').doc(usuario.email).set({ codigoPromocional: codigo }, { merge:true });
+      }
+    }catch(err){
+      console.error('No se pudo generar el código promocional', err);
+    }
+    if(!codigo){
+      alert('No se pudo generar tu código promocional. Completa tus datos en el perfil.');
+      return;
+    }
+    let cartonesNuevo = 0;
+    try{
+      const campana = await obtenerCampanaActiva();
+      cartonesNuevo = Number(campana?.cartonesNuevo || 0) || 0;
+    }catch(err){
+      console.error('No se pudo obtener la campaña activa', err);
+    }
+    const mensaje = `Epale! estoy jugando a BingOnline, y es un vasilón! 🤩 si entras en este link: https://www.bingo.juega-online.com/registrase.html 👈 y te registras usando mi código ${codigo} te regalarán ${cartonesNuevo} cartones para que juegues GRATIS!`;
+    const enlace = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+    window.location.href = enlace;
   }
 
   async function obtenerLinkWhatsapp(){
@@ -1385,6 +1480,7 @@
     configurarAccionImagen('boton-billetera', ()=>{ window.location.href = 'billetera.html'; });
     configurarAccionImagen('boton-perfil', ()=>{ window.location.href = 'perfil.html'; });
     configurarAccionImagen('boton-mensajes', manejarClickWhatsapp);
+    configurarAccionImagen('boton-referidos', manejarClickReferidos);
 
     if(whatsappModalAceptarBtn){
       whatsappModalAceptarBtn.addEventListener('click', cerrarModalWhatsapp);
