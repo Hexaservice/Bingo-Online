@@ -336,11 +336,19 @@
           animation: pulso-sorteo 1.5s ease-in-out infinite;
       }
       .menu-imagen--referidos {
-          max-width: 86%;
+          max-width: 40%;
       }
       @keyframes pulso-sorteo {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.08); }
+      }
+      @keyframes pulso-referidos {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.12); }
+      }
+      .menu-opcion--referidos.referidos-activa .menu-imagen--referidos,
+      .menu-opcion--referidos.referidos-activa .menu-label--referidos {
+          animation: pulso-referidos 1.4s ease-in-out infinite;
       }
       .menu-imagen:focus,
       .menu-imagen:hover {
@@ -380,6 +388,7 @@
       }
       .menu-label--referidos {
           text-shadow: 0 0 8px rgba(0, 128, 0, 0.85), 0 0 14px rgba(0, 200, 0, 0.9);
+          display: inline-block;
       }
 
       #carton-screen {
@@ -902,6 +911,7 @@
   const whatsappModalMensajeEl = document.getElementById('modal-whatsapp-mensaje');
   const whatsappModalAceptarBtn = document.getElementById('modal-whatsapp-aceptar');
   const sorteoImagen = document.getElementById('boton-sorteo');
+  const referidosOpcion = document.querySelector('.menu-opcion--referidos');
   const tutorialToggle = document.getElementById('tutorial-toggle');
   const tutorialNav = document.getElementById('tutorial-nav');
   const tutorialPrev = document.getElementById('tutorial-prev');
@@ -1091,6 +1101,17 @@
     });
     if(cambios){ await batch.commit(); }
     return activa;
+  }
+
+  async function actualizarIndicadorReferidos(){
+    if(!firestoreRef || !referidosOpcion) return;
+    try{
+      const campana = await obtenerCampanaActiva();
+      referidosOpcion.classList.toggle('referidos-activa', !!campana);
+    }catch(error){
+      console.error('No se pudo validar la campaña activa de referidos', error);
+      referidosOpcion.classList.remove('referidos-activa');
+    }
   }
 
   async function manejarClickReferidos(){
@@ -1505,6 +1526,7 @@
     }
 
     observarEstadoSorteo();
+    actualizarIndicadorReferidos();
   }
 
   initBingoAudioControl({
