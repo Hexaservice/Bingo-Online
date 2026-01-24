@@ -177,6 +177,9 @@
     .modal-box .detalle-estado { color:crimson; }
     .modal-box .detalle-item { margin-bottom:8px; }
     .modal-box button { margin-top:10px; }
+    .fecha-toggle-header {
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -198,12 +201,7 @@
       <tr>
         <th>N°</th>
         <th><input type="text" id="filtro-nombre" placeholder="Nombre de campaña" style="width:100%;box-sizing:border-box;"></th>
-        <th>
-          <div class="fecha-container">
-            <input type="date" id="filtro-fecha" style="width:100%;">
-            <span class="fecha-placeholder">Inicio</span>
-          </div>
-        </th>
+        <th><strong id="fecha-col-header" class="fecha-toggle-header">INICIO</strong></th>
         <th>
           <select id="filtro-estado" style="width:100%;">
             <option value="">Estado</option>
@@ -232,9 +230,11 @@
   <script>
   const datos=[];
   const tbody=document.querySelector('#tabla-campanas tbody');
+  const fechaHeader=document.getElementById('fecha-col-header');
   let mostrarArch=false;
   let cacheCampanas=[];
   let unsubscribeCampanas=null;
+  let mostrarInicio=true;
 
   function actualizarArchivarBtn(){
     const btn=document.getElementById('archivar-btn');
@@ -263,6 +263,27 @@
   function hoySinHora(){
     const ahora = new Date();
     return new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+  }
+
+  function esFechaVigente(inicio, fin){
+    const hoy = hoySinHora();
+    const fechaInicio = parseFecha(inicio);
+    const fechaFin = parseFecha(fin);
+    if(!fechaInicio || !fechaFin) return false;
+    return fechaInicio <= hoy && hoy <= fechaFin;
+  }
+
+  async function obtenerCampanaActiva(){
+    const snapshot = await db.collection('campanasReferidos').where('estado','==','ACTIVA').get();
+    let encontrada = null;
+    snapshot.forEach(doc => {
+      if(encontrada) return;
+      const data = doc.data() || {};
+      if(esFechaVigente(data.fechaInicio, data.fechaFin)){
+        encontrada = { id: doc.id, ...data };
+      }
+    });
+    return encontrada;
   }
 
   async function marcarCampanasVencidas(lista){
@@ -318,14 +339,33 @@
     });
   }
 
+  function formatearFecha(valor){
+    if(!valor) return '';
+    if(valor.includes('-')) return valor.split('-').reverse().join('/');
+    return valor;
+  }
+
+  function actualizarFechasTabla(){
+    if(fechaHeader){
+      fechaHeader.textContent = mostrarInicio ? 'INICIO' : 'FIN';
+      fechaHeader.style.color = mostrarInicio ? 'green' : 'red';
+    }
+    document.querySelectorAll('#tabla-campanas tbody .fecha-toggle').forEach(cell=>{
+      const texto = mostrarInicio ? cell.dataset.inicio : cell.dataset.fin;
+      cell.textContent = texto || '';
+      cell.style.color = mostrarInicio ? 'green' : 'red';
+      cell.style.fontWeight = 'bold';
+    });
+  }
+
   function renderTabla(lista){
     tbody.innerHTML='';
     let idx=1;
     lista.forEach(d=>{
-      let fechaInicio=d.fechaInicio||'';
-      if(fechaInicio.includes('-')) fechaInicio=fechaInicio.split('-').reverse().join('/');
+      const fechaInicio=formatearFecha(d.fechaInicio || '');
+      const fechaFin=formatearFecha(d.fechaFin || '');
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${idx++}</td><td class="nombre">${d.nombre}</td><td class="fecha">${fechaInicio}</td><td>${d.estado}</td><td style="text-align:center;"><input type="checkbox" data-id="${d.id}" data-estado="${d.estado}"></td>`;
+      tr.innerHTML=`<td>${idx++}</td><td class="nombre">${d.nombre}</td><td class="fecha fecha-toggle" data-inicio="${fechaInicio}" data-fin="${fechaFin}"></td><td>${d.estado}</td><td style="text-align:center;"><input type="checkbox" data-id="${d.id}" data-estado="${d.estado}"></td>`;
       const nombreCell=tr.querySelector('.nombre');
       nombreCell.style.cursor='pointer';
       nombreCell.addEventListener('click',()=>mostrarInfo(d));
@@ -342,29 +382,21 @@
       }
       tbody.appendChild(tr);
     });
+    actualizarFechasTabla();
   }
 
   function filtrar(){
     const nom=document.getElementById('filtro-nombre').value.trim().toLowerCase();
-    const fecha=document.getElementById('filtro-fecha').value;
     const est=document.getElementById('filtro-estado').value;
     let lista=datos.filter(s=>mostrarArch ? s.estado==='ARCHIVADA' : s.estado!=='ARCHIVADA');
     if(nom) lista=lista.filter(s=>(s.nombre||'').toLowerCase().includes(nom));
-    if(fecha) lista=lista.filter(s=>s.fechaInicio===fecha);
     if(est) lista=lista.filter(s=>s.estado===est);
     renderTabla(lista);
   }
 
   document.getElementById('filtro-nombre').addEventListener('input',filtrar);
-  const fechaInput=document.getElementById('filtro-fecha');
-  const fechaPh=document.querySelector('.fecha-placeholder');
-  function toggleFechaPh(){
-    if(fechaInput.value) fechaPh.style.display='none';
-    else fechaPh.style.display='block';
-  }
-  fechaInput.addEventListener('change',()=>{toggleFechaPh();filtrar();});
   document.getElementById('filtro-estado').addEventListener('change',filtrar);
-  toggleFechaPh();
+  actualizarFechasTabla();
 
   document.getElementById('sel-campana').addEventListener('click',()=>{
     const checks=document.querySelectorAll('#tabla-campanas tbody input[type=checkbox]');
@@ -379,7 +411,18 @@
     filtrar();
   });
 
-  document.getElementById('nuevo-btn').addEventListener('click',()=>{
+  document.getElementById('nuevo-btn').addEventListener('click',async ()=>{
+    try{
+      const activa = await obtenerCampanaActiva();
+      if(activa){
+        alert(`No se puede crear una nueva campaña ya que existe activa la campaña ${activa.nombre || ''}`);
+        return;
+      }
+    }catch(err){
+      console.error('No se pudo validar campañas activas', err);
+      alert('No se pudo validar la campaña activa. Intenta nuevamente.');
+      return;
+    }
     localStorage.removeItem('editCampanaId');
     window.location.href='nuevacampana.html';
   });
@@ -441,6 +484,10 @@
 
   document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='admin.html';});
   actualizarArchivarBtn();
+  setInterval(()=>{
+    mostrarInicio = !mostrarInicio;
+    actualizarFechasTabla();
+  }, 5000);
   window.addEventListener('beforeunload',()=>{
     if(unsubscribeCampanas) unsubscribeCampanas();
   });

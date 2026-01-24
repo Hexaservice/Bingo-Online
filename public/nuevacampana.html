@@ -72,25 +72,42 @@
     }
     .row{display:flex;justify-content:center;gap:5px;width:calc(100% - 12px);margin:3px 6px;}
     .row input{flex:1;width:100%;}
+    .row--fechas{align-items:center;}
+    .row--premios{align-items:center;flex-wrap:nowrap;}
     .input-wrapper{display:flex;align-items:center;gap:4px;flex:1;}
     .label-left{font-weight:bold;font-size:0.8rem;margin-right:3px;text-shadow:0 0 3px #fff;}
     .label-right{font-weight:bold;font-size:0.8rem;margin-left:3px;text-shadow:0 0 3px #fff;}
-    .small-label{
-      font-size:0.55rem;
-      font-family:'Poppins', sans-serif;
-      text-transform:uppercase;
-      color:#444;
-      letter-spacing:0.5px;
-      margin-bottom:2px;
-    }
-    .field-block{
+    .label-inicio{color:#0b5d0b;text-shadow:0 0 6px #fff;font-weight:bold;}
+    .label-fin{color:#8b0000;text-shadow:0 0 6px #fff;font-weight:bold;}
+    #fecha-inicio{font-weight:bold;color:#00c853;}
+    #fecha-fin{font-weight:bold;color:#ff1744;}
+    .field-inline{
       display:flex;
-      flex-direction:column;
       align-items:center;
+      gap:4px;
       flex:1;
+      min-width:0;
     }
+    .field-inline input{
+      width:90px;
+      flex:0 0 auto;
+    }
+    .field-label{
+      font-size:0.6rem;
+      line-height:1.1;
+      text-transform:uppercase;
+      font-family:'Poppins', sans-serif;
+      font-weight:bold;
+      text-shadow:0 0 6px #fff;
+      white-space:normal;
+      text-align:right;
+      min-width:78px;
+    }
+    .label-cartones{color:#0047ff;}
+    .label-referidos{color:#ff8c00;}
+    .label-nuevo{color:#1b8f1b;}
     #nombre-campana{font-weight:bold;color:purple;}
-    .toggle-group{display:flex;justify-content:center;gap:5px;margin:8px 0;}
+    .toggle-group{display:flex;justify-content:center;gap:5px;margin:4px 0;}
     .toggle-group button{flex:0 0 auto;width:95px;padding:5px 10px;border-radius:20px;border:1px solid #ccc;font-family:'Bangers',cursive;font-size:1rem;cursor:pointer;background:#808080;color:#fff;text-shadow:1px 1px 2px #333;}
     .toggle-group button.active{filter:brightness(1.2);text-shadow:1px 1px 2px #000;}
     #estado-group button.active[data-value="ACTIVA"]{background:linear-gradient(#00a000,#ffffff);}
@@ -108,11 +125,20 @@
       cursor:pointer;
       margin:5px auto;
     }
+    #guardar-campana-btn.modo-editar{
+      background:#0057ff;
+    }
     @media (max-width:600px){
       body{align-items:stretch;padding:5px 20px;}
       .menu-btn,input,.row,.toggle-group{width:100%;max-width:none;margin-left:0;margin-right:0;}
       .row{flex-direction:column;}
-      .input-wrapper{justify-content:center;}
+      .row--fechas,.row--premios{flex-direction:row;flex-wrap:nowrap;}
+      .row--fechas .input-wrapper{justify-content:center;}
+      .row--fechas input{max-width:140px;font-size:0.85rem;padding:4px;}
+      .row--premios{gap:4px;}
+      .field-inline input{width:78px;font-size:0.85rem;padding:4px;}
+      .field-label{font-size:0.52rem;min-width:70px;}
+      .label-inicio,.label-fin{font-size:0.9rem;}
     }
     @media (orientation:portrait){
       #volver-btn{width:40px;}
@@ -124,29 +150,29 @@
   <button id="volver-btn" class="menu-btn back-btn" data-compact-back="true"><span class="icon">&#9664;</span><span class="label">Volver</span></button>
   <h2 style="margin-top:0;" id="titulo-campana">NUEVA CAMPAÑA</h2>
   <input id="nombre-campana" maxlength="70" placeholder="Nombre de Campaña">
-  <div class="row">
+  <div class="row row--fechas">
     <div class="input-wrapper">
-      <span class="label-left">INICIO</span>
+      <span class="label-left label-inicio">INICIO</span>
       <input id="fecha-inicio" type="date">
     </div>
     <div class="input-wrapper">
       <input id="fecha-fin" type="date">
-      <span class="label-right">FIN</span>
+      <span class="label-right label-fin">FIN</span>
     </div>
   </div>
-  <div class="row">
-    <div class="field-block">
-      <div class="small-label">Numero de Cartones</div>
+  <div class="row row--premios">
+    <div class="field-inline">
+      <span class="field-label label-cartones">NUMERO<br>DE CARTONES</span>
       <input id="cartones-premio" type="number" inputmode="numeric" min="0" placeholder="Cartones">
     </div>
-    <div class="field-block">
-      <div class="small-label">Numero de Referidos para obtener premio</div>
+    <div class="field-inline">
+      <span class="field-label label-referidos">NUMERO<br>DE REFERIDOS</span>
       <input id="referidos-min" type="number" inputmode="numeric" min="1" placeholder="Referidos">
     </div>
-  </div>
-  <div class="field-block" style="max-width:260px;">
-    <div class="small-label">Cartones gratis nuevo usuario</div>
-    <input id="cartones-nuevo" type="number" inputmode="numeric" min="0" placeholder="Cartones nuevo">
+    <div class="field-inline">
+      <span class="field-label label-nuevo">CARTONES<br>GRATIS NUEVO<br>USUARIO</span>
+      <input id="cartones-nuevo" type="number" inputmode="numeric" min="0" placeholder="Cartones nuevo">
+    </div>
   </div>
   <div id="estado-group" class="toggle-group">
     <button data-value="ACTIVA">ACTIVA</button>
@@ -165,12 +191,55 @@
     const estadoBtns = Array.from(document.querySelectorAll('#estado-group button'));
     let estadoSeleccionado = 'ACTIVA';
     let campanaEditId = null;
+    let snapshotInicial = null;
+    const guardarBtn = document.getElementById('guardar-campana-btn');
 
     function setEstado(valor){
       estadoSeleccionado = valor;
       estadoBtns.forEach(btn => {
         btn.classList.toggle('active', btn.dataset.value === valor);
       });
+      actualizarBotonGuardar();
+    }
+
+    function obtenerEstadoFormulario(){
+      return {
+        nombre: document.getElementById('nombre-campana').value.trim(),
+        fechaInicio: document.getElementById('fecha-inicio').value,
+        fechaFin: document.getElementById('fecha-fin').value,
+        cartonesPremio: document.getElementById('cartones-premio').value,
+        referidosMin: document.getElementById('referidos-min').value,
+        cartonesNuevo: document.getElementById('cartones-nuevo').value,
+        estado: estadoSeleccionado,
+      };
+    }
+
+    function actualizoValor(val){ return val ?? ''; }
+
+    function compararEstados(a, b){
+      if(!a || !b) return false;
+      return (
+        actualizoValor(a.nombre) === actualizoValor(b.nombre) &&
+        actualizoValor(a.fechaInicio) === actualizoValor(b.fechaInicio) &&
+        actualizoValor(a.fechaFin) === actualizoValor(b.fechaFin) &&
+        actualizoValor(a.cartonesPremio) === actualizoValor(b.cartonesPremio) &&
+        actualizoValor(a.referidosMin) === actualizoValor(b.referidosMin) &&
+        actualizoValor(a.cartonesNuevo) === actualizoValor(b.cartonesNuevo) &&
+        actualizoValor(a.estado) === actualizoValor(b.estado)
+      );
+    }
+
+    function actualizarBotonGuardar(){
+      if(!guardarBtn || !campanaEditId || !snapshotInicial) return;
+      const actual = obtenerEstadoFormulario();
+      const sinCambios = compararEstados(actual, snapshotInicial);
+      if(sinCambios){
+        guardarBtn.textContent = 'Guardar';
+        guardarBtn.classList.remove('modo-editar');
+      }else{
+        guardarBtn.textContent = 'EDITAR';
+        guardarBtn.classList.add('modo-editar');
+      }
     }
 
     function parseFecha(valor){
@@ -230,6 +299,8 @@
         document.getElementById('referidos-min').value = data.referidosMin ?? '';
         document.getElementById('cartones-nuevo').value = data.cartonesNuevo ?? '';
         setEstado((data.estado || 'INACTIVA').toUpperCase());
+        snapshotInicial = obtenerEstadoFormulario();
+        actualizarBotonGuardar();
       }catch(err){
         console.error('No se pudo cargar la campaña', err);
         campanaEditId = null;
@@ -240,6 +311,13 @@
       btn.addEventListener('click', () => setEstado(btn.dataset.value));
     });
     setEstado(estadoSeleccionado);
+    ['nombre-campana','fecha-inicio','fecha-fin','cartones-premio','referidos-min','cartones-nuevo'].forEach(id=>{
+      const campo = document.getElementById(id);
+      if(campo){
+        campo.addEventListener('input', actualizarBotonGuardar);
+        campo.addEventListener('change', actualizarBotonGuardar);
+      }
+    });
 
     document.getElementById('guardar-campana-btn').addEventListener('click', async ()=>{
       const nombre = document.getElementById('nombre-campana').value.trim();
@@ -267,13 +345,7 @@
       }
 
       try{
-        if(!campanaEditId){
-          const activa = await obtenerCampanaActiva();
-          if(activa){
-            alert(`No se puede crear una nueva campaña ya que existe activa la campaña ${activa.nombre || ''}`);
-            return;
-          }
-        }else if(estadoFinal === 'ACTIVA'){
+        if(campanaEditId && estadoFinal === 'ACTIVA'){
           const activa = await obtenerCampanaActiva(campanaEditId);
           if(activa){
             alert(`No se puede activar esta campaña ya que existe activa la campaña ${activa.nombre || ''}`);
