@@ -72,6 +72,7 @@ async function initFirebase(){
     db = firebase.firestore();
     auth = firebase.auth();
     provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
     await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     return app;
   })();
