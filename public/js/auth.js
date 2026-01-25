@@ -273,6 +273,9 @@ async function loginGoogle(){
     return;
   }
   try {
+    if(provider && provider.setCustomParameters){
+      provider.setCustomParameters({ prompt: 'select_account' });
+    }
     await auth.signInWithPopup(provider);
   } catch(err) {
     if (err.code === 'auth/user-disabled') {
