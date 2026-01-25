@@ -320,6 +320,161 @@
 
     const selectCodigoPais=document.getElementById('codigo-pais');
     poblarSelectCodigos(selectCodigoPais);
+    const REGISTRO_PENDIENTE_KEY = 'registroPendienteBingoOnline';
+    let registroEnProceso = false;
+
+    function obtenerDatosFormulario(){
+      return {
+        nombre: document.getElementById('nombre').value.trim(),
+        apellido: document.getElementById('apellido').value.trim(),
+        alias: document.getElementById('alias').value.trim(),
+        celularLocal: document.getElementById('celular').value.trim().replace(/\D/g,''),
+        codigoPais: selectCodigoPais ? selectCodigoPais.value || '' : '',
+        codigoReferido: (codigoReferidoInputEl?.value || '').trim().toUpperCase(),
+        aceptoTerminos: document.getElementById('accept-terms').checked
+      };
+    }
+
+    function aplicarDatosFormulario(datos){
+      if(!datos) return;
+      if(datos.nombre) document.getElementById('nombre').value = datos.nombre;
+      if(datos.apellido) document.getElementById('apellido').value = datos.apellido;
+      if(datos.alias) document.getElementById('alias').value = datos.alias;
+      if(selectCodigoPais && datos.codigoPais){
+        selectCodigoPais.value = datos.codigoPais;
+      }
+      if(typeof datos.celularLocal === 'string'){
+        document.getElementById('celular').value = datos.celularLocal;
+      }
+      if(codigoReferidoInputEl && datos.codigoReferido){
+        codigoReferidoInputEl.value = datos.codigoReferido;
+      }
+      if(typeof datos.aceptoTerminos === 'boolean'){
+        document.getElementById('accept-terms').checked = datos.aceptoTerminos;
+      }
+    }
+
+    function guardarRegistroPendiente(datos){
+      sessionStorage.setItem(REGISTRO_PENDIENTE_KEY, JSON.stringify(datos));
+    }
+
+    function cargarRegistroPendiente(){
+      const raw = sessionStorage.getItem(REGISTRO_PENDIENTE_KEY);
+      if(!raw) return null;
+      try{
+        return JSON.parse(raw);
+      }catch(err){
+        sessionStorage.removeItem(REGISTRO_PENDIENTE_KEY);
+        return null;
+      }
+    }
+
+    function limpiarRegistroPendiente(){
+      sessionStorage.removeItem(REGISTRO_PENDIENTE_KEY);
+    }
+
+    function validarFormulario(){
+      const datos = obtenerDatosFormulario();
+      if(!datos.nombre){ alert('Debes llenar el campo nombre'); document.getElementById('nombre').focus(); return null; }
+      if(!validarTexto(datos.nombre,40)){ alert('Nombre inválido'); document.getElementById('nombre').focus(); return null; }
+      if(!datos.apellido){ alert('Debes llenar el campo Apellido'); document.getElementById('apellido').focus(); return null; }
+      if(!validarTexto(datos.apellido,40)){ alert('Apellido inválido'); document.getElementById('apellido').focus(); return null; }
+      if(!datos.alias){ alert('Debes llenar el campo Alias'); document.getElementById('alias').focus(); return null; }
+      if(datos.alias.length>60){ alert('Alias inválido'); document.getElementById('alias').focus(); return null; }
+      if(!datos.codigoPais){ alert('Debes elegir un código de país'); selectCodigoPais.focus(); return null; }
+      if(!datos.celularLocal){ alert('Debes agregar tu número celular'); document.getElementById('celular').focus(); return null; }
+      if(!datos.aceptoTerminos){
+        alert('Para poder registrarte debes aceptar nuestros terminos y condiciones');
+        return null;
+      }
+      return datos;
+    }
+
+    async function completarRegistroConDatos(user, datos){
+      if(registroEnProceso) return;
+      registroEnProceso = true;
+      try{
+        const nombre = datos.nombre;
+        const apellido = datos.apellido;
+        const alias = datos.alias;
+        const prefijo = datos.codigoPais || (selectCodigoPais ? selectCodigoPais.value || '' : '');
+        const celularLocal = (datos.celularLocal || '').toString().replace(/\D/g,'');
+        const numeroCompleto = `${prefijo || ''}${celularLocal}`;
+        const codigoPromocional = generarCodigoPromocional(user.email, numeroCompleto);
+        const codigoReferido = (datos.codigoReferido || '').trim().toUpperCase();
+        let campanaActiva = null;
+        let usuarioReferidor = null;
+        if(codigoReferido){
+          usuarioReferidor = await buscarUsuarioPorCodigo(codigoReferido);
+          if(!usuarioReferidor){
+            alert('Este código promocional no existe, coloca uno válido o deja en blanco');
+            return;
+          }
+          if(usuarioReferidor.email === user.email || usuarioReferidor.id === user.email){
+            alert('No puedes usar tu propio código promocional.');
+            return;
+          }
+          campanaActiva = await obtenerCampanaActiva();
+        }
+        await db.collection('users').doc(user.email).set({
+          name:nombre,
+          apellido:apellido,
+          alias:alias,
+          celular:numeroCompleto,
+          numerocel:numeroCompleto,
+          email:user.email,
+          photoURL:user.photoURL,
+          role:'Jugador',
+          aceptoNotificaciones:'NO',
+          codigoPromocional,
+          codigoReferidoUsado: codigoReferido || '',
+          referidoPorEmail: usuarioReferidor ? (usuarioReferidor.email || usuarioReferidor.id || '') : '',
+          campanaReferidosId: campanaActiva ? campanaActiva.id : ''
+        });
+        let delayRedirect = 0;
+        if(codigoReferido && usuarioReferidor && campanaActiva){
+          const cartonesNuevo = Number(campanaActiva.cartonesNuevo || 0) || 0;
+          if(cartonesNuevo > 0){
+            await actualizarBilletera(user.email, cartonesNuevo);
+            mostrarToast(`¡Código exitoso! ganaste ${cartonesNuevo} cartones GRATIS`);
+            delayRedirect = 1400;
+          }
+          const { premioReferidor } = await registrarReferido({
+            campana: campanaActiva,
+            nuevoEmail: user.email,
+            referidoEmail: usuarioReferidor.email || usuarioReferidor.id
+          });
+          if(premioReferidor > 0){
+            await actualizarBilletera(usuarioReferidor.email || usuarioReferidor.id, premioReferidor);
+          }
+        }
+        limpiarRegistroPendiente();
+        if(delayRedirect){
+          await new Promise(resolve => setTimeout(resolve, delayRedirect));
+        }
+        window.location.href='player.html';
+      }finally{
+        registroEnProceso = false;
+      }
+    }
+
+    async function completarRegistroPendiente(user){
+      const datos = cargarRegistroPendiente();
+      if(!datos) return false;
+      try{
+        const doc = await db.collection('users').doc(user.email).get();
+        if(doc.exists){
+          limpiarRegistroPendiente();
+          window.location.href='player.html';
+          return true;
+        }
+      }catch(err){
+        console.error('No se pudo validar el estado del registro pendiente', err);
+      }
+      aplicarDatosFormulario(datos);
+      await completarRegistroConDatos(user, datos);
+      return true;
+    }
 
     (async()=>{
       try{
@@ -330,12 +485,20 @@
         window.location.href='index.html';
         return;
       }
+      const pendienteInicial = cargarRegistroPendiente();
+      if(pendienteInicial){
+        aplicarDatosFormulario(pendienteInicial);
+      }
       auth.onAuthStateChanged(async user=>{
         if(!user){
-          window.location.href='index.html';
+          document.getElementById('email').textContent = 'Inicia sesión con Google para completar el registro.';
           return;
         }
         document.getElementById('email').textContent = user.email || '';
+        const pendienteProcesado = await completarRegistroPendiente(user);
+        if(pendienteProcesado){
+          return;
+        }
         try{
           const doc = await db.collection('users').doc(user.email).get();
           if(doc.exists){
@@ -372,81 +535,15 @@
       }
     }
     document.getElementById('registrar').addEventListener('click', async ()=>{
-      const nombre = document.getElementById('nombre').value.trim();
-      if(!nombre){ alert('Debes llenar el campo nombre'); document.getElementById('nombre').focus(); return; }
-      if(!validarTexto(nombre,40)){ alert('Nombre inválido'); document.getElementById('nombre').focus(); return; }
-      const apellido = document.getElementById('apellido').value.trim();
-      if(!apellido){ alert('Debes llenar el campo Apellido'); document.getElementById('apellido').focus(); return; }
-      if(!validarTexto(apellido,40)){ alert('Apellido inválido'); document.getElementById('apellido').focus(); return; }
-      const alias = document.getElementById('alias').value.trim();
-      if(!alias){ alert('Debes llenar el campo Alias'); document.getElementById('alias').focus(); return; }
-      if(alias.length>60){ alert('Alias inválido'); document.getElementById('alias').focus(); return; }
-      const celularLocal = document.getElementById('celular').value.trim().replace(/\D/g,'');
-      if(!selectCodigoPais || !selectCodigoPais.value){ alert('Debes elegir un código de país'); selectCodigoPais.focus(); return; }
-      if(!celularLocal){ alert('Debes agregar tu número celular'); document.getElementById('celular').focus(); return; }
-      if(!document.getElementById('accept-terms').checked){
-        alert('Para poder registrarte debes aceptar nuestros terminos y condiciones');
-        return;
-      }
+      const datos = validarFormulario();
+      if(!datos) return;
       const user = auth.currentUser;
       if(!user){
-        alert('Tu sesión ha expirado. Vuelve a iniciar sesión con Google para registrarte.');
-        window.location.href='index.html';
+        guardarRegistroPendiente(datos);
+        await loginGoogle();
         return;
       }
-      const numeroCompleto=obtenerNumeroCompleto();
-      const codigoPromocional = generarCodigoPromocional(user.email, numeroCompleto);
-      const codigoReferido = (codigoReferidoInputEl?.value || '').trim().toUpperCase();
-      let campanaActiva = null;
-      let usuarioReferidor = null;
-      if(codigoReferido){
-        usuarioReferidor = await buscarUsuarioPorCodigo(codigoReferido);
-        if(!usuarioReferidor){
-          alert('Este código promocional no existe, coloca uno válido o deja en blanco');
-          return;
-        }
-        if(usuarioReferidor.email === user.email || usuarioReferidor.id === user.email){
-          alert('No puedes usar tu propio código promocional.');
-          return;
-        }
-        campanaActiva = await obtenerCampanaActiva();
-      }
-      await db.collection('users').doc(user.email).set({
-        name:nombre,
-        apellido:apellido,
-        alias:alias,
-        celular:numeroCompleto,
-        numerocel:numeroCompleto,
-        email:user.email,
-        photoURL:user.photoURL,
-        role:'Jugador',
-        aceptoNotificaciones:'NO',
-        codigoPromocional,
-        codigoReferidoUsado: codigoReferido || '',
-        referidoPorEmail: usuarioReferidor ? (usuarioReferidor.email || usuarioReferidor.id || '') : '',
-        campanaReferidosId: campanaActiva ? campanaActiva.id : ''
-      });
-      let delayRedirect = 0;
-      if(codigoReferido && usuarioReferidor && campanaActiva){
-        const cartonesNuevo = Number(campanaActiva.cartonesNuevo || 0) || 0;
-        if(cartonesNuevo > 0){
-          await actualizarBilletera(user.email, cartonesNuevo);
-          mostrarToast(`¡Código exitoso! ganaste ${cartonesNuevo} cartones GRATIS`);
-          delayRedirect = 1400;
-        }
-        const { premioReferidor } = await registrarReferido({
-          campana: campanaActiva,
-          nuevoEmail: user.email,
-          referidoEmail: usuarioReferidor.email || usuarioReferidor.id
-        });
-        if(premioReferidor > 0){
-          await actualizarBilletera(usuarioReferidor.email || usuarioReferidor.id, premioReferidor);
-        }
-      }
-      if(delayRedirect){
-        await new Promise(resolve => setTimeout(resolve, delayRedirect));
-      }
-      window.location.href='player.html';
+      await completarRegistroConDatos(user, datos);
     });
     document.getElementById('cancelar').addEventListener('click', ()=>{ window.location.href='index.html'; });
     initFechaHora('fecha-hora');
