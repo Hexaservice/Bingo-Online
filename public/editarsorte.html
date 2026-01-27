@@ -82,14 +82,18 @@
     }
     .row{display:flex;justify-content:center;gap:5px;width:calc(100% - 12px);margin:3px 6px;}
     .row input{flex:1;width:100%;}
-    .premio-row{display:grid;grid-template-columns:repeat(4,1fr);align-items:center;width:calc(100% - 12px);gap:5px;font-weight:bold;}
-    .premio-row input{margin:0;text-align:center;font-weight:bold;width:100%;}
+    .premio-row{display:grid;grid-template-columns:1.15fr 0.85fr 1.15fr 0.85fr 1.15fr 0.85fr;align-items:center;width:calc(100% - 12px);gap:5px;font-weight:bold;}
+    .premio-row input{margin:0;text-align:center;font-weight:bold;width:100%;min-width:0;}
     .premio-row span{margin:0;text-align:center;font-weight:bold;}
-    .porcentaje-forma{color:green;}
+    .porcentaje-forma{color:green;border:2px solid #006400;}
     .porcentaje-forma::placeholder,
-    .cartones-forma::placeholder{font-size:0.8rem;}
+    .cartones-forma::placeholder,
+    .cartones-forma-2::placeholder{font-size:0.78rem;}
     .porcentaje-restante{color:#006400;font-size:1.2rem;}
+    .cartones-forma{border:2px solid purple;}
     .cartones-total{color:purple;font-size:1.2rem;}
+    .cartones-forma-2{border:2px solid #ff8c00;}
+    .cartones-total-2{color:#ff8c00;font-size:1.2rem;}
     #nombre-sorteo{font-weight:bold;color:purple;}
     .toggle-group{display:flex;justify-content:center;gap:5px;margin:3px 0;}
     .toggle-group button{flex:0 0 auto;width:95px;padding:5px 10px;border-radius:20px;border:1px solid #ccc;font-family:'Bangers',cursive;font-size:1rem;cursor:pointer;background:#808080;color:#fff;text-shadow:1px 1px 2px #333;}
@@ -202,7 +206,7 @@
     @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.1);}100%{transform:scale(1);}}
     @media (orientation:landscape){
       .row,.premio-row,.imagen-wrapper,.toggle-group,.tabs{width:90% !important;margin-left:auto;margin-right:auto;}
-      .premio-row{grid-template-columns:2fr 1fr 2fr 1fr;}
+      .premio-row{grid-template-columns:2fr 1fr 2fr 1fr 2fr 1fr;}
     }
     @media (max-width:600px){
       body{align-items:stretch;padding:5px 20px;}
@@ -382,6 +386,7 @@
         nombre:div.querySelector('.nombre-forma').value.trim(),
         porcentaje:div.querySelector('.porcentaje-forma').value,
         cartones:div.querySelector('.cartones-forma').value,
+        cartones2:div.querySelector('.cartones-forma-2').value,
         imagen:div.querySelector('.imagen-url').value,
         posiciones:[]
       };
@@ -425,6 +430,7 @@
         div.querySelector('.nombre-forma').value=f.nombre||'';
         div.querySelector('.porcentaje-forma').value=f.porcentaje||'';
         div.querySelector('.cartones-forma').value=f.cartones||'';
+        div.querySelector('.cartones-forma-2').value=f.cartones2||'';
         div.querySelector('.imagen-url').value=f.imagen||'';
         if(f.imagen){
           const ver=div.querySelector('.ver-imagen');
@@ -467,9 +473,12 @@
       e.target.value=e.target.value.replace(/[^\d]/g,'');
       saveState();
     });
-    document.querySelectorAll('.tab-content .nombre-forma,.tab-content .porcentaje-forma,.tab-content .cartones-forma,.tab-content .imagen-url').forEach(i=>i.addEventListener('input',e=>{
+    document.querySelectorAll('.tab-content .nombre-forma,.tab-content .porcentaje-forma,.tab-content .cartones-forma,.tab-content .cartones-forma-2,.tab-content .imagen-url').forEach(i=>i.addEventListener('input',e=>{
+      if(e.target.classList.contains('cartones-forma') || e.target.classList.contains('cartones-forma-2')){
+        e.target.value=e.target.value.replace(/[^\d]/g,'');
+      }
       saveState();
-      if(e.target.classList.contains('porcentaje-forma')||e.target.classList.contains('cartones-forma')) actualizarTotales();
+      if(e.target.classList.contains('porcentaje-forma')||e.target.classList.contains('cartones-forma')||e.target.classList.contains('cartones-forma-2')) actualizarTotales();
     }));
   }
 
@@ -492,7 +501,7 @@
     const snap=await db.collection('formas').where('sorteoId','==',sorteoId).get();
     const arr=[];snap.forEach(s=>arr.push(s.data()));
     arr.sort((a,b)=>(a.idx||0)-(b.idx||0));
-    arr.forEach(f=>{data.formas.push({nombre:f.nombre||'',porcentaje:f.porcentaje||'',cartones:f.cartonesGratis||'',imagen:f.premioImagen||'',posiciones:f.posiciones||[]});});
+    arr.forEach(f=>{data.formas.push({nombre:f.nombre||'',porcentaje:f.porcentaje||'',cartones:f.cartonesGratis||'',cartones2:f.cartonesGratis2||'',imagen:f.premioImagen||'',posiciones:f.posiciones||[]});});
     setCookie(cookieKey,JSON.stringify(data));
   }
 
@@ -628,6 +637,9 @@ firebase.auth().onAuthStateChanged(u=>{
     const cartones=Array.from(document.querySelectorAll('.cartones-forma')).map(i=>parseInt(i.value)||0);
     const totalCartones=cartones.reduce((a,b)=>a+b,0);
     document.querySelectorAll('.cartones-total').forEach(span=>{span.textContent=totalCartones;});
+    const cartonesSegundo=Array.from(document.querySelectorAll('.cartones-forma-2')).map(i=>parseInt(i.value)||0);
+    const totalCartonesSegundo=cartonesSegundo.reduce((a,b)=>a+b,0);
+    document.querySelectorAll('.cartones-total-2').forEach(span=>{span.textContent=totalCartonesSegundo;});
   }
 
   function obtenerColorForma(idx){
@@ -875,8 +887,10 @@ firebase.auth().onAuthStateChanged(u=>{
       div.innerHTML=`<div class=\"forma-label\">Forma ${i}</div><div class=\"forma-nombre-row\" data-idx=\"${i}\" style=\"--fx-color:${obtenerColorForma(i)}\"><button type=\"button\" class=\"fx-button\">F${i}</button><input class=\"nombre-forma\" placeholder=\"Nombre de forma\"><button type=\"button\" class=\"guardar-forma-btn\" title=\"Guardar forma\"><span>💾</span></button></div>\
       <div class=\"premio-row\"><input type=\"number\" class=\"porcentaje-forma\" placeholder=\"% Premio\">\
       <span class=\"porcentaje-restante\">100%<\/span>\
-      <input type=\"number\" class=\"cartones-forma\" placeholder=\"Cartones Gratis\">\
-      <span class=\"cartones-total\">0<\/span><\/div>\
+      <input type=\"number\" class=\"cartones-forma\" placeholder=\"C. Gratis\">\
+      <span class=\"cartones-total\">0<\/span>\
+      <input type=\"number\" class=\"cartones-forma-2\" placeholder=\"C. gratis 2\">\
+      <span class=\"cartones-total-2\">0<\/span><\/div>\
       <div class=\"imagen-wrapper\">\
         <button type=\"button\" class=\"ver-foto-btn\"><img src=\"https://img.icons8.com/ios-glyphs/30/image.png\" alt=\"foto\"><\/button>\
         <input type=\"file\" accept=\"image/*\" class=\"imagen-forma\">\
@@ -1092,10 +1106,12 @@ firebase.auth().onAuthStateChanged(u=>{
       const nomInput=div.querySelector('.nombre-forma');
       const porInput=div.querySelector('.porcentaje-forma');
       const cartInput=div.querySelector('.cartones-forma');
+      const cartSegundoInput=div.querySelector('.cartones-forma-2');
       const urlInput=div.querySelector('.imagen-url');
       const nom=nomInput.value.trim();
       const por=parseFloat(porInput.value);
       const cart=parseInt(cartInput.value);
+      const cartSegundo=parseInt(cartSegundoInput.value);
       const img=urlInput.value.trim();
       const pos=[];
       div.querySelectorAll('td.selected').forEach(td=>{
@@ -1103,7 +1119,7 @@ firebase.auth().onAuthStateChanged(u=>{
         if(!(r===2&&c===2)) pos.push({r,c});
       });
         if(!nom){selectTab(i+1);alert(`Asigna un nombre a la forma ${i+1}`);nomInput.focus();return;}
-        if((isNaN(por)||por<=0) && (isNaN(cart)||cart<=0) && !img){
+        if((isNaN(por)||por<=0) && (isNaN(cart)||cart<=0) && (isNaN(cartSegundo)||cartSegundo<=0) && !img){
           selectTab(i+1);
           alert(`Asigna un premio a la forma ${i+1}`);
           porInput.focus();
@@ -1118,6 +1134,7 @@ firebase.auth().onAuthStateChanged(u=>{
       const obj={idx:i+1,nombre:nom,posiciones:pos};
       if(!isNaN(por)&&por>0){obj.porcentaje=por;total+=por;conPorcentaje++;}
       if(!isNaN(cart)&&cart>0){obj.cartonesGratis=cart;}
+      if(!isNaN(cartSegundo)&&cartSegundo>0){obj.cartonesGratis2=cartSegundo;}
       if(img){obj.premioImagen=img;}
       formas.push(obj);
     }

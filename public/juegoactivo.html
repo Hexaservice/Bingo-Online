@@ -2630,6 +2630,55 @@
           gap: 12px;
           box-sizing: border-box;
       }
+      .modal-sin-premio .modal-contenido {
+          max-width: min(520px, calc(100vw - 36px));
+          width: min(520px, calc(100vw - 36px));
+          text-align: center;
+          align-items: center;
+          background: linear-gradient(135deg, #ffd06b, #ff9f43);
+          border: 4px solid #ff7b00;
+          color: #1f1f1f;
+      }
+      .modal-segundo-lugar .modal-contenido {
+          max-width: min(520px, calc(100vw - 36px));
+          width: min(520px, calc(100vw - 36px));
+          text-align: center;
+          align-items: center;
+          background: linear-gradient(135deg, #6d28d9, #ff7a00);
+          border: 4px solid #ffe066;
+          color: #fff;
+      }
+      .modal-premio-extra-titulo {
+          margin: 0;
+          font-family: 'Bangers', cursive;
+          letter-spacing: 1px;
+          font-size: clamp(1.4rem, 4.4vw, 2rem);
+          text-shadow: 0 3px 8px rgba(0,0,0,0.35);
+      }
+      .modal-premio-extra-mensaje {
+          margin: 0;
+          font-size: clamp(0.95rem, 3.4vw, 1.15rem);
+          font-weight: 600;
+          line-height: 1.35;
+      }
+      .modal-premio-extra-accion {
+          border: none;
+          border-radius: 999px;
+          padding: 8px 20px;
+          font-family: 'Bangers', cursive;
+          font-size: 1rem;
+          letter-spacing: 1px;
+          cursor: pointer;
+          background: #1f1f1f;
+          color: #fff;
+          box-shadow: 0 6px 14px rgba(0,0,0,0.25);
+      }
+      .modal-sin-premio .modal-premio-extra-accion {
+          background: #111827;
+      }
+      .modal-segundo-lugar .modal-premio-extra-accion {
+          background: #1f2937;
+      }
       .modal-premio-forma {
           display: none;
           align-items: center;
@@ -4195,6 +4244,24 @@
     </div>
   </div>
 
+  <div id="modal-sin-premio" class="modal modal-sin-premio" role="dialog" aria-modal="true" aria-labelledby="modal-sin-premio-titulo" aria-hidden="true">
+    <div class="modal-contenido" role="document">
+      <button type="button" id="modal-sin-premio-cerrar" class="modal-cerrar" aria-label="Cerrar">✖</button>
+      <h2 id="modal-sin-premio-titulo" class="modal-premio-extra-titulo">¡Gracias por jugar!</h2>
+      <p id="modal-sin-premio-mensaje" class="modal-premio-extra-mensaje"></p>
+      <button type="button" id="modal-sin-premio-aceptar" class="modal-premio-extra-accion">Entendido</button>
+    </div>
+  </div>
+
+  <div id="modal-segundo-lugar" class="modal modal-segundo-lugar" role="dialog" aria-modal="true" aria-labelledby="modal-segundo-lugar-titulo" aria-hidden="true">
+    <div class="modal-contenido" role="document">
+      <button type="button" id="modal-segundo-lugar-cerrar" class="modal-cerrar" aria-label="Cerrar">✖</button>
+      <h2 id="modal-segundo-lugar-titulo" class="modal-premio-extra-titulo">¡Segundo lugar!</h2>
+      <p id="modal-segundo-lugar-mensaje" class="modal-premio-extra-mensaje"></p>
+      <button type="button" id="modal-segundo-lugar-aceptar" class="modal-premio-extra-accion">Entendido</button>
+    </div>
+  </div>
+
   <div id="modal-whatsapp" class="modal modal-whatsapp" role="dialog" aria-modal="true" aria-labelledby="modal-whatsapp-titulo" aria-hidden="true">
     <div class="modal-contenido" role="document">
       <h2 id="modal-whatsapp-titulo">GRUPO DE WHATSAPP NO DISPONIBLE</h2>
@@ -4330,6 +4397,14 @@
   const modalCelebracionAceptarBtn = document.getElementById('modal-celebracion-aceptar');
   const modalCelebracionMensajeEl = document.getElementById('modal-celebracion-mensaje');
   const modalCelebracionTituloEl = document.getElementById('modal-celebracion-titulo');
+  const modalSinPremioEl = document.getElementById('modal-sin-premio');
+  const modalSinPremioMensajeEl = document.getElementById('modal-sin-premio-mensaje');
+  const modalSinPremioCerrarBtn = document.getElementById('modal-sin-premio-cerrar');
+  const modalSinPremioAceptarBtn = document.getElementById('modal-sin-premio-aceptar');
+  const modalSegundoLugarEl = document.getElementById('modal-segundo-lugar');
+  const modalSegundoLugarMensajeEl = document.getElementById('modal-segundo-lugar-mensaje');
+  const modalSegundoLugarCerrarBtn = document.getElementById('modal-segundo-lugar-cerrar');
+  const modalSegundoLugarAceptarBtn = document.getElementById('modal-segundo-lugar-aceptar');
   const whatsappBtnEl = document.getElementById('whatsapp-flotante');
   const whatsappModalEl = document.getElementById('modal-whatsapp');
   const whatsappModalAceptarBtn = document.getElementById('modal-whatsapp-aceptar');
@@ -4398,6 +4473,7 @@
   const LIVE_ICON_INTERVAL_MS = 3000;
   let ventanaEnFoco = document.visibilityState === 'visible' && document.hasFocus();
   let cantosRecientesSinAnimacion = false;
+  let resumenGanadoresPrevio = new Map();
 
   let cartonSeleccionadoId = null;
   const animacionesCartones = new Map();
@@ -4456,6 +4532,10 @@
   let cantoColorMap = new Map();
   let formasSinGanadoresAlertaClave = '';
   let celebracionModalActiva = false;
+  let modalSinPremioActiva = false;
+  let modalSegundoLugarActiva = false;
+  const formasSegundoLugarNotificadas = new Set();
+  const sorteosSinPremioNotificados = new Set();
   let unsubscribeCartonesGuardados = null;
   let contadoresFlotantesIntervalo = null;
   let contadoresFlotantesActivos = [];
@@ -8591,6 +8671,27 @@
     return 0;
   }
 
+  function obtenerCartonesGratisSegundo(forma){
+    if(!forma) return 0;
+    const candidatos=[
+      forma?.cartonesGratis2,
+      forma?.cartonesgratis2,
+      forma?.cartones_gratis2,
+      forma?.cartonesGratisSegundo,
+      forma?.cartonesGratisSegundoLugar,
+      forma?.premioCartonesGratis2,
+      forma?.premioCartonesGratisSegundo,
+      forma?.premioCartonesGratisSegundoLugar
+    ];
+    for(const candidato of candidatos){
+      const numero=normalizarCartonesGratisValor(candidato);
+      if(numero !== null){
+        return numero;
+      }
+    }
+    return 0;
+  }
+
   function obtenerCartonesGratisPorGanador(forma,totalGanadores){
     const totalCartones=obtenerCartonesGratisForma(forma);
     if(totalCartones<=0) return 0;
@@ -9005,6 +9106,136 @@
       modalCelebracionListaEl.innerHTML='';
     }
     detenerConfetiCelebracion();
+  }
+
+  function mostrarModalSinPremio(){
+    if(!modalSinPremioEl || !modalSinPremioMensajeEl) return;
+    modalSinPremioMensajeEl.textContent = '😅 Esta vez no ganaste ningún premio, te invitamos a seguir jugando al Bingo Online y podrás ser un feliz ganador 😊';
+    modalSinPremioEl.classList.add('activa');
+    modalSinPremioEl.setAttribute('aria-hidden','false');
+    modalSinPremioActiva = true;
+    modalSinPremioAceptarBtn?.focus({preventScroll:true});
+  }
+
+  function cerrarModalSinPremio(){
+    if(!modalSinPremioEl) return;
+    modalSinPremioEl.classList.remove('activa');
+    modalSinPremioEl.setAttribute('aria-hidden','true');
+    modalSinPremioActiva = false;
+  }
+
+  function mostrarModalSegundoLugar(mensaje){
+    if(!modalSegundoLugarEl || !modalSegundoLugarMensajeEl) return;
+    modalSegundoLugarMensajeEl.textContent = mensaje;
+    modalSegundoLugarEl.classList.add('activa');
+    modalSegundoLugarEl.setAttribute('aria-hidden','false');
+    modalSegundoLugarActiva = true;
+    modalSegundoLugarAceptarBtn?.focus({preventScroll:true});
+  }
+
+  function cerrarModalSegundoLugar(){
+    if(!modalSegundoLugarEl) return;
+    modalSegundoLugarEl.classList.remove('activa');
+    modalSegundoLugarEl.setAttribute('aria-hidden','true');
+    modalSegundoLugarActiva = false;
+  }
+
+  function obtenerResumenGanadores(map){
+    const resumen = new Map();
+    if(!(map instanceof Map)) return resumen;
+    map.forEach((info, indice)=>{
+      const idxNumero = Number(indice);
+      if(!Number.isFinite(idxNumero)) return;
+      const total = Array.isArray(info?.cartones) ? info.cartones.length : 0;
+      resumen.set(idxNumero, { total, paso: Number(info?.paso) });
+    });
+    return resumen;
+  }
+
+  function obtenerCartonesSegundoLugarPorForma(forma, pasoGanador, cartones){
+    const posiciones = obtenerPosicionesNormalizadas(forma);
+    if(!posiciones.length || posiciones.length <= 1) return [];
+    const pasoLimite = Number(pasoGanador);
+    if(!Number.isFinite(pasoLimite) || pasoLimite < 0) return [];
+    const lista = Array.isArray(cartones) ? cartones : [];
+    const resultado = [];
+    lista.forEach(carton=>{
+      let faltantes = 0;
+      let validas = 0;
+      for(const pos of posiciones){
+        const valor = carton.valorPorPos.get(`${pos.r}-${pos.c}`);
+        if(valor === undefined){
+          faltantes = 2;
+          break;
+        }
+        const paso = cantosIndiceMap.get(valor);
+        if(paso === undefined || paso > pasoLimite){
+          faltantes += 1;
+          if(faltantes > 1) break;
+        }else{
+          validas += 1;
+        }
+      }
+      if(faltantes === 1 && validas > 0){
+        resultado.push(carton);
+      }
+    });
+    return resultado;
+  }
+
+  function evaluarMensajesSegundoLugar(resumenPrevio, resumenActual){
+    if(!usuarioActual || !activeSorteoId) return;
+    const cartonesJugador = obtenerCartonesJugadorActual();
+    if(modoSimulacionCartones) return;
+    const cartonesReales = cartonesJugador.filter(carton=>carton.userId===usuarioActual.uid);
+    if(!cartonesReales.length) return;
+    resumenActual.forEach((infoActual, indice)=>{
+      const totalActual = Number(infoActual?.total || 0);
+      if(totalActual <= 0) return;
+      const previo = Number(resumenPrevio.get(indice)?.total || 0);
+      if(totalActual <= previo) return;
+      const forma = formasActivas.find(f=>Number(f.idx)===Number(indice)) || { idx: indice };
+      const cartonesGratisSegundo = obtenerCartonesGratisSegundo(forma);
+      if(!Number(cartonesGratisSegundo) || cartonesGratisSegundo <= 0) return;
+      const pasoGanador = Number(infoActual?.paso);
+      if(!Number.isFinite(pasoGanador)) return;
+      const claveNotificacion = `${activeSorteoId}__${indice}`;
+      if(formasSegundoLugarNotificadas.has(claveNotificacion)) return;
+      const segundos = obtenerCartonesSegundoLugarPorForma(forma, pasoGanador, cartonesReales);
+      if(!segundos.length) return;
+      const nombreForma = (forma?.nombre || '').toString().trim() || `Forma ${String(indice).padStart(2,'0')}`;
+      const mensaje = `Estuviste a un solo acierto para ganar con la forma ${nombreForma} por eso te ganas en segundo lugar ${cartonesGratisSegundo} cartones !GRATIS! 🤩`;
+      mostrarModalSegundoLugar(mensaje);
+      formasSegundoLugarNotificadas.add(claveNotificacion);
+    });
+  }
+
+  function evaluarMensajeSinPremio(estadoAnterior){
+    if(!activeSorteoId) return;
+    if(estadoAnterior || !todasFormasConGanadores) return;
+    if(!Number.isInteger(indiceUltimoGanador)) return;
+    if(indiceUltimoGanador !== cantosOrdenados.length - 1) return;
+    const clave = `${activeSorteoId}__sin-premio`;
+    if(sorteosSinPremioNotificados.has(clave)) return;
+    const cartonesJugador = obtenerCartonesJugadorActual();
+    if(modoSimulacionCartones) return;
+    if(!cartonesJugador.length) return;
+    const mapaFormasActivo = obtenerFormasPorCartonActivo();
+    const tieneGanancia = cartonesJugador.some(carton=>{
+      const lista = mapaFormasActivo.get(carton.id) || [];
+      return lista.length > 0;
+    });
+    if(tieneGanancia) return;
+    mostrarModalSinPremio();
+    sorteosSinPremioNotificados.add(clave);
+  }
+
+  function reiniciarNotificacionesPremios(){
+    resumenGanadoresPrevio = new Map();
+    formasSegundoLugarNotificadas.clear();
+    sorteosSinPremioNotificados.clear();
+    cerrarModalSegundoLugar();
+    cerrarModalSinPremio();
   }
 
   function gestionarCelebracionesNuevosGanadores(cartones, esSimulacion=false){
@@ -9543,6 +9774,32 @@
       }
     });
   }
+  if(modalSinPremioCerrarBtn){
+    modalSinPremioCerrarBtn.addEventListener('click',cerrarModalSinPremio);
+  }
+  if(modalSinPremioAceptarBtn){
+    modalSinPremioAceptarBtn.addEventListener('click',cerrarModalSinPremio);
+  }
+  if(modalSinPremioEl){
+    modalSinPremioEl.addEventListener('click',evento=>{
+      if(evento.target===modalSinPremioEl){
+        cerrarModalSinPremio();
+      }
+    });
+  }
+  if(modalSegundoLugarCerrarBtn){
+    modalSegundoLugarCerrarBtn.addEventListener('click',cerrarModalSegundoLugar);
+  }
+  if(modalSegundoLugarAceptarBtn){
+    modalSegundoLugarAceptarBtn.addEventListener('click',cerrarModalSegundoLugar);
+  }
+  if(modalSegundoLugarEl){
+    modalSegundoLugarEl.addEventListener('click',evento=>{
+      if(evento.target===modalSegundoLugarEl){
+        cerrarModalSegundoLugar();
+      }
+    });
+  }
 
   if(whatsappBtnEl){
     whatsappBtnEl.addEventListener('click',manejarClickWhatsapp);
@@ -9616,6 +9873,14 @@
     if(evento.key!=='Escape') return;
     if(celebracionModalActiva || modalCelebracionEl?.classList?.contains('activa')){
       cerrarModalCelebracionGanador();
+      return;
+    }
+    if(modalSegundoLugarActiva || modalSegundoLugarEl?.classList?.contains('activa')){
+      cerrarModalSegundoLugar();
+      return;
+    }
+    if(modalSinPremioActiva || modalSinPremioEl?.classList?.contains('activa')){
+      cerrarModalSinPremio();
       return;
     }
     if(complementariosAvisoEl?.classList?.contains('activa')){
@@ -9747,6 +10012,9 @@
     cartonesGanadoresSimuladosPorForma=resultadoSimulado.cartonesGanadoresPorForma || new Map();
     formasPorCartonSimulados=resultadoSimulado.formasPorCarton || new Map();
     evaluarEstadoFormasGanadoras();
+    const resumenActual=obtenerResumenGanadores(cartonesGanadoresPorForma);
+    evaluarMensajesSegundoLugar(resumenGanadoresPrevio, resumenActual);
+    resumenGanadoresPrevio=resumenActual;
     renderFormas();
     renderCartonesJugador();
   }
@@ -10048,6 +10316,11 @@
         data.cartonesGratis ?? data.cartonesgratis ?? data.cartones_gratis ??
         data.premioCartonesGratis ?? data.premioCartonesgratis ?? data.cartones
       ) ?? 0;
+      const cartonesGratisSegundo=normalizarCartonesGratisValor(
+        data.cartonesGratis2 ?? data.cartonesgratis2 ?? data.cartones_gratis2 ??
+        data.cartonesGratisSegundo ?? data.cartonesGratisSegundoLugar ??
+        data.premioCartonesGratis2 ?? data.premioCartonesGratisSegundo ?? data.premioCartonesGratisSegundoLugar
+      ) ?? 0;
       arr.push({
         id:doc.id,
         idx,
@@ -10056,7 +10329,8 @@
         posicionesNormalizadas:normalizadas,
         porcentaje:Number(data.porcentaje ?? data.porcentajePremio ?? data.porcentajepremio ?? 0) || 0,
         premioCreditos:Number(data.premioCreditos ?? data.premiocreditos ?? data.creditos ?? data.premio ?? 0) || 0,
-        cartonesGratis
+        cartonesGratis,
+        cartonesGratis2: cartonesGratisSegundo
       });
     });
     arr.sort((a,b)=>(a.idx||0)-(b.idx||0));
@@ -10145,6 +10419,7 @@
     }else if(!avisoComplementariosMostrado){
       mostrarAvisoComplementarios();
     }
+    evaluarMensajeSinPremio(estadoAnterior);
     evaluarFormasSinGanadores(totalCantos);
   }
 
@@ -10244,6 +10519,7 @@
       activeSorteo=null;
       activeSorteoId=null;
       actualizarHeader();
+      reiniciarNotificacionesPremios();
       reiniciarAlertaFormasSinGanadores();
       if(unsubscribeCantos){unsubscribeCantos();unsubscribeCantos=null;}
       if(unsubscribeFormas){unsubscribeFormas();unsubscribeFormas=null;}
@@ -10270,6 +10546,7 @@
     suscribirSimulacionSorteo(activeSorteoId);
     if(cambio){
       reiniciarAlertaFormasSinGanadores();
+      reiniciarNotificacionesPremios();
       todasFormasConGanadores=false;
       indiceUltimoGanador=null;
       cantosComplementariosActivos=false;

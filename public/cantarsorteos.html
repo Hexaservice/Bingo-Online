@@ -1895,6 +1895,8 @@
   let evaluandoCantoActual = false;
   const premiosAutomaticosProcesados = new Set();
   const premiosAutomaticosEnCurso = new Set();
+  const premiosSegundoLugarProcesados = new Set();
+  const premiosSegundoLugarEnCurso = new Set();
 
   function manejarAceptarConfirmacionCanto(){
     cerrarConfirmacionCanto(true);
@@ -3111,6 +3113,25 @@
     return null;
   }
 
+  function obtenerCartonesGratisSegundoDesde(datos){
+    if(!datos || typeof datos!=='object') return null;
+    const claves=[
+      'cartonesGratis2','cartonesgratis2','cartones_gratis2',
+      'cartonesGratisSegundo','cartonesGratisSegundoLugar',
+      'premioCartonesGratis2','premioCartonesGratisSegundo',
+      'premioCartonesGratisSegundoLugar'
+    ];
+    for(const clave of claves){
+      if(Object.prototype.hasOwnProperty.call(datos, clave)){
+        const valor=normalizarCartonesGratisValor(datos[clave]);
+        if(valor!==null){
+          return valor;
+        }
+      }
+    }
+    return null;
+  }
+
   function sincronizarFormasBase(formas){
     const lista = Array.isArray(formas) ? formas : [];
     formasBaseResumen = lista
@@ -3119,12 +3140,14 @@
         if(!Number.isFinite(idx)) return null;
         const posicionesNorm = Array.isArray(item.posicionesNormalizadas) ? item.posicionesNormalizadas : [];
         const cartonesGratis = obtenerCartonesGratisDesde(item);
+        const cartonesGratisSegundo = obtenerCartonesGratisSegundoDesde(item);
         return {
           idx,
           nombre: item?.nombre || '',
           porcentaje: Number(item?.porcentaje ?? item?.porcentajePremio ?? 0) || 0,
           premioCreditos: Number(item?.premioCreditos ?? item?.premiocreditos ?? item?.creditos ?? 0) || 0,
           cartonesGratis: cartonesGratis ?? 0,
+          cartonesGratis2: cartonesGratisSegundo ?? 0,
           posicionesNormalizadas: posicionesNorm
             .map(pos=>({ r: Number(pos?.r ?? pos?.row ?? pos?.fila), c: Number(pos?.c ?? pos?.col ?? pos?.columna) }))
             .filter(pos=>Number.isInteger(pos.r) && Number.isInteger(pos.c))
@@ -3169,6 +3192,7 @@
           : [];
         const base = obtenerResumenForma(idx) || {};
         const cartonesGratis = obtenerCartonesGratisDesde(data);
+        const cartonesGratisSegundo = obtenerCartonesGratisSegundoDesde(data);
         mapa.set(idx, {
           ...base,
           id: doc.id,
@@ -3177,6 +3201,7 @@
           porcentaje: Number(data?.porcentaje ?? data?.porcentajePremio ?? base?.porcentaje ?? 0) || 0,
           premioCreditos: Number(data?.premioCreditos ?? data?.premiocreditos ?? data?.creditos ?? base?.premioCreditos ?? 0) || 0,
           cartonesGratis: cartonesGratis ?? base?.cartonesGratis ?? 0,
+          cartonesGratis2: cartonesGratisSegundo ?? base?.cartonesGratis2 ?? 0,
           posicionesNormalizadas: posiciones
         });
       });
@@ -3628,6 +3653,27 @@
       forma?.premioCartonesGratis,
       forma?.premioCartonesgratis,
       forma?.cartones
+    ];
+    for(const candidato of candidatos){
+      const numero = normalizarCartonesGratisValor(candidato);
+      if(numero !== null){
+        return numero;
+      }
+    }
+    return 0;
+  }
+
+  function obtenerCartonesGratisSegundo(forma){
+    if(!forma) return 0;
+    const candidatos = [
+      forma?.cartonesGratis2,
+      forma?.cartonesgratis2,
+      forma?.cartones_gratis2,
+      forma?.cartonesGratisSegundo,
+      forma?.cartonesGratisSegundoLugar,
+      forma?.premioCartonesGratis2,
+      forma?.premioCartonesGratisSegundo,
+      forma?.premioCartonesGratisSegundoLugar
     ];
     for(const candidato of candidatos){
       const numero = normalizarCartonesGratisValor(candidato);
@@ -4278,6 +4324,9 @@
       procesarPremiosAutomaticos({ formas: formasNuevas }).catch(err=>{
         console.warn('No se pudieron procesar premios automáticos', err);
       });
+      procesarPremiosSegundoLugar({ formas: formasNuevas }).catch(err=>{
+        console.warn('No se pudieron procesar premios de segundo lugar', err);
+      });
     }
     if(esPrimerProcesamiento || !nuevos.length) return;
     mostrarModalNuevosGanadores(nuevos);
@@ -4288,6 +4337,43 @@
     const formaSeguro = sanitizarId(`f${formaIdx ?? ''}` || 'forma');
     const cartonSeguro = sanitizarId(cartonId || 'carton');
     return `${sorteoSeguro}__${formaSeguro}__${cartonSeguro}`;
+  }
+
+  function construirIdPremioSegundoLugar(sorteoId, formaIdx, cartonId){
+    const sorteoSeguro = sanitizarId(sorteoId || 'sorteo');
+    const formaSeguro = sanitizarId(`f${formaIdx ?? ''}` || 'forma');
+    const cartonSeguro = sanitizarId(cartonId || 'carton');
+    return `segundo__${sorteoSeguro}__${formaSeguro}__${cartonSeguro}`;
+  }
+
+  function obtenerCartonesSegundoLugar(forma, pasoGanador){
+    const posiciones = obtenerPosicionesForma(forma);
+    if(!posiciones.length || posiciones.length <= 1) return [];
+    const pasoLimite = Number(pasoGanador);
+    if(!Number.isFinite(pasoLimite) || pasoLimite < 0) return [];
+    const resultados = [];
+    cartonesSorteo.forEach(carton=>{
+      let faltantes = 0;
+      let validas = 0;
+      for(const pos of posiciones){
+        const valor = carton.valorPorPos.get(`${pos.r}-${pos.c}`);
+        if(valor === undefined){
+          faltantes = 2;
+          break;
+        }
+        const paso = cantosIndiceMap.get(valor);
+        if(paso === undefined || paso > pasoLimite){
+          faltantes += 1;
+          if(faltantes > 1) break;
+        }else{
+          validas += 1;
+        }
+      }
+      if(faltantes === 1 && validas > 0){
+        resultados.push(carton);
+      }
+    });
+    return resultados;
   }
 
   async function acreditarPremioAutomatico({ carton, forma, totalGanadores }){
@@ -4396,6 +4482,132 @@
     }
   }
 
+  async function acreditarPremioSegundoLugar({ carton, forma }){
+    if(!carton || !forma || !currentSorteoId) return;
+    const cartonReferencia = carton.id || carton.cartonId || carton.carton || carton.userId || carton.usuarioId || '';
+    const premioId = construirIdPremioSegundoLugar(currentSorteoId, forma?.idx, cartonReferencia);
+    if(premiosSegundoLugarProcesados.has(premioId) || premiosSegundoLugarEnCurso.has(premioId)) return;
+    const cartonesGratis = obtenerCartonesGratisSegundo(forma);
+    if(!Number(cartonesGratis) || cartonesGratis <= 0) return;
+    premiosSegundoLugarEnCurso.add(premioId);
+    try {
+      await asegurarDbListo();
+      const identidad = await resolverIdentidadPersona(carton);
+      const email = normalizarEmail(identidad.email);
+      if(!email){
+        return;
+      }
+      const sorteoNombre = (currentSorteoData?.nombre || '').toString();
+      const ahora = getServerNow();
+      const fechaGestion = formatearFechaCorta(ahora);
+      const horaGestion = formatearHoraCorta(ahora);
+      const timestamp = getServerTimestamp();
+      const premioRef = db.collection('PremiosSorteos').doc(premioId);
+      const transaccionRef = db.collection('transacciones').doc(`premio2_${premioId}`);
+      const billeteraRef = db.collection('Billetera').doc(email);
+      await db.runTransaction(async tx => {
+        const premioSnap = await tx.get(premioRef);
+        if(premioSnap.exists){
+          const estadoActual = (premioSnap.data()?.estado || '').toString().trim().toUpperCase();
+          if(estadoActual === 'APROBADO'){
+            return;
+          }
+        }
+        const billeteraSnap = await tx.get(billeteraRef);
+        const datosBilletera = billeteraSnap.exists ? billeteraSnap.data() : {};
+        const nuevosCartones = (Number(datosBilletera.CartonesGratis) || 0) + (Number(cartonesGratis) || 0);
+        const payloadPremio = {
+          sorteoId: currentSorteoId,
+          sorteoNombre,
+          gmail: email,
+          email,
+          alias: identidad.alias || carton.alias || '',
+          aliasJugador: identidad.alias || carton.alias || '',
+          aliasGanador: identidad.alias || carton.alias || '',
+          creditos: 0,
+          creditosGanados: 0,
+          cartonesGratis: Number(cartonesGratis) || 0,
+          cartonesGanados: 0,
+          formasSegundoLugar: [{
+            idx: Number(forma?.idx) || null,
+            nombre: forma?.nombre || '',
+            cartonesGratis: Number(cartonesGratis) || 0
+          }],
+          estado: 'APROBADO',
+          fechaGanado: timestamp,
+          fechaRegistro: timestamp,
+          creadoEn: timestamp,
+          actualizadoEn: timestamp,
+          fechaGestion,
+          horaGestion,
+          gestionadoPor: auth?.currentUser?.email || '',
+          rolGestor: window.currentRole || '',
+          tipoRegistro: 'SEGUNDO_LUGAR_SORTEO',
+          segundoLugar: true,
+          userIds: identidad.userId ? [identidad.userId] : [],
+          cartonId: carton.id || carton.cartonId || '',
+          formaIdx: Number(forma?.idx) || null,
+          generadoDesde: 'cantarsorteos'
+        };
+        if(email){ payloadPremio.idBilletera = email; }
+        tx.set(premioRef, payloadPremio, { merge: true });
+        if(Number(cartonesGratis)){
+          tx.set(billeteraRef, { CartonesGratis: nuevosCartones }, { merge: true });
+        }
+        const transSnap = await tx.get(transaccionRef);
+        if(!transSnap.exists){
+          tx.set(transaccionRef, {
+            tipotrans: 'premio',
+            origen: 'premios_segundo_lugar',
+            Monto: 0,
+            cartonesGratis: Number(cartonesGratis) || 0,
+            estado: 'APROBADO',
+            IDbilletera: email,
+            fechasolicitud: '',
+            horasolicitud: '',
+            fechagestion: fechaGestion,
+            horagestion: horaGestion,
+            usuariogestor: auth?.currentUser?.email || '',
+            rolusuario: window.currentRole || '',
+            referencia: 'PREMIO_SEGUNDO_LUGAR',
+            sorteoId: currentSorteoId,
+            sorteoNombre,
+            rolInterno: '',
+            rolinterno: ''
+          }, { merge: true });
+        }
+      });
+      premiosSegundoLugarProcesados.add(premioId);
+    } catch (err) {
+      console.error('Error acreditando premio segundo lugar', err);
+    } finally {
+      premiosSegundoLugarEnCurso.delete(premioId);
+    }
+  }
+
+  async function procesarPremiosSegundoLugar({ formas } = {}){
+    if(!currentSorteoId || !cartonesGanadoresPorForma || !cartonesGanadoresPorForma.size) return;
+    const indices = formas instanceof Set ? formas : null;
+    const tareas = [];
+    cartonesGanadoresPorForma.forEach((registro, indice)=>{
+      const idxNumero = Number(indice);
+      if(!Number.isFinite(idxNumero)) return;
+      if(indices && !indices.has(idxNumero)) return;
+      const forma = registro?.forma || obtenerResumenForma(idxNumero) || { idx: idxNumero };
+      const cartonesGratisSegundo = obtenerCartonesGratisSegundo(forma);
+      if(!Number(cartonesGratisSegundo) || cartonesGratisSegundo <= 0) return;
+      const pasoGanador = Number(registro?.paso);
+      if(!Number.isFinite(pasoGanador)) return;
+      const segundos = obtenerCartonesSegundoLugar(forma, pasoGanador);
+      segundos.forEach(carton=>{
+        tareas.push(acreditarPremioSegundoLugar({ carton, forma }));
+      });
+    });
+    if(tareas.length){
+      await Promise.all(tareas);
+    }
+  }
+
   async function procesarPremiosAutomaticos({ formas } = {}){
     if(!currentSorteoId || !cartonesGanadoresPorForma || !cartonesGanadoresPorForma.size) return;
     const indices = formas instanceof Set ? formas : null;
@@ -4472,6 +4684,8 @@
     }
     premiosAutomaticosProcesados.clear();
     premiosAutomaticosEnCurso.clear();
+    premiosSegundoLugarProcesados.clear();
+    premiosSegundoLugarEnCurso.clear();
     cerrarModalComplementarios();
     cerrarAvisoSimple();
     cantoCeldas.forEach(celda=>celda.classList.remove('no-jugado'));
