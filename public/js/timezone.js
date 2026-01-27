@@ -358,3 +358,17 @@ serverTime.serverTimestamp = function () {
   }
   return null;
 };
+
+function actualizarAnioFooter() {
+  const yearEl = document.querySelector('#derechos .current-year');
+  if (!yearEl) return;
+  yearEl.textContent = new Date().getFullYear();
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', actualizarAnioFooter);
+  } else {
+    actualizarAnioFooter();
+  }
+}
