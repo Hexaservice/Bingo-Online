@@ -921,7 +921,7 @@
       <div class="perfil-pendiente-card" role="document">
           <span class="perfil-pendiente-icono" aria-hidden="true">⚠️</span>
           <h2 id="perfil-pendiente-titulo" class="perfil-pendiente-titulo">DATOS DE PERFIL REQUERIDOS</h2>
-          <p class="perfil-pendiente-mensaje">Para poder realizar jugadas debes primero guardar tus datos de perfil.</p>
+          <p class="perfil-pendiente-mensaje">Para poder jugar debes guardar tu número de celular en tu perfil.</p>
           <button type="button" id="perfil-pendiente-ir" class="perfil-pendiente-boton">Ir PERFIL</button>
       </div>
   </div>
@@ -1018,7 +1018,7 @@
   const premioExtraPlusEl=document.getElementById('premio-extra-plus');
   const premioExtraValorEl=document.getElementById('premio-extra-valor');
   const aliasJugadorInput=document.getElementById('alias-jugador');
-  let perfilDatosCompletos=false;
+  let perfilTieneCelular=false;
   const perfilPendienteModal=document.getElementById('perfil-pendiente-modal');
   const perfilPendienteIrBtn=document.getElementById('perfil-pendiente-ir');
   let datosBancariosCompletos=false;
@@ -1118,11 +1118,16 @@
 
   function datosBancariosEstanCompletos(data){
     if(!data) return false;
-    const campos=['banco','cuenta','cedula','pagomovil','tipoCuenta'];
-    return campos.every(campo=>{
-      const valor=(data[campo]??'').toString().trim();
-      return valor.length>0;
-    });
+    const banco=(data.banco??'').toString().trim();
+    const cedula=(data.cedula??'').toString().trim();
+    const pagomovil=(data.pagomovil??'').toString().trim();
+    if(!banco || !cedula || !pagomovil) return false;
+    const cuenta=(data.cuenta??'').toString().trim();
+    const tipoCuenta=(data.tipoCuenta??'').toString().trim();
+    if((cuenta || tipoCuenta) && (!cuenta || !tipoCuenta)){
+      return false;
+    }
+    return true;
   }
 
   async function cargarDatosBilleteraUsuario(force=false){
@@ -2572,6 +2577,10 @@ function toggleForma(idx){
       }
       return;
     }
+    if(!perfilTieneCelular){
+      mostrarModalPerfilPendiente();
+      return;
+    }
     const billeteraInfo=await cargarDatosBilleteraUsuario(true);
     if(!datosBancariosCompletos){
       mostrarModalDatosBancarios();
@@ -2679,10 +2688,6 @@ function toggleForma(idx){
   }
 
   async function guardarCarton(){
-    if(!perfilDatosCompletos){
-      mostrarModalPerfilPendiente();
-      return;
-    }
     const check=document.getElementById('guardar-check');
     const nombre=document.getElementById('nombre-carton').value.trim();
     if(!check.checked || nombre===''){
@@ -3312,17 +3317,15 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
         if(user){
           const doc=await db.collection('users').doc(user.email).get();
           let aliasMostrado=user.displayName||user.email;
-          perfilDatosCompletos=false;
+          perfilTieneCelular=false;
           if(doc.exists){
             const datosPerfil=doc.data()||{};
-            const nombrePerfil=(datosPerfil.name||'').toString().trim();
-            const apellidoPerfil=(datosPerfil.apellido||'').toString().trim();
             const aliasPerfil=normalizarAliasPerfil(datosPerfil.alias||'');
             const celularPerfil=normalizarCelularPerfil(datosPerfil.celular||datosPerfil.telefono||datosPerfil.Telefono||datosPerfil.whatsapp||'');
             if(aliasPerfil){
               aliasMostrado=aliasPerfil;
             }
-            perfilDatosCompletos=Boolean(nombrePerfil&&apellidoPerfil&&aliasPerfil&&esCelularPerfilValido(celularPerfil));
+            perfilTieneCelular=esCelularPerfilValido(celularPerfil);
           }
           if(aliasJugadorInput){
             aliasJugadorInput.value=aliasMostrado||'';
