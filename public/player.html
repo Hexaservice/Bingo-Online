@@ -390,6 +390,14 @@
           text-shadow: 0 0 8px rgba(0, 128, 0, 0.85), 0 0 14px rgba(0, 200, 0, 0.9);
           display: inline-block;
       }
+      .menu-label--referidos-sub {
+          font-size: clamp(0.55rem, 1.5vw, 0.75rem);
+          font-weight: 700;
+          color: #ffffff;
+          text-shadow: 0 0 8px rgba(0, 128, 0, 0.85), 0 0 14px rgba(0, 200, 0, 0.9);
+          display: block;
+          margin-top: -4px;
+      }
 
       #carton-screen {
           position: relative;
@@ -834,6 +842,7 @@
                 <div class="menu-opcion menu-opcion--referidos">
                   <img id="boton-referidos" class="menu-imagen menu-imagen--referidos" src="img/boton-compartir-200p.png" alt="Compartir código promocional" role="button" tabindex="0" loading="lazy" />
                   <span class="menu-label menu-label--referidos">CARTONES GRATIS</span>
+                  <span class="menu-label menu-label--referidos-sub">AL COMPARTIR BingOnline por WhatsApp</span>
                 </div>
               </td>
               <td>
@@ -912,6 +921,8 @@
   const whatsappModalAceptarBtn = document.getElementById('modal-whatsapp-aceptar');
   const sorteoImagen = document.getElementById('boton-sorteo');
   const referidosOpcion = document.querySelector('.menu-opcion--referidos');
+  const referidosLabel = document.querySelector('.menu-label--referidos');
+  const referidosSubLabel = document.querySelector('.menu-label--referidos-sub');
   const tutorialToggle = document.getElementById('tutorial-toggle');
   const tutorialNav = document.getElementById('tutorial-nav');
   const tutorialPrev = document.getElementById('tutorial-prev');
@@ -921,6 +932,7 @@
   const tutorialLabel = document.getElementById('tutorial-label');
   const tutorialOverlay = document.getElementById('tutorial-overlay');
   const whatsappState = { enlace:'', cargado:false };
+  const APP_NOMBRE = 'BingOnline';
   let firestoreRef = null;
   let sorteoUnsubscribe = null;
   const tutorialSteps = [
@@ -1108,6 +1120,14 @@
     try{
       const campana = await obtenerCampanaActiva();
       referidosOpcion.classList.toggle('referidos-activa', !!campana);
+      if(referidosLabel){
+        referidosLabel.textContent = campana ? 'CARTONES GRATIS' : `COMPARTE ${APP_NOMBRE}`;
+      }
+      if(referidosSubLabel){
+        referidosSubLabel.textContent = campana
+          ? `AL COMPARTIR ${APP_NOMBRE} por WhatsApp`
+          : 'A tus amigos por WhatsApp';
+      }
     }catch(error){
       console.error('No se pudo validar la campaña activa de referidos', error);
       referidosOpcion.classList.remove('referidos-activa');
@@ -1122,6 +1142,19 @@
     const usuario = auth.currentUser;
     if(!usuario){
       alert('Debes iniciar sesión para compartir tu código.');
+      return;
+    }
+    let campana = null;
+    try{
+      campana = await obtenerCampanaActiva();
+    }catch(err){
+      console.error('No se pudo obtener la campaña activa', err);
+    }
+    if(!campana){
+      const registroUrl = 'https://www.bingo.juega-online.com/registrarse.html';
+      const mensaje = `Epale! estoy jugando a ${APP_NOMBRE}, y es un vasilón! 🤩 si enetras en este link: ${registroUrl} 👈 te registras, y al jugar ¡Puedes ganar muchos PREMIOS!`;
+      const enlace = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+      window.location.href = enlace;
       return;
     }
     let telefono = '';
@@ -1143,13 +1176,12 @@
     }
     let cartonesNuevo = 0;
     try{
-      const campana = await obtenerCampanaActiva();
       cartonesNuevo = Number(campana?.cartonesNuevo || 0) || 0;
     }catch(err){
       console.error('No se pudo obtener la campaña activa', err);
     }
     const registroUrl = `https://www.bingo.juega-online.com/registrarse.html?codigo=${encodeURIComponent(codigo)}`;
-    const mensaje = `Epale! estoy jugando a BingOnline, y es un vasilón! 🤩 si entras en este link: ${registroUrl} 👈 y te registras usando mi código ${codigo} te regalarán ${cartonesNuevo} cartones para que juegues GRATIS!`;
+    const mensaje = `Epale! estoy jugando a ${APP_NOMBRE}, y es un vasilón! 🤩 si entras en este link: ${registroUrl} 👈 y te registras usando mi código ${codigo} te regalarán ${cartonesNuevo} cartones para que juegues GRATIS!`;
     const enlace = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
     window.location.href = enlace;
   }
