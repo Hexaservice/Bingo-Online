@@ -232,6 +232,9 @@
       display: flex;
       align-items: center;
       font-size: 0.7rem;
+      transform: translateZ(0);
+      will-change: transform;
+      backface-visibility: hidden;
     }
     #user-pic {
       width: 40px;
@@ -331,6 +334,9 @@
       align-items: center;
       gap: 12px;
       z-index: 17000;
+      transform: translateZ(0);
+      will-change: transform;
+      backface-visibility: hidden;
     }
     #tutorial-toggle {
       width: 62px;
@@ -375,6 +381,19 @@
     .tutorial-hand-pulse { animation: tutorial-hand-pulse 0.65s ease-in-out infinite; }
     #tutorial-label { position: fixed; left: 50%; display: none; padding: 14px 18px; background: linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(237, 241, 255, 0.98)); border: 2px solid rgba(85, 70, 192, 0.45); border-radius: 14px; font-family: 'Poppins', sans-serif; font-size: clamp(16px, 2.4vw, 22px); font-weight: 800; box-shadow: 0 12px 26px rgba(0, 0, 0, 0.3); text-align: center; line-height: 1.35; transform: translate(-50%, -100%); width: fit-content; max-width: min(480px, 90vw); min-width: 200px; z-index: 15000; pointer-events: none; box-sizing: border-box; max-height: 78vh; overflow: auto; align-items: center; justify-content: center; word-break: break-word; }
     #tutorial-label.adaptado { transition: top 0.2s ease, left 0.2s ease; }
+    @media (max-width:480px) and (orientation:portrait){
+      #tutorial-controls{
+        left: max(12px, env(safe-area-inset-left));
+        bottom: max(16px, env(safe-area-inset-bottom));
+      }
+      #session-info{
+        top: max(8px, env(safe-area-inset-top));
+        right: max(8px, env(safe-area-inset-right));
+      }
+      #tutorial-label{
+        max-height: min(70svh, 78vh);
+      }
+    }
     .tutorial-elemento-activo { position: relative; z-index: 13000 !important; filter: none !important; }
     body.tutorial-activo * { pointer-events: none !important; filter: none; }
     body.tutorial-activo #tutorial-controls *,
@@ -1126,6 +1145,9 @@
     let tutorialMascaraSuavizada=false;
 
     function obtenerAlturaViewport(){
+      if(tutorialState.activo && tutorialState.alturaBaseViewport){
+        return tutorialState.alturaBaseViewport;
+      }
       return tutorialState.viewportAltura || window.innerHeight;
     }
 
