@@ -543,6 +543,7 @@ const PWA_DISMISS_KEY = 'pwaInstallDismissUntil';
 const PWA_INSTALLED_KEY = 'pwaInstalled';
 let deferredInstallPrompt = null;
 let pwaPromptScheduled = false;
+let pwaModalOpen = false;
 
 function isIosDevice(){
   if(!hasWindow() || !window.navigator) return false;
@@ -622,6 +623,166 @@ function ensurePwaMetaAssets(){
   }
 }
 
+function ensurePwaModalStyles(){
+  if(typeof document === 'undefined') return;
+  if(document.getElementById('pwa-install-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'pwa-install-styles';
+  style.textContent = `
+    .pwa-install-overlay{
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.2);
+      z-index: 9999;
+      padding: 24px;
+    }
+    .pwa-install-card{
+      width: min(360px, 100%);
+      background: #fdf7ff;
+      border-radius: 18px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      overflow: hidden;
+      font-family: "Poppins", "Segoe UI", sans-serif;
+      color: #1f2937;
+    }
+    .pwa-install-header{
+      background: linear-gradient(135deg, #dbeafe, #ede9fe);
+      padding: 16px 20px;
+      font-size: 16px;
+      font-weight: 600;
+      color: #4c1d95;
+    }
+    .pwa-install-body{
+      padding: 16px 20px 4px;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #334155;
+    }
+    .pwa-install-body ul{
+      margin: 8px 0 0 18px;
+      padding: 0;
+    }
+    .pwa-install-actions{
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      padding: 16px 20px 20px;
+    }
+    .pwa-install-button{
+      border: none;
+      border-radius: 999px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .pwa-install-button:active{
+      transform: scale(0.98);
+    }
+    .pwa-install-cancel{
+      background: #e2e8f0;
+      color: #475569;
+    }
+    .pwa-install-confirm{
+      background: linear-gradient(135deg, #4ade80, #22c55e);
+      color: #f8fafc;
+      box-shadow: 0 8px 18px rgba(34, 197, 94, 0.35);
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function showInstallModal({
+  title,
+  message,
+  list,
+  confirmText = 'Aceptar',
+  cancelText = 'Cancelar',
+  showCancel = true,
+  onConfirm,
+  onCancel
+}){
+  if(typeof document === 'undefined' || pwaModalOpen) return Promise.resolve(false);
+  pwaModalOpen = true;
+  ensurePwaModalStyles();
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'pwa-install-overlay';
+
+    const card = document.createElement('div');
+    card.className = 'pwa-install-card';
+
+    const header = document.createElement('div');
+    header.className = 'pwa-install-header';
+    header.textContent = title;
+
+    const body = document.createElement('div');
+    body.className = 'pwa-install-body';
+    const messageEl = document.createElement('p');
+    messageEl.textContent = message;
+    body.appendChild(messageEl);
+
+    if(Array.isArray(list) && list.length){
+      const ul = document.createElement('ul');
+      list.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = item;
+        ul.appendChild(li);
+      });
+      body.appendChild(ul);
+    }
+
+    const actions = document.createElement('div');
+    actions.className = 'pwa-install-actions';
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.type = 'button';
+    confirmBtn.className = 'pwa-install-button pwa-install-confirm';
+    confirmBtn.textContent = confirmText;
+
+    const closeModal = () => {
+      overlay.remove();
+      pwaModalOpen = false;
+    };
+
+    confirmBtn.addEventListener('click', () => {
+      if(typeof onConfirm === 'function'){
+        onConfirm();
+      }
+      closeModal();
+      resolve(true);
+    });
+
+    actions.appendChild(confirmBtn);
+
+    if(showCancel){
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'pwa-install-button pwa-install-cancel';
+      cancelBtn.textContent = cancelText;
+      cancelBtn.addEventListener('click', () => {
+        if(typeof onCancel === 'function'){
+          onCancel();
+        }
+        closeModal();
+        resolve(false);
+      });
+      actions.prepend(cancelBtn);
+    }
+
+    card.appendChild(header);
+    card.appendChild(body);
+    card.appendChild(actions);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+  });
+}
+
 function shouldOfferInstall(){
   if(!hasWindow()) return false;
   if(!isMobileDevice()) return false;
@@ -633,27 +794,48 @@ function shouldOfferInstall(){
 }
 
 async function showIosInstallInstructions(){
-  const accepted = window.confirm('¿Quieres instalar Bingo Online en tu pantalla principal?');
+  const accepted = await showInstallModal({
+    title: 'Bingo Online',
+    message: '¿Quieres instalar Bingo Online en tu pantalla principal?',
+    confirmText: 'Continuar',
+    cancelText: 'Ahora no'
+  });
   if(!accepted){
     dismissInstallPrompt();
     return;
   }
-  window.alert(
-    'Para instalar en iOS:\n' +
-    '1) Abre el menú de compartir en Safari (ícono de cuadro con flecha).\n' +
-    '2) Selecciona "Agregar a pantalla de inicio".\n' +
-    '3) Confirma el nombre y toca "Agregar".'
-  );
+  await showInstallModal({
+    title: 'Instalación en iOS',
+    message: 'Sigue estos pasos en Safari para agregar el acceso directo:',
+    list: [
+      'Abre el menú de compartir (ícono de cuadro con flecha).',
+      'Selecciona "Agregar a pantalla de inicio".',
+      'Confirma el nombre y toca "Agregar".'
+    ],
+    confirmText: 'Entendido',
+    showCancel: false
+  });
 }
 
 async function showAndroidInstallPrompt(){
   if(!deferredInstallPrompt) return;
-  const accepted = window.confirm('¿Deseas instalar Bingo Online como acceso directo?');
+  const accepted = await showInstallModal({
+    title: 'Bingo Online',
+    message: '¿Deseas instalar Bingo Online como acceso directo?',
+    confirmText: 'Instalar',
+    cancelText: 'Cancelar',
+    onConfirm: () => {
+      try{
+        deferredInstallPrompt.prompt();
+      }catch(err){
+        console.warn('No se pudo lanzar el instalador de la app', err);
+      }
+    }
+  });
   if(!accepted){
     dismissInstallPrompt();
     return;
   }
-  deferredInstallPrompt.prompt();
   try{
     const choice = await deferredInstallPrompt.userChoice;
     if(choice && choice.outcome !== 'accepted'){
