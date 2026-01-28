@@ -539,4 +539,193 @@ function startUserStatusWatcher(){
   },60000);
 }
 
+const PWA_DISMISS_KEY = 'pwaInstallDismissUntil';
+const PWA_INSTALLED_KEY = 'pwaInstalled';
+let deferredInstallPrompt = null;
+let pwaPromptScheduled = false;
+
+function isIosDevice(){
+  if(!hasWindow() || !window.navigator) return false;
+  return /iphone|ipad|ipod/i.test(window.navigator.userAgent || '');
+}
+
+function isMobileDevice(){
+  if(!hasWindow() || !window.navigator) return false;
+  return /android|iphone|ipad|ipod/i.test(window.navigator.userAgent || '');
+}
+
+function isStandaloneMode(){
+  if(!hasWindow()) return false;
+  const isStandaloneMedia = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+  const isIosStandalone = window.navigator && window.navigator.standalone === true;
+  return Boolean(isStandaloneMedia || isIosStandalone);
+}
+
+function markPwaInstalled(){
+  if(!hasWindow() || !window.localStorage) return;
+  window.localStorage.setItem(PWA_INSTALLED_KEY, 'true');
+  window.pwaInstallStatus = { installed: true, checkedAt: new Date().toISOString() };
+}
+
+function readDismissUntil(){
+  if(!hasWindow() || !window.localStorage) return null;
+  const stored = window.localStorage.getItem(PWA_DISMISS_KEY);
+  if(!stored) return null;
+  const parsed = Number(stored);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function dismissInstallPrompt(days = 7){
+  if(!hasWindow() || !window.localStorage) return;
+  const until = Date.now() + days * 24 * 60 * 60 * 1000;
+  window.localStorage.setItem(PWA_DISMISS_KEY, String(until));
+}
+
+async function hasRelatedInstalledApps(){
+  if(!hasWindow() || !window.navigator || typeof window.navigator.getInstalledRelatedApps !== 'function'){
+    return false;
+  }
+  try{
+    const apps = await window.navigator.getInstalledRelatedApps();
+    return Array.isArray(apps) && apps.length > 0;
+  }catch(err){
+    console.warn('No se pudo consultar getInstalledRelatedApps', err);
+    return false;
+  }
+}
+
+function ensurePwaMetaAssets(){
+  if(typeof document === 'undefined') return;
+  if(!document.querySelector('link[rel="manifest"]')){
+    const manifestLink = document.createElement('link');
+    manifestLink.rel = 'manifest';
+    manifestLink.href = '/manifest.webmanifest';
+    document.head.appendChild(manifestLink);
+  }
+  if(!document.querySelector('meta[name="theme-color"]')){
+    const themeColor = document.createElement('meta');
+    themeColor.name = 'theme-color';
+    themeColor.content = '#0b1b4d';
+    document.head.appendChild(themeColor);
+  }
+  if(!document.querySelector('meta[name="apple-mobile-web-app-capable"]')){
+    const appleCapable = document.createElement('meta');
+    appleCapable.name = 'apple-mobile-web-app-capable';
+    appleCapable.content = 'yes';
+    document.head.appendChild(appleCapable);
+  }
+  if(!document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')){
+    const appleStatus = document.createElement('meta');
+    appleStatus.name = 'apple-mobile-web-app-status-bar-style';
+    appleStatus.content = 'black-translucent';
+    document.head.appendChild(appleStatus);
+  }
+}
+
+function shouldOfferInstall(){
+  if(!hasWindow()) return false;
+  if(!isMobileDevice()) return false;
+  if(isStandaloneMode()) return false;
+  if(window.localStorage && window.localStorage.getItem(PWA_INSTALLED_KEY) === 'true') return false;
+  const dismissUntil = readDismissUntil();
+  if(dismissUntil && Date.now() < dismissUntil) return false;
+  return true;
+}
+
+async function showIosInstallInstructions(){
+  const accepted = window.confirm('¿Quieres instalar Bingo Online en tu pantalla principal?');
+  if(!accepted){
+    dismissInstallPrompt();
+    return;
+  }
+  window.alert(
+    'Para instalar en iOS:\n' +
+    '1) Abre el menú de compartir en Safari (ícono de cuadro con flecha).\n' +
+    '2) Selecciona "Agregar a pantalla de inicio".\n' +
+    '3) Confirma el nombre y toca "Agregar".'
+  );
+}
+
+async function showAndroidInstallPrompt(){
+  if(!deferredInstallPrompt) return;
+  const accepted = window.confirm('¿Deseas instalar Bingo Online como acceso directo?');
+  if(!accepted){
+    dismissInstallPrompt();
+    return;
+  }
+  deferredInstallPrompt.prompt();
+  try{
+    const choice = await deferredInstallPrompt.userChoice;
+    if(choice && choice.outcome !== 'accepted'){
+      dismissInstallPrompt();
+    }else{
+      markPwaInstalled();
+    }
+  }catch(err){
+    console.warn('No se pudo completar la solicitud de instalación', err);
+  }
+  deferredInstallPrompt = null;
+}
+
+async function tryPromptPwaInstall(){
+  if(!shouldOfferInstall()) return;
+  const installedRelated = await hasRelatedInstalledApps();
+  if(installedRelated){
+    markPwaInstalled();
+    return;
+  }
+  if(isIosDevice()){
+    await showIosInstallInstructions();
+    return;
+  }
+  if(deferredInstallPrompt){
+    await showAndroidInstallPrompt();
+  }
+}
+
+function schedulePwaPrompt(){
+  if(pwaPromptScheduled) return;
+  pwaPromptScheduled = true;
+  setTimeout(() => {
+    tryPromptPwaInstall().finally(() => {
+      pwaPromptScheduled = false;
+    });
+  }, 1500);
+}
+
+function initPwaInstallFlow(){
+  if(!hasWindow()) return;
+  if(window.__pwaInstallFlowInitialized) return;
+  window.__pwaInstallFlowInitialized = true;
+
+  ensurePwaMetaAssets();
+  window.pwaInstallStatus = { installed: isStandaloneMode(), checkedAt: new Date().toISOString() };
+
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('/sw.js').catch(err => {
+      console.warn('No se pudo registrar el service worker', err);
+    });
+  }
+
+  window.addEventListener('beforeinstallprompt', event => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    schedulePwaPrompt();
+  });
+
+  window.addEventListener('appinstalled', () => {
+    markPwaInstalled();
+  });
+
+  schedulePwaPrompt();
+}
+
+if(hasWindow()){
+  if(document.readyState === 'complete' || document.readyState === 'interactive'){
+    initPwaInstallFlow();
+  }else{
+    window.addEventListener('DOMContentLoaded', initPwaInstallFlow, { once: true });
+  }
+}
+
 if (typeof module !== "undefined") { module.exports = { redirectByRole, ensureAuth, setupSuperadminExit }; }
