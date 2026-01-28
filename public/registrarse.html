@@ -523,26 +523,6 @@
       }
     }
 
-    async function completarRegistroPendiente(user){
-      const datos = cargarRegistroPendiente();
-      if(!datos) return false;
-      try{
-        const doc = await db.collection('users').doc(user.email).get();
-        if(doc.exists){
-          limpiarRegistroPendiente();
-          mostrarToast('Esta cuenta ya esta registrada, se procede con el inicio de sesión');
-          await new Promise(resolve => setTimeout(resolve, 1400));
-          window.location.href='player.html';
-          return true;
-        }
-      }catch(err){
-        console.error('No se pudo validar el estado del registro pendiente', err);
-      }
-      aplicarDatosFormulario(datos);
-      await completarRegistroConDatos(user, datos);
-      return true;
-    }
-
     (async()=>{
       try{
         await initFirebase();
@@ -564,9 +544,10 @@
         }
         emailLabel.textContent = user.email || '';
         actualizarEstadoRegistro();
-        const pendienteProcesado = await completarRegistroPendiente(user);
-        if(pendienteProcesado){
-          return;
+        const datosPendientes = cargarRegistroPendiente();
+        if(datosPendientes){
+          aplicarDatosFormulario(datosPendientes);
+          actualizarEstadoRegistro();
         }
         try{
           const doc = await db.collection('users').doc(user.email).get();
