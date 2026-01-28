@@ -635,32 +635,32 @@ function ensurePwaModalStyles(){
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(15, 23, 42, 0.2);
+      background: rgba(148, 163, 184, 0.2);
       z-index: 9999;
       padding: 24px;
     }
     .pwa-install-card{
       width: min(360px, 100%);
-      background: #fdf7ff;
+      background: #ffffff;
       border-radius: 18px;
-      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
-      border: 1px solid rgba(148, 163, 184, 0.35);
+      box-shadow: 0 16px 36px rgba(100, 116, 139, 0.18);
+      border: 1px solid rgba(226, 232, 240, 0.9);
       overflow: hidden;
       font-family: "Poppins", "Segoe UI", sans-serif;
       color: #1f2937;
     }
     .pwa-install-header{
-      background: linear-gradient(135deg, #dbeafe, #ede9fe);
+      background: linear-gradient(135deg, #fce7f3, #e0f2fe);
       padding: 16px 20px;
       font-size: 16px;
       font-weight: 600;
-      color: #4c1d95;
+      color: #6b21a8;
     }
     .pwa-install-body{
       padding: 16px 20px 4px;
       font-size: 14px;
       line-height: 1.5;
-      color: #334155;
+      color: #475569;
     }
     .pwa-install-body ul{
       margin: 8px 0 0 18px;
@@ -685,13 +685,13 @@ function ensurePwaModalStyles(){
       transform: scale(0.98);
     }
     .pwa-install-cancel{
-      background: #e2e8f0;
-      color: #475569;
+      background: #f1f5f9;
+      color: #64748b;
     }
     .pwa-install-confirm{
-      background: linear-gradient(135deg, #4ade80, #22c55e);
-      color: #f8fafc;
-      box-shadow: 0 8px 18px rgba(34, 197, 94, 0.35);
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      color: #ffffff;
+      box-shadow: 0 10px 20px rgba(59, 130, 246, 0.28);
     }
   `;
   document.head.appendChild(style);
@@ -817,17 +817,37 @@ async function showIosInstallInstructions(){
   });
 }
 
+async function showAndroidInstallInstructions(){
+  await showInstallModal({
+    title: 'Instalación en Android',
+    message: 'Si el navegador no mostró la ventana de instalación, puedes agregar el acceso directo manualmente:',
+    list: [
+      'Abre el menú del navegador (tres puntos).',
+      'Selecciona "Agregar a pantalla principal".',
+      'Confirma el nombre y toca "Agregar".'
+    ],
+    confirmText: 'Entendido',
+    showCancel: false
+  });
+}
+
 async function showAndroidInstallPrompt(){
   if(!deferredInstallPrompt) return;
+  let choicePromise = null;
   const accepted = await showInstallModal({
     title: 'Bingo Online',
     message: '¿Deseas instalar Bingo Online como acceso directo?',
     confirmText: 'Instalar',
     cancelText: 'Cancelar',
     onConfirm: () => {
+      const promptEvent = deferredInstallPrompt;
+      if(!promptEvent) return;
+      deferredInstallPrompt = null;
       try{
-        deferredInstallPrompt.prompt();
+        promptEvent.prompt();
+        choicePromise = promptEvent.userChoice;
       }catch(err){
+        deferredInstallPrompt = promptEvent;
         console.warn('No se pudo lanzar el instalador de la app', err);
       }
     }
@@ -837,7 +857,11 @@ async function showAndroidInstallPrompt(){
     return;
   }
   try{
-    const choice = await deferredInstallPrompt.userChoice;
+    if(!choicePromise){
+      await showAndroidInstallInstructions();
+      return;
+    }
+    const choice = await choicePromise;
     if(choice && choice.outcome !== 'accepted'){
       dismissInstallPrompt();
     }else{
@@ -845,8 +869,8 @@ async function showAndroidInstallPrompt(){
     }
   }catch(err){
     console.warn('No se pudo completar la solicitud de instalación', err);
+    await showAndroidInstallInstructions();
   }
-  deferredInstallPrompt = null;
 }
 
 async function tryPromptPwaInstall(){
