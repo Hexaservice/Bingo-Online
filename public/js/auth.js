@@ -1,4 +1,4 @@
-let app, auth, db, provider, appName = 'BingOnline';
+let app, auth, db, provider, appleProvider, appName = 'BingOnline';
 const DISABLED_MSG = "Tu cuenta ha sido deshabilitada, Motivado posiblemente a que has incumplido una o más clausulas en nuestros Terminos y condiciones. Contacta con un administrador del sistema si necesitas información.";
 let firebaseInitPromise = null;
 let firebaseConfigLoadPromise = null;
@@ -73,6 +73,9 @@ async function initFirebase(){
     auth = firebase.auth();
     provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
+    appleProvider = new firebase.auth.OAuthProvider('apple.com');
+    appleProvider.addScope('email');
+    appleProvider.addScope('name');
     await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     return app;
   })();
@@ -293,6 +296,37 @@ async function loginGoogle(){
       } else {
         console.error('Error login Google', e);
         alert('Error al iniciar sesión con Google');
+      }
+    }
+  }
+}
+
+async function loginApple(){
+  try {
+    await initFirebase();
+  } catch(initErr){
+    console.error('No se pudo inicializar Firebase', initErr);
+    alert('Error de inicialización de Firebase');
+    return;
+  }
+  try{
+    await auth.signInWithPopup(appleProvider);
+  }catch(err){
+    if (err.code === 'auth/user-disabled') {
+      alert(DISABLED_MSG);
+      return;
+    }
+    console.warn('Popup login failed, trying redirect', err);
+    try{
+      await auth.signInWithRedirect(appleProvider);
+    }catch(e){
+      if (e.code === 'auth/user-disabled') {
+        alert(DISABLED_MSG);
+      } else if (e.code === 'auth/web-storage-unsupported') {
+        alert('El navegador ha bloqueado las cookies necesarias para continuar. Intenta habilitarlas o abre la aplicación desde un dominio configurado en Firebase.');
+      } else {
+        console.error('Error login Apple', e);
+        alert('Error al iniciar sesión con Apple');
       }
     }
   }
