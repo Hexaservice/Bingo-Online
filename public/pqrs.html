@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="img/android-chrome-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="img/android-chrome-512x512.png">
+  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
+  <link rel="icon" type="image/x-icon" sizes="16x16" href="img/favicon-16x16.ico">
+  <link rel="icon" type="image/x-icon" sizes="32x32" href="img/favicon-32x32.ico">
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PQRS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-image: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)),
+                        url('img/fondo-dinero-porcentage.jpg');
+      background-repeat: repeat;
+      background-size: auto;
+      background-position: 0 0, 0 0;
+      animation: fondo-movimiento 120s linear infinite;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      text-align: center;
+      margin: 0;
+      padding: clamp(20px, 6vh, 60px) 16px 40px;
+      color: #0f172a;
+    }
+    @keyframes fondo-movimiento {
+      0% { background-position: 0 0, 0 0; }
+      100% { background-position: 0 0, -600px 600px; }
+    }
+    .back-btn {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      width: 130px;
+      height: 44px;
+      font-family: 'Bangers', cursive;
+      font-size: 1.2rem;
+      background: orange;
+      color: white;
+      border: 4px solid #FFD700;
+      border-radius: 12px;
+      text-shadow: 2px 2px 4px #000;
+      text-transform: uppercase;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      z-index: 1000;
+    }
+    .back-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+    }
+    .pqrs-card {
+      width: min(860px, 100%);
+      background: rgba(255, 255, 255, 0.94);
+      border-radius: 24px;
+      padding: clamp(20px, 4vw, 32px);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.2);
+      border: 3px solid rgba(15, 23, 42, 0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .pqrs-card h2 {
+      font-family: 'Bangers', cursive;
+      font-size: clamp(2rem, 4vw, 2.8rem);
+      color: #ffffff;
+      text-shadow: 0 0 12px rgba(179, 71, 0, 0.8);
+      margin: 0;
+      letter-spacing: 1px;
+      background: linear-gradient(135deg, #1d4ed8, #38bdf8);
+      padding: 12px 20px;
+      border-radius: 16px;
+    }
+    .pqrs-subtitle {
+      margin: 0;
+      color: #1f2937;
+      font-size: 1rem;
+    }
+    .pqrs-type-buttons {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+    }
+    .pqrs-type {
+      border-radius: 14px;
+      padding: 12px 10px;
+      font-family: 'Bangers', cursive;
+      font-size: 1.05rem;
+      text-transform: uppercase;
+      cursor: pointer;
+      border: 3px solid transparent;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .pqrs-type.is-active {
+      transform: translateY(-1px) scale(1.02);
+      box-shadow: 0 10px 18px rgba(15, 23, 42, 0.2);
+    }
+    .pqrs-type[data-type="PREGUNTA"] {
+      background: #d9fbe0;
+      border-color: #1b5e20;
+      color: #1b5e20;
+    }
+    .pqrs-type[data-type="RESPUESTA"] {
+      background: #ffe7c7;
+      border-color: #c2410c;
+      color: #9a3412;
+    }
+    .pqrs-type[data-type="QUEJA"] {
+      background: #ffd6d6;
+      border-color: #b91c1c;
+      color: #7f1d1d;
+    }
+    .pqrs-type[data-type="SUGERENCIA"] {
+      background: #efe2ff;
+      border-color: #6d28d9;
+      color: #4c1d95;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      text-align: left;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+    }
+    label {
+      font-weight: 600;
+      color: #0f172a;
+      display: block;
+      margin-bottom: 6px;
+    }
+    input, select, textarea {
+      width: 100%;
+      border-radius: 12px;
+      border: 2px solid #cbd5f5;
+      padding: 10px 12px;
+      font-size: 0.95rem;
+      font-family: 'Poppins', sans-serif;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      background: #ffffff;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    }
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+    .section-title {
+      font-family: 'Bangers', cursive;
+      font-size: 1.3rem;
+      color: #1d4ed8;
+      margin: 0 0 6px;
+    }
+    .pqrs-section {
+      display: none;
+      padding: 14px;
+      border-radius: 16px;
+      border: 2px dashed rgba(15, 23, 42, 0.2);
+      background: rgba(248, 250, 252, 0.9);
+    }
+    .pqrs-section.is-visible {
+      display: block;
+    }
+    .pqrs-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-start;
+    }
+    .pqrs-status {
+      font-size: 0.95rem;
+      margin: 0;
+      color: #0f172a;
+    }
+    .pqrs-status.is-error {
+      color: #b91c1c;
+    }
+    .pqrs-status.is-success {
+      color: #047857;
+    }
+    .submit-btn {
+      align-self: flex-end;
+      padding: 12px 28px;
+      font-family: 'Bangers', cursive;
+      font-size: 1.2rem;
+      border-radius: 14px;
+      border: 4px solid #FFD700;
+      background: linear-gradient(135deg, #16a34a, #4ade80);
+      color: #ffffff;
+      text-shadow: 1px 1px 2px #000;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .submit-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .submit-btn:hover:not(:disabled) {
+      transform: translateY(-1px) scale(1.02);
+      box-shadow: 0 12px 22px rgba(22, 163, 74, 0.3);
+    }
+    @media (max-width: 640px) {
+      .pqrs-card {
+        padding: 18px;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="css/desktopFrame.css">
+</head>
+<body>
+  <button id="volver-btn" class="menu-btn back-btn" data-compact-back="true">Salir</button>
+
+  <main class="pqrs-card">
+    <h2>Centro de PQRS</h2>
+    <p class="pqrs-subtitle">Selecciona el tipo de solicitud para mostrar los campos adecuados.</p>
+
+    <div class="pqrs-type-buttons" role="radiogroup" aria-label="Tipo de solicitud">
+      <button type="button" class="pqrs-type" data-type="PREGUNTA" aria-pressed="false">Pregunta</button>
+      <button type="button" class="pqrs-type" data-type="RESPUESTA" aria-pressed="false">Respuesta</button>
+      <button type="button" class="pqrs-type" data-type="QUEJA" aria-pressed="false">Queja</button>
+      <button type="button" class="pqrs-type" data-type="SUGERENCIA" aria-pressed="false">Sugerencia</button>
+    </div>
+
+    <form id="pqrs-form">
+      <div>
+        <p class="section-title">Información general</p>
+        <div class="form-grid">
+          <div>
+            <label for="pqrs-asunto">Asunto</label>
+            <input id="pqrs-asunto" type="text" placeholder="Ej. Problema con mi billetera" />
+          </div>
+          <div>
+            <label for="pqrs-urgencia">Nivel de urgencia</label>
+            <select id="pqrs-urgencia">
+              <option value="">Selecciona la urgencia</option>
+              <option value="Baja">Baja</option>
+              <option value="Media">Media</option>
+              <option value="Alta">Alta</option>
+            </select>
+          </div>
+          <div>
+            <label for="pqrs-contacto">Contacto preferido</label>
+            <select id="pqrs-contacto">
+              <option value="">Selecciona una opción</option>
+              <option value="WhatsApp">WhatsApp</option>
+              <option value="Correo">Correo</option>
+              <option value="Llamada">Llamada</option>
+            </select>
+          </div>
+          <div>
+            <label for="pqrs-telefono">Teléfono de contacto</label>
+            <input id="pqrs-telefono" type="tel" placeholder="Opcional si deseas contacto telefónico" />
+          </div>
+        </div>
+        <div style="margin-top:14px;">
+          <label for="pqrs-descripcion">Descripción detallada</label>
+          <textarea id="pqrs-descripcion" placeholder="Cuéntanos lo sucedido o lo que necesitas."></textarea>
+        </div>
+      </div>
+
+      <section class="pqrs-section" data-type="PREGUNTA">
+        <p class="section-title">Detalles de la pregunta</p>
+        <div class="form-grid">
+          <div>
+            <label for="pregunta-tema">Tema principal</label>
+            <select id="pregunta-tema">
+              <option value="">Selecciona un tema</option>
+              <option value="Cuenta">Cuenta y perfil</option>
+              <option value="Pagos">Pagos y billetera</option>
+              <option value="Sorteos">Sorteos</option>
+              <option value="Cartones">Cartones</option>
+              <option value="Referidos">Referidos</option>
+              <option value="Otros">Otros</option>
+            </select>
+          </div>
+          <div>
+            <label for="pregunta-canal">¿Dónde se presentó la duda?</label>
+            <select id="pregunta-canal">
+              <option value="">Selecciona una opción</option>
+              <option value="Jugador">Menú del jugador</option>
+              <option value="Juego">Durante un sorteo</option>
+              <option value="Billetera">Billetera</option>
+              <option value="Perfil">Perfil</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section class="pqrs-section" data-type="RESPUESTA">
+        <p class="section-title">Detalles de la respuesta</p>
+        <div class="form-grid">
+          <div>
+            <label for="respuesta-ticket">Número de solicitud previa</label>
+            <input id="respuesta-ticket" type="text" placeholder="Ej. PQRS-000123" />
+          </div>
+          <div>
+            <label for="respuesta-estado">Estado actual</label>
+            <select id="respuesta-estado">
+              <option value="">Selecciona un estado</option>
+              <option value="SinRespuesta">Aún no recibo respuesta</option>
+              <option value="Seguimiento">Necesito seguimiento</option>
+              <option value="Actualizacion">Quiero actualizar información</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:14px;">
+          <label for="respuesta-detalle">Información adicional</label>
+          <textarea id="respuesta-detalle" placeholder="Describe lo que necesitas agregar o aclarar."></textarea>
+        </div>
+      </section>
+
+      <section class="pqrs-section" data-type="QUEJA">
+        <p class="section-title">Detalles de la queja</p>
+        <div class="form-grid">
+          <div>
+            <label for="queja-motivo">Motivo principal</label>
+            <select id="queja-motivo">
+              <option value="">Selecciona un motivo</option>
+              <option value="Pago">Pago o retiro</option>
+              <option value="Sorteo">Sorteo</option>
+              <option value="Cartones">Cartones</option>
+              <option value="Atencion">Atención recibida</option>
+              <option value="Tecnico">Error técnico</option>
+            </select>
+          </div>
+          <div>
+            <label for="queja-fecha">Fecha del evento</label>
+            <input id="queja-fecha" type="date" />
+          </div>
+          <div>
+            <label for="queja-referencia">Sorteo o referencia</label>
+            <input id="queja-referencia" type="text" placeholder="ID del sorteo o referencia" />
+          </div>
+          <div>
+            <label for="queja-impacto">Impacto principal</label>
+            <select id="queja-impacto">
+              <option value="">Selecciona un impacto</option>
+              <option value="NoJugar">No pude jugar</option>
+              <option value="Dinero">Afectación económica</option>
+              <option value="Demora">Demora o bloqueo</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section class="pqrs-section" data-type="SUGERENCIA">
+        <p class="section-title">Detalles de la sugerencia</p>
+        <div class="form-grid">
+          <div>
+            <label for="sugerencia-area">Área de mejora</label>
+            <select id="sugerencia-area">
+              <option value="">Selecciona un área</option>
+              <option value="Experiencia">Experiencia de juego</option>
+              <option value="Pagos">Pagos y billetera</option>
+              <option value="Notificaciones">Notificaciones</option>
+              <option value="Soporte">Soporte y atención</option>
+              <option value="Otros">Otros</option>
+            </select>
+          </div>
+          <div>
+            <label for="sugerencia-impacto">Impacto esperado</label>
+            <select id="sugerencia-impacto">
+              <option value="">Selecciona un impacto</option>
+              <option value="Rapidez">Mayor rapidez</option>
+              <option value="Claridad">Más claridad</option>
+              <option value="Confianza">Más confianza</option>
+              <option value="Diversion">Más diversión</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <div class="pqrs-actions">
+        <p id="pqrs-status" class="pqrs-status" aria-live="polite"></p>
+        <button type="submit" class="submit-btn" id="pqrs-submit">Enviar</button>
+      </div>
+    </form>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/backNavigation.js"></script>
+  <script>
+    (function(){
+      const volverBtn = document.getElementById('volver-btn');
+      const tipoButtons = Array.from(document.querySelectorAll('.pqrs-type'));
+      const sections = Array.from(document.querySelectorAll('.pqrs-section'));
+      const statusEl = document.getElementById('pqrs-status');
+      const form = document.getElementById('pqrs-form');
+      const submitBtn = document.getElementById('pqrs-submit');
+      let tipoSeleccionado = '';
+
+      const requiredByType = {
+        PREGUNTA: ['pregunta-tema'],
+        RESPUESTA: ['respuesta-ticket', 'respuesta-estado'],
+        QUEJA: ['queja-motivo', 'queja-fecha'],
+        SUGERENCIA: ['sugerencia-area']
+      };
+
+      const showStatus = (message, type = '') => {
+        statusEl.textContent = message;
+        statusEl.classList.toggle('is-error', type === 'error');
+        statusEl.classList.toggle('is-success', type === 'success');
+      };
+
+      const setTipo = (tipo) => {
+        tipoSeleccionado = tipo;
+        tipoButtons.forEach(btn => {
+          const active = btn.dataset.type === tipo;
+          btn.classList.toggle('is-active', active);
+          btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        sections.forEach(section => {
+          const visible = section.dataset.type === tipo;
+          section.classList.toggle('is-visible', visible);
+        });
+      };
+
+      tipoButtons.forEach(btn => {
+        btn.addEventListener('click', () => setTipo(btn.dataset.type));
+      });
+
+      volverBtn.addEventListener('click', () => {
+        window.location.href = 'player.html';
+      });
+
+      const getValue = (id) => {
+        const el = document.getElementById(id);
+        return el ? el.value.trim() : '';
+      };
+
+      const validateForm = () => {
+        if (!tipoSeleccionado) {
+          showStatus('Selecciona un tipo de solicitud.', 'error');
+          return false;
+        }
+        if (!getValue('pqrs-asunto')) {
+          showStatus('Completa el asunto de la solicitud.', 'error');
+          return false;
+        }
+        if (!getValue('pqrs-urgencia')) {
+          showStatus('Selecciona el nivel de urgencia.', 'error');
+          return false;
+        }
+        if (!getValue('pqrs-contacto')) {
+          showStatus('Selecciona el contacto preferido.', 'error');
+          return false;
+        }
+        if (!getValue('pqrs-descripcion')) {
+          showStatus('Describe la solicitud con más detalle.', 'error');
+          return false;
+        }
+        const requiredFields = requiredByType[tipoSeleccionado] || [];
+        for (const fieldId of requiredFields) {
+          if (!getValue(fieldId)) {
+            showStatus('Completa los campos obligatorios del tipo seleccionado.', 'error');
+            const fieldEl = document.getElementById(fieldId);
+            if (fieldEl) fieldEl.focus();
+            return false;
+          }
+        }
+        showStatus('');
+        return true;
+      };
+
+      const getTipoDetalle = () => {
+        switch (tipoSeleccionado) {
+          case 'PREGUNTA':
+            return {
+              tema: getValue('pregunta-tema'),
+              canal: getValue('pregunta-canal')
+            };
+          case 'RESPUESTA':
+            return {
+              solicitudRelacionada: getValue('respuesta-ticket'),
+              estadoActual: getValue('respuesta-estado'),
+              detalleExtra: getValue('respuesta-detalle')
+            };
+          case 'QUEJA':
+            return {
+              motivo: getValue('queja-motivo'),
+              fechaEvento: getValue('queja-fecha'),
+              referencia: getValue('queja-referencia'),
+              impacto: getValue('queja-impacto')
+            };
+          case 'SUGERENCIA':
+            return {
+              area: getValue('sugerencia-area'),
+              impactoEsperado: getValue('sugerencia-impacto')
+            };
+          default:
+            return {};
+        }
+      };
+
+      const cargarDatosUsuario = async (usuario) => {
+        if (!usuario || !usuario.email) return {};
+        try {
+          const doc = await firebase.firestore().collection('users').doc(usuario.email).get();
+          if (!doc.exists) return {};
+          return doc.data() || {};
+        } catch (error) {
+          console.error('No se pudieron cargar los datos del usuario', error);
+          return {};
+        }
+      };
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!validateForm()) return;
+        submitBtn.disabled = true;
+        showStatus('Enviando tu solicitud...', '');
+
+        try {
+          await initFirebase();
+          ensureAuth();
+          const auth = firebase.auth();
+          const user = auth.currentUser;
+          const perfil = await cargarDatosUsuario(user);
+          const payload = {
+            tipo: tipoSeleccionado,
+            asunto: getValue('pqrs-asunto'),
+            urgencia: getValue('pqrs-urgencia'),
+            contactoPreferido: getValue('pqrs-contacto'),
+            telefonoContacto: getValue('pqrs-telefono'),
+            descripcion: getValue('pqrs-descripcion'),
+            detalle: getTipoDetalle(),
+            estado: 'Pendiente',
+            creadoEn: firebase.firestore.FieldValue.serverTimestamp(),
+            usuario: {
+              uid: user ? user.uid : null,
+              email: user ? user.email : null,
+              nombre: user ? user.displayName : null,
+              alias: perfil.alias || null,
+              celular: perfil.celular || null
+            }
+          };
+
+          const docRef = await firebase.firestore().collection('pqrs').add(payload);
+          await docRef.update({ id: docRef.id });
+          showStatus('Tu solicitud fue enviada correctamente. Pronto recibirás respuesta.', 'success');
+          form.reset();
+          setTipo('PREGUNTA');
+        } catch (error) {
+          console.error('Error al guardar la solicitud PQRS', error);
+          showStatus('No se pudo enviar la solicitud. Intenta nuevamente.', 'error');
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+
+      initFirebase()
+        .then(() => ensureAuth())
+        .catch(error => console.error('No se pudo inicializar Firebase en PQRS', error));
+      setTipo('PREGUNTA');
+    })();
+  </script>
+</body>
+</html>
