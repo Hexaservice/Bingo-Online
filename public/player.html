@@ -402,6 +402,12 @@
           display: block;
           margin-top: -4px;
       }
+      .menu-label--referidos-sub.referidos-datos {
+          font-size: clamp(0.85rem, 2.1vw, 1.05rem);
+          text-shadow: 0 0 8px rgba(0, 120, 255, 0.9), 0 0 16px rgba(0, 120, 255, 0.95);
+          cursor: pointer;
+          animation: pulso-referidos 1.4s ease-in-out infinite;
+      }
 
       #carton-screen {
           position: relative;
@@ -807,6 +813,107 @@
           outline: none;
           box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
       }
+      .modal-referidos {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.6);
+          display: none;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          z-index: 2100;
+      }
+      .modal-referidos.activa {
+          display: flex;
+      }
+      .modal-referidos .modal-contenido {
+          background: #ffffff;
+          border-radius: 20px;
+          padding: clamp(20px, 4vw, 36px);
+          width: min(720px, 95vw);
+          max-height: min(82vh, 680px);
+          box-shadow: 0 16px 32px rgba(0, 0, 0, 0.35);
+          text-align: center;
+          border: 4px solid #ffd700;
+          overflow: auto;
+          box-sizing: border-box;
+      }
+      .modal-referidos .modal-contenido h2 {
+          font-family: 'Bangers', cursive;
+          font-size: clamp(1.6rem, 3.4vw, 2.4rem);
+          color: #0a8a2a;
+          margin-bottom: 6px;
+          text-shadow: 0 0 6px rgba(0, 128, 0, 0.7);
+      }
+      .modal-referidos-total {
+          font-family: 'Poppins', sans-serif;
+          font-size: clamp(1rem, 2.3vw, 1.3rem);
+          color: #7b2cbf;
+          margin-bottom: 18px;
+      }
+      .modal-referidos-lista {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          text-align: left;
+      }
+      .referido-item {
+          border-bottom: 2px solid rgba(0, 128, 0, 0.15);
+          padding-bottom: 12px;
+      }
+      .referido-campana {
+          font-family: 'Bangers', cursive;
+          color: #003d7a;
+          font-size: clamp(1.05rem, 2.3vw, 1.35rem);
+          margin-bottom: 6px;
+      }
+      .referido-detalle {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px 18px;
+          font-family: 'Poppins', sans-serif;
+          font-size: clamp(0.78rem, 1.8vw, 0.95rem);
+      }
+      .referido-nombre {
+          color: #000;
+          font-weight: 600;
+      }
+      .referido-fecha {
+          color: #0a8a2a;
+          font-weight: 600;
+      }
+      .referido-cartones {
+          color: #ff8c00;
+          font-weight: 600;
+      }
+      .modal-referidos-vacio {
+          font-family: 'Poppins', sans-serif;
+          color: #444;
+          font-size: clamp(0.9rem, 2vw, 1.1rem);
+          text-align: center;
+      }
+      #modal-referidos-cerrar {
+          margin-top: 20px;
+          font-family: 'Bangers', cursive;
+          font-size: clamp(1rem, 2.2vw, 1.2rem);
+          background: linear-gradient(135deg, #0a8800, #51c94d);
+          color: #fff;
+          border: 3px solid #ffd700;
+          border-radius: 10px;
+          padding: 10px 24px;
+          cursor: pointer;
+          text-transform: uppercase;
+          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+      }
+      #modal-referidos-cerrar:hover,
+      #modal-referidos-cerrar:focus {
+          transform: scale(1.03);
+          outline: none;
+          box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+      }
   </style>
   <link rel="stylesheet" href="css/desktopFrame.css">
 </head>
@@ -945,6 +1052,14 @@
       <button type="button" id="modal-whatsapp-aceptar">Aceptar</button>
     </div>
   </div>
+  <div id="modal-referidos" class="modal-referidos" role="dialog" aria-modal="true" aria-labelledby="modal-referidos-titulo" aria-hidden="true">
+    <div class="modal-contenido">
+      <h2 id="modal-referidos-titulo">MIS REFERIDOS</h2>
+      <p id="modal-referidos-total" class="modal-referidos-total">Cartones gratis que has ganado: 0</p>
+      <div id="modal-referidos-lista" class="modal-referidos-lista"></div>
+      <button type="button" id="modal-referidos-cerrar">Cerrar</button>
+    </div>
+  </div>
 
   <script src="js/logoSwitcher.js"></script>
   <script src="js/auth.js"></script>
@@ -957,6 +1072,10 @@
   const whatsappModalEl = document.getElementById('modal-whatsapp');
   const whatsappModalMensajeEl = document.getElementById('modal-whatsapp-mensaje');
   const whatsappModalAceptarBtn = document.getElementById('modal-whatsapp-aceptar');
+  const referidosModalEl = document.getElementById('modal-referidos');
+  const referidosModalListaEl = document.getElementById('modal-referidos-lista');
+  const referidosModalTotalEl = document.getElementById('modal-referidos-total');
+  const referidosModalCerrarBtn = document.getElementById('modal-referidos-cerrar');
   const sorteoImagen = document.getElementById('boton-sorteo');
   const referidosOpcion = document.querySelector('.menu-opcion--referidos');
   const referidosLabel = document.querySelector('.menu-label--referidos');
@@ -973,6 +1092,7 @@
   const APP_NOMBRE = 'BingOnline';
   let firestoreRef = null;
   let sorteoUnsubscribe = null;
+  const estadoReferidos = { cantidad: 0, tieneDatos: false };
   const tutorialSteps = [
     {
       elementId: 'boton-perfil',
@@ -1129,6 +1249,96 @@
     return new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
   }
 
+  function normalizarFechaRegistro(valor){
+    if(!valor) return null;
+    if(typeof valor.toDate === 'function'){
+      const fecha = valor.toDate();
+      return Number.isNaN(fecha.getTime()) ? null : fecha;
+    }
+    if(typeof valor === 'string'){
+      const fecha = new Date(valor);
+      return Number.isNaN(fecha.getTime()) ? null : fecha;
+    }
+    if(typeof valor === 'number'){
+      const fecha = new Date(valor);
+      return Number.isNaN(fecha.getTime()) ? null : fecha;
+    }
+    if(typeof valor === 'object' && typeof valor.seconds === 'number'){
+      const fecha = new Date(valor.seconds * 1000);
+      return Number.isNaN(fecha.getTime()) ? null : fecha;
+    }
+    return null;
+  }
+
+  function formatearFechaRegistro(valor){
+    const fecha = normalizarFechaRegistro(valor);
+    if(!fecha) return 'Fecha no disponible';
+    return fecha.toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
+  function obtenerNombreUsuario(data){
+    if(!data) return 'Usuario';
+    const nombre = (data.name || data.nombre || '').toString().trim();
+    const apellido = (data.apellido || '').toString().trim();
+    const alias = (data.alias || '').toString().trim();
+    const combinado = `${nombre} ${apellido}`.trim();
+    return combinado || alias || data.email || data.id || 'Usuario';
+  }
+
+  async function obtenerCampanasPorIds(ids){
+    const mapa = {};
+    const unicos = Array.from(new Set(ids.filter(Boolean)));
+    await Promise.all(unicos.map(async id => {
+      try{
+        const doc = await firestoreRef.collection('campanasReferidos').doc(id).get();
+        mapa[id] = doc.exists ? (doc.data() || {}) : null;
+      }catch(err){
+        console.error('No se pudo cargar la campaña de referidos', err);
+        mapa[id] = null;
+      }
+    }));
+    return mapa;
+  }
+
+  async function obtenerResumenReferidos(usuarioEmail){
+    if(!firestoreRef || !usuarioEmail){
+      return { referidos: [], totalCartones: 0 };
+    }
+    const referidosSnapshot = await firestoreRef.collection('users').where('referidoPorEmail','==', usuarioEmail).get();
+    const referidos = referidosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const statsSnapshot = await firestoreRef.collection('Referidos').doc(usuarioEmail).collection('campanas').get();
+    const campanaIds = [
+      ...referidos.map(item => item.campanaReferidosId).filter(Boolean),
+      ...statsSnapshot.docs.map(doc => doc.id)
+    ];
+    const campanas = await obtenerCampanasPorIds(campanaIds);
+    const totalCartones = statsSnapshot.docs.reduce((acc, doc) => {
+      const data = doc.data() || {};
+      const campana = campanas[doc.id] || {};
+      const cartonesPremio = Number(campana.cartonesPremio || 0) || 0;
+      const premiosEntregados = Number(data.premiosEntregados || 0) || 0;
+      return acc + (premiosEntregados * cartonesPremio);
+    }, 0);
+    const listado = referidos.map(item => {
+      const campana = campanas[item.campanaReferidosId] || {};
+      const nombreCampana = (campana.nombre || campana.titulo || 'Campaña sin nombre').toString();
+      return {
+        campanaNombre: nombreCampana,
+        nombre: obtenerNombreUsuario(item),
+        fechaRegistro: formatearFechaRegistro(item.fechaRegistro || item.creadoEn || item.createdAt),
+        cartonesNuevo: Number(campana.cartonesNuevo || 0) || 0,
+        fechaOrden: normalizarFechaRegistro(item.fechaRegistro || item.creadoEn || item.createdAt)
+      };
+    });
+    listado.sort((a, b) => {
+      if(!a.fechaOrden && !b.fechaOrden) return 0;
+      if(!a.fechaOrden) return 1;
+      if(!b.fechaOrden) return -1;
+      return b.fechaOrden - a.fechaOrden;
+    });
+    return { referidos: listado, totalCartones };
+  }
+
   async function obtenerCampanaActiva(){
     if(!firestoreRef) return null;
     const snapshot = await firestoreRef.collection('campanasReferidos').where('estado','==','ACTIVA').get();
@@ -1165,11 +1375,92 @@
         referidosSubLabel.textContent = campana
           ? `AL COMPARTIR ${APP_NOMBRE} por WhatsApp`
           : 'A tus amigos por WhatsApp';
+        referidosSubLabel.classList.remove('referidos-datos');
+        referidosSubLabel.setAttribute('role', 'presentation');
+        referidosSubLabel.removeAttribute('tabindex');
+      }
+      const usuario = auth.currentUser;
+      if(usuario?.email){
+        const resumen = await obtenerResumenReferidos(usuario.email);
+        estadoReferidos.cantidad = resumen.referidos.length;
+        estadoReferidos.tieneDatos = resumen.referidos.length > 1;
+        if(referidosSubLabel && estadoReferidos.tieneDatos){
+          referidosSubLabel.textContent = 'DATOS DE TUS REFERIDOS';
+          referidosSubLabel.classList.add('referidos-datos');
+          referidosSubLabel.setAttribute('role', 'button');
+          referidosSubLabel.setAttribute('tabindex', '0');
+        }
       }
     }catch(error){
       console.error('No se pudo validar la campaña activa de referidos', error);
       referidosOpcion.classList.remove('referidos-activa');
     }
+  }
+
+  function limpiarModalReferidos(){
+    if(referidosModalListaEl){
+      referidosModalListaEl.innerHTML = '';
+    }
+  }
+
+  function renderizarReferidosModal(resumen){
+    if(!referidosModalListaEl || !referidosModalTotalEl) return;
+    referidosModalTotalEl.textContent = `Cartones gratis que has ganado: ${resumen.totalCartones}`;
+    referidosModalListaEl.innerHTML = '';
+    if(!resumen.referidos.length){
+      const vacio = document.createElement('div');
+      vacio.className = 'modal-referidos-vacio';
+      vacio.textContent = 'Aún no tienes referidos registrados.';
+      referidosModalListaEl.appendChild(vacio);
+      return;
+    }
+    resumen.referidos.forEach(item => {
+      const contenedor = document.createElement('div');
+      contenedor.className = 'referido-item';
+      const campana = document.createElement('div');
+      campana.className = 'referido-campana';
+      campana.textContent = item.campanaNombre;
+      const detalle = document.createElement('div');
+      detalle.className = 'referido-detalle';
+      const nombre = document.createElement('span');
+      nombre.className = 'referido-nombre';
+      nombre.textContent = item.nombre;
+      const fecha = document.createElement('span');
+      fecha.className = 'referido-fecha';
+      fecha.textContent = item.fechaRegistro;
+      const cartones = document.createElement('span');
+      cartones.className = 'referido-cartones';
+      cartones.textContent = `Recibió: ${item.cartonesNuevo} cartones`;
+      detalle.appendChild(nombre);
+      detalle.appendChild(fecha);
+      detalle.appendChild(cartones);
+      contenedor.appendChild(campana);
+      contenedor.appendChild(detalle);
+      referidosModalListaEl.appendChild(contenedor);
+    });
+  }
+
+  async function abrirModalReferidos(){
+    if(!referidosModalEl) return;
+    limpiarModalReferidos();
+    const usuario = auth.currentUser;
+    if(usuario?.email){
+      try{
+        const resumen = await obtenerResumenReferidos(usuario.email);
+        renderizarReferidosModal(resumen);
+      }catch(error){
+        console.error('No se pudieron cargar los datos de referidos', error);
+        renderizarReferidosModal({ referidos: [], totalCartones: 0 });
+      }
+    }
+    referidosModalEl.classList.add('activa');
+    referidosModalEl.setAttribute('aria-hidden','false');
+  }
+
+  function cerrarModalReferidos(){
+    if(!referidosModalEl) return;
+    referidosModalEl.classList.remove('activa');
+    referidosModalEl.setAttribute('aria-hidden','true');
   }
 
   async function manejarClickReferidos(){
@@ -1222,6 +1513,16 @@
     const mensaje = `Epale! estoy jugando a ${APP_NOMBRE}, y es un vasilón! 🤩 si entras en este link: ${registroUrl} 👈 y te registras usando mi código ${codigo} te regalarán ${cartonesNuevo} cartones para que juegues GRATIS!`;
     const enlace = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
     window.location.href = enlace;
+  }
+
+  function manejarClickDatosReferidos(evento){
+    if(!referidosSubLabel || !referidosSubLabel.classList.contains('referidos-datos')){
+      return;
+    }
+    if(evento){
+      evento.preventDefault();
+    }
+    abrirModalReferidos();
   }
 
   async function obtenerLinkWhatsapp(){
@@ -1583,6 +1884,14 @@
     configurarAccionImagen('boton-perfil', ()=>{ window.location.href = 'perfil.html'; });
     configurarAccionImagen('boton-mensajes', manejarClickWhatsapp);
     configurarAccionImagen('boton-referidos', manejarClickReferidos);
+    if(referidosSubLabel){
+      referidosSubLabel.addEventListener('click', manejarClickDatosReferidos);
+      referidosSubLabel.addEventListener('keydown', evento=>{
+        if(evento.key === 'Enter' || evento.key === ' '){
+          manejarClickDatosReferidos(evento);
+        }
+      });
+    }
 
     if(whatsappModalAceptarBtn){
       whatsappModalAceptarBtn.addEventListener('click', cerrarModalWhatsapp);
@@ -1594,9 +1903,23 @@
         }
       });
     }
+    if(referidosModalCerrarBtn){
+      referidosModalCerrarBtn.addEventListener('click', cerrarModalReferidos);
+    }
+    if(referidosModalEl){
+      referidosModalEl.addEventListener('click', evento => {
+        if(evento.target === referidosModalEl){
+          cerrarModalReferidos();
+        }
+      });
+    }
 
     observarEstadoSorteo();
-    actualizarIndicadorReferidos();
+    if(auth?.onAuthStateChanged){
+      auth.onAuthStateChanged(()=>{ actualizarIndicadorReferidos(); });
+    }else{
+      actualizarIndicadorReferidos();
+    }
   }
 
   initBingoAudioControl({
