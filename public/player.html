@@ -847,6 +847,7 @@
           box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
       }
       .modal-referidos {
+          --modal-inline-margen: clamp(6px, 2.4vw, 16px);
           position: fixed;
           top: 0;
           left: 0;
@@ -856,7 +857,7 @@
           display: none;
           align-items: center;
           justify-content: center;
-          padding: clamp(4px, 1.6vw, 10px);
+          padding: var(--modal-inline-margen);
           z-index: 2100;
       }
       .modal-referidos.activa {
@@ -867,7 +868,7 @@
           background: #ffffff;
           border-radius: 18px;
           padding: clamp(10px, 2.2vw, 16px);
-          width: min(720px, 100%);
+          width: min(820px, calc(100% - (2 * var(--modal-inline-margen))));
           max-width: 100%;
           max-height: min(92vh, 760px);
           box-shadow: 0 16px 32px rgba(0, 0, 0, 0.18);
@@ -982,19 +983,23 @@
       }
       .modal-referidos-tabla .col-numero {
           color: #808080;
-          width: 7%;
+          width: 8%;
       }
       .modal-referidos-tabla .col-nombre {
           color: #000000;
-          width: 45%;
+          width: 44%;
       }
       .modal-referidos-tabla .col-fecha {
           color: #0a8a2a;
-          width: 40%;
+          width: 32%;
       }
-      .modal-referidos-tabla .col-premio {
+      .modal-referidos-tabla th.col-premio {
+          width: 16%;
+      }
+      .modal-referidos-tabla tbody .col-premio {
           color: #ff8c00;
-          width: 10px;
+          font-weight: 700;
+          width: 16%;
       }
       .modal-referidos-tabla .icon {
           font-size: 0.85rem;
@@ -1719,7 +1724,8 @@
       fecha.textContent = item.fechaRegistro;
       const premio = document.createElement('td');
       premio.className = 'col-premio';
-      premio.innerHTML = item.cartonesNuevo > 0 ? '<span class="icon check">&#10004;</span>' : '';
+      const cartonesGanados = Number(item.cartonesNuevo || 0) || 0;
+      premio.textContent = `${cartonesGanados}`;
       fila.appendChild(numero);
       fila.appendChild(nombre);
       fila.appendChild(fecha);
