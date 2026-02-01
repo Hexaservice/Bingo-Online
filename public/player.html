@@ -840,8 +840,8 @@
           position: relative;
           background: #ffffff;
           border-radius: 18px;
-          padding: clamp(16px, 3.6vw, 26px);
-          width: min(560px, 96vw);
+          padding: clamp(12px, 2.6vw, 20px);
+          width: min(720px, 98vw);
           max-width: 96vw;
           max-height: min(86vh, 720px);
           box-shadow: 0 16px 32px rgba(0, 0, 0, 0.18);
@@ -849,6 +849,9 @@
           border: 3px solid #ffd700;
           overflow: hidden;
           box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
       }
       .modal-referidos .modal-contenido h2 {
           font-family: 'Poppins', sans-serif;
@@ -861,7 +864,19 @@
           font-family: 'Poppins', sans-serif;
           font-size: clamp(0.78rem, 2vw, 0.92rem);
           color: #4a4a4a;
-          margin: 0 0 12px;
+          margin: 0;
+          display: flex;
+          justify-content: center;
+          gap: 12px;
+          flex-wrap: wrap;
+      }
+      .modal-referidos-inicio {
+          color: #8b1d1d;
+          font-weight: 600;
+      }
+      .modal-referidos-fin-valor {
+          color: #0e6b2b;
+          font-weight: 600;
       }
       .modal-referidos-resumen {
           display: grid;
@@ -886,14 +901,6 @@
           font-size: clamp(0.78rem, 2vw, 0.92rem);
           color: #9b6b2d;
       }
-      .modal-referidos-tabla-wrapper {
-          max-height: min(56vh, 480px);
-          overflow: auto;
-          border-radius: 12px;
-          background: #ffffff;
-          padding: clamp(4px, 1.6vw, 8px);
-          box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.12);
-      }
       .modal-referidos-tabla {
           width: 100%;
           border-collapse: collapse;
@@ -902,23 +909,46 @@
           font-size: clamp(0.72rem, 2.6vw, 0.95rem);
           color: #1f1f1f;
           background: #ffffff;
+          border-radius: 12px;
+          overflow: hidden;
+          flex: 1 1 auto;
+          display: block;
+          max-height: min(58vh, 480px);
+          overflow: auto;
+      }
+      .modal-referidos-tabla thead {
+          display: table;
+          width: 100%;
+          table-layout: fixed;
+      }
+      .modal-referidos-tabla tbody {
+          display: table;
+          width: 100%;
+          table-layout: fixed;
       }
       .modal-referidos-tabla thead th {
           position: sticky;
           top: 0;
-          background: #ffffff;
+          background: #f0f0f0;
           font-weight: 700;
           padding: clamp(4px, 1.2vw, 6px) clamp(4px, 1.4vw, 8px);
           text-align: center;
-          z-index: 1;
+          z-index: 2;
           font-size: clamp(0.68rem, 2.4vw, 0.9rem);
-          border: 1px solid transparent;
+          border: 1px solid #d9d9d9;
+          text-shadow: none;
       }
       .modal-referidos-tabla td {
+          display: table-cell;
           padding: clamp(4px, 1.2vw, 8px) clamp(4px, 1.4vw, 10px);
           text-align: center;
           word-break: break-word;
-          border: 1px solid transparent;
+          border: 1px solid #ededed;
+      }
+      .modal-referidos-tabla tbody tr {
+          display: table;
+          width: 100%;
+          table-layout: fixed;
       }
       .modal-referidos-tabla .col-numero {
           color: #808080;
@@ -1122,25 +1152,26 @@
     <div class="modal-contenido">
       <button type="button" id="modal-referidos-cerrar" aria-label="Cerrar">✕</button>
       <h2 id="modal-referidos-titulo">Campaña: --</h2>
-      <p id="modal-referidos-fin" class="modal-referidos-fin">Fin: --/--/----</p>
+      <p class="modal-referidos-fin">
+        <span id="modal-referidos-inicio" class="modal-referidos-inicio">Inicio: --/--/----</span>
+        <span id="modal-referidos-fin" class="modal-referidos-fin-valor">Fin: --/--/----</span>
+      </p>
       <div class="modal-referidos-resumen">
         <span id="modal-referidos-total" class="modal-referidos-total">C. Ganados: 0</span>
         <span id="modal-referidos-nuevo" class="modal-referidos-nuevo">C. Nuevo Jugador: 0</span>
         <span id="modal-referidos-min" class="modal-referidos-min">Referidos Min: 0</span>
       </div>
-      <div class="modal-referidos-tabla-wrapper">
-        <table class="modal-referidos-tabla" aria-label="Tabla de referidos">
-          <thead>
-            <tr>
-              <th class="col-numero">N°</th>
-              <th class="col-nombre">Nombre y Apellido</th>
-              <th class="col-fecha">Fecha y hora</th>
-              <th class="col-premio">Premio</th>
-            </tr>
-          </thead>
-          <tbody id="modal-referidos-lista" class="modal-referidos-lista"></tbody>
-        </table>
-      </div>
+      <table class="modal-referidos-tabla" aria-label="Tabla de referidos">
+        <thead>
+          <tr>
+            <th class="col-numero">N°</th>
+            <th class="col-nombre">Nombre y Apellido</th>
+            <th class="col-fecha">Fecha y hora</th>
+            <th class="col-premio">Premio</th>
+          </tr>
+        </thead>
+        <tbody id="modal-referidos-lista" class="modal-referidos-lista"></tbody>
+      </table>
       <div id="modal-referidos-vacio" class="modal-referidos-vacio" hidden></div>
     </div>
   </div>
@@ -1160,6 +1191,7 @@
   const referidosModalListaEl = document.getElementById('modal-referidos-lista');
   const referidosModalTotalEl = document.getElementById('modal-referidos-total');
   const referidosModalTituloEl = document.getElementById('modal-referidos-titulo');
+  const referidosModalInicioEl = document.getElementById('modal-referidos-inicio');
   const referidosModalFinEl = document.getElementById('modal-referidos-fin');
   const referidosModalNuevoEl = document.getElementById('modal-referidos-nuevo');
   const referidosModalMinEl = document.getElementById('modal-referidos-min');
@@ -1540,6 +1572,9 @@
       : '--';
     if(referidosModalTituloEl){
       referidosModalTituloEl.textContent = `Campaña: ${campanaNombre}`;
+    }
+    if(referidosModalInicioEl){
+      referidosModalInicioEl.textContent = `Inicio: ${formatearFechaCorta(resumen.campana?.fechaInicio)}`;
     }
     if(referidosModalFinEl){
       referidosModalFinEl.textContent = `Fin: ${formatearFechaCorta(resumen.campana?.fechaFin)}`;
