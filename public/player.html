@@ -871,11 +871,11 @@
           flex-wrap: wrap;
       }
       .modal-referidos-inicio {
-          color: #8b1d1d;
+          color: #0e6b2b;
           font-weight: 600;
       }
       .modal-referidos-fin-valor {
-          color: #0e6b2b;
+          color: #8b1d1d;
           font-weight: 600;
       }
       .modal-referidos-resumen {
@@ -909,7 +909,11 @@
           font-size: clamp(0.72rem, 2.6vw, 0.95rem);
           color: #1f1f1f;
           background: #ffffff;
+          border: none;
           border-radius: 12px;
+          box-shadow: none;
+          margin: 0 auto;
+          padding: 0;
           overflow: hidden;
           flex: 1 1 auto;
           display: block;
@@ -1397,9 +1401,11 @@
     const dia = String(fecha.getDate()).padStart(2, '0');
     const mes = String(fecha.getMonth() + 1).padStart(2, '0');
     const anio = fecha.getFullYear();
-    const hora = String(fecha.getHours()).padStart(2, '0');
+    const horas = fecha.getHours();
+    const hora = String(horas % 12 || 12).padStart(2, '0');
     const minuto = String(fecha.getMinutes()).padStart(2, '0');
-    return `${dia}/${mes}/${anio} ${hora}:${minuto}`;
+    const periodo = horas >= 12 ? 'pm' : 'am';
+    return `${dia}/${mes}/${anio} ${hora}:${minuto} ${periodo}`;
   }
 
   function formatearFechaCorta(valor){
