@@ -318,6 +318,7 @@
           flex-direction: column;
           align-items: center;
           gap: clamp(4px, 1vh, 10px);
+          position: relative;
       }
       .menu-opcion--sorteo .menu-imagen {
           max-width: 115%;
@@ -406,14 +407,37 @@
           font-weight: 700;
           color: #ffffff;
           text-shadow: 0 0 6px rgba(0, 0, 0, 0.85), 0 0 12px rgba(0, 0, 0, 0.75);
-          display: block;
+          display: inline-block;
           margin-top: -4px;
+          position: relative;
+          padding-right: 18px;
       }
       .menu-label--referidos-sub.referidos-datos {
           font-size: clamp(0.85rem, 2.1vw, 1.05rem);
-          text-shadow: 0 0 8px rgba(0, 120, 255, 0.9), 0 0 16px rgba(0, 120, 255, 0.95);
+          text-shadow: 0 0 8px rgba(128, 0, 180, 0.9), 0 0 16px rgba(160, 0, 220, 0.95);
           cursor: pointer;
           animation: pulso-referidos 1.4s ease-in-out infinite;
+      }
+      .referidos-badge {
+          position: absolute;
+          top: -10px;
+          right: -8px;
+          min-width: 18px;
+          height: 18px;
+          padding: 0 4px;
+          border-radius: 999px;
+          background: #e60000;
+          color: #ffffff;
+          font-size: 0.6rem;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+          animation: pulso-referidos 1.4s ease-in-out infinite;
+      }
+      .referidos-badge.hidden {
+          display: none;
       }
 
       #carton-screen {
@@ -830,7 +854,7 @@
           display: none;
           align-items: center;
           justify-content: center;
-          padding: 20px;
+          padding: clamp(6px, 2vw, 12px);
           z-index: 2100;
       }
       .modal-referidos.activa {
@@ -841,9 +865,9 @@
           background: #ffffff;
           border-radius: 18px;
           padding: clamp(12px, 2.6vw, 20px);
-          width: min(720px, 98vw);
-          max-width: 96vw;
-          max-height: min(86vh, 720px);
+          width: min(720px, 100%);
+          max-width: 100%;
+          max-height: min(94vh, 760px);
           box-shadow: 0 16px 32px rgba(0, 0, 0, 0.18);
           text-align: center;
           border: 3px solid #ffd700;
@@ -910,15 +934,15 @@
           color: #1f1f1f;
           background: #ffffff;
           border: none;
-          border-radius: 12px;
+          border-radius: 0;
           box-shadow: none;
           margin: 0 auto;
           padding: 0;
-          overflow: hidden;
           flex: 1 1 auto;
           display: block;
           max-height: min(58vh, 480px);
-          overflow: auto;
+          overflow-y: auto;
+          overflow-x: hidden;
       }
       .modal-referidos-tabla thead {
           display: table;
@@ -956,19 +980,19 @@
       }
       .modal-referidos-tabla .col-numero {
           color: #808080;
-          width: 10%;
+          width: 7%;
       }
       .modal-referidos-tabla .col-nombre {
           color: #000000;
-          width: 35%;
+          width: 43%;
       }
       .modal-referidos-tabla .col-fecha {
           color: #0a8a2a;
-          width: 35%;
+          width: 38%;
       }
       .modal-referidos-tabla .col-premio {
           color: #ff8c00;
-          width: 20%;
+          width: 12%;
       }
       .modal-referidos-lista {
           text-align: center;
@@ -1077,7 +1101,10 @@
                 <div class="menu-opcion menu-opcion--referidos">
                   <img id="boton-referidos" class="menu-imagen menu-imagen--referidos" src="img/boton-compartir-200p.png" alt="Compartir código promocional" role="button" tabindex="0" loading="lazy" />
                   <span class="menu-label menu-label--referidos">CARTONES GRATIS</span>
-                  <span class="menu-label menu-label--referidos-sub">AL COMPARTIR BingOnline por WhatsApp</span>
+                  <span class="menu-label menu-label--referidos-sub">
+                    <span class="menu-label--referidos-text">AL COMPARTIR BingOnline por WhatsApp</span>
+                    <span id="referidos-badge" class="referidos-badge hidden" aria-hidden="true">0</span>
+                  </span>
                 </div>
               </td>
               <td>
@@ -1205,6 +1232,8 @@
   const referidosOpcion = document.querySelector('.menu-opcion--referidos');
   const referidosLabel = document.querySelector('.menu-label--referidos');
   const referidosSubLabel = document.querySelector('.menu-label--referidos-sub');
+  const referidosSubTextEl = referidosSubLabel?.querySelector('.menu-label--referidos-text') || null;
+  const referidosBadgeEl = document.getElementById('referidos-badge');
   const tutorialToggle = document.getElementById('tutorial-toggle');
   const tutorialNav = document.getElementById('tutorial-nav');
   const tutorialPrev = document.getElementById('tutorial-prev');
@@ -1534,12 +1563,21 @@
         referidosLabel.textContent = campana ? 'CARTONES GRATIS' : `COMPARTE ${APP_NOMBRE}`;
       }
       if(referidosSubLabel){
-        referidosSubLabel.textContent = campana
+        const textoSub = campana
           ? `AL COMPARTIR ${APP_NOMBRE} por WhatsApp`
           : 'A tus amigos por WhatsApp';
+        if(referidosSubTextEl){
+          referidosSubTextEl.textContent = textoSub;
+        }else{
+          referidosSubLabel.textContent = textoSub;
+        }
         referidosSubLabel.classList.remove('referidos-datos');
         referidosSubLabel.setAttribute('role', 'presentation');
         referidosSubLabel.removeAttribute('tabindex');
+      }
+      if(referidosBadgeEl){
+        referidosBadgeEl.textContent = '0';
+        referidosBadgeEl.classList.add('hidden');
       }
       estadoReferidos.cantidad = 0;
       estadoReferidos.tieneDatos = false;
@@ -1549,10 +1587,18 @@
         estadoReferidos.cantidad = resumen.referidos.length;
         estadoReferidos.tieneDatos = resumen.referidos.length > 0;
         if(referidosSubLabel && estadoReferidos.tieneDatos){
-          referidosSubLabel.textContent = 'DATOS DE TUS REFERIDOS';
+          if(referidosSubTextEl){
+            referidosSubTextEl.textContent = 'Click AQUÍ para ver Referidos';
+          }else{
+            referidosSubLabel.textContent = 'Click AQUÍ para ver Referidos';
+          }
           referidosSubLabel.classList.add('referidos-datos');
           referidosSubLabel.setAttribute('role', 'button');
           referidosSubLabel.setAttribute('tabindex', '0');
+        }
+        if(referidosBadgeEl && estadoReferidos.tieneDatos){
+          referidosBadgeEl.textContent = `${estadoReferidos.cantidad}`;
+          referidosBadgeEl.classList.remove('hidden');
         }
       }
     }catch(error){
