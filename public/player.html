@@ -420,7 +420,7 @@
       }
       .referidos-badge {
           position: absolute;
-          bottom: -6px;
+          bottom: 0;
           left: 50%;
           min-width: 18px;
           height: 18px;
@@ -435,7 +435,7 @@
           justify-content: center;
           box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
           animation: pulso-referidos 1.4s ease-in-out infinite;
-          transform: translate(-50%, 50%);
+          transform: translate(-50%, 30%);
       }
       .referidos-badge.hidden {
           display: none;
@@ -912,6 +912,9 @@
       .modal-referidos-resumen .resumen-text {
           color: #1f1f1f;
       }
+      .modal-referidos-resumen .resumen-valor {
+          font-weight: 700;
+      }
       .modal-referidos-total {
           color: #1f1f1f;
       }
@@ -955,19 +958,21 @@
           top: 0;
           background: #f0f0f0;
           font-weight: 700;
-          padding: clamp(2px, 0.8vw, 4px) clamp(4px, 1.2vw, 8px);
+          padding: clamp(1px, 0.6vw, 3px) clamp(4px, 1.2vw, 8px);
           text-align: center;
           z-index: 2;
           font-size: clamp(0.68rem, 2.4vw, 0.9rem);
           border: 1px solid #d9d9d9;
           text-shadow: none;
+          line-height: 1.2;
       }
       .modal-referidos-tabla td {
           display: table-cell;
-          padding: clamp(2px, 0.8vw, 4px) clamp(4px, 1.2vw, 8px);
+          padding: clamp(1px, 0.6vw, 3px) clamp(4px, 1.2vw, 8px);
           text-align: center;
           word-break: break-word;
           border: 1px solid #ededed;
+          line-height: 1.2;
       }
       .modal-referidos-tabla tbody tr {
           display: table;
@@ -980,15 +985,15 @@
       }
       .modal-referidos-tabla .col-nombre {
           color: #000000;
-          width: 43%;
+          width: 45%;
       }
       .modal-referidos-tabla .col-fecha {
           color: #0a8a2a;
-          width: 38%;
+          width: 40%;
       }
       .modal-referidos-tabla .col-premio {
           color: #ff8c00;
-          width: 12%;
+          width: 8%;
       }
       .modal-referidos-lista {
           text-align: center;
@@ -1185,13 +1190,18 @@
       </p>
       <p class="modal-referidos-resumen">
         <span class="resumen-text">Haz ganado:</span>
-        <span id="modal-referidos-total" class="modal-referidos-total">0</span>
+        <strong class="resumen-valor"><span id="modal-referidos-total" class="modal-referidos-total">0</span></strong>
         <span class="resumen-text">cartones por</span>
-        <span id="modal-referidos-total-referidos" class="modal-referidos-total">0</span>
+        <strong class="resumen-valor"><span id="modal-referidos-total-referidos" class="modal-referidos-total">0</span></strong>
         <span class="resumen-text">Referidos que se han registrado con tu código:</span>
-        <span id="modal-referidos-codigo" class="modal-referidos-nuevo">--</span>
-        <span class="resumen-text">Para seguir ganando cartones debes llegar a otro minimo de:</span>
-        <span id="modal-referidos-min" class="modal-referidos-min">0</span>
+        <strong class="resumen-valor"><span id="modal-referidos-codigo" class="modal-referidos-nuevo">--</span></strong>
+        <span class="resumen-text">Para seguir ganando cartones debes completar:</span>
+        <strong class="resumen-valor">
+          <span id="modal-referidos-progreso-actual" class="modal-referidos-total">0</span>/<span id="modal-referidos-min" class="modal-referidos-min">0</span>
+        </strong>
+        <span class="resumen-text">para que recibas:</span>
+        <strong class="resumen-valor"><span id="modal-referidos-premio" class="modal-referidos-nuevo">0</span></strong>
+        <span class="resumen-text">cartones</span>
       </p>
       <table class="modal-referidos-tabla" aria-label="Tabla de referidos">
         <thead>
@@ -1199,7 +1209,7 @@
             <th class="col-numero">N°</th>
             <th class="col-nombre">Nombre y Apellido</th>
             <th class="col-fecha">Fecha y hora</th>
-            <th class="col-premio">Premio</th>
+            <th class="col-premio">Ganó</th>
           </tr>
         </thead>
         <tbody id="modal-referidos-lista" class="modal-referidos-lista"></tbody>
@@ -1228,6 +1238,8 @@
   const referidosModalTotalReferidosEl = document.getElementById('modal-referidos-total-referidos');
   const referidosModalCodigoEl = document.getElementById('modal-referidos-codigo');
   const referidosModalMinEl = document.getElementById('modal-referidos-min');
+  const referidosModalProgresoActualEl = document.getElementById('modal-referidos-progreso-actual');
+  const referidosModalPremioEl = document.getElementById('modal-referidos-premio');
   const referidosModalVacioEl = document.getElementById('modal-referidos-vacio');
   const referidosModalCerrarBtn = document.getElementById('modal-referidos-cerrar');
   const sorteoImagen = document.getElementById('boton-sorteo');
@@ -1493,7 +1505,7 @@
 
   async function obtenerResumenReferidos(usuarioEmail, campanaActiva){
     if(!firestoreRef || !usuarioEmail){
-      return { referidos: [], totalCartones: 0, cartonesNuevo: 0, referidosMin: 0, totalReferidos: 0, campana: null };
+      return { referidos: [], totalCartones: 0, cartonesNuevo: 0, referidosMin: 0, totalReferidos: 0, cartonesPremio: 0, campana: null };
     }
     const referidosSnapshot = await firestoreRef.collection('users').where('referidoPorEmail','==', usuarioEmail).get();
     const referidos = referidosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -1541,12 +1553,14 @@
       : totalCartones;
     const cartonesNuevo = Number(campanaData?.cartonesNuevo || 0) || 0;
     const referidosMin = Number(campanaData?.referidosMin || 0) || 0;
+    const cartonesPremio = Number(campanaData?.cartonesPremio || 0) || 0;
     const referidosFiltrados = campanaId ? listado.filter(item => item.campanaId === campanaId) : listado;
     return {
       referidos: referidosFiltrados,
       totalCartones: totalCartonesCampana,
       cartonesNuevo,
       referidosMin,
+      cartonesPremio,
       totalReferidos: referidosFiltrados.length,
       campana: campanaData
     };
@@ -1657,11 +1671,17 @@
     if(referidosModalTotalReferidosEl){
       referidosModalTotalReferidosEl.textContent = `${resumen.totalReferidos ?? resumen.referidos.length}`;
     }
+    if(referidosModalProgresoActualEl){
+      referidosModalProgresoActualEl.textContent = `${resumen.totalReferidos ?? resumen.referidos.length}`;
+    }
     if(referidosModalCodigoEl){
       referidosModalCodigoEl.textContent = resumen.codigoPromocional || '--';
     }
     if(referidosModalMinEl){
       referidosModalMinEl.textContent = `${resumen.referidosMin}`;
+    }
+    if(referidosModalPremioEl){
+      referidosModalPremioEl.textContent = `${resumen.cartonesPremio ?? 0}`;
     }
     referidosModalListaEl.innerHTML = '';
     if(!resumen.referidos.length){
@@ -1705,7 +1725,7 @@
         renderizarReferidosModal({ ...resumen, codigoPromocional });
       }catch(error){
         console.error('No se pudieron cargar los datos de referidos', error);
-        renderizarReferidosModal({ referidos: [], totalCartones: 0, cartonesNuevo: 0, referidosMin: 0, totalReferidos: 0, campana: null, codigoPromocional: '' });
+        renderizarReferidosModal({ referidos: [], totalCartones: 0, cartonesNuevo: 0, referidosMin: 0, totalReferidos: 0, cartonesPremio: 0, campana: null, codigoPromocional: '' });
       }
     }
     referidosModalEl.classList.add('activa');
