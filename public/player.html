@@ -410,7 +410,7 @@
           display: inline-block;
           margin-top: -4px;
           position: relative;
-          padding-right: 18px;
+          padding-bottom: 10px;
       }
       .menu-label--referidos-sub.referidos-datos {
           font-size: clamp(0.85rem, 2.1vw, 1.05rem);
@@ -420,8 +420,8 @@
       }
       .referidos-badge {
           position: absolute;
-          top: -10px;
-          right: -8px;
+          bottom: -6px;
+          left: 50%;
           min-width: 18px;
           height: 18px;
           padding: 0 4px;
@@ -435,6 +435,7 @@
           justify-content: center;
           box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
           animation: pulso-referidos 1.4s ease-in-out infinite;
+          transform: translate(-50%, 50%);
       }
       .referidos-badge.hidden {
           display: none;
@@ -854,7 +855,7 @@
           display: none;
           align-items: center;
           justify-content: center;
-          padding: clamp(6px, 2vw, 12px);
+          padding: clamp(4px, 1.6vw, 10px);
           z-index: 2100;
       }
       .modal-referidos.activa {
@@ -864,10 +865,10 @@
           position: relative;
           background: #ffffff;
           border-radius: 18px;
-          padding: clamp(12px, 2.6vw, 20px);
+          padding: clamp(10px, 2.2vw, 16px);
           width: min(720px, 100%);
           max-width: 100%;
-          max-height: min(94vh, 760px);
+          max-height: min(92vh, 760px);
           box-shadow: 0 16px 32px rgba(0, 0, 0, 0.18);
           text-align: center;
           border: 3px solid #ffd700;
@@ -875,7 +876,7 @@
           box-sizing: border-box;
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 6px;
       }
       .modal-referidos .modal-contenido h2 {
           font-family: 'Poppins', sans-serif;
@@ -903,26 +904,21 @@
           font-weight: 600;
       }
       .modal-referidos-resumen {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 6px 8px;
-          align-items: center;
-          justify-items: center;
-          margin-bottom: 12px;
-      }
-      .modal-referidos-total {
           font-family: 'Poppins', sans-serif;
           font-size: clamp(0.78rem, 2vw, 0.92rem);
+          line-height: 1.3;
+          margin: 0 0 6px;
+      }
+      .modal-referidos-resumen .resumen-text {
+          color: #1f1f1f;
+      }
+      .modal-referidos-total {
           color: #1f1f1f;
       }
       .modal-referidos-nuevo {
-          font-family: 'Poppins', sans-serif;
-          font-size: clamp(0.78rem, 2vw, 0.92rem);
           color: #27c93f;
       }
       .modal-referidos-min {
-          font-family: 'Poppins', sans-serif;
-          font-size: clamp(0.78rem, 2vw, 0.92rem);
           color: #9b6b2d;
       }
       .modal-referidos-tabla {
@@ -940,7 +936,7 @@
           padding: 0;
           flex: 1 1 auto;
           display: block;
-          max-height: min(58vh, 480px);
+          max-height: min(52vh, 440px);
           overflow-y: auto;
           overflow-x: hidden;
       }
@@ -959,7 +955,7 @@
           top: 0;
           background: #f0f0f0;
           font-weight: 700;
-          padding: clamp(4px, 1.2vw, 6px) clamp(4px, 1.4vw, 8px);
+          padding: clamp(2px, 0.8vw, 4px) clamp(4px, 1.2vw, 8px);
           text-align: center;
           z-index: 2;
           font-size: clamp(0.68rem, 2.4vw, 0.9rem);
@@ -968,7 +964,7 @@
       }
       .modal-referidos-tabla td {
           display: table-cell;
-          padding: clamp(4px, 1.2vw, 8px) clamp(4px, 1.4vw, 10px);
+          padding: clamp(2px, 0.8vw, 4px) clamp(4px, 1.2vw, 8px);
           text-align: center;
           word-break: break-word;
           border: 1px solid #ededed;
@@ -1187,11 +1183,16 @@
         <span id="modal-referidos-inicio" class="modal-referidos-inicio">Inicio: --/--/----</span>
         <span id="modal-referidos-fin" class="modal-referidos-fin-valor">Fin: --/--/----</span>
       </p>
-      <div class="modal-referidos-resumen">
-        <span id="modal-referidos-total" class="modal-referidos-total">C. Ganados: 0</span>
-        <span id="modal-referidos-nuevo" class="modal-referidos-nuevo">C. Nuevo Jugador: 0</span>
-        <span id="modal-referidos-min" class="modal-referidos-min">Referidos Min: 0</span>
-      </div>
+      <p class="modal-referidos-resumen">
+        <span class="resumen-text">Haz ganado:</span>
+        <span id="modal-referidos-total" class="modal-referidos-total">0</span>
+        <span class="resumen-text">cartones por</span>
+        <span id="modal-referidos-total-referidos" class="modal-referidos-total">0</span>
+        <span class="resumen-text">Referidos que se han registrado con tu código:</span>
+        <span id="modal-referidos-codigo" class="modal-referidos-nuevo">--</span>
+        <span class="resumen-text">Para seguir ganando cartones debes llegar a otro minimo de:</span>
+        <span id="modal-referidos-min" class="modal-referidos-min">0</span>
+      </p>
       <table class="modal-referidos-tabla" aria-label="Tabla de referidos">
         <thead>
           <tr>
@@ -1224,7 +1225,8 @@
   const referidosModalTituloEl = document.getElementById('modal-referidos-titulo');
   const referidosModalInicioEl = document.getElementById('modal-referidos-inicio');
   const referidosModalFinEl = document.getElementById('modal-referidos-fin');
-  const referidosModalNuevoEl = document.getElementById('modal-referidos-nuevo');
+  const referidosModalTotalReferidosEl = document.getElementById('modal-referidos-total-referidos');
+  const referidosModalCodigoEl = document.getElementById('modal-referidos-codigo');
   const referidosModalMinEl = document.getElementById('modal-referidos-min');
   const referidosModalVacioEl = document.getElementById('modal-referidos-vacio');
   const referidosModalCerrarBtn = document.getElementById('modal-referidos-cerrar');
@@ -1470,9 +1472,28 @@
     return mapa;
   }
 
+  async function obtenerCodigoPromocionalUsuario(usuarioEmail){
+    if(!firestoreRef || !usuarioEmail){
+      return '';
+    }
+    try{
+      const doc = await firestoreRef.collection('users').doc(usuarioEmail).get();
+      const data = doc.exists ? (doc.data() || {}) : {};
+      const telefono = data.celular || data.numerocel || '';
+      const codigo = data.codigoPromocional || generarCodigoPromocional(usuarioEmail, telefono);
+      if(!data.codigoPromocional && codigo){
+        await firestoreRef.collection('users').doc(usuarioEmail).set({ codigoPromocional: codigo }, { merge:true });
+      }
+      return codigo || '';
+    }catch(err){
+      console.error('No se pudo obtener el código promocional', err);
+      return '';
+    }
+  }
+
   async function obtenerResumenReferidos(usuarioEmail, campanaActiva){
     if(!firestoreRef || !usuarioEmail){
-      return { referidos: [], totalCartones: 0, cartonesNuevo: 0, referidosMin: 0, campana: null };
+      return { referidos: [], totalCartones: 0, cartonesNuevo: 0, referidosMin: 0, totalReferidos: 0, campana: null };
     }
     const referidosSnapshot = await firestoreRef.collection('users').where('referidoPorEmail','==', usuarioEmail).get();
     const referidos = referidosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -1526,6 +1547,7 @@
       totalCartones: totalCartonesCampana,
       cartonesNuevo,
       referidosMin,
+      totalReferidos: referidosFiltrados.length,
       campana: campanaData
     };
   }
@@ -1631,12 +1653,15 @@
     if(referidosModalFinEl){
       referidosModalFinEl.textContent = `Fin: ${formatearFechaCorta(resumen.campana?.fechaFin)}`;
     }
-    referidosModalTotalEl.textContent = `C. Ganados: ${resumen.totalCartones}`;
-    if(referidosModalNuevoEl){
-      referidosModalNuevoEl.textContent = `C. Nuevo Jugador: ${resumen.cartonesNuevo}`;
+    referidosModalTotalEl.textContent = `${resumen.totalCartones}`;
+    if(referidosModalTotalReferidosEl){
+      referidosModalTotalReferidosEl.textContent = `${resumen.totalReferidos ?? resumen.referidos.length}`;
+    }
+    if(referidosModalCodigoEl){
+      referidosModalCodigoEl.textContent = resumen.codigoPromocional || '--';
     }
     if(referidosModalMinEl){
-      referidosModalMinEl.textContent = `Referidos Min: ${resumen.referidosMin}`;
+      referidosModalMinEl.textContent = `${resumen.referidosMin}`;
     }
     referidosModalListaEl.innerHTML = '';
     if(!resumen.referidos.length){
@@ -1676,10 +1701,11 @@
       try{
         const campana = await obtenerCampanaActiva();
         const resumen = await obtenerResumenReferidos(usuario.email, campana);
-        renderizarReferidosModal(resumen);
+        const codigoPromocional = await obtenerCodigoPromocionalUsuario(usuario.email);
+        renderizarReferidosModal({ ...resumen, codigoPromocional });
       }catch(error){
         console.error('No se pudieron cargar los datos de referidos', error);
-        renderizarReferidosModal({ referidos: [], totalCartones: 0, cartonesNuevo: 0, referidosMin: 0, campana: null });
+        renderizarReferidosModal({ referidos: [], totalCartones: 0, cartonesNuevo: 0, referidosMin: 0, totalReferidos: 0, campana: null, codigoPromocional: '' });
       }
     }
     referidosModalEl.classList.add('activa');
@@ -1715,19 +1741,7 @@
       window.location.href = enlace;
       return;
     }
-    let telefono = '';
-    let codigo = '';
-    try{
-      const doc = await firestoreRef.collection('users').doc(usuario.email).get();
-      const data = doc.exists ? (doc.data() || {}) : {};
-      telefono = data.celular || data.numerocel || '';
-      codigo = data.codigoPromocional || generarCodigoPromocional(usuario.email, telefono);
-      if(!data.codigoPromocional && codigo){
-        await firestoreRef.collection('users').doc(usuario.email).set({ codigoPromocional: codigo }, { merge:true });
-      }
-    }catch(err){
-      console.error('No se pudo generar el código promocional', err);
-    }
+    const codigo = await obtenerCodigoPromocionalUsuario(usuario.email);
     if(!codigo){
       alert('No se pudo generar tu código promocional. Completa tus datos en el perfil.');
       return;
