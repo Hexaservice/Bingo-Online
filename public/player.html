@@ -994,7 +994,17 @@
       }
       .modal-referidos-tabla .col-premio {
           color: #ff8c00;
-          width: calc(8% - 5px);
+          width: 10px;
+      }
+      .modal-referidos-tabla .icon {
+          font-size: 0.85rem;
+          line-height: 1;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+      }
+      .modal-referidos-tabla .icon.check {
+          color: #1f8f2f;
       }
       .modal-referidos-lista {
           text-align: center;
@@ -1196,13 +1206,12 @@
         <strong class="resumen-valor"><span id="modal-referidos-total-referidos" class="modal-referidos-total">0</span></strong>
         <span class="resumen-text">Referidos que se han registrado con tu código:</span>
         <strong class="resumen-valor"><span id="modal-referidos-codigo" class="modal-referidos-nuevo">--</span></strong>
-        <span class="resumen-text">Para seguir ganando cartones debes completar:</span>
-        <strong class="resumen-valor">
-          <span id="modal-referidos-progreso-actual" class="modal-referidos-total">0</span>/<span id="modal-referidos-min" class="modal-referidos-min">0</span>
-        </strong>
-        <span class="resumen-text">para que recibas:</span>
+        <span class="resumen-text">Por cada:</span>
+        <strong class="resumen-valor"><span id="modal-referidos-min" class="modal-referidos-min">0</span></strong>
+        <span class="resumen-text">recibiras:</span>
         <strong class="resumen-valor"><span id="modal-referidos-premio" class="modal-referidos-nuevo">0</span></strong>
-        <span class="resumen-text">cartones</span>
+        <span class="resumen-text">En esta campaña llevas:</span>
+        <strong class="resumen-valor"><span id="modal-referidos-total-referidos-campana" class="modal-referidos-total">0</span></strong>
       </p>
       <table class="modal-referidos-tabla" aria-label="Tabla de referidos">
         <thead>
@@ -1210,7 +1219,7 @@
             <th class="col-numero">N°</th>
             <th class="col-nombre">Nombre y Apellido</th>
             <th class="col-fecha">Fecha y hora</th>
-            <th class="col-premio">Ganó</th>
+            <th class="col-premio"><span class="icon check">&#10004;</span></th>
           </tr>
         </thead>
         <tbody id="modal-referidos-lista" class="modal-referidos-lista"></tbody>
@@ -1237,9 +1246,9 @@
   const referidosModalInicioEl = document.getElementById('modal-referidos-inicio');
   const referidosModalFinEl = document.getElementById('modal-referidos-fin');
   const referidosModalTotalReferidosEl = document.getElementById('modal-referidos-total-referidos');
+  const referidosModalTotalReferidosCampanaEl = document.getElementById('modal-referidos-total-referidos-campana');
   const referidosModalCodigoEl = document.getElementById('modal-referidos-codigo');
   const referidosModalMinEl = document.getElementById('modal-referidos-min');
-  const referidosModalProgresoActualEl = document.getElementById('modal-referidos-progreso-actual');
   const referidosModalPremioEl = document.getElementById('modal-referidos-premio');
   const referidosModalVacioEl = document.getElementById('modal-referidos-vacio');
   const referidosModalCerrarBtn = document.getElementById('modal-referidos-cerrar');
@@ -1677,9 +1686,8 @@
     if(referidosModalTotalReferidosEl){
       referidosModalTotalReferidosEl.textContent = `${resumen.totalReferidos ?? resumen.referidos.length}`;
     }
-    if(referidosModalProgresoActualEl){
-      const progresoActual = resumen.progresoActual ?? 0;
-      referidosModalProgresoActualEl.textContent = `${progresoActual}`;
+    if(referidosModalTotalReferidosCampanaEl){
+      referidosModalTotalReferidosCampanaEl.textContent = `${resumen.totalReferidos ?? resumen.referidos.length}`;
     }
     if(referidosModalCodigoEl){
       referidosModalCodigoEl.textContent = resumen.codigoPromocional || '--';
@@ -1711,7 +1719,7 @@
       fecha.textContent = item.fechaRegistro;
       const premio = document.createElement('td');
       premio.className = 'col-premio';
-      premio.textContent = `${item.cartonesNuevo}`;
+      premio.innerHTML = item.cartonesNuevo > 0 ? '<span class="icon check">&#10004;</span>' : '';
       fila.appendChild(numero);
       fila.appendChild(nombre);
       fila.appendChild(fecha);
