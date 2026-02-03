@@ -411,6 +411,7 @@
     const campoCelular = document.getElementById('celular');
     const botonGoogle = document.getElementById('login-google');
     const botonApple = document.getElementById('login-apple');
+    let loginEnProceso = false;
 
     function obtenerDatosFormulario(){
       return {
@@ -634,15 +635,22 @@
       selectCodigoPais.addEventListener('change', actualizarEstadoRegistro);
     }
     async function iniciarLoginConProveedor(tipo){
+      loginEnProceso = true;
+      ocultarManoRegistro();
       guardarRegistroPendiente(obtenerDatosFormulario());
       if(auth?.currentUser){
         await auth.signOut();
       }
-      if(tipo === 'google'){
-        await loginGoogle();
-        return;
+      try{
+        if(tipo === 'google'){
+          await loginGoogle();
+          return;
+        }
+        await loginApple();
+      }finally{
+        loginEnProceso = false;
+        actualizarEstadoRegistro();
       }
-      await loginApple();
     }
     document.getElementById('login-google').addEventListener('click', ()=>iniciarLoginConProveedor('google'));
     document.getElementById('login-apple').addEventListener('click', ()=>iniciarLoginConProveedor('apple'));
@@ -709,8 +717,8 @@
       const rectApple = botonApple.getBoundingClientRect();
       const centroGoogle = rectGoogle.left + rectGoogle.width / 2;
       const centroApple = rectApple.left + rectApple.width / 2;
-      const baseLeft = Math.min(centroGoogle, centroApple);
-      const shift = Math.max(centroGoogle, centroApple) - baseLeft;
+      const baseLeft = Math.max(centroGoogle, centroApple);
+      const shift = Math.min(centroGoogle, centroApple) - baseLeft;
       const manoWidth = manoRegistro.width || 52;
       const manoHeight = manoRegistro.height || 52;
       const left = baseLeft - manoWidth / 2;
@@ -752,6 +760,10 @@
     }
 
     function actualizarGuiaRegistro(){
+      if(loginEnProceso){
+        ocultarManoRegistro();
+        return;
+      }
       const paso = determinarPasoGuia();
       actualizarBloqueosPaso(paso);
       if(paso === 'nombre'){
