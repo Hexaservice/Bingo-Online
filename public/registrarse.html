@@ -80,6 +80,10 @@
       color:#111827;
       box-shadow:0 2px 6px rgba(0,0,0,0.12);
     }
+    .provider-btn.provider-attention{
+      animation:provider-attention 0.8s ease-in-out infinite;
+      transform-origin:center;
+    }
     .provider-btn svg{
       width:18px;
       height:18px;
@@ -199,6 +203,11 @@
       0%{transform:translateX(0);}
       50%{transform:translateX(var(--registro-hand-shift));}
       100%{transform:translateX(0);}
+    }
+    @keyframes provider-attention{
+      0%{transform:scale(1);}
+      50%{transform:scale(1.08);}
+      100%{transform:scale(1);}
     }
   </style>
   <link rel="stylesheet" href="css/desktopFrame.css">
@@ -690,6 +699,12 @@
       manoRegistro.classList.remove('registro-hand-pulse','registro-hand-sweep');
     }
 
+    function actualizarAnimacionProveedores(activa){
+      if(!botonGoogle || !botonApple) return;
+      botonGoogle.classList.toggle('provider-attention', activa);
+      botonApple.classList.toggle('provider-attention', activa);
+    }
+
     function mostrarManoRegistro({src, left, top, clase, shift}){
       if(!manoRegistro) return;
       manoRegistro.src = src;
@@ -709,21 +724,6 @@
       const left = rect.right + 8;
       const top = rect.top + rect.height / 2 - manoHeight / 2;
       return { left, top, manoWidth };
-    }
-
-    function posicionarManoProveedores(){
-      if(!manoRegistro || !botonGoogle || !botonApple) return null;
-      const rectGoogle = botonGoogle.getBoundingClientRect();
-      const rectApple = botonApple.getBoundingClientRect();
-      const centroGoogle = rectGoogle.left + rectGoogle.width / 2;
-      const centroApple = rectApple.left + rectApple.width / 2;
-      const baseLeft = Math.max(centroGoogle, centroApple);
-      const shift = Math.min(centroGoogle, centroApple) - baseLeft;
-      const manoWidth = manoRegistro.width || 52;
-      const manoHeight = manoRegistro.height || 52;
-      const left = baseLeft - manoWidth / 2;
-      const top = Math.max(rectGoogle.bottom, rectApple.bottom) + 8;
-      return { left, top, shift };
     }
 
     function actualizarBloqueosPaso(paso){
@@ -762,11 +762,13 @@
     function actualizarGuiaRegistro(){
       if(loginEnProceso){
         ocultarManoRegistro();
+        actualizarAnimacionProveedores(false);
         return;
       }
       const paso = determinarPasoGuia();
       actualizarBloqueosPaso(paso);
       if(paso === 'nombre'){
+        actualizarAnimacionProveedores(false);
         const pos = posicionarManoDerecha(campoNombre);
         if(pos){
           mostrarManoRegistro({ src:'img/Mano-izquierda.png', left:pos.left, top:pos.top, clase:'registro-hand-pulse' });
@@ -774,6 +776,7 @@
         }
       }
       if(paso === 'apellido'){
+        actualizarAnimacionProveedores(false);
         const pos = posicionarManoDerecha(campoApellido);
         if(pos){
           mostrarManoRegistro({ src:'img/Mano-izquierda.png', left:pos.left, top:pos.top, clase:'registro-hand-pulse' });
@@ -781,6 +784,7 @@
         }
       }
       if(paso === 'alias'){
+        actualizarAnimacionProveedores(false);
         const pos = posicionarManoDerecha(campoAlias);
         if(pos){
           mostrarManoRegistro({ src:'img/Mano-izquierda.png', left:pos.left, top:pos.top, clase:'registro-hand-pulse' });
@@ -788,6 +792,7 @@
         }
       }
       if(paso === 'celular'){
+        actualizarAnimacionProveedores(false);
         const pos = posicionarManoDerecha(campoCelular);
         if(pos){
           mostrarManoRegistro({ src:'img/Mano-izquierda.png', left:pos.left, top:pos.top, clase:'registro-hand-pulse' });
@@ -795,19 +800,19 @@
         }
       }
       if(paso === 'proveedor'){
-        const pos = posicionarManoProveedores();
-        if(pos){
-          mostrarManoRegistro({ src:'img/Mano-arriba.png', left:pos.left, top:pos.top, clase:'registro-hand-sweep', shift: pos.shift });
-          return;
-        }
+        ocultarManoRegistro();
+        actualizarAnimacionProveedores(true);
+        return;
       }
       if(paso === 'registrar'){
+        actualizarAnimacionProveedores(false);
         const pos = posicionarManoDerecha(registrarBtn);
         if(pos){
           mostrarManoRegistro({ src:'img/Mano-izquierda.png', left:pos.left, top:pos.top, clase:'registro-hand-pulse' });
           return;
         }
       }
+      actualizarAnimacionProveedores(false);
       ocultarManoRegistro();
     }
 
