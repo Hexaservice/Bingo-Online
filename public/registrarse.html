@@ -173,12 +173,40 @@
       opacity:1;
       transform:translateX(-50%) translateY(-8px);
     }
+    #registro-hand{
+      position:fixed;
+      width:52px;
+      height:auto;
+      display:none;
+      z-index:14000;
+      pointer-events:none;
+      filter:drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35));
+      transform-origin:center;
+      --registro-hand-shift: 0px;
+    }
+    #registro-hand.registro-hand-pulse{
+      animation:registro-hand-pulse 0.7s ease-in-out infinite;
+    }
+    #registro-hand.registro-hand-sweep{
+      animation:registro-hand-sweep 1.4s ease-in-out infinite;
+    }
+    @keyframes registro-hand-pulse{
+      0%{transform:scale(1);}
+      45%{transform:scale(1.18);}
+      100%{transform:scale(1);}
+    }
+    @keyframes registro-hand-sweep{
+      0%{transform:translateX(0);}
+      50%{transform:translateX(var(--registro-hand-shift));}
+      100%{transform:translateX(0);}
+    }
   </style>
   <link rel="stylesheet" href="css/desktopFrame.css">
 </head>
 <body>
   <img id="logo-bingo" src="img/Logo-BingOnline-nuevo500p.png" />
   <h2>Registro de Jugador</h2>
+  <img id="registro-hand" alt="Guía visual del registro" loading="lazy" />
   <input type="text" id="nombre" placeholder="Nombre">
   <input type="text" id="apellido" placeholder="Apellido">
   <input type="text" id="alias" placeholder="Alias">
@@ -376,6 +404,13 @@
     let registroEnProceso = false;
     const registrarBtn = document.getElementById('registrar');
     const emailLabel = document.getElementById('email');
+    const manoRegistro = document.getElementById('registro-hand');
+    const campoNombre = document.getElementById('nombre');
+    const campoApellido = document.getElementById('apellido');
+    const campoAlias = document.getElementById('alias');
+    const campoCelular = document.getElementById('celular');
+    const botonGoogle = document.getElementById('login-google');
+    const botonApple = document.getElementById('login-apple');
 
     function obtenerDatosFormulario(){
       return {
@@ -631,8 +666,145 @@
         && !!datos.aceptoTerminos
         && !!auth?.currentUser?.email;
       registrarBtn.disabled = !requisitos;
+      actualizarGuiaRegistro();
     }
     initFechaHora('fecha-hora');
+
+    function establecerHabilitado(elemento, habilitado){
+      if(!elemento) return;
+      elemento.disabled = !habilitado;
+      elemento.setAttribute('aria-disabled', (!habilitado).toString());
+    }
+
+    function ocultarManoRegistro(){
+      if(!manoRegistro) return;
+      manoRegistro.style.display='none';
+      manoRegistro.classList.remove('registro-hand-pulse','registro-hand-sweep');
+    }
+
+    function mostrarManoRegistro({src, left, top, clase, shift}){
+      if(!manoRegistro) return;
+      manoRegistro.src = src;
+      manoRegistro.style.left = `${left}px`;
+      manoRegistro.style.top = `${top}px`;
+      manoRegistro.style.setProperty('--registro-hand-shift', `${shift ?? 0}px`);
+      manoRegistro.classList.remove('registro-hand-pulse','registro-hand-sweep');
+      manoRegistro.classList.add(clase);
+      manoRegistro.style.display = 'block';
+    }
+
+    function posicionarManoDerecha(elemento){
+      if(!manoRegistro || !elemento) return null;
+      const rect = elemento.getBoundingClientRect();
+      const manoWidth = manoRegistro.width || 52;
+      const manoHeight = manoRegistro.height || 52;
+      const left = rect.right + 8;
+      const top = rect.top + rect.height / 2 - manoHeight / 2;
+      return { left, top, manoWidth };
+    }
+
+    function posicionarManoProveedores(){
+      if(!manoRegistro || !botonGoogle || !botonApple) return null;
+      const rectGoogle = botonGoogle.getBoundingClientRect();
+      const rectApple = botonApple.getBoundingClientRect();
+      const centroGoogle = rectGoogle.left + rectGoogle.width / 2;
+      const centroApple = rectApple.left + rectApple.width / 2;
+      const baseLeft = Math.min(centroGoogle, centroApple);
+      const shift = Math.max(centroGoogle, centroApple) - baseLeft;
+      const manoWidth = manoRegistro.width || 52;
+      const manoHeight = manoRegistro.height || 52;
+      const left = baseLeft - manoWidth / 2;
+      const top = Math.max(rectGoogle.bottom, rectApple.bottom) + 8;
+      return { left, top, shift };
+    }
+
+    function actualizarBloqueosPaso(paso){
+      const bloqueos = new Set();
+      if(paso === 'nombre'){
+        bloqueos.add('apellido');
+        bloqueos.add('alias');
+        bloqueos.add('celular');
+        bloqueos.add('codigo-pais');
+      }else if(paso === 'apellido'){
+        bloqueos.add('alias');
+        bloqueos.add('celular');
+        bloqueos.add('codigo-pais');
+      }else if(paso === 'alias'){
+        bloqueos.add('celular');
+        bloqueos.add('codigo-pais');
+      }
+      establecerHabilitado(campoNombre, true);
+      establecerHabilitado(campoApellido, !bloqueos.has('apellido'));
+      establecerHabilitado(campoAlias, !bloqueos.has('alias'));
+      establecerHabilitado(campoCelular, !bloqueos.has('celular'));
+      establecerHabilitado(selectCodigoPais, !bloqueos.has('codigo-pais'));
+    }
+
+    function determinarPasoGuia(){
+      const datos = obtenerDatosFormulario();
+      if((datos.nombre || '').length <= 2) return 'nombre';
+      if((datos.apellido || '').length <= 2) return 'apellido';
+      if((datos.alias || '').length <= 2) return 'alias';
+      if((datos.celularLocal || '').length <= 6) return 'celular';
+      if(!auth?.currentUser?.email) return 'proveedor';
+      if(!registrarBtn.disabled) return 'registrar';
+      return 'listo';
+    }
+
+    function actualizarGuiaRegistro(){
+      const paso = determinarPasoGuia();
+      actualizarBloqueosPaso(paso);
+      if(paso === 'nombre'){
+        const pos = posicionarManoDerecha(campoNombre);
+        if(pos){
+          mostrarManoRegistro({ src:'img/Mano-izquierda.png', left:pos.left, top:pos.top, clase:'registro-hand-pulse' });
+          return;
+        }
+      }
+      if(paso === 'apellido'){
+        const pos = posicionarManoDerecha(campoApellido);
+        if(pos){
+          mostrarManoRegistro({ src:'img/Mano-izquierda.png', left:pos.left, top:pos.top, clase:'registro-hand-pulse' });
+          return;
+        }
+      }
+      if(paso === 'alias'){
+        const pos = posicionarManoDerecha(campoAlias);
+        if(pos){
+          mostrarManoRegistro({ src:'img/Mano-izquierda.png', left:pos.left, top:pos.top, clase:'registro-hand-pulse' });
+          return;
+        }
+      }
+      if(paso === 'celular'){
+        const pos = posicionarManoDerecha(campoCelular);
+        if(pos){
+          mostrarManoRegistro({ src:'img/Mano-izquierda.png', left:pos.left, top:pos.top, clase:'registro-hand-pulse' });
+          return;
+        }
+      }
+      if(paso === 'proveedor'){
+        const pos = posicionarManoProveedores();
+        if(pos){
+          mostrarManoRegistro({ src:'img/Mano-arriba.png', left:pos.left, top:pos.top, clase:'registro-hand-sweep', shift: pos.shift });
+          return;
+        }
+      }
+      if(paso === 'registrar'){
+        const pos = posicionarManoDerecha(registrarBtn);
+        if(pos){
+          mostrarManoRegistro({ src:'img/Mano-izquierda.png', left:pos.left, top:pos.top, clase:'registro-hand-pulse' });
+          return;
+        }
+      }
+      ocultarManoRegistro();
+    }
+
+    ['scroll','resize'].forEach(evt=>{
+      window.addEventListener(evt, ()=>{
+        window.requestAnimationFrame(actualizarGuiaRegistro);
+      });
+    });
+    actualizarGuiaRegistro();
   </script>
 </body>
 </html>

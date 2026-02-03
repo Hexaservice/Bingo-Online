@@ -378,7 +378,7 @@
     #tutorial-nav.activo .tutorial-nav-btn:nth-child(2) { animation-delay: 0.12s; }
     .tutorial-nav-btn:hover { transform: scale(1.08); color: #5546c0; }
     .tutorial-nav-btn:active { transform: scale(0.95); }
-    #tutorial-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 12000; background: rgba(0, 0, 0, 0.65); transition: opacity 0.25s ease; opacity: 0; }
+    #tutorial-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 12000; background: transparent; transition: opacity 0.25s ease, background 0.25s ease; opacity: 0; }
     #tutorial-overlay.sin-mascara{ background: transparent; }
     #tutorial-overlay.activo { opacity: 1; }
     #tutorial-hand { position: fixed; width: 44px; height: auto; display: none; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35)); transform-origin: center; z-index: 16000; pointer-events: none; }
@@ -1282,6 +1282,8 @@
       }
     }
 
+    const OPACIDAD_MASCARA_TUTORIAL = 0.52;
+
     function actualizarMascara(rect, extraRect){
       if(!tutorialUI.overlay || !rect) return;
       const padding=14;
@@ -1291,15 +1293,21 @@
         top: Math.max(0, Math.min(rect.top, extraRect?.top ?? rect.top) - padding),
         bottom: Math.min(obtenerAlturaViewport(), Math.max(rect.bottom, extraRect?.bottom ?? rect.bottom) + padding),
       };
+      const centroX=(union.left + union.right) / 2;
+      const centroY=(union.top + union.bottom) / 2;
+      const ancho=union.right - union.left;
+      const alto=union.bottom - union.top;
+      const radio=Math.sqrt((ancho ** 2) + (alto ** 2)) / 2 + 26;
+      const halo=radio + 160;
       tutorialUI.overlay.classList.remove('sin-mascara');
-      tutorialUI.overlay.style.background='rgba(0, 0, 0, 0.6)';
-      tutorialUI.overlay.style.clipPath=`polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 0, 0 0, ${union.left}px 0, ${union.left}px ${union.top}px, ${union.right}px ${union.top}px, ${union.right}px ${union.bottom}px, ${union.left}px ${union.bottom}px, ${union.left}px 0, 0 0)`;
+      tutorialUI.overlay.style.clipPath='none';
+      tutorialUI.overlay.style.background=`radial-gradient(circle at ${centroX}px ${centroY}px, rgba(0, 0, 0, 0) ${radio}px, rgba(0, 0, 0, ${OPACIDAD_MASCARA_TUTORIAL}) ${halo}px)`;
     }
 
     function limpiarMascara(){
       if(!tutorialUI.overlay) return;
       tutorialUI.overlay.style.clipPath='none';
-      tutorialUI.overlay.style.background=tutorialMascaraSuavizada?'transparent':'rgba(0, 0, 0, 0.6)';
+      tutorialUI.overlay.style.background=tutorialMascaraSuavizada?'transparent':`rgba(0, 0, 0, ${OPACIDAD_MASCARA_TUTORIAL})`;
       if(tutorialMascaraSuavizada){ tutorialUI.overlay.classList.add('sin-mascara'); }
     }
 
