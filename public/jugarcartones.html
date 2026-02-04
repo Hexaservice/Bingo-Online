@@ -865,7 +865,7 @@
       position:fixed;
       inset:0;
       pointer-events:none;
-      z-index:3200;
+      z-index:5200;
       background:transparent;
     }
     #tutorial-hand{
@@ -874,9 +874,8 @@
       height:auto;
       display:none;
       filter:drop-shadow(0 6px 10px rgba(0,0,0,0.35));
-      animation:tutorial-hand-pulse 0.85s ease-in-out infinite;
       transform-origin:center;
-      transition:left 0.65s ease, top 0.65s ease;
+      transition:none;
     }
     #tutorial-hand.tutorial-hand-tap{
       animation:tutorial-hand-tap 0.55s ease-in-out;
@@ -1205,7 +1204,8 @@
     activo:false,
     indice:0,
     auto:{reproduciendo:false, ejecutando:false},
-    token:0
+    token:0,
+    seguimiento:null
   };
 
   function actualizarSorteoHint(){
@@ -1220,8 +1220,15 @@
     return Math.min(Math.max(value,min),max);
   }
 
-  async function moverManoAElemento(elemento,opciones={}){
-    if(!tutorialHand || !elemento) return;
+  function detenerSeguimientoMano(){
+    if(tutorialState.seguimiento?.rafId){
+      cancelAnimationFrame(tutorialState.seguimiento.rafId);
+    }
+    tutorialState.seguimiento=null;
+  }
+
+  function calcularPosicionManoParaElemento(elemento,opciones){
+    if(!tutorialHand || !elemento) return null;
     const {offsetX=0,offsetY=12,position='below'}=opciones;
     const rect=elemento.getBoundingClientRect();
     const manoW=tutorialHand.width||56;
@@ -1236,9 +1243,51 @@
     }
     x=clamp(x,8,window.innerWidth-manoW-8);
     y=clamp(y,8,window.innerHeight-manoH-8);
+    return {x,y};
+  }
+
+  function actualizarPosicionManoSeguimiento(){
+    if(!tutorialState.seguimiento || !tutorialHand) return;
+    const {elemento,opciones}=tutorialState.seguimiento;
+    if(!elemento || !document.contains(elemento)) return;
+    const posicion=calcularPosicionManoParaElemento(elemento,opciones);
+    if(!posicion) return;
     tutorialHand.src='img/Mano-arriba.png';
-    tutorialHand.style.left=`${x}px`;
-    tutorialHand.style.top=`${y}px`;
+    tutorialHand.style.left=`${posicion.x}px`;
+    tutorialHand.style.top=`${posicion.y}px`;
+    tutorialHand.style.display='block';
+  }
+
+  function iniciarSeguimientoMano(elemento,opciones){
+    if(!tutorialHand || !elemento) return;
+    detenerSeguimientoMano();
+    tutorialState.seguimiento={elemento,opciones,rafId:null};
+    const loop=()=>{
+      if(!tutorialState.activo || !tutorialState.seguimiento) return;
+      if(!document.contains(tutorialState.seguimiento.elemento)){
+        detenerSeguimientoMano();
+        return;
+      }
+      actualizarPosicionManoSeguimiento();
+      tutorialState.seguimiento.rafId=requestAnimationFrame(loop);
+    };
+    loop();
+  }
+
+  async function moverManoAElemento(elemento,opciones={}){
+    if(!tutorialHand || !elemento) return;
+    const {track=true}=opciones;
+    if(track){
+      iniciarSeguimientoMano(elemento,opciones);
+      await esperar(700);
+      return;
+    }
+    detenerSeguimientoMano();
+    const posicion=calcularPosicionManoParaElemento(elemento,opciones);
+    if(!posicion) return;
+    tutorialHand.src='img/Mano-arriba.png';
+    tutorialHand.style.left=`${posicion.x}px`;
+    tutorialHand.style.top=`${posicion.y}px`;
     tutorialHand.style.display='block';
     await esperar(700);
   }
@@ -1272,6 +1321,7 @@
 
   async function animarScrollConMano(contenedor,token){
     if(!contenedor || token!==tutorialState.token) return;
+    detenerSeguimientoMano();
     const maxScroll=contenedor.scrollHeight-contenedor.clientHeight;
     if(maxScroll<=0) return;
     const inicio=contenedor.scrollTop;
@@ -1304,6 +1354,7 @@
 
   async function animarScrollSubirBajar(contenedor,token){
     if(!contenedor || token!==tutorialState.token) return;
+    detenerSeguimientoMano();
     const maxScroll=contenedor.scrollHeight-contenedor.clientHeight;
     if(maxScroll<=0) return;
     const mitad=Math.min(maxScroll,120);
@@ -1496,6 +1547,7 @@
     tutorialState.activo=false;
     cancelarTutorialEnCurso();
     detenerTutorialAutomatico();
+    detenerSeguimientoMano();
     if(tutorialToggle){
       tutorialToggle.classList.remove('activo');
     }
