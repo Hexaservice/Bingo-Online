@@ -88,7 +88,21 @@
     .sorteo-jugando{color:purple;}
     @keyframes zoomInOut{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
     .sorteo-jugando span,.sorteo-jugando .sorteo-detalle{display:inline-block;animation:zoomInOut 1s infinite;transform-origin:left center;}
-    .sorteo-info{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;}
+    .sorteo-info{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;position:relative;}
+    .sorteo-btn-wrap{position:relative;display:inline-flex;align-items:center;justify-content:center;}
+    #sorteo-hint-hand{
+      position:absolute;
+      right:-65px;
+      top:50%;
+      width:52px;
+      height:auto;
+      transform:translateY(-50%);
+      animation:zoomInOut 1.1s ease-in-out infinite;
+      display:none;
+      pointer-events:none;
+      z-index:5;
+    }
+    #sorteo-hint-hand.visible{display:block;}
     .sellado-overlay{
       position:fixed;
       inset:0;
@@ -767,6 +781,124 @@
       #fecha-hora-sorteo .fecha-col{align-items:center;text-align:center;}
       .datos-sorteo,#alias-section,.carton-box{max-width:560px;width:100%;}
     }
+
+    /* Controles del modo tutorial */
+    #tutorial-controls{
+      position:fixed;
+      left:14px;
+      bottom:18px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      z-index:3300;
+    }
+    #tutorial-toggle{
+      width:62px;
+      height:62px;
+      border-radius:50%;
+      border:2px solid #0f0f0f;
+      background:radial-gradient(circle at 30% 30%, #aab2ff, #4b3fae 65%);
+      color:#f7f9ff;
+      font-family:'Poppins',sans-serif;
+      font-weight:800;
+      font-size:8.5px;
+      line-height:1.1;
+      letter-spacing:0.4px;
+      text-shadow:0 2px 6px rgba(0,0,0,0.55);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      cursor:pointer;
+      box-shadow:0 10px 20px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.3);
+      transition:transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+    }
+    #tutorial-toggle.activo{
+      background:radial-gradient(circle at 30% 30%, #63e68a, #0b9a2e 70%);
+      box-shadow:0 12px 20px rgba(0,128,0,0.35), inset 0 1px 0 rgba(255,255,255,0.35);
+    }
+    #tutorial-toggle:hover{
+      transform:translateY(-1px) scale(1.03);
+      box-shadow:0 12px 22px rgba(0,0,0,0.4);
+    }
+    #tutorial-nav{
+      display:none;
+      gap:8px;
+      align-items:center;
+      transform:translateX(-10px);
+      opacity:0;
+    }
+    #tutorial-toggle.activo + #tutorial-nav,
+    #tutorial-nav.activo{
+      display:flex;
+      animation:tutorial-nav-surge 0.42s ease forwards;
+    }
+    #tutorial-nav.saliendo{
+      display:flex;
+      animation:tutorial-nav-exit 0.32s ease forwards;
+    }
+    .tutorial-nav-btn{
+      min-width:38px;
+      height:auto;
+      border:none;
+      background:transparent;
+      color:#1f1f1f;
+      font-size:26px;
+      cursor:pointer;
+      box-shadow:none;
+      display:grid;
+      place-items:center;
+      padding:6px 4px;
+      transition:transform 0.2s ease, color 0.2s ease;
+      animation:tutorial-nav-surge 0.42s ease forwards;
+      opacity:0;
+    }
+    #tutorial-nav.saliendo .tutorial-nav-btn{
+      animation:tutorial-nav-exit 0.32s ease forwards;
+    }
+    #tutorial-nav.activo .tutorial-nav-btn:nth-child(1){animation-delay:0.05s;}
+    #tutorial-nav.activo .tutorial-nav-btn:nth-child(2){animation-delay:0.12s;}
+    #tutorial-nav.activo .tutorial-nav-btn:nth-child(3){animation-delay:0.18s;}
+    .tutorial-nav-btn:hover{transform:scale(1.08);color:#5546c0;}
+    .tutorial-nav-btn:active{transform:scale(0.95);}
+    #tutorial-overlay{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      z-index:3200;
+      background:transparent;
+    }
+    #tutorial-hand{
+      position:absolute;
+      width:56px;
+      height:auto;
+      display:none;
+      filter:drop-shadow(0 6px 10px rgba(0,0,0,0.35));
+      animation:tutorial-hand-pulse 0.85s ease-in-out infinite;
+      transform-origin:center;
+      transition:left 0.65s ease, top 0.65s ease;
+    }
+    #tutorial-hand.tutorial-hand-tap{
+      animation:tutorial-hand-tap 0.55s ease-in-out;
+    }
+    @keyframes tutorial-hand-pulse{
+      0%{transform:scale(1);}
+      45%{transform:scale(1.08);}
+      100%{transform:scale(1);}
+    }
+    @keyframes tutorial-hand-tap{
+      0%{transform:scale(1);}
+      45%{transform:scale(0.88);}
+      100%{transform:scale(1);}
+    }
+    @keyframes tutorial-nav-surge{
+      0%{transform:translateX(-12px);opacity:0;}
+      100%{transform:translateX(0);opacity:1;}
+    }
+    @keyframes tutorial-nav-exit{
+      0%{transform:translateX(0);opacity:1;}
+      100%{transform:translateX(-10px);opacity:0;}
+    }
   </style>
   <link rel="stylesheet" href="css/desktopFrame.css">
 </head>
@@ -775,7 +907,10 @@
   <h1 id="titulo">JUGAR CARTÓN</h1>
   <section id="sorteo-section">
     <div class="sorteo-info">
-      <button id="sorteo-btn">Selecciona Sorteo</button>
+      <div class="sorteo-btn-wrap">
+        <button id="sorteo-btn">Selecciona Sorteo</button>
+        <img id="sorteo-hint-hand" src="img/Mano-izquierda.png" alt="Selecciona un sorteo disponible" loading="lazy">
+      </div>
       <div id="fecha-hora-sorteo">
         <div class="fecha-col">
           <div id="fecha-sorteo" class="sorteo-line"></div>
@@ -840,6 +975,18 @@
     <div class="wallet-row guardar-row"><label><input type="checkbox" id="guardar-check"><span id="guardar-titulo"> Guardar cartón</span></label><input type="text" id="nombre-carton" placeholder="Nombra el Cartón"><button id="guardar-carton-btn" title="Guardar cartón">💾</button><div id="mis-cartones-btn-container"><img id="mis-cartones-icon" class="carton-icon" src="https://cdn-icons-png.flaticon.com/32/5065/5065890.png" alt="Mis Cartones" title="Mis Cartones"><span id="guardados-count" style="display:none;">0</span></div></div>
     <button id="jugar-carton-btn" class="action-btn">JUGAR CARTÓN</button>
   </section>
+  <div id="tutorial-overlay" aria-hidden="true">
+    <img id="tutorial-hand" alt="Guía visual del tutorial" loading="lazy">
+  </div>
+
+  <div id="tutorial-controls" aria-label="Controles del modo tutorial">
+    <button id="tutorial-toggle" type="button">MODO<br/>TUTORIAL</button>
+    <div id="tutorial-nav" aria-hidden="true">
+      <button id="tutorial-prev" class="tutorial-nav-btn" type="button" aria-label="Paso anterior del tutorial">⏪</button>
+      <button id="tutorial-play" class="tutorial-nav-btn" type="button" aria-label="Reproducir tutorial automáticamente">▶️</button>
+      <button id="tutorial-next" class="tutorial-nav-btn" type="button" aria-label="Siguiente paso del tutorial">⏩</button>
+    </div>
+  </div>
   <div id="fecha-hora"></div>
   <div id="derechos">Todos los derechos reservados ® Hexaservice <span class="current-year"></span></div>
   <div id="number-modal" class="modal" onclick="this.style.display='none'">
@@ -1034,6 +1181,13 @@
   const creditosModalRetenidos=document.getElementById('creditos-modal-retenidos');
   const creditosModalCerrar=document.getElementById('creditos-modal-cerrar');
   const creditosLabelEl=document.getElementById('creditos-label');
+  const sorteoHintHand=document.getElementById('sorteo-hint-hand');
+  const tutorialToggle=document.getElementById('tutorial-toggle');
+  const tutorialNav=document.getElementById('tutorial-nav');
+  const tutorialPrev=document.getElementById('tutorial-prev');
+  const tutorialPlay=document.getElementById('tutorial-play');
+  const tutorialNext=document.getElementById('tutorial-next');
+  const tutorialHand=document.getElementById('tutorial-hand');
   const cartonModalOverlay=document.getElementById('carton-confirm-modal');
   const cartonModalCard=document.getElementById('carton-modal-card');
   const cartonModalHeaderIcons=document.getElementById('carton-modal-header-icons');
@@ -1047,6 +1201,310 @@
   const cartonProcessingSpinner=cartonProcessingOverlay?cartonProcessingOverlay.querySelector('.carton-processing-spinner'):null;
   const cartonToast=document.getElementById('carton-toast');
   const infoCartonesTablaBody=document.getElementById('info-cartones-tabla-body');
+  const tutorialState={
+    activo:false,
+    indice:0,
+    auto:{reproduciendo:false, ejecutando:false},
+    token:0
+  };
+
+  function actualizarSorteoHint(){
+    if(!sorteoHintHand) return;
+    const visible=!tutorialState.activo && !currentSorteo && sorteosActivos.length>0;
+    sorteoHintHand.classList.toggle('visible',visible);
+  }
+
+  const esperar=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
+
+  function clamp(value,min,max){
+    return Math.min(Math.max(value,min),max);
+  }
+
+  async function moverManoAElemento(elemento,opciones={}){
+    if(!tutorialHand || !elemento) return;
+    const {offsetX=0,offsetY=12,position='below'}=opciones;
+    const rect=elemento.getBoundingClientRect();
+    const manoW=tutorialHand.width||56;
+    const manoH=tutorialHand.height||56;
+    let x=rect.left+rect.width/2-manoW/2+offsetX;
+    let y=rect.top+rect.height/2-manoH/2+offsetY;
+    if(position==='below'){
+      y=rect.bottom+offsetY;
+      x=rect.left+rect.width/2-manoW/2+offsetX;
+    }else if(position==='above'){
+      y=rect.top-manoH-offsetY;
+    }
+    x=clamp(x,8,window.innerWidth-manoW-8);
+    y=clamp(y,8,window.innerHeight-manoH-8);
+    tutorialHand.src='img/Mano-arriba.png';
+    tutorialHand.style.left=`${x}px`;
+    tutorialHand.style.top=`${y}px`;
+    tutorialHand.style.display='block';
+    await esperar(700);
+  }
+
+  async function tocarMano(){
+    if(!tutorialHand) return;
+    tutorialHand.classList.remove('tutorial-hand-tap');
+    void tutorialHand.offsetWidth;
+    tutorialHand.classList.add('tutorial-hand-tap');
+    await esperar(600);
+    tutorialHand.classList.remove('tutorial-hand-tap');
+  }
+
+  function cancelarTutorialEnCurso(){
+    tutorialState.token+=1;
+    tutorialState.auto.ejecutando=false;
+  }
+
+  async function esperarModalVisible(selector){
+    const limite=30;
+    let intentos=0;
+    while(intentos<limite){
+      const modal=document.querySelector(selector);
+      const visible=modal && (modal.classList.contains('visible') || modal.style.display==='flex');
+      if(visible) return modal;
+      await esperar(200);
+      intentos+=1;
+    }
+    return null;
+  }
+
+  async function animarScrollConMano(contenedor,token){
+    if(!contenedor || token!==tutorialState.token) return;
+    const maxScroll=contenedor.scrollHeight-contenedor.clientHeight;
+    if(maxScroll<=0) return;
+    const inicio=contenedor.scrollTop;
+    const fin=maxScroll;
+    const rect=contenedor.getBoundingClientRect();
+    const duracion=1200;
+    const inicioTiempo=performance.now();
+    return new Promise(resolve=>{
+      const animar=(ahora)=>{
+        if(token!==tutorialState.token) return resolve();
+        const progreso=clamp((ahora-inicioTiempo)/duracion,0,1);
+        const actual=inicio+(fin-inicio)*progreso;
+        contenedor.scrollTop=actual;
+        const y=rect.top+rect.height*0.15+(rect.height*0.7*progreso);
+        const x=rect.left+rect.width*0.8;
+        if(tutorialHand){
+          tutorialHand.style.left=`${clamp(x,8,window.innerWidth-(tutorialHand.width||56)-8)}px`;
+          tutorialHand.style.top=`${clamp(y,8,window.innerHeight-(tutorialHand.height||56)-8)}px`;
+          tutorialHand.style.display='block';
+        }
+        if(progreso<1){
+          requestAnimationFrame(animar);
+        }else{
+          resolve();
+        }
+      };
+      requestAnimationFrame(animar);
+    });
+  }
+
+  async function animarScrollSubirBajar(contenedor,token){
+    if(!contenedor || token!==tutorialState.token) return;
+    const maxScroll=contenedor.scrollHeight-contenedor.clientHeight;
+    if(maxScroll<=0) return;
+    const mitad=Math.min(maxScroll,120);
+    const rect=contenedor.getBoundingClientRect();
+    const duracion=900;
+    const inicioTiempo=performance.now();
+    return new Promise(resolve=>{
+      const animar=(ahora)=>{
+        if(token!==tutorialState.token) return resolve();
+        const progreso=clamp((ahora-inicioTiempo)/duracion,0,1);
+        const fase=progreso<0.5?progreso*2:(1-progreso)*2;
+        const actual=mitad*fase;
+        contenedor.scrollTop=actual;
+        const y=rect.top+rect.height*0.2+(rect.height*0.4*progreso);
+        const x=rect.left+rect.width*0.78;
+        if(tutorialHand){
+          tutorialHand.style.left=`${clamp(x,8,window.innerWidth-(tutorialHand.width||56)-8)}px`;
+          tutorialHand.style.top=`${clamp(y,8,window.innerHeight-(tutorialHand.height||56)-8)}px`;
+          tutorialHand.style.display='block';
+        }
+        if(progreso<1){
+          requestAnimationFrame(animar);
+        }else{
+          resolve();
+        }
+      };
+      requestAnimationFrame(animar);
+    });
+  }
+
+  async function ejecutarPasoPremio(token){
+    const premioValor=document.getElementById('premio-valor');
+    const aceptar=document.getElementById('premios-aceptar');
+    const modalContenido=document.querySelector('#premios-modal .modal-content');
+    if(!premioValor) return;
+    await moverManoAElemento(premioValor,{position:'below',offsetY:10});
+    await esperar(3000);
+    if(token!==tutorialState.token) return;
+    await tocarMano();
+    premioValor.click();
+    await esperarModalVisible('#premios-modal');
+    if(token!==tutorialState.token) return;
+    if(modalContenido){
+      await animarScrollConMano(modalContenido,token);
+    }
+    if(aceptar){
+      await moverManoAElemento(aceptar,{position:'below',offsetY:8});
+      await tocarMano();
+      aceptar.click();
+    }
+    await esperar(500);
+  }
+
+  async function ejecutarPasoJugando(token){
+    const jugandoValor=document.getElementById('cartones-jugando-valor');
+    const aceptar=document.getElementById('info-cartones-aceptar');
+    const wrapper=document.getElementById('info-cartones-tabla-wrapper');
+    if(!jugandoValor) return;
+    await moverManoAElemento(jugandoValor,{position:'below',offsetY:8});
+    await esperar(3000);
+    if(token!==tutorialState.token) return;
+    await tocarMano();
+    jugandoValor.click();
+    await esperarModalVisible('#info-cartones-modal');
+    if(token!==tutorialState.token) return;
+    if(wrapper && wrapper.scrollHeight>wrapper.clientHeight){
+      await animarScrollSubirBajar(wrapper,token);
+    }else{
+      await esperar(2000);
+    }
+    if(aceptar){
+      await moverManoAElemento(aceptar,{position:'below',offsetY:8});
+      await tocarMano();
+      aceptar.click();
+    }
+    await esperar(500);
+  }
+
+  async function ejecutarPasoCreditos(token){
+    const creditos=document.getElementById('creditos-label');
+    const aceptar=document.getElementById('creditos-modal-cerrar');
+    if(!creditos) return;
+    await moverManoAElemento(creditos,{position:'below',offsetY:8});
+    await esperar(3000);
+    if(token!==tutorialState.token) return;
+    await tocarMano();
+    creditos.click();
+    await esperarModalVisible('#creditos-modal');
+    if(token!==tutorialState.token) return;
+    await esperar(2000);
+    if(aceptar){
+      await moverManoAElemento(aceptar,{position:'below',offsetY:8});
+      await tocarMano();
+      aceptar.click();
+    }
+    await esperar(500);
+  }
+
+  async function ejecutarPasoBotones(token){
+    const botones=[
+      document.getElementById('azar-btn'),
+      document.getElementById('limpiar-btn'),
+      document.getElementById('ver-jugados-btn'),
+      document.getElementById('ir-billetera-btn')
+    ];
+    for(const boton of botones){
+      if(token!==tutorialState.token) return;
+      if(!boton) continue;
+      await moverManoAElemento(boton,{position:'below',offsetY:8});
+      await esperar(1000);
+    }
+  }
+
+  const tutorialSteps=[
+    ejecutarPasoPremio,
+    ejecutarPasoJugando,
+    ejecutarPasoCreditos,
+    ejecutarPasoBotones
+  ];
+
+  async function ejecutarPasoTutorial(indice){
+    if(!tutorialState.activo || tutorialState.auto.ejecutando) return;
+    tutorialState.auto.ejecutando=true;
+    const total=tutorialSteps.length;
+    tutorialState.indice=(indice+total)%total;
+    const token=tutorialState.token;
+    const paso=tutorialSteps[tutorialState.indice];
+    if(typeof paso==='function'){
+      await paso(token);
+    }
+    tutorialState.auto.ejecutando=false;
+  }
+
+  async function reproducirTutorial(){
+    if(tutorialState.auto.reproduciendo) return;
+    tutorialState.auto.reproduciendo=true;
+    if(tutorialPlay){
+      tutorialPlay.textContent='⏸️';
+      tutorialPlay.setAttribute('aria-label','Pausar avance automático del tutorial');
+    }
+    while(tutorialState.activo && tutorialState.auto.reproduciendo){
+      await ejecutarPasoTutorial(tutorialState.indice);
+      if(!tutorialState.activo || !tutorialState.auto.reproduciendo) break;
+      tutorialState.indice=(tutorialState.indice+1)%tutorialSteps.length;
+    }
+  }
+
+  function detenerTutorialAutomatico(){
+    tutorialState.auto.reproduciendo=false;
+    tutorialState.auto.ejecutando=false;
+    if(tutorialPlay){
+      tutorialPlay.textContent='▶️';
+      tutorialPlay.setAttribute('aria-label','Reproducir tutorial automáticamente');
+    }
+  }
+
+  function mostrarNavTutorial(){
+    if(!tutorialNav) return;
+    tutorialNav.classList.remove('saliendo');
+    tutorialNav.classList.add('activo');
+    tutorialNav.setAttribute('aria-hidden','false');
+  }
+
+  function ocultarNavTutorial(){
+    if(!tutorialNav) return;
+    const estabaActivo=tutorialNav.classList.contains('activo');
+    tutorialNav.classList.remove('activo');
+    tutorialNav.setAttribute('aria-hidden','true');
+    if(estabaActivo){
+      tutorialNav.classList.add('saliendo');
+      tutorialNav.addEventListener('animationend',()=>tutorialNav.classList.remove('saliendo'),{once:true});
+    }
+  }
+
+  function activarTutorial(){
+    tutorialState.activo=true;
+    cancelarTutorialEnCurso();
+    if(tutorialToggle){
+      tutorialToggle.classList.add('activo');
+    }
+    mostrarNavTutorial();
+    if(tutorialHand){
+      tutorialHand.style.display='block';
+    }
+    actualizarSorteoHint();
+    ejecutarPasoTutorial(tutorialState.indice);
+  }
+
+  function desactivarTutorial(){
+    tutorialState.activo=false;
+    cancelarTutorialEnCurso();
+    detenerTutorialAutomatico();
+    if(tutorialToggle){
+      tutorialToggle.classList.remove('activo');
+    }
+    ocultarNavTutorial();
+    if(tutorialHand){
+      tutorialHand.style.display='none';
+    }
+    actualizarSorteoHint();
+  }
 
   function normalizarAliasPerfil(valor){
     return (valor||'').toString().trim().slice(0,20);
@@ -2208,6 +2666,7 @@ function toggleForma(idx){
         btn.style.fontSize='1.1rem';
       }
       alert('Este sorteo ya está FINALIZADO. Selecciona otro sorteo disponible.');
+      actualizarSorteoHint();
       return;
     }
     currentSorteo=s.id;
@@ -2245,6 +2704,7 @@ function toggleForma(idx){
     await actualizarDatosSorteo();
     iniciarIntervalo();
     actualizarCartonesJugador();
+    actualizarSorteoHint();
   }
 
   function abrirSorteosModal(){
@@ -2304,6 +2764,7 @@ function toggleForma(idx){
         }
       });
     }catch(e){ console.warn('No se pudieron cargar sorteos'); }
+    actualizarSorteoHint();
   }
 
   async function enviarDatos(){
@@ -3308,6 +3769,46 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
     document.getElementById('guardar-titulo').style.display=show?'none':'inline';
     if(!show) document.getElementById('nombre-carton').value='';
   });
+
+  if(tutorialToggle){
+    tutorialToggle.addEventListener('click',()=>{
+      if(tutorialState.activo){
+        desactivarTutorial();
+      }else{
+        activarTutorial();
+      }
+    });
+  }
+  if(tutorialPrev){
+    tutorialPrev.addEventListener('click',()=>{
+      if(!tutorialState.activo) return;
+      cancelarTutorialEnCurso();
+      detenerTutorialAutomatico();
+      tutorialState.indice=(tutorialState.indice-1+tutorialSteps.length)%tutorialSteps.length;
+      ejecutarPasoTutorial(tutorialState.indice);
+    });
+  }
+  if(tutorialNext){
+    tutorialNext.addEventListener('click',()=>{
+      if(!tutorialState.activo) return;
+      cancelarTutorialEnCurso();
+      detenerTutorialAutomatico();
+      tutorialState.indice=(tutorialState.indice+1)%tutorialSteps.length;
+      ejecutarPasoTutorial(tutorialState.indice);
+    });
+  }
+  if(tutorialPlay){
+    tutorialPlay.addEventListener('click',()=>{
+      if(!tutorialState.activo){
+        activarTutorial();
+      }
+      if(tutorialState.auto.reproduciendo){
+        detenerTutorialAutomatico();
+      }else{
+        reproducirTutorial();
+      }
+    });
+  }
 
   initFechaHora('fecha-hora');
   iniciarActualizacionFechaActual();
