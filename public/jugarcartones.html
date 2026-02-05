@@ -875,6 +875,10 @@
       display:none;
       filter:drop-shadow(0 6px 10px rgba(0,0,0,0.35));
       transform-origin:center;
+      transition:left 0.35s ease, top 0.35s ease;
+      will-change:left, top;
+    }
+    #tutorial-hand.tutorial-hand-following{
       transition:none;
     }
     #tutorial-hand.tutorial-hand-tap{
@@ -1205,8 +1209,10 @@
     indice:0,
     auto:{reproduciendo:false, ejecutando:false},
     token:0,
-    seguimiento:null
+    seguimiento:null,
+    posicionMano:null
   };
+  const HAND_OFFSET={x:4,y:-12};
 
   function actualizarSorteoHint(){
     if(!sorteoHintHand) return;
@@ -1220,11 +1226,23 @@
     return Math.min(Math.max(value,min),max);
   }
 
+  function aplicarPosicionMano(posicion,{transicion=true}={}){
+    if(!tutorialHand || !posicion) return;
+    tutorialHand.classList.toggle('tutorial-hand-following', !transicion);
+    tutorialHand.style.left=`${posicion.x}px`;
+    tutorialHand.style.top=`${posicion.y}px`;
+    tutorialHand.style.display='block';
+    tutorialState.posicionMano={x:posicion.x,y:posicion.y};
+  }
+
   function detenerSeguimientoMano(){
     if(tutorialState.seguimiento?.rafId){
       cancelAnimationFrame(tutorialState.seguimiento.rafId);
     }
     tutorialState.seguimiento=null;
+    if(tutorialHand){
+      tutorialHand.classList.remove('tutorial-hand-following');
+    }
   }
 
   function calcularPosicionManoParaElemento(elemento,opciones){
@@ -1241,34 +1259,35 @@
     }else if(position==='above'){
       y=rect.top-manoH-offsetY;
     }
+    x+=HAND_OFFSET.x;
+    y+=HAND_OFFSET.y;
     x=clamp(x,8,window.innerWidth-manoW-8);
     y=clamp(y,8,window.innerHeight-manoH-8);
     return {x,y};
   }
 
-  function actualizarPosicionManoSeguimiento(){
+  function actualizarPosicionManoSeguimiento({transicion=false}={}){
     if(!tutorialState.seguimiento || !tutorialHand) return;
     const {elemento,opciones}=tutorialState.seguimiento;
     if(!elemento || !document.contains(elemento)) return;
     const posicion=calcularPosicionManoParaElemento(elemento,opciones);
     if(!posicion) return;
     tutorialHand.src='img/Mano-arriba.png';
-    tutorialHand.style.left=`${posicion.x}px`;
-    tutorialHand.style.top=`${posicion.y}px`;
-    tutorialHand.style.display='block';
+    aplicarPosicionMano(posicion,{transicion});
   }
 
   function iniciarSeguimientoMano(elemento,opciones){
     if(!tutorialHand || !elemento) return;
     detenerSeguimientoMano();
     tutorialState.seguimiento={elemento,opciones,rafId:null};
+    actualizarPosicionManoSeguimiento({transicion:true});
     const loop=()=>{
       if(!tutorialState.activo || !tutorialState.seguimiento) return;
       if(!document.contains(tutorialState.seguimiento.elemento)){
         detenerSeguimientoMano();
         return;
       }
-      actualizarPosicionManoSeguimiento();
+      actualizarPosicionManoSeguimiento({transicion:false});
       tutorialState.seguimiento.rafId=requestAnimationFrame(loop);
     };
     loop();
@@ -1286,9 +1305,7 @@
     const posicion=calcularPosicionManoParaElemento(elemento,opciones);
     if(!posicion) return;
     tutorialHand.src='img/Mano-arriba.png';
-    tutorialHand.style.left=`${posicion.x}px`;
-    tutorialHand.style.top=`${posicion.y}px`;
-    tutorialHand.style.display='block';
+    aplicarPosicionMano(posicion,{transicion:true});
     await esperar(700);
   }
 
@@ -1319,6 +1336,15 @@
     return null;
   }
 
+  function reiniciarScrollModal(contenedor){
+    if(!contenedor) return;
+    if(typeof contenedor.scrollTo==='function'){
+      contenedor.scrollTo({top:0,behavior:'smooth'});
+    }else{
+      contenedor.scrollTop=0;
+    }
+  }
+
   async function animarScrollConMano(contenedor,token){
     if(!contenedor || token!==tutorialState.token) return;
     detenerSeguimientoMano();
@@ -1335,12 +1361,13 @@
         const progreso=clamp((ahora-inicioTiempo)/duracion,0,1);
         const actual=inicio+(fin-inicio)*progreso;
         contenedor.scrollTop=actual;
-        const y=rect.top+rect.height*0.15+(rect.height*0.7*progreso);
-        const x=rect.left+rect.width*0.8;
+        const y=rect.top+rect.height*0.15+(rect.height*0.7*progreso)+HAND_OFFSET.y;
+        const x=rect.left+rect.width*0.8+HAND_OFFSET.x;
         if(tutorialHand){
-          tutorialHand.style.left=`${clamp(x,8,window.innerWidth-(tutorialHand.width||56)-8)}px`;
-          tutorialHand.style.top=`${clamp(y,8,window.innerHeight-(tutorialHand.height||56)-8)}px`;
-          tutorialHand.style.display='block';
+          aplicarPosicionMano({
+            x: clamp(x,8,window.innerWidth-(tutorialHand.width||56)-8),
+            y: clamp(y,8,window.innerHeight-(tutorialHand.height||56)-8)
+          },{transicion:false});
         }
         if(progreso<1){
           requestAnimationFrame(animar);
@@ -1368,12 +1395,13 @@
         const fase=progreso<0.5?progreso*2:(1-progreso)*2;
         const actual=mitad*fase;
         contenedor.scrollTop=actual;
-        const y=rect.top+rect.height*0.2+(rect.height*0.4*progreso);
-        const x=rect.left+rect.width*0.78;
+        const y=rect.top+rect.height*0.2+(rect.height*0.4*progreso)+HAND_OFFSET.y;
+        const x=rect.left+rect.width*0.78+HAND_OFFSET.x;
         if(tutorialHand){
-          tutorialHand.style.left=`${clamp(x,8,window.innerWidth-(tutorialHand.width||56)-8)}px`;
-          tutorialHand.style.top=`${clamp(y,8,window.innerHeight-(tutorialHand.height||56)-8)}px`;
-          tutorialHand.style.display='block';
+          aplicarPosicionMano({
+            x: clamp(x,8,window.innerWidth-(tutorialHand.width||56)-8),
+            y: clamp(y,8,window.innerHeight-(tutorialHand.height||56)-8)
+          },{transicion:false});
         }
         if(progreso<1){
           requestAnimationFrame(animar);
@@ -1537,7 +1565,11 @@
     }
     mostrarNavTutorial();
     if(tutorialHand){
-      tutorialHand.style.display='block';
+      if(tutorialState.posicionMano){
+        aplicarPosicionMano(tutorialState.posicionMano,{transicion:false});
+      }else{
+        tutorialHand.style.display='none';
+      }
     }
     actualizarSorteoHint();
     ejecutarPasoTutorial(tutorialState.indice);
@@ -3265,6 +3297,7 @@ function toggleForma(idx){
       grid.innerHTML='<div class="no-cartones">No has guardado ningún cartón en tu menú</div>';
       botones.style.display='none';
       document.getElementById('cartones-modal').style.display='flex';
+      reiniciarScrollModal(grid);
       return;
     }
     botones.style.display='flex';
@@ -3297,6 +3330,7 @@ function toggleForma(idx){
       grid.appendChild(box);
     });
     document.getElementById('cartones-modal').style.display='flex';
+    reiniciarScrollModal(grid);
   }
 
   async function cargarCartonGuardado(){
@@ -3489,6 +3523,7 @@ function toggleForma(idx){
     const modal=document.getElementById('info-cartones-modal');
     if(modal){
       modal.style.display='flex';
+      reiniciarScrollModal(document.getElementById('info-cartones-tabla-wrapper'));
     }
     await cargarCartonesJugandoTabla();
   }
@@ -3502,6 +3537,7 @@ function toggleForma(idx){
     renderPremios('premios');
     renderPremios('back-premios');
     document.getElementById('premios-modal').style.display='flex';
+    reiniciarScrollModal(document.querySelector('#premios-modal .modal-content'));
   }
 
   async function abrirJugadosModal(){
@@ -3542,6 +3578,7 @@ function toggleForma(idx){
       grid.innerHTML='<div class="no-cartones">No has jugado ningún cartón en este sorteo</div>';
       botones.style.display='none';
       document.getElementById('jugados-modal').style.display='flex';
+      reiniciarScrollModal(grid);
       return;
     }
     botones.style.display='flex';
@@ -3576,6 +3613,7 @@ function toggleForma(idx){
       grid.appendChild(box);
     });
     document.getElementById('jugados-modal').style.display='flex';
+    reiniciarScrollModal(grid);
   }
 
   async function editarCartonGuardado(){
