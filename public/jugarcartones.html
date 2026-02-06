@@ -1490,19 +1490,27 @@
       evitarMano=true,
       evitarControles=true
     }=opciones;
+    const mensajePrevio=tutorialLabel.dataset.mensaje ?? '';
+    const necesitaReinicio=tutorialLabel.style.display!=='flex' || mensajePrevio!==mensaje;
     const maxAncho=Math.min(480,viewportWidth*0.9);
     const tamanoFuente=Math.max(16,Math.min(22,maxAncho/18));
     tutorialLabel.style.maxWidth=`${maxAncho}px`;
     tutorialLabel.style.minWidth='200px';
     tutorialLabel.style.fontSize=`${tamanoFuente}px`;
     tutorialLabel.style.padding=`${Math.max(16,tamanoFuente*0.75)}px ${Math.max(20,tamanoFuente*0.95)}px`;
-    tutorialLabel.textContent=mensaje;
-    tutorialLabel.style.display='flex';
-    tutorialLabel.classList.add('adaptado');
-    tutorialLabel.classList.remove('tutorial-label-visible');
-    tutorialLabel.style.visibility='hidden';
-    tutorialLabel.style.left='0px';
-    tutorialLabel.style.top='0px';
+    if(necesitaReinicio){
+      tutorialLabel.textContent=mensaje;
+      tutorialLabel.dataset.mensaje=mensaje;
+      tutorialLabel.style.display='flex';
+      tutorialLabel.classList.add('adaptado');
+      tutorialLabel.classList.remove('tutorial-label-visible');
+      tutorialLabel.style.visibility='hidden';
+      tutorialLabel.style.left='0px';
+      tutorialLabel.style.top='0px';
+    }else{
+      tutorialLabel.textContent=mensaje;
+      tutorialLabel.dataset.mensaje=mensaje;
+    }
     actualizarMascaraTutorial(rect);
 
     const medidas=tutorialLabel.getBoundingClientRect();
@@ -1592,9 +1600,13 @@
     tutorialLabel.style.left=`${left}px`;
     tutorialLabel.style.top=`${top}px`;
     tutorialLabel.style.visibility='visible';
-    requestAnimationFrame(()=>{
+    if(necesitaReinicio){
+      requestAnimationFrame(()=>{
+        tutorialLabel.classList.add('tutorial-label-visible');
+      });
+    }else{
       tutorialLabel.classList.add('tutorial-label-visible');
-    });
+    }
   }
 
   async function pulsarElementoTutorial(elemento){
@@ -1737,7 +1749,7 @@
         }
         const tablero=document.getElementById('bingo-board');
         if(tablero){
-          const opcionesEtiqueta={direccionPreferida:'arriba',forzarDireccion:true,evitarMano:false};
+          const opcionesEtiqueta={direccionPreferida:'arriba',forzarDireccion:true,evitarMano:false,evitarControles:false};
           posicionarEtiquetaTutorial(tablero.getBoundingClientRect(),mensaje,opcionesEtiqueta);
           iniciarSeguimientoEtiqueta(tablero,mensaje,opcionesEtiqueta);
         }
@@ -1760,7 +1772,7 @@
           tutorialHand.classList.remove('tutorial-hand-pulse');
         }
         const tablero=document.getElementById('bingo-board');
-        const opcionesEtiqueta={direccionPreferida:'arriba',forzarDireccion:true,evitarMano:false};
+        const opcionesEtiqueta={direccionPreferida:'arriba',forzarDireccion:true,evitarMano:false,evitarControles:false};
         const headers=[...document.querySelectorAll('.carton th')];
         for(let i=0;i<headers.length;i++){
           const header=headers[i];
@@ -1845,6 +1857,11 @@
     }
   ];
 
+  function necesitaScrollHastaFinal(){
+    const margen=80;
+    return window.scrollY+window.innerHeight < document.documentElement.scrollHeight-margen;
+  }
+
   async function ejecutarPasoTutorial(indice,{manual=false}={}){
     if(!tutorialState.activo || tutorialState.auto.ejecutando) return;
     tutorialState.auto.ejecutando=true;
@@ -1860,6 +1877,10 @@
     if(paso.id==='sorteo' && window.scrollY>0){
       window.scrollTo({top:0,behavior:'smooth'});
       await esperar(400);
+    }
+    if(['guardar-carton','jugar-carton'].includes(paso.id) && necesitaScrollHastaFinal()){
+      window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'});
+      await esperar(500);
     }
     if(typeof paso.ejecutar==='function'){
       detenerSeguimientoMano();
