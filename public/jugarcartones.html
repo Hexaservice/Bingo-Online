@@ -1263,7 +1263,6 @@
     etiquetaSeguimiento:null
   };
   const HAND_OFFSET={x:4,y:-20};
-  const OPACIDAD_MASCARA_TUTORIAL=0.52;
   const sorteoHintState={
     listo:false,
     rafId:null,
@@ -1279,7 +1278,7 @@
 
   function actualizarSorteoHint(){
     if(!sorteoHintHand || !sorteoHintState.listo) return;
-    const visible=!tutorialState.activo && !currentSorteo && sorteosActivos.length>0;
+    const visible=tutorialState.activo && !currentSorteo && sorteosActivos.length>0;
     if(!visible){
       detenerSeguimientoSorteoHint();
       return;
@@ -1375,22 +1374,8 @@
     aplicarPosicionMano(posicion,{transicion});
   }
 
-  function actualizarMascaraTutorial(rect){
-    if(!tutorialOverlay || !rect) return;
-    const padding=14;
-    const union={
-      left: Math.max(0, rect.left - padding),
-      right: Math.min(window.innerWidth, rect.right + padding),
-      top: Math.max(0, rect.top - padding),
-      bottom: Math.min(window.innerHeight, rect.bottom + padding)
-    };
-    const centroX=(union.left + union.right) / 2;
-    const centroY=(union.top + union.bottom) / 2;
-    const ancho=union.right - union.left;
-    const alto=union.bottom - union.top;
-    const radio=Math.sqrt((ancho ** 2) + (alto ** 2)) / 2 + 26;
-    const halo=radio + 160;
-    tutorialOverlay.style.background=`radial-gradient(circle at ${centroX}px ${centroY}px, rgba(0, 0, 0, 0) ${radio}px, rgba(0, 0, 0, ${OPACIDAD_MASCARA_TUTORIAL}) ${halo}px)`;
+  function actualizarMascaraTutorial(){
+    limpiarMascaraTutorial();
   }
 
   function limpiarMascaraTutorial(){
@@ -1431,7 +1416,7 @@
     if(!boton) return;
     sorteoHintHand.classList.add('visible');
     sorteoHintHand.style.display='block';
-    const opciones={position:'right',offsetX:12,offsetY:0};
+    const opciones={position:'right',offsetX:12,offsetY:12};
     const loop=()=>{
       if(!sorteoHintState.listo) return;
       const pos=calcularPosicionManoParaElemento(boton,opciones,sorteoHintHand,{x:0,y:0});
@@ -1504,7 +1489,6 @@
     tutorialLabel.textContent=mensaje;
     tutorialLabel.style.display='flex';
     tutorialLabel.classList.add('adaptado');
-    tutorialLabel.classList.remove('tutorial-label-visible');
     tutorialLabel.style.visibility='hidden';
     tutorialLabel.style.left='0px';
     tutorialLabel.style.top='0px';
@@ -1591,9 +1575,7 @@
     tutorialLabel.style.top=`${top}px`;
     tutorialLabel.style.transform='none';
     tutorialLabel.style.visibility='visible';
-    requestAnimationFrame(()=>{
-      tutorialLabel.classList.add('tutorial-label-visible');
-    });
+    tutorialLabel.classList.add('tutorial-label-visible');
   }
 
   async function pulsarElementoTutorial(elemento){
@@ -1628,6 +1610,13 @@
     return nombre;
   }
 
+  async function asegurarCartonFrente(){
+    const wrapper=document.getElementById('carton-wrapper');
+    if(!wrapper || !wrapper.classList.contains('flipped')) return;
+    flipCard();
+    await esperar(700);
+  }
+
   const tutorialSteps=[
     {
       id:'sorteo',
@@ -1635,7 +1624,7 @@
       mano:'img/Mano-izquierda.png',
       posicion:'right',
       offsetX:8,
-      offsetY:-15,
+      offsetY:10,
       mensaje:'Aquí debes seleccionar el sorteo donde jugaras los cartones',
       pulso:true
     },
@@ -1665,7 +1654,7 @@
       mano:'img/Mano-izquierda.png',
       posicion:'right',
       offsetX:8,
-      offsetY:8,
+      offsetY:16,
       mensaje:'Pulsando aquí puedes acceder al menú de perfil para actualizar tus datos',
       pulso:true
     },
@@ -1732,16 +1721,17 @@
           if(tutorialCancelado(token)) return;
           const celda=obtenerCeldaCarton(punto.r,punto.c);
           if(!celda) continue;
-          await moverManoAElemento(celda,{position:'below',offsetX:0,offsetY:8,track:true,waitMs:500});
-          if(tutorialCancelado(token)) return;
           posicionarEtiquetaTutorial(celda.getBoundingClientRect(),mensaje);
           iniciarSeguimientoEtiqueta(celda,mensaje);
+          await moverManoAElemento(celda,{position:'below',offsetX:0,offsetY:8,track:true,waitMs:500});
+          if(tutorialCancelado(token)) return;
         }
       }
     },
     {
       id:'formas-bingo',
       ejecutar:async ({token})=>{
+        await asegurarCartonFrente();
         if(tutorialHand){
           tutorialHand.src='img/Mano-arriba.png';
           tutorialHand.classList.remove('tutorial-hand-pulse');
@@ -1777,7 +1767,7 @@
           tutorialHand.src='img/Mano-izquierda.png';
           tutorialHand.classList.remove('tutorial-hand-pulse');
         }
-        await moverManoAElemento(celda,{position:'right',offsetX:12,offsetY:0,track:true,waitMs:500});
+        await moverManoAElemento(celda,{position:'right',offsetX:-8,offsetY:0,track:true,waitMs:500});
         if(tutorialCancelado(token)) return;
         posicionarEtiquetaTutorial(celda.getBoundingClientRect(),mensaje);
         iniciarSeguimientoEtiqueta(celda,mensaje);
@@ -1791,7 +1781,7 @@
         if(tutorialHand){
           tutorialHand.style.display='block';
         }
-        await moverManoAElemento(celda,{position:'right',offsetX:12,offsetY:0,track:true,waitMs:400});
+        await moverManoAElemento(celda,{position:'right',offsetX:-8,offsetY:0,track:true,waitMs:400});
         if(tutorialCancelado(token)) return;
         await pulsarElementoTutorial(celda);
       }
@@ -1802,7 +1792,7 @@
       mano:'img/Mano-derecha.png',
       posicion:'left',
       offsetX:-8,
-      offsetY:0,
+      offsetY:12,
       mensaje:'Pulsa aqui para desplegar el campo Nombra al cartón, nombralo y luego pulsa el icono del Disket para guardarlo',
       pulso:true
     },
@@ -1812,7 +1802,7 @@
       mano:'img/Mano-izquierda.png',
       posicion:'right',
       offsetX:12,
-      offsetY:0,
+      offsetY:12,
       mensaje:'Pulsa aquí para ver tus cartones guardados, podrás elegirlos o editarlos',
       pulso:true
     },
@@ -1822,7 +1812,7 @@
       mano:'img/Mano-izquierda.png',
       posicion:'right',
       offsetX:12,
-      offsetY:0,
+      offsetY:12,
       mensaje:'Pulsa para guardar tu cartón',
       pulso:true
     }
