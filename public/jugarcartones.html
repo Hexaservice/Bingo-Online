@@ -812,7 +812,7 @@
       text-align:center;
       cursor:pointer;
       box-shadow:0 10px 20px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.3);
-      transition:transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+      transition:transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, opacity 0.22s ease;
     }
     #tutorial-toggle.activo{
       background:radial-gradient(circle at 30% 30%, #63e68a, #0b9a2e 70%);
@@ -921,13 +921,15 @@
       justify-content:center;
       word-break:break-word;
       opacity:0;
-      transition:opacity 0.28s ease, top 0.2s ease, left 0.2s ease;
+      transform:translateX(-24px);
+      transition:opacity 0.28s ease, transform 0.28s ease, top 0.2s ease, left 0.2s ease;
     }
     #tutorial-label.adaptado{
-      transition:opacity 0.28s ease, top 0.2s ease, left 0.2s ease;
+      transition:opacity 0.28s ease, transform 0.28s ease, top 0.2s ease, left 0.2s ease;
     }
     #tutorial-label.tutorial-label-visible{
       opacity:1;
+      transform:translateX(0);
     }
     @keyframes tutorial-hand-pulse{
       0%{transform:scale(1);}
@@ -1260,7 +1262,8 @@
     token:0,
     seguimiento:null,
     posicionMano:null,
-    etiquetaSeguimiento:null
+    etiquetaSeguimiento:null,
+    permitirVolteoCentro:false
   };
   const HAND_OFFSET={x:4,y:-20};
   const sorteoHintState={
@@ -1268,6 +1271,7 @@
     rafId:null,
     elemento:null
   };
+  let tutorialDimTimeout=null;
 
   function asegurarManoVisible(){
     if(!tutorialHand || !tutorialState.posicionMano) return;
@@ -1383,17 +1387,17 @@
     tutorialOverlay.style.background='transparent';
   }
 
-  function iniciarSeguimientoEtiqueta(elemento,mensaje){
+  function iniciarSeguimientoEtiqueta(elemento,mensaje,opciones={}){
     if(!tutorialLabel || !elemento) return;
     detenerSeguimientoEtiqueta();
-    tutorialState.etiquetaSeguimiento={elemento,mensaje,rafId:null};
+    tutorialState.etiquetaSeguimiento={elemento,mensaje,opciones,rafId:null};
     const loop=()=>{
       if(!tutorialState.activo || !tutorialState.etiquetaSeguimiento) return;
       if(!document.contains(elemento)){
         detenerSeguimientoEtiqueta();
         return;
       }
-      posicionarEtiquetaTutorial(elemento.getBoundingClientRect(),mensaje);
+      posicionarEtiquetaTutorial(elemento.getBoundingClientRect(),mensaje,opciones);
       tutorialState.etiquetaSeguimiento.rafId=requestAnimationFrame(loop);
     };
     loop();
@@ -1475,11 +1479,17 @@
     return token!==tutorialState.token || !tutorialState.activo;
   }
 
-  function posicionarEtiquetaTutorial(rect,mensaje){
+  function posicionarEtiquetaTutorial(rect,mensaje,opciones={}){
     if(!tutorialLabel) return;
     const viewportHeight=window.innerHeight;
     const viewportWidth=window.innerWidth;
     const clampValor=(valor,min,max)=>Math.max(min,Math.min(max,valor));
+    const {
+      direccionPreferida=null,
+      forzarDireccion=false,
+      evitarMano=true,
+      evitarControles=true
+    }=opciones;
     const maxAncho=Math.min(480,viewportWidth*0.9);
     const tamanoFuente=Math.max(16,Math.min(22,maxAncho/18));
     tutorialLabel.style.maxWidth=`${maxAncho}px`;
@@ -1489,10 +1499,10 @@
     tutorialLabel.textContent=mensaje;
     tutorialLabel.style.display='flex';
     tutorialLabel.classList.add('adaptado');
+    tutorialLabel.classList.remove('tutorial-label-visible');
     tutorialLabel.style.visibility='hidden';
     tutorialLabel.style.left='0px';
     tutorialLabel.style.top='0px';
-    tutorialLabel.style.transform='none';
     actualizarMascaraTutorial(rect);
 
     const medidas=tutorialLabel.getBoundingClientRect();
@@ -1504,10 +1514,14 @@
       izquierda: Math.max(0, rect.left),
       derecha: Math.max(0, viewportWidth-rect.right),
     };
-    let direccion='abajo';
-    ['derecha','izquierda','abajo','arriba'].forEach(dir=>{
-      if(espacios[dir]>espacios[direccion]) direccion=dir;
-    });
+    let direccion=direccionPreferida||'abajo';
+    if(!forzarDireccion){
+      let candidato='abajo';
+      ['derecha','izquierda','abajo','arriba'].forEach(dir=>{
+        if(espacios[dir]>espacios[candidato]) candidato=dir;
+      });
+      direccion=candidato;
+    }
     const margen=Math.max(20,tamanoFuente*1.1);
     let left=viewportWidth/2 - ancho/2;
     let top=viewportHeight/2 - alto/2;
@@ -1537,45 +1551,50 @@
     left=clampValor(left,margen,viewportWidth-ancho-margen);
     top=clampValor(top,margen,viewportHeight-alto-margen);
 
-    const manoRect=tutorialHand?.getBoundingClientRect();
-    if(manoRect){
-      const solapa=!(left+ancho < manoRect.left || left > manoRect.right || top+alto < manoRect.top || top > manoRect.bottom);
-      if(solapa){
-        if(espacios.arriba>espacios.abajo){
-          top=clampValor(manoRect.top-alto-margen,margen,viewportHeight-alto-margen);
-        }else{
-          top=clampValor(manoRect.bottom+margen,margen,viewportHeight-alto-margen);
+    if(evitarMano){
+      const manoRect=tutorialHand?.getBoundingClientRect();
+      if(manoRect){
+        const solapa=!(left+ancho < manoRect.left || left > manoRect.right || top+alto < manoRect.top || top > manoRect.bottom);
+        if(solapa){
+          if(espacios.arriba>espacios.abajo){
+            top=clampValor(manoRect.top-alto-margen,margen,viewportHeight-alto-margen);
+          }else{
+            top=clampValor(manoRect.bottom+margen,margen,viewportHeight-alto-margen);
+          }
         }
       }
     }
 
-    const controlesRect=tutorialControls?.getBoundingClientRect();
-    if(controlesRect){
-      const solapaControles=!(left+ancho < controlesRect.left || left > controlesRect.right || top+alto < controlesRect.top || top > controlesRect.bottom);
-      if(solapaControles){
-        const candidatos=[
-          { left, top: controlesRect.top-alto-margen },
-          { left, top: controlesRect.bottom+margen },
-          { left: controlesRect.right+margen, top },
-          { left: controlesRect.left-ancho-margen, top },
-        ];
-        const valido=candidatos.find((cand)=>{
-          const candLeft=clampValor(cand.left,margen,viewportWidth-ancho-margen);
-          const candTop=clampValor(cand.top,margen,viewportHeight-alto-margen);
-          return (candLeft+ancho < controlesRect.left || candLeft > controlesRect.right || candTop+alto < controlesRect.top || candTop > controlesRect.bottom);
-        });
-        if(valido){
-          left=clampValor(valido.left,margen,viewportWidth-ancho-margen);
-          top=clampValor(valido.top,margen,viewportHeight-alto-margen);
+    if(evitarControles){
+      const controlesRect=tutorialControls?.getBoundingClientRect();
+      if(controlesRect){
+        const solapaControles=!(left+ancho < controlesRect.left || left > controlesRect.right || top+alto < controlesRect.top || top > controlesRect.bottom);
+        if(solapaControles){
+          const candidatos=[
+            { left, top: controlesRect.top-alto-margen },
+            { left, top: controlesRect.bottom+margen },
+            { left: controlesRect.right+margen, top },
+            { left: controlesRect.left-ancho-margen, top },
+          ];
+          const valido=candidatos.find((cand)=>{
+            const candLeft=clampValor(cand.left,margen,viewportWidth-ancho-margen);
+            const candTop=clampValor(cand.top,margen,viewportHeight-alto-margen);
+            return (candLeft+ancho < controlesRect.left || candLeft > controlesRect.right || candTop+alto < controlesRect.top || candTop > controlesRect.bottom);
+          });
+          if(valido){
+            left=clampValor(valido.left,margen,viewportWidth-ancho-margen);
+            top=clampValor(valido.top,margen,viewportHeight-alto-margen);
+          }
         }
       }
     }
 
     tutorialLabel.style.left=`${left}px`;
     tutorialLabel.style.top=`${top}px`;
-    tutorialLabel.style.transform='none';
     tutorialLabel.style.visibility='visible';
-    tutorialLabel.classList.add('tutorial-label-visible');
+    requestAnimationFrame(()=>{
+      tutorialLabel.classList.add('tutorial-label-visible');
+    });
   }
 
   async function pulsarElementoTutorial(elemento){
@@ -1716,13 +1735,17 @@
           tutorialHand.src='img/Mano-arriba.png';
           tutorialHand.classList.remove('tutorial-hand-pulse');
         }
+        const tablero=document.getElementById('bingo-board');
+        if(tablero){
+          const opcionesEtiqueta={direccionPreferida:'arriba',forzarDireccion:true,evitarMano:false};
+          posicionarEtiquetaTutorial(tablero.getBoundingClientRect(),mensaje,opcionesEtiqueta);
+          iniciarSeguimientoEtiqueta(tablero,mensaje,opcionesEtiqueta);
+        }
         const ruta=obtenerSecuenciaCeldasSerpenteo();
         for(const punto of ruta){
           if(tutorialCancelado(token)) return;
           const celda=obtenerCeldaCarton(punto.r,punto.c);
           if(!celda) continue;
-          posicionarEtiquetaTutorial(celda.getBoundingClientRect(),mensaje);
-          iniciarSeguimientoEtiqueta(celda,mensaje);
           await moverManoAElemento(celda,{position:'below',offsetX:0,offsetY:8,track:true,waitMs:500});
           if(tutorialCancelado(token)) return;
         }
@@ -1736,6 +1759,8 @@
           tutorialHand.src='img/Mano-arriba.png';
           tutorialHand.classList.remove('tutorial-hand-pulse');
         }
+        const tablero=document.getElementById('bingo-board');
+        const opcionesEtiqueta={direccionPreferida:'arriba',forzarDireccion:true,evitarMano:false};
         const headers=[...document.querySelectorAll('.carton th')];
         for(let i=0;i<headers.length;i++){
           const header=headers[i];
@@ -1745,10 +1770,12 @@
           const mensaje=nombre
             ? `Forma ${i+1} ${nombre} para mostrar el nombre de la forma actual`
             : `Forma ${i+1} para mostrar el nombre de la forma actual`;
+          if(tablero){
+            posicionarEtiquetaTutorial(tablero.getBoundingClientRect(),mensaje,opcionesEtiqueta);
+            iniciarSeguimientoEtiqueta(tablero,mensaje,opcionesEtiqueta);
+          }
           await moverManoAElemento(header,{position:'below',offsetX:0,offsetY:6,track:true,waitMs:500});
           if(tutorialCancelado(token)) return;
-          posicionarEtiquetaTutorial(header.getBoundingClientRect(),mensaje);
-          iniciarSeguimientoEtiqueta(header,mensaje);
           await pulsarElementoTutorial(header);
           if(tutorialCancelado(token)) return;
           await esperar(320);
@@ -1825,9 +1852,14 @@
     tutorialState.indice=(indice+total)%total;
     const token=tutorialState.token;
     const paso=tutorialSteps[tutorialState.indice];
+    tutorialState.permitirVolteoCentro=Boolean(paso?.id==='voltear-carton' && tutorialState.activo);
     if(!paso){
       tutorialState.auto.ejecutando=false;
       return;
+    }
+    if(paso.id==='sorteo' && window.scrollY>0){
+      window.scrollTo({top:0,behavior:'smooth'});
+      await esperar(400);
     }
     if(typeof paso.ejecutar==='function'){
       detenerSeguimientoMano();
@@ -1869,6 +1901,10 @@
       tutorialPlay.setAttribute('aria-label','Pausar avance automático del tutorial');
     }
     while(tutorialState.activo && tutorialState.auto.reproduciendo){
+      if(tutorialState.auto.ejecutando){
+        await esperar(120);
+        continue;
+      }
       await ejecutarPasoTutorial(tutorialState.indice);
       if(!tutorialState.activo || !tutorialState.auto.reproduciendo) break;
       tutorialState.indice=(tutorialState.indice+1)%tutorialSteps.length;
@@ -1903,10 +1939,16 @@
   }
 
   function activarTutorial(){
+    return activarTutorialOpciones({iniciarPaso:true});
+  }
+
+  function activarTutorialOpciones({iniciarPaso=true}={}){
     tutorialState.activo=true;
     cancelarTutorialEnCurso();
+    tutorialState.permitirVolteoCentro=false;
     if(tutorialToggle){
       tutorialToggle.classList.add('activo');
+      tutorialToggle.style.opacity='1';
     }
     if(tutorialOverlay){
       tutorialOverlay.classList.add('activo');
@@ -1921,7 +1963,9 @@
       }
     }
     actualizarSorteoHint();
-    ejecutarPasoTutorial(tutorialState.indice);
+    if(iniciarPaso){
+      ejecutarPasoTutorial(tutorialState.indice);
+    }
   }
 
   function desactivarTutorial(){
@@ -1931,6 +1975,7 @@
     detenerSeguimientoMano();
     detenerSeguimientoEtiqueta();
     limpiarMascaraTutorial();
+    tutorialState.permitirVolteoCentro=false;
     if(tutorialToggle){
       tutorialToggle.classList.remove('activo');
     }
@@ -1941,6 +1986,21 @@
     ocultarNavTutorial();
     ocultarVisualesTutorial();
     actualizarSorteoHint();
+    programarAtenuacionTutorial();
+  }
+
+  function programarAtenuacionTutorial(){
+    if(!tutorialToggle) return;
+    if(tutorialDimTimeout){
+      clearTimeout(tutorialDimTimeout);
+    }
+    tutorialToggle.style.opacity='1';
+    if(tutorialState.activo) return;
+    tutorialDimTimeout=setTimeout(()=>{
+      if(!tutorialState.activo && tutorialToggle){
+        tutorialToggle.style.opacity='0.3';
+      }
+    },10000);
   }
 
   function normalizarAliasPerfil(valor){
@@ -2827,6 +2887,11 @@ function toggleForma(idx){
     };
   }
 
+  function intentarVoltearDesdeCentro(){
+    if(tutorialState.activo && !tutorialState.permitirVolteoCentro) return;
+    flipCard();
+  }
+
   function createBoard(){
     for(let r=0;r<5;r++){
       const tr=document.createElement('tr');
@@ -2842,7 +2907,7 @@ function toggleForma(idx){
           maxSpan.textContent='----';
           info.appendChild(maxSpan);
           td.appendChild(info);
-          td.addEventListener('click',flipCard);
+          td.addEventListener('click',intentarVoltearDesdeCentro);
         }else{
           td.addEventListener('click',()=>openModal(td));
         }
@@ -4248,7 +4313,7 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
   if(tutorialPlay){
     tutorialPlay.addEventListener('click',()=>{
       if(!tutorialState.activo){
-        activarTutorial();
+        activarTutorialOpciones({iniciarPaso:false});
       }
       if(tutorialState.auto.reproduciendo){
         detenerTutorialAutomatico();
@@ -4257,6 +4322,7 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
       }
     });
   }
+  programarAtenuacionTutorial();
 
   initFechaHora('fecha-hora');
   iniciarActualizacionFechaActual();
