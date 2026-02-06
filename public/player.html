@@ -634,7 +634,7 @@
           text-align: center;
           cursor: pointer;
           box-shadow: 0 10px 20px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-          transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+          transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, opacity 0.22s ease;
       }
 
       #tutorial-toggle.activo {
@@ -1328,6 +1328,7 @@
     indice: 0,
     auto: { reproduciendo: false, intervalId: null, ciclos: 0, indiceInicio: 0, iniciado: false },
   };
+  let tutorialDimTimeout = null;
 
   const TUTORIAL_COOKIE = 'tutorialIndice';
 
@@ -2096,6 +2097,7 @@
       : 0;
     if(tutorialToggle){
       tutorialToggle.classList.add('activo');
+      tutorialToggle.style.opacity = '1';
     }
     if(tutorialNav){
       tutorialNav.classList.remove('saliendo');
@@ -2118,6 +2120,21 @@
     window.removeEventListener('resize', actualizarPasoTutorial);
     limpiarAutoPlay();
     ocultarIndicadoresTutorial();
+    programarAtenuacionTutorial();
+  }
+
+  function programarAtenuacionTutorial(){
+    if(!tutorialToggle) return;
+    if(tutorialDimTimeout){
+      clearTimeout(tutorialDimTimeout);
+    }
+    tutorialToggle.style.opacity = '1';
+    if(tutorialState.activo) return;
+    tutorialDimTimeout = setTimeout(()=>{
+      if(!tutorialState.activo && tutorialToggle){
+        tutorialToggle.style.opacity = '0.3';
+      }
+    }, 10000);
   }
 
   function configurarTutorial(){
@@ -2147,6 +2164,7 @@
       }
       cambiarPasoTutorial(1);
     });
+    programarAtenuacionTutorial();
   }
 
   async function inicializarVistaJugador(){

@@ -367,7 +367,7 @@
       text-align: center;
       cursor: pointer;
       box-shadow: 0 10px 20px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-      transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+      transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, opacity 0.22s ease;
     }
     #tutorial-toggle.activo {
       background: radial-gradient(circle at 30% 30%, #63e68a, #0b9a2e 70%);
@@ -1072,6 +1072,7 @@
       viewportAltura: (window.visualViewport?.height)||window.innerHeight,
       enPausaTemporal:false,
     };
+    let tutorialDimTimeout = null;
 
     function sincronizarViewportVisual(){
       if(!document.documentElement) return;
@@ -1698,6 +1699,7 @@
       enfocarPaso();
       if(!omitirGuardado){ guardarEstadoTutorialFirestore(false); }
       if(!omitirGuardado){ tutorialState.enPausaTemporal=false; }
+      programarAtenuacionTutorial();
     }
 
     function activarTutorial(opciones={}){
@@ -1710,11 +1712,28 @@
       }
       tutorialState.activo=true;
       tutorialState.enPausaTemporal=false;
-      if(tutorialUI.toggleBtn){ tutorialUI.toggleBtn.classList.add('activo'); }
+      if(tutorialUI.toggleBtn){
+        tutorialUI.toggleBtn.classList.add('activo');
+        tutorialUI.toggleBtn.style.opacity='1';
+      }
       if(tutorialUI.nav){ tutorialUI.nav.classList.remove('saliendo'); tutorialUI.nav.classList.add('activo'); tutorialUI.nav.setAttribute('aria-hidden','false'); }
       window.addEventListener('resize', enfocarPaso);
       enfocarPaso();
       if(!opciones?.omitirGuardado){ guardarEstadoTutorialFirestore(true); }
+    }
+
+    function programarAtenuacionTutorial(){
+      if(!tutorialUI.toggleBtn) return;
+      if(tutorialDimTimeout){
+        clearTimeout(tutorialDimTimeout);
+      }
+      tutorialUI.toggleBtn.style.opacity='1';
+      if(tutorialState.activo) return;
+      tutorialDimTimeout=setTimeout(()=>{
+        if(!tutorialState.activo && tutorialUI.toggleBtn){
+          tutorialUI.toggleBtn.style.opacity='0.3';
+        }
+      },10000);
     }
 
     function pausarTutorialTemporal(){
@@ -1766,6 +1785,7 @@
           }
         });
       }
+      programarAtenuacionTutorial();
     }
 
     document.addEventListener('focusin',()=>{
