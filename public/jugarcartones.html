@@ -877,12 +877,46 @@
       transform-origin:center;
       transition:left 0.35s ease, top 0.35s ease;
       will-change:left, top;
+      z-index:5400;
     }
     #tutorial-hand.tutorial-hand-following{
       transition:none;
     }
     #tutorial-hand.tutorial-hand-tap{
       animation:tutorial-hand-tap 0.55s ease-in-out;
+    }
+    #tutorial-hand.tutorial-hand-pulse{
+      animation:tutorial-hand-pulse 0.7s ease-in-out infinite;
+    }
+    #tutorial-label{
+      position:fixed;
+      left:50%;
+      display:none;
+      padding:14px 18px;
+      background:linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(237, 241, 255, 0.98));
+      border:2px solid rgba(85, 70, 192, 0.45);
+      border-radius:14px;
+      font-family:'Poppins', sans-serif;
+      font-size:clamp(16px, 2.4vw, 22px);
+      font-weight:800;
+      box-shadow:0 12px 26px rgba(0, 0, 0, 0.3);
+      text-align:center;
+      line-height:1.35;
+      transform:translate(-50%, -100%);
+      width:fit-content;
+      max-width:min(480px, 90vw);
+      min-width:200px;
+      z-index:5500;
+      pointer-events:none;
+      box-sizing:border-box;
+      max-height:78vh;
+      overflow:auto;
+      align-items:center;
+      justify-content:center;
+      word-break:break-word;
+    }
+    #tutorial-label.adaptado{
+      transition:top 0.2s ease, left 0.2s ease;
     }
     @keyframes tutorial-hand-pulse{
       0%{transform:scale(1);}
@@ -980,6 +1014,7 @@
   </section>
   <div id="tutorial-overlay" aria-hidden="true">
     <img id="tutorial-hand" alt="Guía visual del tutorial" loading="lazy">
+    <div id="tutorial-label" role="status" aria-live="polite"></div>
   </div>
 
   <div id="tutorial-controls" aria-label="Controles del modo tutorial">
@@ -1191,6 +1226,8 @@
   const tutorialPlay=document.getElementById('tutorial-play');
   const tutorialNext=document.getElementById('tutorial-next');
   const tutorialHand=document.getElementById('tutorial-hand');
+  const tutorialLabel=document.getElementById('tutorial-label');
+  const tutorialControls=document.getElementById('tutorial-controls');
   const cartonModalOverlay=document.getElementById('carton-confirm-modal');
   const cartonModalCard=document.getElementById('carton-modal-card');
   const cartonModalHeaderIcons=document.getElementById('carton-modal-header-icons');
@@ -1233,6 +1270,16 @@
     return Math.min(Math.max(value,min),max);
   }
 
+  function ocultarVisualesTutorial(){
+    if(tutorialHand){
+      tutorialHand.style.display='none';
+      tutorialHand.classList.remove('tutorial-hand-pulse');
+    }
+    if(tutorialLabel){
+      tutorialLabel.style.display='none';
+    }
+  }
+
   function aplicarPosicionMano(posicion,{transicion=true}={}){
     if(!tutorialHand || !posicion) return;
     tutorialHand.classList.toggle('tutorial-hand-following', !transicion);
@@ -1265,6 +1312,16 @@
       x=rect.left+rect.width/2-manoW/2+offsetX;
     }else if(position==='above'){
       y=rect.top-manoH-offsetY;
+      x=rect.left+rect.width/2-manoW/2+offsetX;
+    }else if(position==='right'){
+      x=rect.right+offsetX;
+      y=rect.top+rect.height/2-manoH/2+offsetY;
+    }else if(position==='left'){
+      x=rect.left-manoW+offsetX;
+      y=rect.top+rect.height/2-manoH/2+offsetY;
+    }else if(position==='center'){
+      x=rect.left+rect.width/2-manoW/2+offsetX;
+      y=rect.top+rect.height/2-manoH/2+offsetY;
     }
     x+=HAND_OFFSET.x;
     y+=HAND_OFFSET.y;
@@ -1304,7 +1361,7 @@
   async function moverManoAElemento(elemento,opciones={}){
     if(!tutorialHand || !elemento) return;
     asegurarManoVisible();
-    const {track=true}=opciones;
+    const {track=false}=opciones;
     if(track){
       iniciarSeguimientoMano(elemento,opciones);
       await esperar(700);
@@ -1313,18 +1370,8 @@
     detenerSeguimientoMano();
     const posicion=calcularPosicionManoParaElemento(elemento,opciones);
     if(!posicion) return;
-    tutorialHand.src='img/Mano-arriba.png';
     aplicarPosicionMano(posicion,{transicion:true});
     await esperar(700);
-  }
-
-  async function tocarMano(){
-    if(!tutorialHand) return;
-    tutorialHand.classList.remove('tutorial-hand-tap');
-    void tutorialHand.offsetWidth;
-    tutorialHand.classList.add('tutorial-hand-tap');
-    await esperar(600);
-    tutorialHand.classList.remove('tutorial-hand-tap');
   }
 
   function cancelarTutorialEnCurso(){
@@ -1332,195 +1379,227 @@
     tutorialState.auto.ejecutando=false;
   }
 
-  async function esperarModalVisible(selector){
-    const limite=30;
-    let intentos=0;
-    while(intentos<limite){
-      const modal=document.querySelector(selector);
-      const visible=modal && (modal.classList.contains('visible') || modal.style.display==='flex');
-      if(visible) return modal;
-      await esperar(200);
-      intentos+=1;
-    }
-    return null;
-  }
+  function posicionarEtiquetaTutorial(rect,mensaje){
+    if(!tutorialLabel) return;
+    const viewportHeight=window.innerHeight;
+    const viewportWidth=window.innerWidth;
+    const clampValor=(valor,min,max)=>Math.max(min,Math.min(max,valor));
+    const maxAncho=Math.min(480,viewportWidth*0.9);
+    const tamanoFuente=Math.max(16,Math.min(22,maxAncho/18));
+    tutorialLabel.style.maxWidth=`${maxAncho}px`;
+    tutorialLabel.style.minWidth='200px';
+    tutorialLabel.style.fontSize=`${tamanoFuente}px`;
+    tutorialLabel.style.padding=`${Math.max(16,tamanoFuente*0.75)}px ${Math.max(20,tamanoFuente*0.95)}px`;
+    tutorialLabel.textContent=mensaje;
+    tutorialLabel.style.display='flex';
+    tutorialLabel.classList.add('adaptado');
+    tutorialLabel.style.visibility='hidden';
+    tutorialLabel.style.left='0px';
+    tutorialLabel.style.top='0px';
+    tutorialLabel.style.transform='none';
 
-  function reiniciarScrollModal(contenedor){
-    if(!contenedor) return;
-    if(typeof contenedor.scrollTo==='function'){
-      contenedor.scrollTo({top:0,behavior:'smooth'});
-    }else{
-      contenedor.scrollTop=0;
-    }
-  }
-
-  async function animarScrollConMano(contenedor,token){
-    if(!contenedor || token!==tutorialState.token) return;
-    detenerSeguimientoMano();
-    const maxScroll=contenedor.scrollHeight-contenedor.clientHeight;
-    if(maxScroll<=0) return;
-    const inicio=contenedor.scrollTop;
-    const fin=maxScroll;
-    const rect=contenedor.getBoundingClientRect();
-    const duracion=1200;
-    const inicioTiempo=performance.now();
-    return new Promise(resolve=>{
-      const animar=(ahora)=>{
-        if(token!==tutorialState.token) return resolve();
-        const progreso=clamp((ahora-inicioTiempo)/duracion,0,1);
-        const actual=inicio+(fin-inicio)*progreso;
-        contenedor.scrollTop=actual;
-        const y=rect.top+rect.height*0.15+(rect.height*0.7*progreso)+HAND_OFFSET.y;
-        const x=rect.left+rect.width*0.8+HAND_OFFSET.x;
-        if(tutorialHand){
-          aplicarPosicionMano({
-            x: clamp(x,8,window.innerWidth-(tutorialHand.width||56)-8),
-            y: clamp(y,8,window.innerHeight-(tutorialHand.height||56)-8)
-          },{transicion:false});
-        }
-        if(progreso<1){
-          requestAnimationFrame(animar);
-        }else{
-          resolve();
-        }
-      };
-      requestAnimationFrame(animar);
+    const medidas=tutorialLabel.getBoundingClientRect();
+    const ancho=medidas.width;
+    const alto=medidas.height;
+    const espacios={
+      arriba: Math.max(0, rect.top),
+      abajo: Math.max(0, viewportHeight-rect.bottom),
+      izquierda: Math.max(0, rect.left),
+      derecha: Math.max(0, viewportWidth-rect.right),
+    };
+    let direccion='abajo';
+    ['derecha','izquierda','abajo','arriba'].forEach(dir=>{
+      if(espacios[dir]>espacios[direccion]) direccion=dir;
     });
-  }
+    const margen=Math.max(20,tamanoFuente*1.1);
+    let left=viewportWidth/2 - ancho/2;
+    let top=viewportHeight/2 - alto/2;
+    switch(direccion){
+      case 'derecha':
+        left=rect.right+margen;
+        top=rect.top+rect.height/2 - alto/2;
+        break;
+      case 'izquierda':
+        left=rect.left-ancho-margen;
+        top=rect.top+rect.height/2 - alto/2;
+        break;
+      case 'arriba':
+        top=rect.top-alto-margen;
+        left=rect.left+rect.width/2 - ancho/2;
+        break;
+      default:
+        top=rect.bottom+margen;
+        left=rect.left+rect.width/2 - ancho/2;
+        break;
+    }
 
-  async function animarScrollSubirBajar(contenedor,token){
-    if(!contenedor || token!==tutorialState.token) return;
-    detenerSeguimientoMano();
-    const maxScroll=contenedor.scrollHeight-contenedor.clientHeight;
-    if(maxScroll<=0) return;
-    const mitad=Math.min(maxScroll,120);
-    const rect=contenedor.getBoundingClientRect();
-    const duracion=900;
-    const inicioTiempo=performance.now();
-    return new Promise(resolve=>{
-      const animar=(ahora)=>{
-        if(token!==tutorialState.token) return resolve();
-        const progreso=clamp((ahora-inicioTiempo)/duracion,0,1);
-        const fase=progreso<0.5?progreso*2:(1-progreso)*2;
-        const actual=mitad*fase;
-        contenedor.scrollTop=actual;
-        const y=rect.top+rect.height*0.2+(rect.height*0.4*progreso)+HAND_OFFSET.y;
-        const x=rect.left+rect.width*0.78+HAND_OFFSET.x;
-        if(tutorialHand){
-          aplicarPosicionMano({
-            x: clamp(x,8,window.innerWidth-(tutorialHand.width||56)-8),
-            y: clamp(y,8,window.innerHeight-(tutorialHand.height||56)-8)
-          },{transicion:false});
-        }
-        if(progreso<1){
-          requestAnimationFrame(animar);
+    const centroHorizontal=viewportWidth/2 - ancho/2;
+    left=(left+centroHorizontal)/2;
+
+    left=clampValor(left,margen,viewportWidth-ancho-margen);
+    top=clampValor(top,margen,viewportHeight-alto-margen);
+
+    const manoRect=tutorialHand?.getBoundingClientRect();
+    if(manoRect){
+      const solapa=!(left+ancho < manoRect.left || left > manoRect.right || top+alto < manoRect.top || top > manoRect.bottom);
+      if(solapa){
+        if(espacios.arriba>espacios.abajo){
+          top=clampValor(manoRect.top-alto-margen,margen,viewportHeight-alto-margen);
         }else{
-          resolve();
+          top=clampValor(manoRect.bottom+margen,margen,viewportHeight-alto-margen);
         }
-      };
-      requestAnimationFrame(animar);
-    });
-  }
+      }
+    }
 
-  async function ejecutarPasoPremio(token){
-    const premioValor=document.getElementById('premio-valor');
-    const aceptar=document.getElementById('premios-aceptar');
-    const modalContenido=document.querySelector('#premios-modal .modal-content');
-    if(!premioValor) return;
-    await moverManoAElemento(premioValor,{position:'below',offsetY:10});
-    await esperar(3000);
-    if(token!==tutorialState.token) return;
-    await tocarMano();
-    premioValor.click();
-    await esperarModalVisible('#premios-modal');
-    if(token!==tutorialState.token) return;
-    if(modalContenido){
-      await animarScrollConMano(modalContenido,token);
+    const controlesRect=tutorialControls?.getBoundingClientRect();
+    if(controlesRect){
+      const solapaControles=!(left+ancho < controlesRect.left || left > controlesRect.right || top+alto < controlesRect.top || top > controlesRect.bottom);
+      if(solapaControles){
+        const candidatos=[
+          { left, top: controlesRect.top-alto-margen },
+          { left, top: controlesRect.bottom+margen },
+          { left: controlesRect.right+margen, top },
+          { left: controlesRect.left-ancho-margen, top },
+        ];
+        const valido=candidatos.find((cand)=>{
+          const candLeft=clampValor(cand.left,margen,viewportWidth-ancho-margen);
+          const candTop=clampValor(cand.top,margen,viewportHeight-alto-margen);
+          return (candLeft+ancho < controlesRect.left || candLeft > controlesRect.right || candTop+alto < controlesRect.top || candTop > controlesRect.bottom);
+        });
+        if(valido){
+          left=clampValor(valido.left,margen,viewportWidth-ancho-margen);
+          top=clampValor(valido.top,margen,viewportHeight-alto-margen);
+        }
+      }
     }
-    if(aceptar){
-      await moverManoAElemento(aceptar,{position:'below',offsetY:8});
-      await tocarMano();
-      aceptar.click();
-    }
-    await esperar(500);
-  }
 
-  async function ejecutarPasoJugando(token){
-    const jugandoValor=document.getElementById('cartones-jugando-valor');
-    const aceptar=document.getElementById('info-cartones-aceptar');
-    const wrapper=document.getElementById('info-cartones-tabla-wrapper');
-    if(!jugandoValor) return;
-    await moverManoAElemento(jugandoValor,{position:'below',offsetY:8});
-    await esperar(3000);
-    if(token!==tutorialState.token) return;
-    await tocarMano();
-    jugandoValor.click();
-    await esperarModalVisible('#info-cartones-modal');
-    if(token!==tutorialState.token) return;
-    if(wrapper && wrapper.scrollHeight>wrapper.clientHeight){
-      await animarScrollSubirBajar(wrapper,token);
-    }else{
-      await esperar(2000);
-    }
-    if(aceptar){
-      await moverManoAElemento(aceptar,{position:'below',offsetY:8});
-      await tocarMano();
-      aceptar.click();
-    }
-    await esperar(500);
-  }
-
-  async function ejecutarPasoCreditos(token){
-    const creditos=document.getElementById('creditos-label');
-    const aceptar=document.getElementById('creditos-modal-cerrar');
-    if(!creditos) return;
-    await moverManoAElemento(creditos,{position:'below',offsetY:8});
-    await esperar(3000);
-    if(token!==tutorialState.token) return;
-    await tocarMano();
-    creditos.click();
-    await esperarModalVisible('#creditos-modal');
-    if(token!==tutorialState.token) return;
-    await esperar(2000);
-    if(aceptar){
-      await moverManoAElemento(aceptar,{position:'below',offsetY:8});
-      await tocarMano();
-      aceptar.click();
-    }
-    await esperar(500);
-  }
-
-  async function ejecutarPasoBotones(token){
-    const botones=[
-      document.getElementById('azar-btn'),
-      document.getElementById('limpiar-btn'),
-      document.getElementById('ver-jugados-btn'),
-      document.getElementById('ir-billetera-btn')
-    ];
-    for(const boton of botones){
-      if(token!==tutorialState.token) return;
-      if(!boton) continue;
-      await moverManoAElemento(boton,{position:'below',offsetY:8});
-      await esperar(1000);
-    }
+    tutorialLabel.style.left=`${left}px`;
+    tutorialLabel.style.top=`${top}px`;
+    tutorialLabel.style.transform='none';
+    tutorialLabel.style.visibility='visible';
   }
 
   const tutorialSteps=[
-    ejecutarPasoPremio,
-    ejecutarPasoJugando,
-    ejecutarPasoCreditos,
-    ejecutarPasoBotones
+    {
+      id:'sorteo',
+      elementId:'sorteo-btn',
+      mano:'img/Mano-izquierda.png',
+      posicion:'right',
+      offsetX:8,
+      offsetY:-15,
+      mensaje:'Aquí debes seleccionar el sorteo donde jugaras los cartones',
+      pulso:true
+    },
+    {
+      id:'premio',
+      elementId:'premio-valor',
+      mano:'img/Mano-arriba.png',
+      posicion:'below',
+      offsetX:0,
+      offsetY:8,
+      mensaje:'Pulsando el valor puedes ver las formas ganadoras para este sorteo, asi como cada premio correspondiente',
+      pulso:true
+    },
+    {
+      id:'jugando',
+      elementId:'cartones-jugando-valor',
+      mano:'img/Mano-arriba.png',
+      posicion:'below',
+      offsetX:0,
+      offsetY:8,
+      mensaje:'Pulsando el valor puedes ver la cantidad de cartones que estan participando incluyendo los gratis así como los alias de los jugadores',
+      pulso:true
+    },
+    {
+      id:'perfil',
+      elementId:'editar-alias',
+      mano:'img/Mano-izquierda.png',
+      posicion:'right',
+      offsetX:8,
+      offsetY:0,
+      mensaje:'Pulsando aquí puedes acceder al menú de perfil para actualizar tus datos',
+      pulso:true
+    },
+    {
+      id:'creditos',
+      elementId:'creditos-label',
+      mano:'img/Mano-arriba.png',
+      posicion:'below',
+      offsetX:0,
+      offsetY:8,
+      mensaje:'Pulsando aquí puedes ver detalles de tus creditos actuales',
+      pulso:true
+    },
+    {
+      id:'azar',
+      elementId:'azar-btn',
+      mano:'img/Mano-arriba.png',
+      posicion:'below',
+      offsetX:0,
+      offsetY:8,
+      mensaje:'Pulsa para jugar todas las posiciones al azar',
+      pulso:true
+    },
+    {
+      id:'limpiar',
+      elementId:'limpiar-btn',
+      mano:'img/Mano-arriba.png',
+      posicion:'below',
+      offsetX:0,
+      offsetY:8,
+      mensaje:'Pulsa para limpiar todas las jugadas del cartón',
+      pulso:true
+    },
+    {
+      id:'jugados',
+      elementId:'ver-jugados-btn',
+      mano:'img/Mano-arriba.png',
+      posicion:'below',
+      offsetX:0,
+      offsetY:8,
+      mensaje:'Pulsa para ver los cartones que tienes jugando',
+      pulso:true
+    },
+    {
+      id:'billetera',
+      elementId:'ir-billetera-btn',
+      mano:'img/Mano-arriba.png',
+      posicion:'below',
+      offsetX:0,
+      offsetY:8,
+      mensaje:'Pulsa para dirigirte a al menú Billetera',
+      pulso:true
+    }
   ];
 
-  async function ejecutarPasoTutorial(indice){
+  async function ejecutarPasoTutorial(indice,{manual=false}={}){
     if(!tutorialState.activo || tutorialState.auto.ejecutando) return;
     tutorialState.auto.ejecutando=true;
     const total=tutorialSteps.length;
     tutorialState.indice=(indice+total)%total;
     const token=tutorialState.token;
     const paso=tutorialSteps[tutorialState.indice];
-    if(typeof paso==='function'){
-      await paso(token);
+    if(!paso){
+      tutorialState.auto.ejecutando=false;
+      return;
+    }
+    const elemento=document.getElementById(paso.elementId);
+    if(!elemento){
+      tutorialState.auto.ejecutando=false;
+      return;
+    }
+    ocultarVisualesTutorial();
+    await esperar(120);
+    if(token!==tutorialState.token) return;
+    if(tutorialHand){
+      tutorialHand.src=paso.mano;
+      tutorialHand.classList.toggle('tutorial-hand-pulse',Boolean(paso.pulso));
+    }
+    await moverManoAElemento(elemento,{position:paso.posicion,offsetX:paso.offsetX,offsetY:paso.offsetY,track:false});
+    if(token!==tutorialState.token) return;
+    posicionarEtiquetaTutorial(elemento.getBoundingClientRect(),paso.mensaje);
+    if(!manual){
+      await esperar(2000);
     }
     tutorialState.auto.ejecutando=false;
   }
@@ -1577,7 +1656,7 @@
       if(tutorialState.posicionMano){
         aplicarPosicionMano(tutorialState.posicionMano,{transicion:false});
       }else{
-        tutorialHand.style.display='none';
+        ocultarVisualesTutorial();
       }
     }
     actualizarSorteoHint();
@@ -1593,9 +1672,7 @@
       tutorialToggle.classList.remove('activo');
     }
     ocultarNavTutorial();
-    if(tutorialHand){
-      tutorialHand.style.display='none';
-    }
+    ocultarVisualesTutorial();
     actualizarSorteoHint();
   }
 
@@ -3886,7 +3963,7 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
       cancelarTutorialEnCurso();
       detenerTutorialAutomatico();
       tutorialState.indice=(tutorialState.indice-1+tutorialSteps.length)%tutorialSteps.length;
-      ejecutarPasoTutorial(tutorialState.indice);
+      ejecutarPasoTutorial(tutorialState.indice,{manual:true});
     });
   }
   if(tutorialNext){
@@ -3895,7 +3972,7 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
       cancelarTutorialEnCurso();
       detenerTutorialAutomatico();
       tutorialState.indice=(tutorialState.indice+1)%tutorialSteps.length;
-      ejecutarPasoTutorial(tutorialState.indice);
+      ejecutarPasoTutorial(tutorialState.indice,{manual:true});
     });
   }
   if(tutorialPlay){
