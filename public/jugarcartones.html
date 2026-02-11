@@ -902,6 +902,9 @@
     #tutorial-hand.tutorial-hand-tap{
       animation:tutorial-hand-tap 0.55s ease-in-out;
     }
+    #tutorial-hand.tutorial-hand-pulsar{
+      animation:tutorial-hand-tap 0.45s ease-in-out;
+    }
     #tutorial-hand.tutorial-hand-pulse{
       animation:tutorial-hand-pulse 0.7s ease-in-out infinite;
     }
@@ -1279,8 +1282,9 @@
     autoSeleccionModalId:0
   };
   const HAND_OFFSET={x:4,y:-20};
-  const HAND_MODAL_ARRI_IZQ_OFFSET={offsetX:0,offsetY:6};
+  const HAND_MODAL_ARRI_IZQ_OFFSET={offsetX:0,offsetY:26};
   const HAND_ARRI_IZQ_CELDA_OFFSET={offsetX:-23,offsetY:34};
+  const HAND_BINGO_ARRI_IZQ_OFFSET={offsetX:-42,offsetY:52};
   const sorteoHintState={
     listo:false,
     rafId:null,
@@ -1377,7 +1381,7 @@
     }
     const modalContenido=document.getElementById('number-modal-content');
     if(animarMano && modalContenido){
-      await moverManoAElemento(modalContenido,{position:'center',offsetX:0,offsetY:0,track:false,waitMs:120});
+      await moverManoAElemento(modalContenido,{position:'center',offsetX:0,offsetY:20,track:false,waitMs:120});
       if(!tutorialState.activo || idActual!==tutorialState.autoSeleccionModalId) return false;
     }
     const opcionSeleccionada=[...document.querySelectorAll('#number-grid div')]
@@ -1385,7 +1389,7 @@
     if(opcionSeleccionada && animarMano){
       await moverManoAElemento(opcionSeleccionada,{position:'below',...HAND_MODAL_ARRI_IZQ_OFFSET,track:false,waitMs:220});
       if(!tutorialState.activo || idActual!==tutorialState.autoSeleccionModalId) return false;
-      await pulsarElementoTutorial(opcionSeleccionada);
+      await pulsarElementoTutorial(opcionSeleccionada,{animacionClase:'tutorial-hand-pulsar'});
       if(!tutorialState.activo || idActual!==tutorialState.autoSeleccionModalId) return false;
     }
     if(currentCell===celda && (celda.dataset.value||'').toString().trim()===''){
@@ -1394,6 +1398,7 @@
     if(tutorialHand){
       tutorialHand.style.display='none';
       tutorialHand.classList.remove('tutorial-hand-tap');
+      tutorialHand.classList.remove('tutorial-hand-pulsar');
     }
     return true;
   }
@@ -1413,7 +1418,7 @@
     const opciones=[...document.querySelectorAll('#number-grid div')];
     const existeOpcion=opciones.some(op=>parseInt(op.textContent,10)===numero);
     if(existeOpcion){
-      await ejecutarAutoSeleccionModalTutorial(celda,{animarMano:true,esperaInicial:500});
+      await ejecutarAutoSeleccionModalTutorial(celda,{animarMano:true,esperaInicial:500,numeroForzado:numero});
     }else if(currentCell===celda && (celda.dataset.value||'').toString().trim()===''){
       selectNumber(numero,{tutorialTemporal:true});
     }
@@ -1440,6 +1445,7 @@
       evitarMano:true,
       evitarControles:true,
       evitarElementos,
+      mascara:{radioExpandido:220,intensidad:0.5},
       ...(colorTexto?{colorTexto}:{})
     };
     posicionarEtiquetaTutorial(referenciaEtiqueta.getBoundingClientRect(),mensaje,opcionesEtiqueta);
@@ -1455,6 +1461,7 @@
       tutorialHand.style.display='none';
       tutorialHand.classList.remove('tutorial-hand-pulse');
       tutorialHand.classList.remove('tutorial-hand-tap');
+      tutorialHand.classList.remove('tutorial-hand-pulsar');
     }
     if(tutorialLabel){
       tutorialLabel.style.display='none';
@@ -1532,9 +1539,22 @@
     aplicarPosicionMano(posicion,{transicion});
   }
 
-  function actualizarMascaraTutorial(){
+  function actualizarMascaraTutorial(rect,opciones={}){
     if(!tutorialOverlay) return;
-    tutorialOverlay.style.background='linear-gradient(rgba(5,18,44,0.30), rgba(5,18,44,0.30))';
+    const intensidad=Number.isFinite(opciones.intensidad)?opciones.intensidad:0.56;
+    const radioExpandido=Number.isFinite(opciones.radioExpandido)?opciones.radioExpandido:110;
+    const extraX=Number.isFinite(opciones.offsetX)?opciones.offsetX:0;
+    const extraY=Number.isFinite(opciones.offsetY)?opciones.offsetY:0;
+    if(!rect){
+      tutorialOverlay.style.background=`linear-gradient(rgba(5,18,44,${intensidad}), rgba(5,18,44,${intensidad}))`;
+      return;
+    }
+    const cx=Math.round(rect.left+(rect.width/2)+extraX);
+    const cy=Math.round(rect.top+(rect.height/2)+extraY);
+    const radioBase=Math.ceil(Math.max(rect.width,rect.height)*0.72);
+    const radio=Math.max(120,radioBase+radioExpandido);
+    const radioTransicion=Math.max(radio+80,radio*1.35);
+    tutorialOverlay.style.background=`radial-gradient(circle at ${cx}px ${cy}px, rgba(255,255,255,0) 0, rgba(255,255,255,0) ${radio}px, rgba(5,18,44,0.22) ${radio+18}px, rgba(5,18,44,${intensidad}) ${radioTransicion}px)`;
   }
 
   function limpiarMascaraTutorial(){
@@ -1647,7 +1667,8 @@
       evitarControles=true,
       minTop=null,
       evitarElementos=[],
-      colorTexto=''
+      colorTexto='',
+      mascara={}
     }=opciones;
     const mensajePrevio=tutorialLabel.dataset.mensaje ?? '';
     const necesitaReinicio=tutorialLabel.style.display!=='flex' || mensajePrevio!==mensaje;
@@ -1671,7 +1692,7 @@
       tutorialLabel.textContent=mensaje;
       tutorialLabel.dataset.mensaje=mensaje;
     }
-    actualizarMascaraTutorial(rect);
+    actualizarMascaraTutorial(rect,mascara);
 
     const medidas=tutorialLabel.getBoundingClientRect();
     const ancho=medidas.width;
@@ -1801,14 +1822,15 @@
     }
   }
 
-  async function pulsarElementoTutorial(elemento){
+  async function pulsarElementoTutorial(elemento,{animacionClase='tutorial-hand-tap'}={}){
     if(!tutorialHand || !elemento) return;
     tutorialHand.classList.remove('tutorial-hand-tap');
+    tutorialHand.classList.remove('tutorial-hand-pulsar');
     void tutorialHand.offsetWidth;
-    tutorialHand.classList.add('tutorial-hand-tap');
+    tutorialHand.classList.add(animacionClase);
     elemento.click();
     await esperar(560);
-    tutorialHand.classList.remove('tutorial-hand-tap');
+    tutorialHand.classList.remove(animacionClase);
   }
 
   function obtenerSecuenciaCeldasSerpenteo(){
@@ -1968,7 +1990,7 @@
           const nombre=obtenerNombreForma(i+1)||'Sin nombre';
           const mensaje=`Forma ${i+1}: ${nombre}`;
           posicionarMensajeTutorialCarton(mensaje,{colorTexto:formGlows[i]||formColors[i]||''});
-          await moverManoAElemento(header,{position:'right',offsetX:8,offsetY:2,track:true,waitMs:340});
+          await moverManoAElemento(header,{position:'right',...HAND_BINGO_ARRI_IZQ_OFFSET,track:true,waitMs:340});
           if(tutorialCancelado(token)) return;
           await pulsarElementoTutorial(header);
           if(tutorialCancelado(token)) return;
@@ -1983,15 +2005,14 @@
       ejecutar:async ({token})=>{
         const celda=obtenerCeldaCarton(2,2);
         if(!celda) return;
-        const mensaje='Pulsa aquí para voltear tu cartón';
+        const mensaje='Pulsa en la celda central del número, para voltear el cartón';
         if(tutorialHand){
           tutorialHand.src='img/Mano-izquierda.png';
           tutorialHand.classList.remove('tutorial-hand-pulse');
         }
         await moverManoAElemento(celda,{position:'right',offsetX:-8,offsetY:0,track:true,waitMs:500});
         if(tutorialCancelado(token)) return;
-        posicionarEtiquetaTutorial(celda.getBoundingClientRect(),mensaje);
-        iniciarSeguimientoEtiqueta(celda,mensaje);
+        posicionarMensajeTutorialCarton(mensaje);
         await pulsarElementoTutorial(celda);
         detenerSeguimientoMano();
         if(tutorialHand){
@@ -2065,9 +2086,16 @@
       window.scrollTo({top:0,behavior:'smooth'});
       await esperar(400);
     }
-    if(esPasoSecuenciaInferior(paso) && necesitaScrollHastaFinal()){
-      window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'});
-      await esperar(500);
+    if(esPasoSecuenciaInferior(paso)){
+      const objetivoInferior=document.getElementById(paso.elementId||'');
+      if(objetivoInferior && typeof objetivoInferior.scrollIntoView==='function'){
+        objetivoInferior.scrollIntoView({behavior:'smooth',block:'end',inline:'nearest'});
+        await esperar(420);
+      }
+      if(necesitaScrollHastaFinal()){
+        window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'});
+        await esperar(500);
+      }
     }
     if(typeof paso.ejecutar==='function'){
       detenerSeguimientoMano();
@@ -2093,8 +2121,11 @@
     }
     await moverManoAElemento(elemento,{position:paso.posicion,offsetX:paso.offsetX,offsetY:paso.offsetY,track:true});
     if(token!==tutorialState.token) return;
-    posicionarEtiquetaTutorial(elemento.getBoundingClientRect(),paso.mensaje);
-    iniciarSeguimientoEtiqueta(elemento,paso.mensaje);
+    const mascaraPaso=paso.id==='recorrido-carton' || paso.id==='voltear-carton'
+      ? {radioExpandido:220,intensidad:0.5}
+      : {radioExpandido:110,intensidad:0.56};
+    posicionarEtiquetaTutorial(elemento.getBoundingClientRect(),paso.mensaje,{mascara:mascaraPaso});
+    iniciarSeguimientoEtiqueta(elemento,paso.mensaje,{mascara:mascaraPaso});
     if(!manual){
       await esperar(2000);
     }
@@ -4114,14 +4145,33 @@ function toggleForma(idx){
     }
     mostrarMensajeTablaCartones('Cargando cartones...');
     try{
-      const snap=await db.collection('CartonJugado').where('sorteoId','==',currentSorteo).get();
+      const snaps=[];
+      const principal=await db.collection('CartonJugado').where('sorteoId','==',currentSorteo).get();
+      snaps.push(principal);
+      if(principal.empty && currentSorteoNombre){
+        const nombreNormalizado=currentSorteoNombre.toString().trim();
+        const camposAlternos=['sorteo','sorteoNombre','nombreSorteo'];
+        for(const campo of camposAlternos){
+          try{
+            const alterno=await db.collection('CartonJugado').where(campo,'==',nombreNormalizado).get();
+            if(!alterno.empty) snaps.push(alterno);
+          }catch(errorAlterno){
+            console.warn(`Consulta alterna no disponible para ${campo}`,errorAlterno);
+          }
+        }
+      }
       const registros=[];
-      snap.forEach(doc=>{
-        const data=doc.data()||{};
-        const alias=extraerAliasCarton(data);
-        const numero=extraerNumeroCartonDatos(data);
-        const tipo=extraerTipoCartonDato(data);
-        registros.push({alias,numeroOrden:numero.orden,numeroTexto:numero.texto,tipo});
+      const idsVistos=new Set();
+      snaps.forEach(snap=>{
+        snap.forEach(doc=>{
+          if(idsVistos.has(doc.id)) return;
+          idsVistos.add(doc.id);
+          const data=doc.data()||{};
+          const alias=extraerAliasCarton(data);
+          const numero=extraerNumeroCartonDatos(data);
+          const tipo=extraerTipoCartonDato(data);
+          registros.push({alias,numeroOrden:numero.orden,numeroTexto:numero.texto,tipo});
+        });
       });
       if(registros.length===0){
         mostrarMensajeTablaCartones('Sin cartones registrados');
