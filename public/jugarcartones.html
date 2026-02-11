@@ -802,7 +802,7 @@
       display:flex;
       align-items:center;
       gap:12px;
-      z-index:3300;
+      z-index:17000;
     }
     #tutorial-toggle{
       width:62px;
@@ -877,7 +877,7 @@
       position:fixed;
       inset:0;
       pointer-events:none;
-      z-index:5200;
+      z-index:12000;
       background:transparent;
       transition:opacity 0.25s ease, background 0.25s ease;
       opacity:0;
@@ -894,7 +894,7 @@
       transform-origin:center;
       transition:left 0.35s ease, top 0.35s ease;
       will-change:left, top;
-      z-index:7600;
+      z-index:16000;
     }
     #tutorial-hand.tutorial-hand-following{
       transition:none;
@@ -926,7 +926,7 @@
       width:fit-content;
       max-width:min(480px, 90vw);
       min-width:200px;
-      z-index:5500;
+      z-index:15000;
       pointer-events:none;
       box-sizing:border-box;
       max-height:78vh;
@@ -1040,9 +1040,9 @@
     <button id="jugar-carton-btn" class="action-btn">JUGAR CARTÓN</button>
   </section>
   <div id="tutorial-overlay" aria-hidden="true">
-    <img id="tutorial-hand" alt="Guía visual del tutorial" loading="lazy">
-    <div id="tutorial-label" role="status" aria-live="polite"></div>
   </div>
+  <img id="tutorial-hand" alt="Guía visual del tutorial" loading="lazy">
+  <div id="tutorial-label" role="status" aria-live="polite"></div>
 
   <div id="tutorial-controls" aria-label="Controles del modo tutorial">
     <button id="tutorial-toggle" type="button">MODO<br/>TUTORIAL</button>
@@ -1541,20 +1541,22 @@
 
   function actualizarMascaraTutorial(rect,opciones={}){
     if(!tutorialOverlay) return;
-    const intensidad=Number.isFinite(opciones.intensidad)?opciones.intensidad:0.56;
+    const opacidadBase=Number.isFinite(opciones.intensidad)?opciones.intensidad:0.52;
     const radioExpandido=Number.isFinite(opciones.radioExpandido)?opciones.radioExpandido:110;
     const extraX=Number.isFinite(opciones.offsetX)?opciones.offsetX:0;
     const extraY=Number.isFinite(opciones.offsetY)?opciones.offsetY:0;
     if(!rect){
-      tutorialOverlay.style.background=`linear-gradient(rgba(5,18,44,${intensidad}), rgba(5,18,44,${intensidad}))`;
+      tutorialOverlay.style.background=`rgba(0,0,0,${opacidadBase})`;
       return;
     }
     const cx=Math.round(rect.left+(rect.width/2)+extraX);
     const cy=Math.round(rect.top+(rect.height/2)+extraY);
-    const radioBase=Math.ceil(Math.max(rect.width,rect.height)*0.72);
-    const radio=Math.max(120,radioBase+radioExpandido);
-    const radioTransicion=Math.max(radio+80,radio*1.35);
-    tutorialOverlay.style.background=`radial-gradient(circle at ${cx}px ${cy}px, rgba(255,255,255,0) 0, rgba(255,255,255,0) ${radio}px, rgba(5,18,44,0.22) ${radio+18}px, rgba(5,18,44,${intensidad}) ${radioTransicion}px)`;
+    const ancho=Math.max(1,rect.width);
+    const alto=Math.max(1,rect.height);
+    const radioBase=Math.sqrt((ancho**2)+(alto**2))/2;
+    const radio=Math.max(90,Math.round(radioBase+Math.max(24,radioExpandido*0.55)));
+    const halo=radio+160;
+    tutorialOverlay.style.background=`radial-gradient(circle at ${cx}px ${cy}px, rgba(0,0,0,0) ${radio}px, rgba(0,0,0,${opacidadBase}) ${halo}px)`;
   }
 
   function limpiarMascaraTutorial(){
@@ -4145,34 +4147,63 @@ function toggleForma(idx){
     }
     mostrarMensajeTablaCartones('Cargando cartones...');
     try{
+      const consultas=[];
+      const posiblesIds=[currentSorteo,(currentSorteo??'').toString().trim()].filter(Boolean);
+      const nombreSorteo=(currentSorteoNombre??'').toString().trim();
+      const nombreSorteoLower=nombreSorteo.toLowerCase();
+      const camposId=['sorteoId','sorteoid','idSorteo','idsorteo'];
+      const camposNombre=['sorteo','sorteoNombre','nombreSorteo'];
+
+      camposId.forEach(campo=>{
+        posiblesIds.forEach(valor=>{
+          consultas.push({campo,valor});
+        });
+      });
+
+      if(nombreSorteo){
+        camposNombre.forEach(campo=>{
+          consultas.push({campo,valor:nombreSorteo});
+        });
+      }
+
       const snaps=[];
-      const principal=await db.collection('CartonJugado').where('sorteoId','==',currentSorteo).get();
-      snaps.push(principal);
-      if(principal.empty && currentSorteoNombre){
-        const nombreNormalizado=currentSorteoNombre.toString().trim();
-        const camposAlternos=['sorteo','sorteoNombre','nombreSorteo'];
-        for(const campo of camposAlternos){
-          try{
-            const alterno=await db.collection('CartonJugado').where(campo,'==',nombreNormalizado).get();
-            if(!alterno.empty) snaps.push(alterno);
-          }catch(errorAlterno){
-            console.warn(`Consulta alterna no disponible para ${campo}`,errorAlterno);
+      const consultasVistas=new Set();
+      for(const consulta of consultas){
+        const llave=`${consulta.campo}::${String(consulta.valor)}`;
+        if(consultasVistas.has(llave)) continue;
+        consultasVistas.add(llave);
+        try{
+          const snap=await db.collection('CartonJugado').where(consulta.campo,'==',consulta.valor).get();
+          if(!snap.empty){
+            snaps.push(snap);
           }
+        }catch(errorConsulta){
+          console.warn(`Consulta alterna no disponible para ${consulta.campo}`,errorConsulta);
         }
       }
+
       const registros=[];
       const idsVistos=new Set();
       snaps.forEach(snap=>{
         snap.forEach(doc=>{
           if(idsVistos.has(doc.id)) return;
-          idsVistos.add(doc.id);
           const data=doc.data()||{};
+          const idSorteoData=(data.sorteoId??data.sorteoid??data.idSorteo??data.idsorteo??'').toString().trim();
+          const nombreData=(data.sorteoNombre??data.nombreSorteo??data.sorteo??'').toString().trim();
+          const coincideId=idSorteoData && posiblesIds.some(valor=>String(valor).trim()===idSorteoData);
+          const coincideNombre=nombreSorteo && (
+            nombreData===nombreSorteo ||
+            nombreData.toLowerCase()===nombreSorteoLower
+          );
+          if(!coincideId && !coincideNombre) return;
+          idsVistos.add(doc.id);
           const alias=extraerAliasCarton(data);
           const numero=extraerNumeroCartonDatos(data);
           const tipo=extraerTipoCartonDato(data);
           registros.push({alias,numeroOrden:numero.orden,numeroTexto:numero.texto,tipo});
         });
       });
+
       if(registros.length===0){
         mostrarMensajeTablaCartones('Sin cartones registrados');
         return;
