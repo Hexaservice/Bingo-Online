@@ -894,7 +894,7 @@
       transform-origin:center;
       transition:left 0.35s ease, top 0.35s ease;
       will-change:left, top;
-      z-index:5400;
+      z-index:7600;
     }
     #tutorial-hand.tutorial-hand-following{
       transition:none;
@@ -1279,7 +1279,8 @@
     autoSeleccionModalId:0
   };
   const HAND_OFFSET={x:4,y:-20};
-  const HAND_MODAL_ARRI_IZQ_OFFSET={offsetX:-25,offsetY:36};
+  const HAND_MODAL_ARRI_IZQ_OFFSET={offsetX:-40,offsetY:56};
+  const HAND_ARRI_IZQ_CELDA_OFFSET={offsetX:-23,offsetY:34};
   const sorteoHintState={
     listo:false,
     rafId:null,
@@ -1342,10 +1343,24 @@
     saveToCookie();
   }
 
+  function modalNumeroVisible(){
+    const modal=document.getElementById('number-modal');
+    if(!modal) return false;
+    if(modal.style.display==='flex') return true;
+    return window.getComputedStyle(modal).display==='flex';
+  }
+
+  async function esperarModalNumeroVisible(intentos=6,esperaMs=60){
+    for(let i=0;i<intentos;i++){
+      if(modalNumeroVisible()) return true;
+      await esperar(esperaMs);
+    }
+    return modalNumeroVisible();
+  }
+
   async function ejecutarAutoSeleccionModalTutorial(celda,{animarMano=true,esperaInicial=120,numeroForzado=null}={}){
     if(!celda || !tutorialState.activo) return false;
-    const modal=document.getElementById('number-modal');
-    if(!modal || modal.style.display!=='flex') return false;
+    if(!(await esperarModalNumeroVisible())) return false;
     const actual=(celda.dataset.value||'').toString().trim();
     if(actual!=='') return false;
     const numero=Number.isInteger(numeroForzado)
@@ -1384,7 +1399,7 @@
       tutorialHand.src='img/Mano-arri-izq.png';
       tutorialHand.classList.remove('tutorial-hand-pulse');
     }
-    await moverManoAElemento(celda,{position:'right',offsetX:-8,offsetY:14,track:false,waitMs:220});
+    await moverManoAElemento(celda,{position:'right',...HAND_ARRI_IZQ_CELDA_OFFSET,track:false,waitMs:220});
     openModal(celda,{tutorialAuto:false});
     const opciones=[...document.querySelectorAll('#number-grid div')];
     const existeOpcion=opciones.some(op=>parseInt(op.textContent,10)===numero);
@@ -1396,7 +1411,7 @@
     celda.dataset.tutorialTemp='1';
     const clave=obtenerClaveCeldaTutorial(celda);
     if(clave) tutorialState.celdasTemporales.add(clave);
-    await moverManoAElemento(celda,{position:'right',offsetX:HAND_MODAL_ARRI_IZQ_OFFSET.offsetX,offsetY:HAND_MODAL_ARRI_IZQ_OFFSET.offsetY,track:false,waitMs:120});
+    await moverManoAElemento(celda,{position:'right',...HAND_ARRI_IZQ_CELDA_OFFSET,track:false,waitMs:120});
   }
 
   function posicionarMensajeTutorialCarton(mensaje,{colorTexto=''}={}){
@@ -1920,7 +1935,7 @@
           if(tutorialCancelado(token)) return;
           const celda=obtenerCeldaCarton(punto.r,punto.c);
           if(!celda) continue;
-          await moverManoAElemento(celda,{position:'right',offsetX:-8,offsetY:14,track:true,waitMs:260});
+          await moverManoAElemento(celda,{position:'right',...HAND_ARRI_IZQ_CELDA_OFFSET,track:true,waitMs:260});
           if(tutorialCancelado(token)) return;
           await simularSeleccionTemporalTutorial(celda);
           if(tutorialCancelado(token)) return;
