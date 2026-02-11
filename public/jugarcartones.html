@@ -610,6 +610,16 @@
     .carton-back{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:10px;backface-visibility:hidden;transform:rotateY(180deg);background:linear-gradient(white,gray);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:5px;overflow:hidden;}
     .carton-back img{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;height:auto;opacity:0.15;object-fit:contain;pointer-events:none;z-index:0;}
     .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);justify-content:center;align-items:center;z-index:1000;padding:12px;box-sizing:border-box;}
+    body.tutorial-activo .modal,
+    body.tutorial-activo .sellado-overlay,
+    body.tutorial-activo .perfil-pendiente-modal,
+    body.tutorial-activo .datos-bancarios-modal,
+    body.tutorial-activo #creditos-modal,
+    body.tutorial-activo .carton-modal-overlay,
+    body.tutorial-activo .carton-processing-overlay,
+    body.tutorial-activo .carton-toast{
+      z-index:6500 !important;
+    }
     .modal-content{background:#fff;padding:10px;border-radius:10px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;width:max-content;box-sizing:border-box;}
     #sorteos-list div{display:block;font-weight:bold;font-size:1rem;cursor:pointer;font-family:'Poppins',sans-serif;margin-bottom:2px;}
     #sorteos-list .sorteo-index{display:inline-block;width:30px;margin-right:2px;}
@@ -1263,7 +1273,8 @@
     seguimiento:null,
     posicionMano:null,
     etiquetaSeguimiento:null,
-    permitirVolteoCentro:false
+    permitirVolteoCentro:false,
+    celdasTemporales:new Set()
   };
   const HAND_OFFSET={x:4,y:-20};
   const sorteoHintState={
@@ -1291,6 +1302,54 @@
   }
 
   const esperar=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
+
+  function obtenerClaveCeldaTutorial(celda){
+    if(!celda) return '';
+    return `${celda.dataset.row||''}-${celda.dataset.col||''}`;
+  }
+
+  function calcularNumeroAleatorioValidoParaCelda(celda){
+    if(!celda) return null;
+    const col=parseInt(celda.dataset.col,10);
+    if(Number.isNaN(col) || !ranges[col]) return null;
+    const [start,end]=ranges[col];
+    const usadosColumna=new Set();
+    document.querySelectorAll(`#bingo-board td[data-col="${col}"]`).forEach(td=>{
+      if(td===celda || td.classList.contains('free')) return;
+      const valor=(td.dataset.value||'').toString().trim();
+      if(valor!=='') usadosColumna.add(valor);
+    });
+    const disponibles=[];
+    for(let valor=start;valor<=end;valor++){
+      if(!usadosColumna.has(String(valor))) disponibles.push(valor);
+    }
+    if(!disponibles.length) return null;
+    return disponibles[Math.floor(Math.random()*disponibles.length)];
+  }
+
+  function limpiarNumerosTemporalesTutorial(){
+    document.querySelectorAll('#bingo-board td[data-tutorial-temp="1"]').forEach(td=>{
+      td.dataset.value='';
+      td.textContent='';
+      td.classList.remove('error');
+      td.removeAttribute('data-tutorial-temp');
+    });
+    tutorialState.celdasTemporales.clear();
+    validateBoard();
+    saveToCookie();
+  }
+
+  async function simularSeleccionTemporalTutorial(celda){
+    if(!celda) return;
+    const actual=(celda.dataset.value||'').toString().trim();
+    if(actual!=='') return;
+    const numero=calcularNumeroAleatorioValidoParaCelda(celda);
+    if(numero===null) return;
+    openModal(celda);
+    await esperar(90);
+    selectNumber(numero,{tutorialTemporal:true});
+    await esperar(120);
+  }
 
   function clamp(value,min,max){
     return Math.min(Math.max(value,min),max);
@@ -1488,7 +1547,10 @@
       direccionPreferida=null,
       forzarDireccion=false,
       evitarMano=true,
-      evitarControles=true
+      evitarControles=true,
+      minTop=null,
+      evitarElementos=[],
+      colorTexto=''
     }=opciones;
     const mensajePrevio=tutorialLabel.dataset.mensaje ?? '';
     const necesitaReinicio=tutorialLabel.style.display!=='flex' || mensajePrevio!==mensaje;
@@ -1498,6 +1560,7 @@
     tutorialLabel.style.minWidth='200px';
     tutorialLabel.style.fontSize=`${tamanoFuente}px`;
     tutorialLabel.style.padding=`${Math.max(16,tamanoFuente*0.75)}px ${Math.max(20,tamanoFuente*0.95)}px`;
+    tutorialLabel.style.color=colorTexto||'';
     if(necesitaReinicio){
       tutorialLabel.textContent=mensaje;
       tutorialLabel.dataset.mensaje=mensaje;
@@ -1558,6 +1621,10 @@
 
     left=clampValor(left,margen,viewportWidth-ancho-margen);
     top=clampValor(top,margen,viewportHeight-alto-margen);
+    if(Number.isFinite(minTop)){
+      top=Math.max(top,Math.max(margen,minTop));
+      top=clampValor(top,margen,viewportHeight-alto-margen);
+    }
 
     if(evitarMano){
       const manoRect=tutorialHand?.getBoundingClientRect();
@@ -1595,6 +1662,34 @@
           }
         }
       }
+    }
+
+    const elementosEvitar=Array.isArray(evitarElementos)
+      ? evitarElementos.filter(Boolean)
+      : (evitarElementos?[evitarElementos]:[]);
+    if(elementosEvitar.length){
+      elementosEvitar.forEach((item)=>{
+        const rectEvitar=typeof item.getBoundingClientRect==='function' ? item.getBoundingClientRect() : null;
+        if(!rectEvitar) return;
+        const solapa=!(left+ancho < rectEvitar.left || left > rectEvitar.right || top+alto < rectEvitar.top || top > rectEvitar.bottom);
+        if(solapa){
+          const candidatos=[
+            {left,top:rectEvitar.top-alto-margen},
+            {left,top:rectEvitar.bottom+margen},
+            {left:rectEvitar.right+margen,top},
+            {left:rectEvitar.left-ancho-margen,top}
+          ];
+          const valido=candidatos.find((cand)=>{
+            const candLeft=clampValor(cand.left,margen,viewportWidth-ancho-margen);
+            const candTop=clampValor(cand.top,margen,viewportHeight-alto-margen);
+            return (candLeft+ancho < rectEvitar.left || candLeft > rectEvitar.right || candTop+alto < rectEvitar.top || candTop > rectEvitar.bottom);
+          });
+          if(valido){
+            left=clampValor(valido.left,margen,viewportWidth-ancho-margen);
+            top=clampValor(valido.top,margen,viewportHeight-alto-margen);
+          }
+        }
+      });
     }
 
     tutorialLabel.style.left=`${left}px`;
@@ -1742,14 +1837,23 @@
     {
       id:'recorrido-carton',
       ejecutar:async ({token})=>{
-        const mensaje='Elije tus números pulsando para personalizar tu cartón';
+        const mensaje='Elige tus números pulsando para personalizar tu cartón';
         if(tutorialHand){
           tutorialHand.src='img/Mano-arriba.png';
           tutorialHand.classList.remove('tutorial-hand-pulse');
         }
         const tablero=document.getElementById('bingo-board');
         if(tablero){
-          const opcionesEtiqueta={direccionPreferida:'arriba',forzarDireccion:true,evitarMano:false,evitarControles:false};
+          const formaNombreEl=document.getElementById('forma-nombre');
+          const formaRect=formaNombreEl?.getBoundingClientRect();
+          const opcionesEtiqueta={
+            direccionPreferida:'arriba',
+            forzarDireccion:true,
+            evitarMano:false,
+            evitarControles:false,
+            minTop:Number.isFinite(formaRect?.bottom)?formaRect.bottom+10:null,
+            evitarElementos:formaNombreEl?[formaNombreEl]:[]
+          };
           posicionarEtiquetaTutorial(tablero.getBoundingClientRect(),mensaje,opcionesEtiqueta);
           iniciarSeguimientoEtiqueta(tablero,mensaje,opcionesEtiqueta);
         }
@@ -1759,6 +1863,8 @@
           const celda=obtenerCeldaCarton(punto.r,punto.c);
           if(!celda) continue;
           await moverManoAElemento(celda,{position:'below',offsetX:0,offsetY:8,track:true,waitMs:500});
+          if(tutorialCancelado(token)) return;
+          await simularSeleccionTemporalTutorial(celda);
           if(tutorialCancelado(token)) return;
         }
       }
@@ -1772,19 +1878,27 @@
           tutorialHand.classList.remove('tutorial-hand-pulse');
         }
         const tablero=document.getElementById('bingo-board');
-        const opcionesEtiqueta={direccionPreferida:'arriba',forzarDireccion:true,evitarMano:false,evitarControles:false};
+        const formaNombreEl=document.getElementById('forma-nombre');
+        const formaRect=formaNombreEl?.getBoundingClientRect();
+        const opcionesEtiqueta={
+          direccionPreferida:'arriba',
+          forzarDireccion:true,
+          evitarMano:false,
+          evitarControles:false,
+          minTop:Number.isFinite(formaRect?.bottom)?formaRect.bottom+10:null,
+          evitarElementos:formaNombreEl?[formaNombreEl]:[]
+        };
         const headers=[...document.querySelectorAll('.carton th')];
         for(let i=0;i<headers.length;i++){
           const header=headers[i];
           if(!header) continue;
           if(tutorialCancelado(token)) return;
-          const nombre=obtenerNombreForma(i+1);
-          const mensaje=nombre
-            ? `Forma ${i+1} ${nombre} para mostrar el nombre de la forma actual`
-            : `Forma ${i+1} para mostrar el nombre de la forma actual`;
+          const nombre=obtenerNombreForma(i+1)||'Sin nombre';
+          const mensaje=`Forma ${i+1}: ${nombre}`;
           if(tablero){
-            posicionarEtiquetaTutorial(tablero.getBoundingClientRect(),mensaje,opcionesEtiqueta);
-            iniciarSeguimientoEtiqueta(tablero,mensaje,opcionesEtiqueta);
+            const opcionesMensajeForma={...opcionesEtiqueta,colorTexto:formGlows[i]||formColors[i]||''};
+            posicionarEtiquetaTutorial(tablero.getBoundingClientRect(),mensaje,opcionesMensajeForma);
+            iniciarSeguimientoEtiqueta(tablero,mensaje,opcionesMensajeForma);
           }
           await moverManoAElemento(header,{position:'below',offsetX:0,offsetY:6,track:true,waitMs:500});
           if(tutorialCancelado(token)) return;
@@ -1965,8 +2079,10 @@
 
   function activarTutorialOpciones({iniciarPaso=true}={}){
     tutorialState.activo=true;
+    document.body.classList.add('tutorial-activo');
     cancelarTutorialEnCurso();
     tutorialState.permitirVolteoCentro=false;
+    limpiarNumerosTemporalesTutorial();
     if(tutorialToggle){
       tutorialToggle.classList.add('activo');
       tutorialToggle.style.opacity='1';
@@ -1991,12 +2107,14 @@
 
   function desactivarTutorial(){
     tutorialState.activo=false;
+    document.body.classList.remove('tutorial-activo');
     cancelarTutorialEnCurso();
     detenerTutorialAutomatico();
     detenerSeguimientoMano();
     detenerSeguimientoEtiqueta();
     limpiarMascaraTutorial();
     tutorialState.permitirVolteoCentro=false;
+    limpiarNumerosTemporalesTutorial();
     if(tutorialToggle){
       tutorialToggle.classList.remove('activo');
     }
@@ -2956,10 +3074,18 @@ function toggleForma(idx){
     reiniciarScrollModal(grid);
   }
 
-  function selectNumber(num){
+  function selectNumber(num,{tutorialTemporal=false}={}){
     if(!currentCell) return;
     currentCell.textContent=num;
     currentCell.dataset.value=num;
+    const clave=obtenerClaveCeldaTutorial(currentCell);
+    if(tutorialTemporal){
+      currentCell.dataset.tutorialTemp='1';
+      if(clave) tutorialState.celdasTemporales.add(clave);
+    }else{
+      currentCell.removeAttribute('data-tutorial-temp');
+      if(clave) tutorialState.celdasTemporales.delete(clave);
+    }
     document.getElementById('number-modal').style.display='none';
     validateBoard();
     saveToCookie();
@@ -2991,7 +3117,9 @@ function toggleForma(idx){
       td.dataset.value='';
       td.textContent='';
       td.classList.remove('error');
+      td.removeAttribute('data-tutorial-temp');
     });
+    tutorialState.celdasTemporales.clear();
     const wrapper=document.getElementById('carton-wrapper');
     wrapper.classList.remove('flipped');
     wrapper.style.transform='';
