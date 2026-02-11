@@ -1275,9 +1275,11 @@
     posicionMano:null,
     etiquetaSeguimiento:null,
     permitirVolteoCentro:false,
-    celdasTemporales:new Set()
+    celdasTemporales:new Set(),
+    autoSeleccionModalId:0
   };
   const HAND_OFFSET={x:4,y:-20};
+  const HAND_MODAL_ARRI_IZQ_OFFSET={offsetX:-25,offsetY:36};
   const sorteoHintState={
     listo:false,
     rafId:null,
@@ -1340,6 +1342,38 @@
     saveToCookie();
   }
 
+  async function ejecutarAutoSeleccionModalTutorial(celda,{animarMano=true,esperaInicial=120,numeroForzado=null}={}){
+    if(!celda || !tutorialState.activo) return false;
+    const modal=document.getElementById('number-modal');
+    if(!modal || modal.style.display!=='flex') return false;
+    const actual=(celda.dataset.value||'').toString().trim();
+    if(actual!=='') return false;
+    const numero=Number.isInteger(numeroForzado)
+      ? numeroForzado
+      : calcularNumeroAleatorioValidoParaCelda(celda);
+    if(numero===null) return false;
+    const idActual=++tutorialState.autoSeleccionModalId;
+    await esperar(esperaInicial);
+    if(!tutorialState.activo || idActual!==tutorialState.autoSeleccionModalId) return false;
+    if(tutorialHand){
+      tutorialHand.src='img/Mano-arri-izq.png';
+      tutorialHand.classList.remove('tutorial-hand-pulse');
+      tutorialHand.style.display='block';
+    }
+    const opcionSeleccionada=[...document.querySelectorAll('#number-grid div')]
+      .find(op=>parseInt(op.textContent,10)===numero);
+    if(opcionSeleccionada && animarMano){
+      await moverManoAElemento(opcionSeleccionada,{position:'right',...HAND_MODAL_ARRI_IZQ_OFFSET,track:false,waitMs:200});
+      if(!tutorialState.activo || idActual!==tutorialState.autoSeleccionModalId) return false;
+      await pulsarElementoTutorial(opcionSeleccionada);
+      if(!tutorialState.activo || idActual!==tutorialState.autoSeleccionModalId) return false;
+    }
+    if(currentCell===celda && (celda.dataset.value||'').toString().trim()===''){
+      selectNumber(numero,{tutorialTemporal:true});
+    }
+    return true;
+  }
+
   async function simularSeleccionTemporalTutorial(celda){
     if(!celda) return;
     const actual=(celda.dataset.value||'').toString().trim();
@@ -1351,23 +1385,18 @@
       tutorialHand.classList.remove('tutorial-hand-pulse');
     }
     await moverManoAElemento(celda,{position:'right',offsetX:-8,offsetY:14,track:false,waitMs:220});
-    openModal(celda);
-    await esperar(120);
+    openModal(celda,{tutorialAuto:false});
     const opciones=[...document.querySelectorAll('#number-grid div')];
-    const opcionSeleccionada=opciones.find(op=>parseInt(op.textContent,10)===numero);
-    if(opcionSeleccionada){
-      await moverManoAElemento(opcionSeleccionada,{position:'right',offsetX:-10,offsetY:16,track:false,waitMs:180});
-      await pulsarElementoTutorial(opcionSeleccionada);
-      if(currentCell===celda && (celda.dataset.value||'').toString().trim()===''){
-        selectNumber(numero,{tutorialTemporal:true});
-      }
-    }else{
+    const existeOpcion=opciones.some(op=>parseInt(op.textContent,10)===numero);
+    if(existeOpcion){
+      await ejecutarAutoSeleccionModalTutorial(celda,{animarMano:true,esperaInicial:100});
+    }else if(currentCell===celda && (celda.dataset.value||'').toString().trim()===''){
       selectNumber(numero,{tutorialTemporal:true});
     }
     celda.dataset.tutorialTemp='1';
     const clave=obtenerClaveCeldaTutorial(celda);
     if(clave) tutorialState.celdasTemporales.add(clave);
-    await moverManoAElemento(celda,{position:'right',offsetX:-8,offsetY:14,track:false,waitMs:120});
+    await moverManoAElemento(celda,{position:'right',offsetX:HAND_MODAL_ARRI_IZQ_OFFSET.offsetX,offsetY:HAND_MODAL_ARRI_IZQ_OFFSET.offsetY,track:false,waitMs:120});
   }
 
   function posicionarMensajeTutorialCarton(mensaje,{colorTexto=''}={}){
@@ -1574,6 +1603,7 @@
   function cancelarTutorialEnCurso(){
     tutorialState.token+=1;
     tutorialState.auto.ejecutando=false;
+    tutorialState.autoSeleccionModalId+=1;
   }
 
   function tutorialCancelado(token){
@@ -3071,7 +3101,7 @@ function toggleForma(idx){
     refrescarNumeroCartonVisual();
   }
 
-  function openModal(cell){
+  function openModal(cell,{tutorialAuto=true}={}){
     currentCell=cell;
     const col=parseInt(cell.dataset.col);
     const [start,end]=ranges[col];
@@ -3085,6 +3115,9 @@ function toggleForma(idx){
     }
     document.getElementById('number-modal').style.display='flex';
     reiniciarScrollModal(grid);
+    if(tutorialState.activo && tutorialAuto){
+      ejecutarAutoSeleccionModalTutorial(cell,{animarMano:true,esperaInicial:120});
+    }
   }
 
   function selectNumber(num,{tutorialTemporal=false}={}){
