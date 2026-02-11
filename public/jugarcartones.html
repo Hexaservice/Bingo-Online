@@ -639,7 +639,6 @@
       align-self:center;
       max-width:340px;
     }
-    #number-modal-title .nota-destacada{color:#c62828;font-weight:800;}
     #number-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;justify-items:center;}
     #number-grid div{width:60px;height:60px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;text-shadow:0 0 5px green;cursor:pointer;}
     #jugados-content,#cartones-content{width:max-content;max-width:100%;margin:auto;max-height:80vh;align-items:center;position:relative;padding:5px;box-sizing:border-box;display:flex;flex-direction:column;}
@@ -979,6 +978,14 @@
     body.tutorial-activo.tutorial-focus-lock .modal:not(#number-modal) *{
       pointer-events:auto !important;
     }
+    body.tutorial-activo.tutorial-focus-lock.tutorial-modal-open .tutorial-modal-abierto,
+    body.tutorial-activo.tutorial-focus-lock.tutorial-modal-open .tutorial-modal-abierto *{
+      pointer-events:auto !important;
+    }
+    body.tutorial-activo.tutorial-modal-open #tutorial-hand,
+    body.tutorial-activo.tutorial-modal-open #tutorial-label{
+      display:none !important;
+    }
     @keyframes tutorial-hand-pulse{
       0%{transform:scale(1);}
       45%{transform:scale(1.08);}
@@ -1090,7 +1097,7 @@
   <div id="derechos">Todos los derechos reservados ® Hexaservice <span class="current-year"></span></div>
   <div id="number-modal" class="modal" onclick="this.style.display='none'">
     <div id="number-modal-content" class="modal-content" onclick="event.stopPropagation();">
-      <div id="number-modal-title">Pulsa uno de los números para seleccionarlo, <span class="nota-destacada">Nota:</span> no se pueden repetir números en la misma columna</div>
+      <div id="number-modal-title">Selecciona un número</div>
       <div id="number-grid"></div>
     </div>
   </div>
@@ -1314,7 +1321,9 @@
     permitirVolteoCentro:false,
     celdasTemporales:new Set(),
     autoSeleccionModalId:0,
-    focoElemento:null
+    focoElemento:null,
+    modalMonitorId:null,
+    modalVisible:false
   };
   const HAND_OFFSET={x:4,y:-20};
   const HAND_ARRI_IZQ_CELDA_OFFSET={offsetX:-23,offsetY:34};
@@ -1324,6 +1333,18 @@
     rafId:null,
     elemento:null
   };
+  const tutorialModalSelectors=[
+    '#number-modal',
+    '#cartones-modal',
+    '#sorteos-modal',
+    '#jugados-modal',
+    '#info-cartones-modal',
+    '#premios-modal',
+    '#perfil-pendiente-modal',
+    '#datos-bancarios-modal',
+    '#creditos-modal',
+    '#carton-confirm-modal'
+  ];
   let tutorialDimTimeout=null;
 
   function asegurarManoVisible(){
@@ -1396,6 +1417,73 @@
     return modalNumeroVisible();
   }
 
+  function obtenerModalesTutorialVisibles(){
+    return tutorialModalSelectors
+      .map(selector=>document.querySelector(selector))
+      .filter(modal=>modal && window.getComputedStyle(modal).display!=='none');
+  }
+
+  function sincronizarEstadoModalTutorial(){
+    if(!tutorialState.activo){
+      document.body.classList.remove('tutorial-modal-open');
+      tutorialState.modalVisible=false;
+      obtenerModalesTutorialVisibles().forEach(modal=>modal.classList.remove('tutorial-modal-abierto'));
+      return;
+    }
+    const modalesVisibles=obtenerModalesTutorialVisibles();
+    const hayModal=modalesVisibles.length>0;
+    tutorialState.modalVisible=hayModal;
+    document.body.classList.toggle('tutorial-modal-open',hayModal);
+    document.querySelectorAll('.tutorial-modal-abierto').forEach(modal=>{
+      if(!modalesVisibles.includes(modal)) modal.classList.remove('tutorial-modal-abierto');
+    });
+    modalesVisibles.forEach(modal=>modal.classList.add('tutorial-modal-abierto'));
+  }
+
+  function iniciarMonitorModalTutorial(){
+    detenerMonitorModalTutorial();
+    const loop=()=>{
+      if(!tutorialState.activo) return;
+      sincronizarEstadoModalTutorial();
+      tutorialState.modalMonitorId=requestAnimationFrame(loop);
+    };
+    loop();
+  }
+
+  function detenerMonitorModalTutorial(){
+    if(tutorialState.modalMonitorId){
+      cancelAnimationFrame(tutorialState.modalMonitorId);
+      tutorialState.modalMonitorId=null;
+    }
+    tutorialState.modalVisible=false;
+    document.body.classList.remove('tutorial-modal-open');
+    document.querySelectorAll('.tutorial-modal-abierto').forEach(modal=>modal.classList.remove('tutorial-modal-abierto'));
+  }
+
+  function cerrarModalesTutorialActivos(){
+    const modalesVisibles=obtenerModalesTutorialVisibles();
+    modalesVisibles.forEach(modal=>{
+      if(modal.classList.contains('perfil-pendiente-modal') || modal.classList.contains('datos-bancarios-modal')){
+        modal.classList.remove('visible');
+        modal.setAttribute('aria-hidden','true');
+        return;
+      }
+      if(modal.id==='creditos-modal'){
+        modal.classList.remove('visible');
+        modal.setAttribute('aria-hidden','true');
+        return;
+      }
+      if(modal.id==='carton-confirm-modal'){
+        modal.classList.remove('visible');
+        modal.setAttribute('aria-hidden','true');
+        document.body.classList.remove('carton-blur');
+        return;
+      }
+      modal.style.display='none';
+    });
+    sincronizarEstadoModalTutorial();
+  }
+
   function limpiarFocoTutorial(){
     if(tutorialState.focoElemento){
       tutorialState.focoElemento.classList.remove('tutorial-focus-target');
@@ -1439,7 +1527,7 @@
     if(animarMano){
       for(const opcion of opcionesModal){
         fijarFocoTutorial(opcion);
-        await moverManoAElemento(opcion,{position:'below',offsetX:0,offsetY:6,track:false,waitMs:200,bloquearFoco:false});
+        await moverManoAElemento(opcion,{position:'below',offsetX:0,offsetY:18,track:false,waitMs:200,bloquearFoco:false});
         if(!tutorialState.activo || idActual!==tutorialState.autoSeleccionModalId) return false;
       }
     }
@@ -2274,6 +2362,7 @@
       tutorialOverlay.setAttribute('aria-hidden','false');
     }
     mostrarNavTutorial();
+    iniciarMonitorModalTutorial();
     if(tutorialHand){
       if(tutorialState.posicionMano){
         aplicarPosicionMano(tutorialState.posicionMano,{transicion:false});
@@ -2281,6 +2370,7 @@
         ocultarVisualesTutorial();
       }
     }
+    sincronizarEstadoModalTutorial();
     actualizarSorteoHint();
     if(iniciarPaso){
       ejecutarPasoTutorial(tutorialState.indice);
@@ -2307,6 +2397,8 @@
     }
     ocultarNavTutorial();
     ocultarVisualesTutorial();
+    detenerMonitorModalTutorial();
+    cerrarModalesTutorialActivos();
     actualizarSorteoHint();
     programarAtenuacionTutorial();
   }
@@ -4683,6 +4775,7 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
   if(tutorialPrev){
     tutorialPrev.addEventListener('click',()=>{
       if(!tutorialState.activo) return;
+      cerrarModalesTutorialActivos();
       cancelarTutorialEnCurso();
       detenerTutorialAutomatico();
       tutorialState.indice=(tutorialState.indice-1+tutorialSteps.length)%tutorialSteps.length;
@@ -4692,6 +4785,7 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
   if(tutorialNext){
     tutorialNext.addEventListener('click',()=>{
       if(!tutorialState.activo) return;
+      cerrarModalesTutorialActivos();
       cancelarTutorialEnCurso();
       detenerTutorialAutomatico();
       tutorialState.indice=(tutorialState.indice+1)%tutorialSteps.length;
