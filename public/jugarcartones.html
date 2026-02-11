@@ -1367,10 +1367,10 @@
     if(!(await esperarModalNumeroVisible())) return false;
     const actual=(celda.dataset.value||'').toString().trim();
     if(actual!=='') return false;
-    const numero=Number.isInteger(numeroForzado)
+    const numeroBase=Number.isInteger(numeroForzado)
       ? numeroForzado
       : calcularNumeroAleatorioValidoParaCelda(celda);
-    if(numero===null) return false;
+    if(numeroBase===null) return false;
     const idActual=++tutorialState.autoSeleccionModalId;
     await esperar(esperaInicial);
     if(!tutorialState.activo || idActual!==tutorialState.autoSeleccionModalId) return false;
@@ -1384,8 +1384,15 @@
       await moverManoAElemento(modalContenido,{position:'center',offsetX:0,offsetY:20,track:false,waitMs:120});
       if(!tutorialState.activo || idActual!==tutorialState.autoSeleccionModalId) return false;
     }
-    const opcionSeleccionada=[...document.querySelectorAll('#number-grid div')]
-      .find(op=>parseInt(op.textContent,10)===numero);
+    const opcionesModal=[...document.querySelectorAll('#number-grid div')];
+    const numeroOpciones=opcionesModal
+      .map(op=>parseInt(op.textContent,10))
+      .filter(valor=>Number.isInteger(valor));
+    const numero=numeroOpciones.includes(numeroBase)
+      ? numeroBase
+      : (numeroOpciones.length ? numeroOpciones[Math.floor(Math.random()*numeroOpciones.length)] : null);
+    if(numero===null) return false;
+    const opcionSeleccionada=opcionesModal.find(op=>parseInt(op.textContent,10)===numero);
     if(opcionSeleccionada && animarMano){
       await moverManoAElemento(opcionSeleccionada,{position:'below',...HAND_MODAL_ARRI_IZQ_OFFSET,track:false,waitMs:220});
       if(!tutorialState.activo || idActual!==tutorialState.autoSeleccionModalId) return false;
@@ -2012,9 +2019,9 @@
           tutorialHand.src='img/Mano-izquierda.png';
           tutorialHand.classList.remove('tutorial-hand-pulse');
         }
+        posicionarMensajeTutorialCarton(mensaje);
         await moverManoAElemento(celda,{position:'right',offsetX:-8,offsetY:0,track:true,waitMs:500});
         if(tutorialCancelado(token)) return;
-        posicionarMensajeTutorialCarton(mensaje);
         await pulsarElementoTutorial(celda);
         detenerSeguimientoMano();
         if(tutorialHand){
@@ -2067,9 +2074,37 @@
     return window.scrollY+window.innerHeight < document.documentElement.scrollHeight-margen;
   }
 
+  async function esperarFinScrollSuave(reintentos=8,esperaMs=90){
+    let ultimaPosicion=window.scrollY;
+    for(let i=0;i<reintentos;i++){
+      await esperar(esperaMs);
+      const actual=window.scrollY;
+      if(Math.abs(actual-ultimaPosicion)<=1) return;
+      ultimaPosicion=actual;
+    }
+  }
+
+  async function desplazarVistaSecuenciaInferior(){
+    const footerFinal=document.getElementById('derechos') || document.getElementById('fecha-hora');
+    if(footerFinal && typeof footerFinal.scrollIntoView==='function'){
+      footerFinal.scrollIntoView({behavior:'smooth',block:'end',inline:'nearest'});
+      await esperarFinScrollSuave(10,90);
+    }
+    if(necesitaScrollHastaFinal()){
+      window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'});
+      await esperarFinScrollSuave(10,90);
+    }
+  }
+
   function esPasoSecuenciaInferior(paso){
     if(!paso) return false;
     return ['guardar-carton','cartones-guardados','jugar-carton'].includes(paso.id);
+  }
+
+  function obtenerMascaraPasoTutorial(pasoId){
+    return pasoId==='recorrido-carton' || pasoId==='voltear-carton'
+      ? {radioExpandido:220,intensidad:0.5}
+      : {radioExpandido:110,intensidad:0.56};
   }
 
   async function ejecutarPasoTutorial(indice,{manual=false}={}){
@@ -2092,12 +2127,9 @@
       const objetivoInferior=document.getElementById(paso.elementId||'');
       if(objetivoInferior && typeof objetivoInferior.scrollIntoView==='function'){
         objetivoInferior.scrollIntoView({behavior:'smooth',block:'end',inline:'nearest'});
-        await esperar(420);
+        await esperarFinScrollSuave();
       }
-      if(necesitaScrollHastaFinal()){
-        window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'});
-        await esperar(500);
-      }
+      await desplazarVistaSecuenciaInferior();
     }
     if(typeof paso.ejecutar==='function'){
       detenerSeguimientoMano();
@@ -2121,11 +2153,10 @@
       tutorialHand.src=paso.mano;
       tutorialHand.classList.toggle('tutorial-hand-pulse',Boolean(paso.pulso));
     }
+    const mascaraPaso=obtenerMascaraPasoTutorial(paso.id);
+    actualizarMascaraTutorial(elemento.getBoundingClientRect(),mascaraPaso);
     await moverManoAElemento(elemento,{position:paso.posicion,offsetX:paso.offsetX,offsetY:paso.offsetY,track:true});
     if(token!==tutorialState.token) return;
-    const mascaraPaso=paso.id==='recorrido-carton' || paso.id==='voltear-carton'
-      ? {radioExpandido:220,intensidad:0.5}
-      : {radioExpandido:110,intensidad:0.56};
     posicionarEtiquetaTutorial(elemento.getBoundingClientRect(),paso.mensaje,{mascara:mascaraPaso});
     iniciarSeguimientoEtiqueta(elemento,paso.mensaje,{mascara:mascaraPaso});
     if(!manual){
