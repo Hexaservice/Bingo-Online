@@ -611,7 +611,7 @@
     .carton-back{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:10px;backface-visibility:hidden;transform:rotateY(180deg);background:linear-gradient(white,gray);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:5px;overflow:hidden;}
     .carton-back img{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;height:auto;opacity:0.15;object-fit:contain;pointer-events:none;z-index:0;}
     .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);justify-content:center;align-items:center;z-index:1000;padding:12px;box-sizing:border-box;}
-    body.tutorial-activo .modal,
+    body.tutorial-activo .modal:not(#number-modal),
     body.tutorial-activo .sellado-overlay,
     body.tutorial-activo .perfil-pendiente-modal,
     body.tutorial-activo .datos-bancarios-modal,
@@ -619,14 +619,27 @@
     body.tutorial-activo .carton-modal-overlay,
     body.tutorial-activo .carton-processing-overlay,
     body.tutorial-activo .carton-toast{
-      z-index:6500 !important;
+      z-index:18050 !important;
     }
     .modal-content{background:#fff;padding:10px;border-radius:10px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;width:max-content;box-sizing:border-box;}
     #sorteos-list div{display:block;font-weight:bold;font-size:1rem;cursor:pointer;font-family:'Poppins',sans-serif;margin-bottom:2px;}
     #sorteos-list .sorteo-index{display:inline-block;width:30px;margin-right:2px;}
     #sorteos-list div .sorteo-detalle{display:flex;align-items:center;gap:4px;font-size:0.6rem;font-weight:normal;pointer-events:none;color:inherit;font-family:'Poppins',sans-serif;margin-top:-2px;padding-left:30px;}
     #sorteos-list div .hora-cierre{color:#ff0000;}
-    #number-modal-title{font-size:0.8rem;text-align:center;width:100%;text-shadow:0 0 5px blue;margin-bottom:5px;font-family:'Poppins',sans-serif;}
+    #number-modal-title{
+      font-size:0.92rem;
+      text-align:center;
+      width:100%;
+      text-shadow:none;
+      margin:0 0 8px 0;
+      font-family:'Poppins',sans-serif;
+      font-weight:700;
+      line-height:1.35;
+      color:#111;
+      align-self:center;
+      max-width:340px;
+    }
+    #number-modal-title .nota-destacada{color:#c62828;font-weight:800;}
     #number-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;justify-items:center;}
     #number-grid div{width:60px;height:60px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;text-shadow:0 0 5px green;cursor:pointer;}
     #jugados-content,#cartones-content{width:max-content;max-width:100%;margin:auto;max-height:80vh;align-items:center;position:relative;padding:5px;box-sizing:border-box;display:flex;flex-direction:column;}
@@ -945,6 +958,27 @@
       opacity:1;
       transform:translateX(0);
     }
+    body.tutorial-activo.tutorial-focus-lock button,
+    body.tutorial-activo.tutorial-focus-lock input,
+    body.tutorial-activo.tutorial-focus-lock select,
+    body.tutorial-activo.tutorial-focus-lock textarea,
+    body.tutorial-activo.tutorial-focus-lock a,
+    body.tutorial-activo.tutorial-focus-lock label,
+    body.tutorial-activo.tutorial-focus-lock [role="button"],
+    body.tutorial-activo.tutorial-focus-lock td,
+    body.tutorial-activo.tutorial-focus-lock #number-grid div,
+    body.tutorial-activo.tutorial-focus-lock .action-btn,
+    body.tutorial-activo.tutorial-focus-lock .carton-icon{
+      pointer-events:none !important;
+    }
+    body.tutorial-activo.tutorial-focus-lock #tutorial-controls,
+    body.tutorial-activo.tutorial-focus-lock #tutorial-controls *,
+    body.tutorial-activo.tutorial-focus-lock .tutorial-focus-target,
+    body.tutorial-activo.tutorial-focus-lock .tutorial-focus-target *,
+    body.tutorial-activo.tutorial-focus-lock .modal:not(#number-modal),
+    body.tutorial-activo.tutorial-focus-lock .modal:not(#number-modal) *{
+      pointer-events:auto !important;
+    }
     @keyframes tutorial-hand-pulse{
       0%{transform:scale(1);}
       45%{transform:scale(1.08);}
@@ -1056,7 +1090,7 @@
   <div id="derechos">Todos los derechos reservados ® Hexaservice <span class="current-year"></span></div>
   <div id="number-modal" class="modal" onclick="this.style.display='none'">
     <div id="number-modal-content" class="modal-content" onclick="event.stopPropagation();">
-      <div id="number-modal-title">Elige tu jugada</div>
+      <div id="number-modal-title">Pulsa uno de los números para seleccionarlo, <span class="nota-destacada">Nota:</span> no se pueden repetir números en la misma columna</div>
       <div id="number-grid"></div>
     </div>
   </div>
@@ -1279,10 +1313,10 @@
     etiquetaSeguimiento:null,
     permitirVolteoCentro:false,
     celdasTemporales:new Set(),
-    autoSeleccionModalId:0
+    autoSeleccionModalId:0,
+    focoElemento:null
   };
   const HAND_OFFSET={x:4,y:-20};
-  const HAND_MODAL_ARRI_IZQ_OFFSET={offsetX:0,offsetY:26};
   const HAND_ARRI_IZQ_CELDA_OFFSET={offsetX:-23,offsetY:34};
   const HAND_BINGO_ARRI_IZQ_OFFSET={offsetX:-42,offsetY:52};
   const sorteoHintState={
@@ -1362,6 +1396,27 @@
     return modalNumeroVisible();
   }
 
+  function limpiarFocoTutorial(){
+    if(tutorialState.focoElemento){
+      tutorialState.focoElemento.classList.remove('tutorial-focus-target');
+      tutorialState.focoElemento.removeAttribute('data-tutorial-focus');
+    }
+    tutorialState.focoElemento=null;
+    document.body.classList.remove('tutorial-focus-lock');
+  }
+
+  function fijarFocoTutorial(elemento){
+    if(!tutorialState.activo || !elemento) return;
+    if(tutorialState.focoElemento && tutorialState.focoElemento!==elemento){
+      tutorialState.focoElemento.classList.remove('tutorial-focus-target');
+      tutorialState.focoElemento.removeAttribute('data-tutorial-focus');
+    }
+    tutorialState.focoElemento=elemento;
+    elemento.classList.add('tutorial-focus-target');
+    elemento.setAttribute('data-tutorial-focus','1');
+    document.body.classList.add('tutorial-focus-lock');
+  }
+
   async function ejecutarAutoSeleccionModalTutorial(celda,{animarMano=true,esperaInicial=500,numeroForzado=null}={}){
     if(!celda || !tutorialState.activo) return false;
     if(!(await esperarModalNumeroVisible())) return false;
@@ -1379,26 +1434,22 @@
       tutorialHand.classList.remove('tutorial-hand-pulse');
       tutorialHand.style.display='block';
     }
-    const modalContenido=document.getElementById('number-modal-content');
-    if(animarMano && modalContenido){
-      await moverManoAElemento(modalContenido,{position:'center',offsetX:0,offsetY:20,track:false,waitMs:120});
-      if(!tutorialState.activo || idActual!==tutorialState.autoSeleccionModalId) return false;
-    }
     const opcionesModal=[...document.querySelectorAll('#number-grid div')];
+    if(!opcionesModal.length) return false;
+    if(animarMano){
+      for(const opcion of opcionesModal){
+        fijarFocoTutorial(opcion);
+        await moverManoAElemento(opcion,{position:'below',offsetX:0,offsetY:6,track:false,waitMs:200,bloquearFoco:false});
+        if(!tutorialState.activo || idActual!==tutorialState.autoSeleccionModalId) return false;
+      }
+    }
     const numeroOpciones=opcionesModal
       .map(op=>parseInt(op.textContent,10))
       .filter(valor=>Number.isInteger(valor));
     const numero=numeroOpciones.includes(numeroBase)
       ? numeroBase
-      : (numeroOpciones.length ? numeroOpciones[Math.floor(Math.random()*numeroOpciones.length)] : null);
-    if(numero===null) return false;
-    const opcionSeleccionada=opcionesModal.find(op=>parseInt(op.textContent,10)===numero);
-    if(opcionSeleccionada && animarMano){
-      await moverManoAElemento(opcionSeleccionada,{position:'below',...HAND_MODAL_ARRI_IZQ_OFFSET,track:false,waitMs:220});
-      if(!tutorialState.activo || idActual!==tutorialState.autoSeleccionModalId) return false;
-      await pulsarElementoTutorial(opcionSeleccionada,{animacionClase:'tutorial-hand-pulsar'});
-      if(!tutorialState.activo || idActual!==tutorialState.autoSeleccionModalId) return false;
-    }
+      : numeroOpciones[numeroOpciones.length-1];
+    if(numero===null || numero===undefined) return false;
     if(currentCell===celda && (celda.dataset.value||'').toString().trim()===''){
       selectNumber(numero,{tutorialTemporal:true});
     }
@@ -1641,7 +1692,10 @@
   async function moverManoAElemento(elemento,opciones={}){
     if(!tutorialHand || !elemento) return;
     asegurarManoVisible();
-    const {track=true,waitMs=700}=opciones;
+    const {track=true,waitMs=700,bloquearFoco=true}=opciones;
+    if(bloquearFoco){
+      fijarFocoTutorial(elemento);
+    }
     if(track){
       iniciarSeguimientoMano(elemento,opciones);
       await esperar(waitMs);
@@ -1965,7 +2019,7 @@
     {
       id:'recorrido-carton',
       ejecutar:async ({token})=>{
-        const mensaje='Elige tus números pulsando para personalizar tu cartón';
+        const mensaje='Pulsa uno de los números para seleccionarlo, Nota: no se pueden repetir números en la misma columna';
         if(tutorialHand){
           tutorialHand.src='img/Mano-arri-izq.png';
           tutorialHand.classList.remove('tutorial-hand-pulse');
@@ -2085,15 +2139,8 @@
   }
 
   async function desplazarVistaSecuenciaInferior(){
-    const footerFinal=document.getElementById('derechos') || document.getElementById('fecha-hora');
-    if(footerFinal && typeof footerFinal.scrollIntoView==='function'){
-      footerFinal.scrollIntoView({behavior:'smooth',block:'end',inline:'nearest'});
-      await esperarFinScrollSuave(10,90);
-    }
-    if(necesitaScrollHastaFinal()){
-      window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'});
-      await esperarFinScrollSuave(10,90);
-    }
+    window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'});
+    await esperarFinScrollSuave(10,90);
   }
 
   function esPasoSecuenciaInferior(paso){
@@ -2124,11 +2171,6 @@
       await esperar(400);
     }
     if(esPasoSecuenciaInferior(paso)){
-      const objetivoInferior=document.getElementById(paso.elementId||'');
-      if(objetivoInferior && typeof objetivoInferior.scrollIntoView==='function'){
-        objetivoInferior.scrollIntoView({behavior:'smooth',block:'end',inline:'nearest'});
-        await esperarFinScrollSuave();
-      }
       await desplazarVistaSecuenciaInferior();
     }
     if(typeof paso.ejecutar==='function'){
@@ -2142,9 +2184,11 @@
     }
     const elemento=document.getElementById(paso.elementId);
     if(!elemento){
+      limpiarFocoTutorial();
       tutorialState.auto.ejecutando=false;
       return;
     }
+    fijarFocoTutorial(elemento);
     detenerSeguimientoEtiqueta();
     ocultarVisualesTutorial();
     await esperar(120);
@@ -2218,6 +2262,7 @@
     tutorialState.activo=true;
     document.body.classList.add('tutorial-activo');
     cancelarTutorialEnCurso();
+    limpiarFocoTutorial();
     tutorialState.permitirVolteoCentro=false;
     limpiarNumerosTemporalesTutorial();
     if(tutorialToggle){
@@ -2250,6 +2295,7 @@
     detenerSeguimientoMano();
     detenerSeguimientoEtiqueta();
     limpiarMascaraTutorial();
+    limpiarFocoTutorial();
     tutorialState.permitirVolteoCentro=false;
     limpiarNumerosTemporalesTutorial();
     if(tutorialToggle){
