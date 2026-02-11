@@ -603,6 +603,7 @@
     .carton th{font-size:2.5rem;color:#ff6600;background:radial-gradient(circle,#ffffff,#ffffff 60%,#00aa00);text-shadow:2px 2px 0 #000;}
     .forma-header{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;font-family:'Bangers',cursive;font-size:0.8rem;line-height:1;text-shadow:1px 1px 0 #000;}
     .carton td{cursor:pointer;font-size:1.8rem;text-shadow:0 0 3px green;}
+    .carton td[data-tutorial-temp="1"]{color:#7a7a7a;text-shadow:none;}
     .carton td.free{background:#ffeb3b;display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:#4B0082;box-shadow:inset 0 0 6px rgba(0,0,0,0.18);}
     .carton-center-info{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1;font-weight:bold;text-transform:none;}
     #carton-num-max{font-size:1.2rem;color:#006400;text-shadow:0 0 4px #fff,0 0 6px rgba(0,0,0,0.2);font-family:'Poppins',sans-serif;display:block;animation:wiggle 1s infinite;}
@@ -1345,10 +1346,51 @@
     if(actual!=='') return;
     const numero=calcularNumeroAleatorioValidoParaCelda(celda);
     if(numero===null) return;
+    if(tutorialHand){
+      tutorialHand.src='img/Mano-arri-izq.png';
+      tutorialHand.classList.remove('tutorial-hand-pulse');
+    }
+    await moverManoAElemento(celda,{position:'right',offsetX:-8,offsetY:14,track:false,waitMs:220});
     openModal(celda);
-    await esperar(90);
-    selectNumber(numero,{tutorialTemporal:true});
     await esperar(120);
+    const opciones=[...document.querySelectorAll('#number-grid div')];
+    const opcionSeleccionada=opciones.find(op=>parseInt(op.textContent,10)===numero);
+    if(opcionSeleccionada){
+      await moverManoAElemento(opcionSeleccionada,{position:'right',offsetX:-10,offsetY:16,track:false,waitMs:180});
+      await pulsarElementoTutorial(opcionSeleccionada);
+      if(currentCell===celda && (celda.dataset.value||'').toString().trim()===''){
+        selectNumber(numero,{tutorialTemporal:true});
+      }
+    }else{
+      selectNumber(numero,{tutorialTemporal:true});
+    }
+    celda.dataset.tutorialTemp='1';
+    const clave=obtenerClaveCeldaTutorial(celda);
+    if(clave) tutorialState.celdasTemporales.add(clave);
+    await moverManoAElemento(celda,{position:'right',offsetX:-8,offsetY:14,track:false,waitMs:120});
+  }
+
+  function posicionarMensajeTutorialCarton(mensaje,{colorTexto=''}={}){
+    const tablero=document.getElementById('bingo-board');
+    if(!tablero) return;
+    const formaNombreEl=document.getElementById('forma-nombre');
+    const referenciaEtiqueta=(formaNombreEl && formaNombreEl.offsetParent!==null)
+      ? formaNombreEl
+      : tablero;
+    const evitarElementos=[tablero];
+    if(formaNombreEl && formaNombreEl!==referenciaEtiqueta){
+      evitarElementos.push(formaNombreEl);
+    }
+    const opcionesEtiqueta={
+      direccionPreferida:'arriba',
+      forzarDireccion:true,
+      evitarMano:true,
+      evitarControles:true,
+      evitarElementos,
+      ...(colorTexto?{colorTexto}:{})
+    };
+    posicionarEtiquetaTutorial(referenciaEtiqueta.getBoundingClientRect(),mensaje,opcionesEtiqueta);
+    iniciarSeguimientoEtiqueta(referenciaEtiqueta,mensaje,opcionesEtiqueta);
   }
 
   function clamp(value,min,max){
@@ -1839,30 +1881,16 @@
       ejecutar:async ({token})=>{
         const mensaje='Elige tus números pulsando para personalizar tu cartón';
         if(tutorialHand){
-          tutorialHand.src='img/Mano-arriba.png';
+          tutorialHand.src='img/Mano-arri-izq.png';
           tutorialHand.classList.remove('tutorial-hand-pulse');
         }
-        const tablero=document.getElementById('bingo-board');
-        if(tablero){
-          const formaNombreEl=document.getElementById('forma-nombre');
-          const formaRect=formaNombreEl?.getBoundingClientRect();
-          const opcionesEtiqueta={
-            direccionPreferida:'arriba',
-            forzarDireccion:true,
-            evitarMano:false,
-            evitarControles:false,
-            minTop:Number.isFinite(formaRect?.bottom)?formaRect.bottom+10:null,
-            evitarElementos:formaNombreEl?[formaNombreEl]:[]
-          };
-          posicionarEtiquetaTutorial(tablero.getBoundingClientRect(),mensaje,opcionesEtiqueta);
-          iniciarSeguimientoEtiqueta(tablero,mensaje,opcionesEtiqueta);
-        }
+        posicionarMensajeTutorialCarton(mensaje);
         const ruta=obtenerSecuenciaCeldasSerpenteo();
         for(const punto of ruta){
           if(tutorialCancelado(token)) return;
           const celda=obtenerCeldaCarton(punto.r,punto.c);
           if(!celda) continue;
-          await moverManoAElemento(celda,{position:'below',offsetX:0,offsetY:8,track:true,waitMs:500});
+          await moverManoAElemento(celda,{position:'right',offsetX:-8,offsetY:14,track:true,waitMs:260});
           if(tutorialCancelado(token)) return;
           await simularSeleccionTemporalTutorial(celda);
           if(tutorialCancelado(token)) return;
@@ -1874,20 +1902,9 @@
       ejecutar:async ({token})=>{
         await asegurarCartonFrente();
         if(tutorialHand){
-          tutorialHand.src='img/Mano-arriba.png';
+          tutorialHand.src='img/Mano-arri-izq.png';
           tutorialHand.classList.remove('tutorial-hand-pulse');
         }
-        const tablero=document.getElementById('bingo-board');
-        const formaNombreEl=document.getElementById('forma-nombre');
-        const formaRect=formaNombreEl?.getBoundingClientRect();
-        const opcionesEtiqueta={
-          direccionPreferida:'arriba',
-          forzarDireccion:true,
-          evitarMano:false,
-          evitarControles:false,
-          minTop:Number.isFinite(formaRect?.bottom)?formaRect.bottom+10:null,
-          evitarElementos:formaNombreEl?[formaNombreEl]:[]
-        };
         const headers=[...document.querySelectorAll('.carton th')];
         for(let i=0;i<headers.length;i++){
           const header=headers[i];
@@ -1895,12 +1912,8 @@
           if(tutorialCancelado(token)) return;
           const nombre=obtenerNombreForma(i+1)||'Sin nombre';
           const mensaje=`Forma ${i+1}: ${nombre}`;
-          if(tablero){
-            const opcionesMensajeForma={...opcionesEtiqueta,colorTexto:formGlows[i]||formColors[i]||''};
-            posicionarEtiquetaTutorial(tablero.getBoundingClientRect(),mensaje,opcionesMensajeForma);
-            iniciarSeguimientoEtiqueta(tablero,mensaje,opcionesMensajeForma);
-          }
-          await moverManoAElemento(header,{position:'below',offsetX:0,offsetY:6,track:true,waitMs:500});
+          posicionarMensajeTutorialCarton(mensaje,{colorTexto:formGlows[i]||formColors[i]||''});
+          await moverManoAElemento(header,{position:'right',offsetX:8,offsetY:2,track:true,waitMs:340});
           if(tutorialCancelado(token)) return;
           await pulsarElementoTutorial(header);
           if(tutorialCancelado(token)) return;
