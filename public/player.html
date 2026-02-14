@@ -683,6 +683,17 @@
           opacity: 0;
       }
 
+      .tutorial-nav-btn--text {
+          background: #ffffff;
+          border: 2px solid #1f1f1f;
+          border-radius: 8px;
+          font-size: 12px;
+          font-weight: 700;
+          min-width: 78px;
+          padding: 6px 10px;
+          color: #111111;
+      }
+
       #tutorial-nav.saliendo .tutorial-nav-btn {
           animation: tutorial-nav-exit 0.32s ease forwards;
       }
@@ -702,6 +713,12 @@
 
       .tutorial-nav-btn:active {
           transform: scale(0.95);
+      }
+
+      #tutorial-toggle:focus-visible,
+      .tutorial-nav-btn:focus-visible {
+          outline: 3px solid #ffd700;
+          outline-offset: 2px;
       }
 
       #tutorial-overlay {
@@ -727,8 +744,8 @@
           position: absolute;
           display: none;
           padding: 8px 12px;
-          background: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(237, 241, 255, 0.96));
-          border: 2px solid rgba(85, 70, 192, 0.35);
+          background: #ffffff;
+          border: 2px solid #1e1e1e;
           border-radius: 12px;
           font-family: 'Poppins', sans-serif;
           font-size: clamp(11px, 1.7vw, 14px);
@@ -745,6 +762,17 @@
           min-width: 120px;
           word-break: break-word;
           hyphens: auto;
+      }
+
+      #tutorial-label .tutorial-cta {
+          margin-top: 6px;
+          display: inline-block;
+          background: #0b5fff;
+          color: #ffffff;
+          padding: 4px 8px;
+          border-radius: 6px;
+          font-size: 11px;
+          font-weight: 700;
       }
 
       @keyframes tutorial-hand-pulse {
@@ -1156,13 +1184,16 @@
   </div>
 
   <div id="tutorial-controls" aria-label="Controles del modo tutorial">
-    <button id="tutorial-toggle" type="button">MODO<br/>TUTORIAL</button>
-    <div id="tutorial-nav" aria-hidden="true">
+    <button id="tutorial-toggle" type="button" aria-expanded="false" aria-controls="tutorial-nav">MODO<br/>TUTORIAL</button>
+    <div id="tutorial-nav" aria-hidden="true" role="toolbar" aria-label="Navegación del tutorial">
       <button id="tutorial-prev" class="tutorial-nav-btn" type="button" aria-label="Paso anterior del tutorial">⏪</button>
       <button id="tutorial-play" class="tutorial-nav-btn" type="button" aria-label="Reproducir tutorial automáticamente">▶️</button>
       <button id="tutorial-next" class="tutorial-nav-btn" type="button" aria-label="Siguiente paso del tutorial">⏩</button>
+      <button id="tutorial-skip" class="tutorial-nav-btn tutorial-nav-btn--text" type="button">Saltar</button>
+      <button id="tutorial-dismiss" class="tutorial-nav-btn tutorial-nav-btn--text" type="button">No volver a mostrar</button>
     </div>
   </div>
+  <p id="tutorial-live-region" class="sr-only" aria-live="polite" aria-atomic="true"></p>
 
   <div id="fecha-hora"></div>
   <div id="derechos">Todos los derechos reservados ® Hexaservice <span class="current-year"></span></div>
@@ -1271,9 +1302,12 @@
   const tutorialPrev = document.getElementById('tutorial-prev');
   const tutorialPlay = document.getElementById('tutorial-play');
   const tutorialNext = document.getElementById('tutorial-next');
+  const tutorialSkip = document.getElementById('tutorial-skip');
+  const tutorialDismiss = document.getElementById('tutorial-dismiss');
   const tutorialHand = document.getElementById('tutorial-hand');
   const tutorialLabel = document.getElementById('tutorial-label');
   const tutorialOverlay = document.getElementById('tutorial-overlay');
+  const tutorialLiveRegion = document.getElementById('tutorial-live-region');
   const whatsappState = { enlace:'', cargado:false };
   const APP_NOMBRE = 'BingOnline';
   let firestoreRef = null;
@@ -1284,53 +1318,78 @@
       elementId: 'boton-perfil',
       hand: 'img/Mano-arri-izq.png',
       corner: 'bottom-right',
-      color: '#663300',
-      label: 'Perfil del jugador:\najusta tus datos.',
+      color: '#3d2500',
+      label: 'Perfil del jugador',
+      description: 'Actualiza tus datos para jugar y cobrar sin demoras.',
+      ctaLabel: 'Completar perfil',
+      ctaAction: () => { window.location.href = 'perfil.html'; },
     },
     {
       elementId: 'boton-billetera',
       hand: 'img/Mano-arri-der.png',
       corner: 'bottom-left',
       color: '#0b7a33',
-      label: 'Consulta tu billetera, solicita recargas o retiros',
+      label: 'Billetera',
+      description: 'Revisa tu saldo y solicita recargas o retiros.',
+      ctaLabel: 'Abrir Billetera',
+      ctaAction: () => { window.location.href = 'billetera.html'; },
     },
     {
       elementId: 'boton-jugar',
       hand: 'img/Mano-aba-izq.png',
       corner: 'top-right',
       color: '#003399',
-      label: 'Entra y juega cartones en los sorteos disponibles',
+      label: 'Zona de juego',
+      description: 'Compra cartones y participa en el próximo sorteo.',
+      ctaLabel: 'Ir a Jugar',
+      ctaAction: () => { window.location.href = 'jugarcartones.html'; },
     },
     {
       elementId: 'boton-sorteo',
       hand: 'img/Mano-arri-der.png',
       corner: 'bottom-left',
       color: '#20004d',
-      label: 'Entra a los sorteos en vivo o consulta sorteos finalizados',
+      label: 'Sorteos en vivo',
+      description: 'Mira sorteos activos y revisa resultados finalizados.',
+      ctaLabel: 'Ver sorteos',
+      ctaAction: () => { window.location.href = 'juegoactivo.html'; },
     },
     {
       elementId: 'boton-mensajes',
       hand: 'img/Mano-arri-der.png',
       corner: 'bottom-left',
-      color: '#b34700',
-      label: 'Entra aqui y unete al grupo de Whatsapp',
+      color: '#7a2f00',
+      label: 'Comunidad WhatsApp',
+      description: 'Únete al grupo para avisos y novedades de premios.',
+      ctaLabel: 'Abrir mensajes',
+      ctaAction: manejarClickWhatsapp,
     },
     {
       elementId: 'boton-referidos',
       hand: 'img/Mano-abajo.png',
       corner: 'top-left',
-      color: '#008000',
-      label: 'Comparte con tus conocidos vía WhatsApp y gana Cartones GRATIS',
+      color: '#006600',
+      label: 'Referidos',
+      description: 'Comparte tu código y gana cartones gratis por invitaciones.',
+      ctaLabel: 'Compartir ahora',
+      ctaAction: manejarClickReferidos,
     },
   ];
   const tutorialState = {
     activo: false,
     indice: 0,
     auto: { reproduciendo: false, intervalId: null, ciclos: 0, indiceInicio: 0, iniciado: false },
+    inicioRegistrado: false,
+    completo: false,
+    marcadoNoMostrar: false,
+    pasosVistos: new Set(),
   };
   let tutorialDimTimeout = null;
 
   const TUTORIAL_COOKIE = 'tutorialIndice';
+  const TUTORIAL_SEEN_KEY = 'tutorialSeen';
+  const TUTORIAL_DISABLED_KEY = 'tutorialDisabled';
+  const TUTORIAL_METRICS_KEY = 'tutorialMetricsQueue';
 
   function guardarIndiceTutorial(indice){
     if(Number.isInteger(indice)){
@@ -1347,6 +1406,119 @@
     const valor = encontrado.split('=')[1];
     const numero = Number.parseInt(valor, 10);
     return Number.isNaN(numero) ? null : numero;
+  }
+
+
+  function obtenerIdentificadorUsuario(){
+    const usuario = auth?.currentUser;
+    return usuario?.email || usuario?.uid || 'anonimo';
+  }
+
+  function setTutorialStorageFlag(key, value){
+    try {
+      window.localStorage.setItem(key, value);
+    } catch (error) {
+      console.warn('No se pudo guardar bandera de tutorial en localStorage', error);
+    }
+  }
+
+  function getTutorialStorageFlag(key){
+    try {
+      return window.localStorage.getItem(key);
+    } catch (error) {
+      console.warn('No se pudo leer bandera de tutorial en localStorage', error);
+      return null;
+    }
+  }
+
+  function marcarTutorialComoVisto(){
+    setTutorialStorageFlag(TUTORIAL_SEEN_KEY, '1');
+  }
+
+  function marcarTutorialNoMostrar(){
+    tutorialState.marcadoNoMostrar = true;
+    setTutorialStorageFlag(TUTORIAL_DISABLED_KEY, '1');
+    marcarTutorialComoVisto();
+  }
+
+  function tutorialNoMostrarActivo(){
+    return getTutorialStorageFlag(TUTORIAL_DISABLED_KEY) === '1';
+  }
+
+  async function guardarPreferenciaTutorialUsuario(data = {}){
+    const userId = obtenerIdentificadorUsuario();
+    if(!firestoreRef || !userId || userId === 'anonimo') return;
+    try {
+      await firestoreRef.collection('users').doc(userId).set({ tutorial: data }, { merge: true });
+    } catch (error) {
+      console.warn('No se pudo guardar preferencia de tutorial en users', error);
+    }
+  }
+
+  function guardarMetricasPendientes(metric){
+    try {
+      const actuales = JSON.parse(window.localStorage.getItem(TUTORIAL_METRICS_KEY) || '[]');
+      actuales.push(metric);
+      window.localStorage.setItem(TUTORIAL_METRICS_KEY, JSON.stringify(actuales.slice(-30)));
+    } catch (error) {
+      console.warn('No se pudo guardar cola local de métricas de tutorial', error);
+    }
+  }
+
+  async function registrarMetricaTutorial(evento, detalle = {}){
+    const metrica = {
+      evento,
+      paso: tutorialState.indice,
+      userId: obtenerIdentificadorUsuario(),
+      timestamp: new Date().toISOString(),
+      ...detalle,
+    };
+    guardarMetricasPendientes(metrica);
+    if(!firestoreRef) return;
+    try {
+      await firestoreRef.collection('tutorialMetrics').add(metrica);
+    } catch (error) {
+      console.warn('No se pudo registrar métrica de tutorial en Firestore', error);
+    }
+  }
+
+  async function sincronizarMetricasTutorialPendientes(){
+    if(!firestoreRef) return;
+    try {
+      const data = JSON.parse(window.localStorage.getItem(TUTORIAL_METRICS_KEY) || '[]');
+      if(!Array.isArray(data) || !data.length) return;
+      for(const metrica of data){
+        await firestoreRef.collection('tutorialMetrics').add(metrica);
+      }
+      window.localStorage.removeItem(TUTORIAL_METRICS_KEY);
+    } catch (error) {
+      console.warn('No se pudieron sincronizar métricas locales del tutorial', error);
+    }
+  }
+
+  async function debeAutoIniciarTutorial(){
+    if(tutorialNoMostrarActivo()) return false;
+    if(getTutorialStorageFlag(TUTORIAL_SEEN_KEY) === '1') return false;
+    const userId = obtenerIdentificadorUsuario();
+    if(!firestoreRef || !userId || userId === 'anonimo'){
+      return true;
+    }
+    try {
+      const userDoc = await firestoreRef.collection('users').doc(userId).get();
+      const userData = userDoc.exists ? (userDoc.data() || {}) : {};
+      const visto = userData?.tutorial?.visto === true;
+      const noMostrar = userData?.tutorial?.noMostrar === true;
+      if(visto){
+        marcarTutorialComoVisto();
+      }
+      if(noMostrar){
+        marcarTutorialNoMostrar();
+      }
+      return !visto && !noMostrar;
+    } catch (error) {
+      console.warn('No se pudo validar el estado del tutorial en users', error);
+      return getTutorialStorageFlag(TUTORIAL_SEEN_KEY) !== '1';
+    }
   }
   function asignarFotoUsuario(elemento, url){
     if(!elemento) return;
@@ -1928,6 +2100,13 @@
       return;
     }
 
+    tutorialState.pasosVistos.add(tutorialState.indice);
+    registrarMetricaTutorial('paso_alcanzado', { pasoId: paso.elementId });
+
+    if(tutorialLiveRegion){
+      tutorialLiveRegion.textContent = `Paso ${tutorialState.indice + 1} de ${tutorialSteps.length}: ${paso.label}. ${paso.description}`;
+    }
+
     const rect = objetivo.getBoundingClientRect();
     const manoWidth = tutorialHand ? tutorialHand.width || 44 : 44;
     const manoHeight = tutorialHand ? tutorialHand.height || 44 : 44;
@@ -1984,7 +2163,7 @@
         tutorialLabel.style.visibility = 'visible';
       };
 
-      tutorialLabel.textContent = paso.label;
+      tutorialLabel.innerHTML = `<strong>${paso.label}</strong><br>${paso.description}<span class="tutorial-cta">${paso.ctaLabel}</span>`;
       tutorialLabel.style.color = paso.color;
       tutorialLabel.style.display = 'block';
       colocarEtiqueta();
@@ -2007,6 +2186,11 @@
       tutorialOverlay.style.background = `radial-gradient(circle at ${centroX}px ${centroY}px, rgba(0, 0, 0, 0) ${radio}px, rgba(0, 0, 0, 0.58) ${halo}px)`;
     }
 
+    if(!objetivo.hasAttribute('tabindex')){
+      objetivo.setAttribute('tabindex', '-1');
+    }
+    objetivo.focus({ preventScroll: false });
+
     guardarIndiceTutorial(tutorialState.indice);
   }
 
@@ -2014,6 +2198,12 @@
     const total = tutorialSteps.length;
     tutorialState.indice = (tutorialState.indice + delta + total) % total;
     actualizarPasoTutorial();
+    if(tutorialState.pasosVistos.size === tutorialSteps.length && !tutorialState.completo){
+      tutorialState.completo = true;
+      marcarTutorialComoVisto();
+      guardarPreferenciaTutorialUsuario({ visto: true, noMostrar: tutorialNoMostrarActivo() });
+      registrarMetricaTutorial('completado', { totalPasos: tutorialSteps.length });
+    }
   }
 
   function actualizarBotonPlay(){
@@ -2074,7 +2264,7 @@
         tutorialState.auto.ciclos += 1;
         if(tutorialState.auto.ciclos >= 3){
           limpiarAutoPlay();
-          desactivarTutorial();
+          desactivarTutorial('completado');
         }
       }
     }, 6000);
@@ -2088,7 +2278,37 @@
     iniciarAutoPlay();
   }
 
-  function activarTutorial(){
+  function irAlPasoActual(){
+    const paso = tutorialSteps[tutorialState.indice];
+    if(paso && typeof paso.ctaAction === 'function'){
+      paso.ctaAction();
+    }
+  }
+
+  function manejarTecladoTutorial(evento){
+    if(!tutorialState.activo) return;
+    if(evento.key === 'ArrowRight'){
+      evento.preventDefault();
+      cambiarPasoTutorial(1);
+      return;
+    }
+    if(evento.key === 'ArrowLeft'){
+      evento.preventDefault();
+      cambiarPasoTutorial(-1);
+      return;
+    }
+    if(evento.key === 'Escape'){
+      evento.preventDefault();
+      desactivarTutorial('abandono');
+      return;
+    }
+    if(evento.key === 'Enter' && document.activeElement?.id === tutorialLabel?.id){
+      evento.preventDefault();
+      irAlPasoActual();
+    }
+  }
+
+  function activarTutorial(origen = 'manual'){
     tutorialState.activo = true;
     const indiceGuardado = obtenerIndiceTutorial();
     const total = tutorialSteps.length;
@@ -2098,29 +2318,41 @@
     if(tutorialToggle){
       tutorialToggle.classList.add('activo');
       tutorialToggle.style.opacity = '1';
+      tutorialToggle.setAttribute('aria-expanded', 'true');
     }
     if(tutorialNav){
       tutorialNav.classList.remove('saliendo');
       tutorialNav.classList.add('activo');
       tutorialNav.setAttribute('aria-hidden', 'false');
     }
+    if(!tutorialState.inicioRegistrado){
+      tutorialState.inicioRegistrado = true;
+      registrarMetricaTutorial('inicio', { origen });
+    }
     window.addEventListener('resize', actualizarPasoTutorial);
+    document.addEventListener('keydown', manejarTecladoTutorial);
     actualizarPasoTutorial();
   }
 
-  function desactivarTutorial(){
+  function desactivarTutorial(motivo = 'abandono'){
+    const estabaActivo = tutorialState.activo;
     tutorialState.activo = false;
     if(tutorialToggle){
       tutorialToggle.classList.remove('activo');
+      tutorialToggle.setAttribute('aria-expanded', 'false');
     }
     if(tutorialNav){
       tutorialNav.setAttribute('aria-hidden', 'true');
       animarSalidaControlesTutorial();
     }
     window.removeEventListener('resize', actualizarPasoTutorial);
+    document.removeEventListener('keydown', manejarTecladoTutorial);
     limpiarAutoPlay();
     ocultarIndicadoresTutorial();
     programarAtenuacionTutorial();
+    if(estabaActivo && !tutorialState.completo && motivo === 'abandono'){
+      registrarMetricaTutorial('abandono', { pasoId: tutorialSteps[tutorialState.indice]?.elementId || '' });
+    }
   }
 
   function programarAtenuacionTutorial(){
@@ -2138,15 +2370,18 @@
   }
 
   function configurarTutorial(){
-    if(!tutorialToggle || !tutorialNav || !tutorialPrev || !tutorialNext || !tutorialPlay){
+    if(!tutorialToggle || !tutorialNav || !tutorialPrev || !tutorialNext || !tutorialPlay || !tutorialSkip || !tutorialDismiss){
       return;
     }
     actualizarBotonPlay();
+    tutorialLabel?.addEventListener('click', irAlPasoActual);
+    tutorialLabel?.setAttribute('tabindex', '0');
+    tutorialLabel?.setAttribute('role', 'button');
     tutorialToggle.addEventListener('click', ()=>{
       if(tutorialState.activo){
-        desactivarTutorial();
+        desactivarTutorial('abandono');
       } else {
-        activarTutorial();
+        activarTutorial('manual');
       }
     });
     tutorialPrev.addEventListener('click', ()=>{
@@ -2159,10 +2394,25 @@
     });
     tutorialNext.addEventListener('click', ()=>{
       if(!tutorialState.activo){
-        activarTutorial();
+        activarTutorial('manual');
         return;
       }
       cambiarPasoTutorial(1);
+    });
+    tutorialSkip.addEventListener('click', ()=>{
+      registrarMetricaTutorial('abandono', { motivo: 'saltar' });
+      desactivarTutorial('saltar');
+    });
+    tutorialDismiss.addEventListener('click', async ()=>{
+      marcarTutorialNoMostrar();
+      await guardarPreferenciaTutorialUsuario({ visto: true, noMostrar: true });
+      registrarMetricaTutorial('abandono', { motivo: 'no_volver_mostrar' });
+      desactivarTutorial('no_mostrar');
+    });
+    window.addEventListener('beforeunload', ()=>{
+      if(tutorialState.activo && !tutorialState.completo){
+        registrarMetricaTutorial('abandono', { motivo: 'salida_pagina' });
+      }
     });
     programarAtenuacionTutorial();
   }
@@ -2182,7 +2432,14 @@
 
     firestoreRef = firebase.firestore();
 
+    await sincronizarMetricasTutorialPendientes();
     configurarTutorial();
+    const autoIniciarTutorial = await debeAutoIniciarTutorial();
+    if(autoIniciarTutorial){
+      activarTutorial('auto_primer_ingreso');
+      marcarTutorialComoVisto();
+      await guardarPreferenciaTutorialUsuario({ visto: true, noMostrar: false });
+    }
     configurarAccionImagen('boton-jugar', ()=>{ window.location.href = 'jugarcartones.html'; });
     configurarAccionImagen('boton-sorteo', ()=>{ window.location.href = 'juegoactivo.html'; });
     configurarAccionImagen('boton-billetera', ()=>{ window.location.href = 'billetera.html'; });
