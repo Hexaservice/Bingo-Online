@@ -7,20 +7,28 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const admin = require('firebase-admin');
 
-// Verificar variables de entorno necesarias antes de inicializar Firebase
-const requiredEnv = ['GOOGLE_APPLICATION_CREDENTIALS', 'FIREBASE_STORAGE_BUCKET', 'SENDGRID_API_KEY'];
-for (const name of requiredEnv) {
-  if (!process.env[name]) {
-    console.error(`Falta la variable de entorno ${name}`);
+const requiredEnv = ['GOOGLE_APPLICATION_CREDENTIALS', 'FIREBASE_STORAGE_BUCKET'];
+
+function getMissingRequiredEnv(env = process.env) {
+  return requiredEnv.filter((name) => !env[name]);
+}
+
+function validateRequiredEnv(env = process.env) {
+  const missingRequiredEnv = getMissingRequiredEnv(env);
+  if (missingRequiredEnv.length > 0) {
+    console.error(
+      `Faltan variables de entorno requeridas para uploadServer: ${missingRequiredEnv.join(', ')}`
+    );
     process.exit(1);
   }
 }
 
-// Inicializa Firebase Admin especificando el bucket de Storage
-if (!admin.apps.length) {
-  admin.initializeApp({
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET
-  });
+function initializeFirebase() {
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET
+    });
+  }
 }
 
 const app = express();
@@ -204,7 +212,25 @@ app.use((err, req, res, next) => {
   return next(err);
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Servicio de subida escuchando en puerto ${PORT}`);
-});
+function startServer() {
+  validateRequiredEnv();
+  initializeFirebase();
+
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Servicio de subida escuchando en puerto ${PORT}`);
+  });
+}
+
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = {
+  app,
+  requiredEnv,
+  getMissingRequiredEnv,
+  validateRequiredEnv,
+  initializeFirebase,
+  startServer
+};
