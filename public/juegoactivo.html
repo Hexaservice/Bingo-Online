@@ -4513,6 +4513,36 @@
   let cantosRecientesSinAnimacion = false;
   let resumenGanadoresPrevio = new Map();
 
+  function normalizarIdentificadorTexto(valor){
+    return (valor ?? '').toString().trim().toLowerCase();
+  }
+
+  function obtenerIdentificadoresUsuarioActual(){
+    const ids = new Set();
+    const uid = normalizarIdentificadorTexto(usuarioActual?.uid);
+    const email = normalizarIdentificadorTexto(usuarioActual?.email);
+    if(uid) ids.add(uid);
+    if(email) ids.add(email);
+    return ids;
+  }
+
+  function cartonPerteneceAUsuarioActual(carton){
+    if(!carton) return false;
+    const idsUsuario = obtenerIdentificadoresUsuarioActual();
+    if(!idsUsuario.size) return false;
+    const posiblesIds = [
+      carton.userId,
+      carton.uid,
+      carton.usuarioId,
+      carton.email,
+      carton.gmail,
+      carton.correo,
+      carton.IDbilletera,
+      carton.idBilletera
+    ].map(normalizarIdentificadorTexto).filter(Boolean);
+    return posiblesIds.some(id=>idsUsuario.has(id));
+  }
+
   let cartonSeleccionadoId = null;
   const animacionesCartones = new Map();
   const celdasPenalizadasTimers = new Map();
@@ -6282,7 +6312,7 @@
     }
     formasPorCarton.forEach((lista, cartonId)=>{
       const carton=cartonesSorteo.get(cartonId);
-      if(!carton || carton.userId!==usuarioActual.uid || !Array.isArray(lista)) return;
+      if(!carton || !cartonPerteneceAUsuarioActual(carton) || !Array.isArray(lista)) return;
       lista.forEach(item=>{
         const idx=Number(item?.forma?.idx ?? item?.idx);
         if(Number.isInteger(idx)){
@@ -7800,7 +7830,7 @@
   }
 
   function obtenerCartonesJugadorActual(){
-    const listaReales=Array.from(cartonesSorteo.values()).filter(c=>c.userId===(usuarioActual?usuarioActual.uid:null));
+    const listaReales=Array.from(cartonesSorteo.values()).filter(cartonPerteneceAUsuarioActual);
     const estadoSorteoActual=(activeSorteo?.estado || activeSorteo?.estadoSorteo || '').toString().toLowerCase();
     const guardados=simulacionSorteoActiva ? obtenerCartonesSimuladosActivos() : [];
     const datosRealesListos = cartonesRealesCargados || listaReales.length>0;
@@ -9225,7 +9255,7 @@
     if(!usuarioActual || !activeSorteoId) return;
     const cartonesJugador = obtenerCartonesJugadorActual();
     if(modoSimulacionCartones) return;
-    const cartonesReales = cartonesJugador.filter(carton=>carton.userId===usuarioActual.uid);
+    const cartonesReales = cartonesJugador.filter(cartonPerteneceAUsuarioActual);
     if(!cartonesReales.length) return;
     resumenActual.forEach((infoActual, indice)=>{
       const totalActual = Number(infoActual?.total || 0);
@@ -10228,7 +10258,7 @@
     if(simulacionSorteoActiva || simulacionCancelada.has(sorteoId) || simulacionModalMostrada.has(sorteoId)){
       return;
     }
-    const tieneCartonesEnSorteo=Array.from(cartonesSorteo.values()).some(c=>c.userId===(usuarioActual?.uid||''));
+    const tieneCartonesEnSorteo=Array.from(cartonesSorteo.values()).some(cartonPerteneceAUsuarioActual);
     if(tieneCartonesEnSorteo){
       return;
     }

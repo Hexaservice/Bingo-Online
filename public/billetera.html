@@ -605,6 +605,8 @@
     let creditosTotales=0, creditosTransito=0, creditosDisponibles=0;
     let numeroWhatsappDestino='';
     let numeroWhatsappCargado=false;
+    let unsubscribeBilletera=null;
+    let unsubscribeTransacciones=null;
 
     function toNumberSafe(valor, defecto=0){
       const numero=parseFloat(valor);
@@ -642,6 +644,52 @@
       if(snap.exists){
         actualizarResumenCreditos(snap.data()||{});
       }
+    }
+
+    function aplicarDatosBilleteraEnPantalla(data){
+      const datos=data||{};
+      actualizarResumenCreditos(datos);
+      document.getElementById('cartones-valor').textContent = datos.CartonesGratis || 0;
+      const cedulaEl=document.getElementById('cedula');
+      cedulaEl.value=normalizarSoloNumeros(datos.cedula);
+      const pagomovilEl=document.getElementById('pagomovil');
+      pagomovilEl.value=normalizarPagoMovil(datos.pagomovil);
+      document.getElementById('banco').value = datos.banco || '';
+      const cuentaEl=document.getElementById('cuenta');
+      cuentaEl.value=normalizarSoloNumeros(datos.cuenta);
+      if(datos.tipoCuenta){
+        const r=document.querySelector(`input[name='tipo-cuenta'][value='${datos.tipoCuenta}']`);
+        if(r) r.checked=true;
+      }
+      const cuentaToggle=document.getElementById('cuenta-toggle');
+      const cuentaActiva=Boolean((datos.cuenta||'').toString().trim()) || Boolean((datos.tipoCuenta||'').toString().trim());
+      cuentaToggle.checked=cuentaActiva;
+      actualizarEstadoCuentaOpcional(cuentaActiva);
+      document.getElementById('banco-retiro').textContent = 'Banco donde recibirás: '+(datos.banco||'');
+    }
+
+    function suscribirBilleteraUsuario(){
+      if(unsubscribeBilletera){
+        unsubscribeBilletera();
+        unsubscribeBilletera=null;
+      }
+      const user=auth.currentUser;
+      if(!user?.email) return;
+      const billeteraRef=db.collection('Billetera').doc(user.email);
+      unsubscribeBilletera=billeteraRef.onSnapshot(async snap=>{
+        if(snap.exists){
+          aplicarDatosBilleteraEnPantalla(snap.data()||{});
+          return;
+        }
+        try{
+          await billeteraRef.set({creditos:0, CartonesGratis:0, creditostransito:0});
+        }catch(error){
+          console.error('No se pudo crear la billetera inicial del usuario',error);
+        }
+        aplicarDatosBilleteraEnPantalla({creditos:0, CartonesGratis:0, creditostransito:0});
+      },error=>{
+        console.error('Error escuchando la billetera del usuario',error);
+      });
     }
 
     function cargarBancosBilletera(){
@@ -867,36 +915,8 @@
         }
         const billeteraRef = db.collection('Billetera').doc(user.email);
         const doc = await billeteraRef.get();
-        if(doc.exists){
-          const data = doc.data();
-          actualizarResumenCreditos(data);
-          document.getElementById('cartones-valor').textContent = data.CartonesGratis || 0;
-          const cedulaEl=document.getElementById('cedula');
-          cedulaEl.value=normalizarSoloNumeros(data.cedula);
-          const pagomovilEl=document.getElementById('pagomovil');
-          pagomovilEl.value=normalizarPagoMovil(data.pagomovil);
-          document.getElementById('banco').value = data.banco || '';
-          const cuentaEl=document.getElementById('cuenta');
-          cuentaEl.value=normalizarSoloNumeros(data.cuenta);
-          if(data.tipoCuenta){
-            const r=document.querySelector(`input[name='tipo-cuenta'][value='${data.tipoCuenta}']`);
-            if(r) r.checked=true;
-          }
-          const cuentaToggle=document.getElementById('cuenta-toggle');
-          const cuentaActiva=Boolean((data.cuenta||'').toString().trim()) || Boolean((data.tipoCuenta||'').toString().trim());
-          cuentaToggle.checked=cuentaActiva;
-          actualizarEstadoCuentaOpcional(cuentaActiva);
-          document.getElementById('banco-retiro').textContent = 'Banco donde recibirás: '+(data.banco||'');
-        } else {
-          await billeteraRef.set({creditos:0, CartonesGratis:0, creditostransito:0});
-          actualizarResumenCreditos({creditos:0, creditostransito:0});
-          document.getElementById('cartones-valor').textContent='0';
-          document.getElementById('banco-retiro').textContent='Banco donde recibirás:';
-          const cuentaToggle=document.getElementById('cuenta-toggle');
-          cuentaToggle.checked=false;
-          actualizarEstadoCuentaOpcional(false);
-        }
-        cargarTransacciones();
+        suscribirBilleteraUsuario();
+        suscribirTransaccionesUsuario();
         const estadoTutorialActivo = (doc.exists && doc.data()?.tutorialBilleteraEstado === 'Activo');
         tutorialState.datosCargados=true;
         configurarControlesTutorial();
@@ -1811,12 +1831,10 @@
     }
 
 
-  async function cargarTransacciones(){
-      const user=auth.currentUser;
-      const snap=await db.collection('transacciones').where('IDbilletera','==',user.email).get();
+  function procesarSnapshotTransacciones(snap){
       transacciones.length=0;
       snap.forEach(doc=>{
-        const data=doc.data();
+        const data=doc.data()||{};
         data.fechasolicitud=formatearFecha(data.fechasolicitud);
         data.fechagestion=formatearFecha(data.fechagestion);
         const tipoNormalizado = normalizarTipoTransaccion(data);
@@ -1828,6 +1846,19 @@
         return db-da;
       });
       filtrarTransacciones();
+    }
+
+    function suscribirTransaccionesUsuario(){
+      if(unsubscribeTransacciones){
+        unsubscribeTransacciones();
+        unsubscribeTransacciones=null;
+      }
+      const user=auth.currentUser;
+      if(!user?.email) return;
+      unsubscribeTransacciones=db.collection('transacciones').where('IDbilletera','==',user.email).onSnapshot(
+        procesarSnapshotTransacciones,
+        error=>{ console.error('Error escuchando transacciones de la billetera',error); }
+      );
     }
 
     function filtrarTransacciones(){
@@ -2119,7 +2150,7 @@
         comentario:data.comentario
       });
       limpiarCamposTransaccion('recarga');
-      cargarTransacciones();
+      suscribirTransaccionesUsuario();
     });
 
     async function ejecutarRetiro(monto,montoFinal, comentario){
@@ -2173,7 +2204,7 @@
       await refrescarResumenBilletera();
       await mostrarAlertaModal('Solicitud enviada, una vez validada se transferirá a tu pago móvil, serás dirigido a tu WhatsApp para poder enviar el mensaje de solicitud');
       limpiarCamposTransaccion('retiro');
-      cargarTransacciones();
+      suscribirTransaccionesUsuario();
       return { data, billetera: billeteraData };
     }
 
