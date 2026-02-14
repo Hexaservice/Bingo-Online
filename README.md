@@ -28,7 +28,7 @@ Para almacenar las imágenes de los sorteos se utiliza **Firebase Cloud Storage*
 
 ### Notificaciones por correo
 
-Las notificaciones por correo electrónico se eliminaron del proyecto y ya no es necesario configurar SendGrid ni credenciales asociadas para operar la aplicación.
+Las notificaciones por correo electrónico se eliminaron del proyecto y ya no es necesario configurar SendGrid ni credenciales asociadas para operar la aplicación. En particular, `uploadServer.js` solo valida `GOOGLE_APPLICATION_CREDENTIALS` y `FIREBASE_STORAGE_BUCKET` al iniciar.
 
 Antes de ejecutar los scripts asegúrese de:
 
