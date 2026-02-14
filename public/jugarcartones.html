@@ -2481,25 +2481,49 @@
       .toLowerCase();
   }
 
-  function cartonCoincideSorteo(data, opciones={}){
-    const idsObjetivo=Array.isArray(opciones.ids)?opciones.ids:[];
-    const nombreObjetivo=(opciones.nombre??'').toString();
-    const nombreObjetivoNormalizado=normalizarTextoComparacion(nombreObjetivo);
-    const idsData=[
+  function extraerPosiblesValoresIdSorteo(data){
+    const candidatos=[
       data?.sorteoId,
       data?.sorteoid,
       data?.idSorteo,
       data?.idsorteo,
       data?.sorteoID,
       data?.IDSorteo,
-      data?.id_sorteo
-    ]
+      data?.id_sorteo,
+      data?.sorteo
+    ];
+    const valores=[];
+    candidatos.forEach(valor=>{
+      if(valor===undefined || valor===null) return;
+      if(typeof valor==='string' || typeof valor==='number'){
+        const texto=String(valor).trim();
+        if(texto) valores.push(texto);
+        return;
+      }
+      if(typeof valor==='object'){
+        const idRef=(valor?.id??'').toString().trim();
+        if(idRef) valores.push(idRef);
+        const pathRef=(valor?.path??'').toString().trim();
+        if(pathRef){
+          valores.push(pathRef);
+          const segmentos=pathRef.split('/').filter(Boolean);
+          if(segmentos.length) valores.push(segmentos[segmentos.length-1]);
+        }
+      }
+    });
+    return [...new Set(valores)];
+  }
+
+  function cartonCoincideSorteo(data, opciones={}){
+    const idsObjetivo=[...new Set((Array.isArray(opciones.ids)?opciones.ids:[])
       .map(valor=>(valor??'').toString().trim())
-      .filter(Boolean);
+      .filter(Boolean))];
+    const nombreObjetivo=(opciones.nombre??'').toString();
+    const nombreObjetivoNormalizado=normalizarTextoComparacion(nombreObjetivo);
+    const idsData=extraerPosiblesValoresIdSorteo(data);
     const nombresData=[
       data?.sorteoNombre,
       data?.nombreSorteo,
-      data?.sorteo,
       data?.nombresorteo,
       data?.sorteo_name
     ]
@@ -4366,8 +4390,8 @@ function toggleForma(idx){
         .filter(Boolean);
       const idsObjetivo=[...new Set(posiblesIds)];
       const nombreSorteo=(currentSorteoNombre??'').toString().trim();
-      const camposId=['sorteoId','sorteoid','idSorteo','idsorteo','sorteoID','IDSorteo','id_sorteo'];
-      const camposNombre=['sorteo','sorteoNombre','nombreSorteo'];
+      const camposId=['sorteoId','sorteoid','idSorteo','idsorteo','sorteoID','IDSorteo','id_sorteo','sorteo'];
+      const camposNombre=['sorteoNombre','nombreSorteo','nombresorteo','sorteo_name'];
 
       camposId.forEach(campo=>{
         posiblesIds.forEach(valor=>{
