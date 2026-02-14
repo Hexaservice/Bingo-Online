@@ -6,11 +6,174 @@ service cloud.firestore {
     }
 
     function isSystemRequest() {
-      return request.auth != null && request.auth.token.admin == true;
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    function isOwner(email) {
+      return isSignedIn() && request.auth.token.email == email;
+    }
+
+    function currentUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.token.email));
+    }
+
+    function hasRole(rolesPermitidos) {
+      return isSignedIn()
+        && currentUserDoc().exists()
+        && rolesPermitidos.hasAny([currentUserDoc().data.role]);
+    }
+
+    function isAdmin() {
+      return isSystemRequest() || hasRole(['Superadmin', 'Administrador']);
+    }
+
+    function isPrivilegedOperator() {
+      return isAdmin() || hasRole(['Colaborador']);
+    }
+
+    function blockedUserFields() {
+      return ['role', 'disabled', 'contrasenasu', 'emailVerified', 'customClaims', 'uid'];
+    }
+
+    function touchesBlockedUserFields() {
+      return request.resource.data.diff(resource.data).changedKeys().hasAny(blockedUserFields());
+    }
+
+    function createsBlockedUserFields() {
+      return request.resource.data.keys().hasAny(blockedUserFields());
+    }
+
+    match /users/{email} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin() || (isOwner(email) && !createsBlockedUserFields());
+      allow update: if isAdmin() || (isOwner(email) && !touchesBlockedUserFields());
+      allow delete: if isAdmin();
+    }
+
+    match /sorteos/{sorteoId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isPrivilegedOperator();
+    }
+
+    match /Billetera/{email} {
+      allow read: if isAdmin() || isOwner(email);
+      allow create, update: if isAdmin() || isOwner(email);
+      allow delete: if isAdmin();
+    }
+
+    match /Variablesglobales/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /roles/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /transacciones/{id} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.IDbilletera == request.auth.token.email);
+      allow create: if isSignedIn() && request.resource.data.IDbilletera == request.auth.token.email;
+      allow update, delete: if isAdmin();
+    }
+
+    match /CartonGuardado/{id} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    match /CartonJugado/{id} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+
+    match /Bancos/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /PagosAdministracion/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isPrivilegedOperator();
+    }
+
+    match /PagosAdministracionArchivo/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isPrivilegedOperator();
+    }
+
+    match /PremiosSorteos/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isPrivilegedOperator();
+    }
+
+    match /PremiosSorteosArchivo/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isPrivilegedOperator();
+    }
+
+    match /Referidos/{email} {
+      allow read: if isAdmin() || isOwner(email);
+      allow create, update: if isAdmin() || isOwner(email);
+      allow delete: if isAdmin();
+
+      match /campanas/{campanaId} {
+        allow read: if isAdmin() || isOwner(email);
+        allow create, update: if isAdmin() || isOwner(email);
+        allow delete: if isAdmin();
+      }
+    }
+
+    match /SorteosCentroPagos/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isPrivilegedOperator();
+    }
+
+    match /campanas/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /campanasReferidos/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /cantarsorteos/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isPrivilegedOperator();
+    }
+
+    match /cantos/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isPrivilegedOperator();
+    }
+
+    match /formas/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isPrivilegedOperator();
+    }
+
+    match /posts/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /pqrs/{docId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.email == request.auth.token.email);
+      allow create: if isSignedIn() && request.resource.data.email == request.auth.token.email;
+      allow update, delete: if isAdmin();
+    }
+
+    match /SimulacionesSorteo/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isPrivilegedOperator();
     }
 
     match /{document=**} {
-      allow read, write: if isSystemRequest() || isSignedIn();
+      allow read, write: if false;
     }
   }
 }
