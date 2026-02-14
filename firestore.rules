@@ -57,10 +57,14 @@ service cloud.firestore {
     }
 
     match /users/{email} {
-      allow read: if isSignedIn();
+      allow read: if isOwner(email) || isSystemRequest();
       allow create: if isAdmin() || (isOwner(email) && !createsBlockedUserFields());
       allow update: if isAdmin() || (isOwner(email) && !touchesBlockedUserFields());
       allow delete: if isAdmin();
+
+      match /role/{docId} {
+        allow read, write: if isSystemRequest();
+      }
     }
 
     match /sorteos/{sorteoId} {
@@ -80,8 +84,7 @@ service cloud.firestore {
     }
 
     match /roles/{docId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow read, write: if isSystemRequest();
     }
 
     match /transacciones/{id} {

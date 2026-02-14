@@ -346,7 +346,7 @@ async function handleRedirect(){
   try {
     const result = await auth.getRedirectResult();
     if(result.user){
-      const { role, exists } = await getUserRole(result.user, { createIfMissing: false });
+      const { role, exists } = await getUserRole(result.user);
       if(!exists && role === 'Jugador'){
         window.location.href = 'registrarse.html';
         return;
@@ -361,50 +361,39 @@ async function handleRedirect(){
   }
 }
 
-async function getUserRole(user, options = {}){
-  const {
-    createIfMissing = false,
-    autoCreateRoles = ['Colaborador', 'Administrador', 'Superadmin']
-  } = options;
+async function getUserRole(user){
   try{
     await initFirebase();
   }catch(e){
     console.error('No se pudo inicializar Firebase al obtener el rol de usuario', e);
     throw e;
   }
-  let persistentRole = null;
+
   try{
-    const rolesSnap = await db.collection('roles').get();
-    rolesSnap.forEach(doc => {
-      const emails = doc.data().emails || [];
-      if(emails.includes(user.email)) persistentRole = doc.id;
-    });
-  }catch(e){
-    console.error('Error checking roles', e);
-  }
-  const ref = db.collection('users').doc(user.email);
-  const doc = await ref.get();
-  if(!doc.exists){
-    const role = persistentRole || 'Jugador';
-    let recordExists = false;
-    if(role !== 'Jugador' && (createIfMissing || autoCreateRoles.includes(role))){
-      const baseData = { email: user.email, role, aceptoNotificaciones: 'NO' };
-      if(user.photoURL){
-        baseData.photoURL = user.photoURL;
-      }
-      await ref.set(baseData, { merge: true });
-      recordExists = true;
+    const token = await user.getIdTokenResult(true);
+    const claims = token?.claims || {};
+    if(typeof claims.role === 'string' && claims.role.trim()){
+      return { role: claims.role.trim(), exists: true };
     }
-    return { role, exists: recordExists };
+    if(Array.isArray(claims.roles) && claims.roles.length && typeof claims.roles[0] === 'string'){
+      return { role: claims.roles[0], exists: true };
+    }
+  }catch(e){
+    console.error('No se pudieron leer los custom claims del usuario', e);
   }
-  const data = doc.data() || {};
-  const dataRole = data.role || 'Jugador';
-  let finalRole = persistentRole || dataRole;
-  if(persistentRole && dataRole !== persistentRole){
-    await ref.update({ role: persistentRole });
-    finalRole = persistentRole;
+
+  try{
+    const ref = db.collection('users').doc(user.email);
+    const doc = await ref.get();
+    if(!doc.exists){
+      return { role: 'Jugador', exists: false };
+    }
+    const data = doc.data() || {};
+    return { role: data.role || 'Jugador', exists: true };
+  }catch(e){
+    console.error('No se pudo leer el perfil de usuario para determinar su rol', e);
+    return { role: 'Jugador', exists: false };
   }
-  return { role: finalRole, exists: true };
 }
 
 function redirectByRole(role){
@@ -442,7 +431,7 @@ function setupSuperadminExit(buttonSelector = '#salir-super-btn', redirect = 'su
           return;
         }
         try{
-          const { role } = await getUserRole(user, { createIfMissing: false });
+          const { role } = await getUserRole(user);
           if(role === 'Superadmin'){
             bindRedirect();
             button.style.display = 'flex';
@@ -474,7 +463,7 @@ function ensureAuth(roleExpected){
           window.location.href='index.html';
           return;
         }
-        const { role, exists } = await getUserRole(user, { createIfMissing: false });
+        const { role, exists } = await getUserRole(user);
         if(!exists && role === 'Jugador'){
           window.location.href = 'registrarse.html';
           return;
