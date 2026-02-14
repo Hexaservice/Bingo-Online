@@ -59,7 +59,24 @@ contenido inseguro.
 
 Para utilizar el botón de habilitar/deshabilitar usuarios en `gestionarusuarios.html` este servicio debe estar activo y accesible desde la URL indicada. El cliente envía un *ID token* de Firebase y el middleware `verificarToken` comprueba la colección `users/{email}` en Firestore: solo los roles **Superadmin** y **Administrador** pueden invocar `/toggleUser`.
 
-Para otorgar estos permisos puede asignarse el rol directamente desde la consola de Firebase editando el documento correspondiente en `users/{email}` (campo `role`) o incluyendo el correo en la colección `roles` (por ejemplo en `roles/Administrador.emails`). Los scripts `initUsers.js` e `initRoles.js` ofrecen ejemplos de cómo poblar estos datos de manera inicial.
+Para otorgar estos permisos use un proceso administrativo con Firebase Admin SDK (por ejemplo `npm run assign-role -- --email usuario@dominio.com --role Administrador`). Este flujo asigna el rol en *custom claims* y sincroniza el perfil en `users/{email}` desde backend, evitando depender de colecciones editables por cliente.
+
+
+### Asignación de roles y custom claims (backend/admin)
+
+Se incluye el script `scripts/assignRoleClaims.js` para administrar privilegios de forma segura desde backend:
+
+```bash
+npm run assign-role -- --email usuario@dominio.com --role Superadmin
+```
+
+Opcionalmente puede forzar el claim `admin`:
+
+```bash
+npm run assign-role -- --email usuario@dominio.com --role Administrador --admin true
+```
+
+Este proceso requiere credenciales de servicio (`GOOGLE_APPLICATION_CREDENTIALS` o `serviceAccountKey.json`) y nunca debe ejecutarse desde el navegador.
 
 ## Actualización automática de estados de sorteos
 
