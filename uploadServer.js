@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 const admin = require('firebase-admin');
 
@@ -22,10 +24,76 @@ if (!admin.apps.length) {
 }
 
 const app = express();
-app.use(cors());
+
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(helmet());
+app.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: Number(process.env.RATE_LIMIT_MAX_REQUESTS || 300),
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Demasiadas solicitudes, intenta más tarde' }
+  })
+);
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('Origen no permitido por CORS'));
+    }
+  })
+);
 app.use(express.json());
 
-const upload = multer({ storage: multer.memoryStorage() });
+const ALLOWED_FILE_TYPES = {
+  '.png': ['image/png'],
+  '.jpg': ['image/jpeg'],
+  '.jpeg': ['image/jpeg'],
+  '.pdf': ['application/pdf']
+};
+const dangerousNamePattern = /(^\.+$|\.\.|[\\/]|[\x00-\x1F\x7F])/;
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: Number(process.env.MAX_UPLOAD_FILE_SIZE_BYTES || 5 * 1024 * 1024),
+    files: 1
+  },
+  fileFilter(req, file, callback) {
+    const extension = path.extname(file.originalname || '').toLowerCase();
+    const allowedMimeTypes = ALLOWED_FILE_TYPES[extension];
+
+    if (!allowedMimeTypes || !allowedMimeTypes.includes(file.mimetype)) {
+      return callback(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'file'));
+    }
+
+    if (dangerousNamePattern.test(file.originalname) || path.basename(file.originalname) !== file.originalname) {
+      return callback(new Error('Nombre de archivo inválido'));
+    }
+
+    return callback(null, true);
+  }
+});
+
+function registrarAuditoria({ email, fileType, result, reason }) {
+  console.info(
+    JSON.stringify({
+      event: 'upload_audit',
+      userEmail: email || 'desconocido',
+      timestamp: new Date().toISOString(),
+      fileType: fileType || 'desconocido',
+      result,
+      reason: reason || null
+    })
+  );
+}
 
 async function verificarToken(req, res, next) {
   const authHeader = req.headers.authorization || '';
@@ -80,19 +148,60 @@ app.post('/toggleUser', verificarToken, async (req, res) => {
 });
 
 app.post('/upload', verificarToken, upload.single('file'), async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'Archivo requerido' });
+  if (!req.file) {
+    registrarAuditoria({ email: req.user?.email, result: 'rechazado', reason: 'Archivo requerido' });
+    return res.status(400).json({ error: 'Archivo requerido' });
+  }
   try {
     const bucket = admin.storage().bucket();
-    const fileName = `${Date.now()}${path.extname(req.file.originalname)}`;
+    const extension = path.extname(req.file.originalname).toLowerCase();
+    const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extension}`;
     const file = bucket.file(fileName);
     await file.save(req.file.buffer, { contentType: req.file.mimetype });
-    await file.makePublic();
-    const url = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
-    res.json({ url });
+    const [url] = await file.getSignedUrl({
+      action: 'read',
+      expires: Date.now() + Number(process.env.SIGNED_URL_EXPIRATION_MS || 15 * 60 * 1000)
+    });
+    registrarAuditoria({ email: req.user?.email, fileType: req.file.mimetype, result: 'exitoso' });
+    res.json({ url, expiresInMs: Number(process.env.SIGNED_URL_EXPIRATION_MS || 15 * 60 * 1000) });
   } catch (e) {
     console.error(e);
+    registrarAuditoria({
+      email: req.user?.email,
+      fileType: req.file?.mimetype,
+      result: 'fallido',
+      reason: e.message
+    });
     res.status(500).json({ error: 'Error al subir archivo', message: e.message });
   }
+});
+
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    const message = err.code === 'LIMIT_FILE_SIZE' ? 'Archivo excede el tamaño permitido' : 'Archivo no permitido';
+    registrarAuditoria({
+      email: req.user?.email,
+      fileType: req.file?.mimetype,
+      result: 'rechazado',
+      reason: message
+    });
+    return res.status(400).json({ error: message });
+  }
+
+  if (err && err.message === 'Nombre de archivo inválido') {
+    registrarAuditoria({
+      email: req.user?.email,
+      result: 'rechazado',
+      reason: err.message
+    });
+    return res.status(400).json({ error: err.message });
+  }
+
+  if (err && err.message === 'Origen no permitido por CORS') {
+    return res.status(403).json({ error: err.message });
+  }
+
+  return next(err);
 });
 
 const PORT = process.env.PORT || 3000;
