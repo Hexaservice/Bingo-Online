@@ -5,12 +5,58 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    function isSystemRequest() {
-      return request.auth != null && request.auth.token.admin == true;
+    function currentUserDoc() {
+      return get(/databases/(default)/documents/users/$(request.auth.token.email));
+    }
+
+    function hasRole(rolesPermitidos) {
+      return isSignedIn()
+        && currentUserDoc().exists()
+        && rolesPermitidos.hasAny([currentUserDoc().data.role]);
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (request.auth.token.admin == true || hasRole(['Superadmin', 'Administrador']));
+    }
+
+    function isPrivilegedUploader() {
+      return isAdmin() || hasRole(['Colaborador']);
+    }
+
+    function validImage(maxSizeBytes) {
+      return request.resource != null
+        && request.resource.size <= maxSizeBytes
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    function validDocument(maxSizeBytes) {
+      return request.resource != null
+        && request.resource.size <= maxSizeBytes
+        && request.resource.contentType.matches('application/pdf');
+    }
+
+    match /sorteos/{sorteoId}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isPrivilegedUploader() && validImage(10 * 1024 * 1024);
+    }
+
+    match /premios/{sorteoId}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isPrivilegedUploader() && validDocument(15 * 1024 * 1024);
+    }
+
+    match /comprobantes/{email}/{fileName} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.token.email == email);
+      allow write: if isAdmin() || ((isSignedIn() && request.auth.token.email == email) && validImage(8 * 1024 * 1024));
+    }
+
+    match /users/{email}/{fileName} {
+      allow read: if isSignedIn() && request.auth.token.email == email;
+      allow write: if (isSignedIn() && request.auth.token.email == email) && validImage(5 * 1024 * 1024);
     }
 
     match /{allPaths=**} {
-      allow read, write: if isSystemRequest() || isSignedIn();
+      allow read, write: if false;
     }
   }
 }
