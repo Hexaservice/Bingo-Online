@@ -575,4 +575,4 @@ function startUserStatusWatcher(){
   },60000);
 }
 
-if (typeof module !== "undefined") { module.exports = { redirectByRole, ensureAuth, setupSuperadminExit, verificarRolFuerte, reautenticarConPopup }; }
+if (typeof module !== "undefined") { module.exports = { getUserRole, redirectByRole, ensureAuth, setupSuperadminExit, verificarRolFuerte, reautenticarConPopup }; }
