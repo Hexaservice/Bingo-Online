@@ -1858,7 +1858,22 @@
         const colorTipo=esRecarga?'green':esRetiro?'red':'#1b5e20';
         const montoStyle=esResaltado?`background:#1b5e20;color:#fff;`:`color:${colorTipo};`;
         const fechaStyle=esResaltado?`color:#1b5e20;`:'';
-        tr.innerHTML=`<td>${n}</td><td style="color:${colorTipo}">${tipoTrans.toUpperCase()}</td><td class="celda-monto" style="${montoStyle}">${montoFmt}</td><td class="celda-fecha" style="${fechaStyle}">${f}</td><td style="color:${estadoColor}">${t.estado}</td>`;
+        const celdas = [
+          { texto: String(n) },
+          { texto: tipoTrans.toUpperCase(), style: `color:${colorTipo}` },
+          { texto: montoFmt, style: montoStyle, className: 'celda-monto' },
+          { texto: f, style: fechaStyle, className: 'celda-fecha' },
+          { texto: t.estado || '', style: `color:${estadoColor}` }
+        ];
+
+        celdas.forEach(celda=>{
+          const td = document.createElement('td');
+          td.textContent = celda.texto;
+          if(celda.style) td.style.cssText = celda.style;
+          if(celda.className) td.className = celda.className;
+          tr.appendChild(td);
+        });
+
         const fechaTd=tr.querySelector('.celda-fecha');
         fechaTd.style.cursor='pointer';
         fechaTd.addEventListener('click',()=>mostrarDetalle(t));
