@@ -2472,6 +2472,45 @@
     return 'PAGADO';
   }
 
+  function normalizarTextoComparacion(valor){
+    return (valor??'')
+      .toString()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g,'')
+      .trim()
+      .toLowerCase();
+  }
+
+  function cartonCoincideSorteo(data, opciones={}){
+    const idsObjetivo=Array.isArray(opciones.ids)?opciones.ids:[];
+    const nombreObjetivo=(opciones.nombre??'').toString();
+    const nombreObjetivoNormalizado=normalizarTextoComparacion(nombreObjetivo);
+    const idsData=[
+      data?.sorteoId,
+      data?.sorteoid,
+      data?.idSorteo,
+      data?.idsorteo,
+      data?.sorteoID,
+      data?.IDSorteo,
+      data?.id_sorteo
+    ]
+      .map(valor=>(valor??'').toString().trim())
+      .filter(Boolean);
+    const nombresData=[
+      data?.sorteoNombre,
+      data?.nombreSorteo,
+      data?.sorteo,
+      data?.nombresorteo,
+      data?.sorteo_name
+    ]
+      .map(valor=>(valor??'').toString().trim())
+      .filter(Boolean);
+
+    const coincideId=idsData.some(id=>idsObjetivo.includes(id));
+    const coincideNombre=!!nombreObjetivoNormalizado && nombresData.some(nombre=>normalizarTextoComparacion(nombre)===nombreObjetivoNormalizado);
+    return coincideId || coincideNombre;
+  }
+
   function normalizarCelularPerfil(valor){
     const texto=(valor||'').toString();
     let limpio=texto.replace(/[^0-9+]/g,'');
@@ -4322,10 +4361,12 @@ function toggleForma(idx){
     mostrarMensajeTablaCartones('Cargando cartones...');
     try{
       const consultas=[];
-      const posiblesIds=[currentSorteo,(currentSorteo??'').toString().trim()].filter(Boolean);
+      const posiblesIds=[currentSorteo,(currentSorteo??'').toString().trim()]
+        .map(valor=>(valor??'').toString().trim())
+        .filter(Boolean);
+      const idsObjetivo=[...new Set(posiblesIds)];
       const nombreSorteo=(currentSorteoNombre??'').toString().trim();
-      const nombreSorteoLower=nombreSorteo.toLowerCase();
-      const camposId=['sorteoId','sorteoid','idSorteo','idsorteo'];
+      const camposId=['sorteoId','sorteoid','idSorteo','idsorteo','sorteoID','IDSorteo','id_sorteo'];
       const camposNombre=['sorteo','sorteoNombre','nombreSorteo'];
 
       camposId.forEach(campo=>{
@@ -4358,25 +4399,26 @@ function toggleForma(idx){
 
       const registros=[];
       const idsVistos=new Set();
-      snaps.forEach(snap=>{
-        snap.forEach(doc=>{
+      const agregarCarton=(doc)=>{
           if(idsVistos.has(doc.id)) return;
           const data=doc.data()||{};
-          const idSorteoData=(data.sorteoId??data.sorteoid??data.idSorteo??data.idsorteo??'').toString().trim();
-          const nombreData=(data.sorteoNombre??data.nombreSorteo??data.sorteo??'').toString().trim();
-          const coincideId=idSorteoData && posiblesIds.some(valor=>String(valor).trim()===idSorteoData);
-          const coincideNombre=nombreSorteo && (
-            nombreData===nombreSorteo ||
-            nombreData.toLowerCase()===nombreSorteoLower
-          );
-          if(!coincideId && !coincideNombre) return;
+          if(!cartonCoincideSorteo(data,{ids:idsObjetivo,nombre:nombreSorteo})) return;
           idsVistos.add(doc.id);
           const alias=extraerAliasCarton(data);
           const numero=extraerNumeroCartonDatos(data);
           const tipo=extraerTipoCartonDato(data);
           registros.push({alias,numeroOrden:numero.orden,numeroTexto:numero.texto,tipo});
-        });
-      });
+      };
+      snaps.forEach(snap=>snap.forEach(agregarCarton));
+
+      if(registros.length===0){
+        try{
+          const snapGeneral=await db.collection('CartonJugado').get();
+          snapGeneral.forEach(agregarCarton);
+        }catch(errorGeneral){
+          console.warn('No se pudo ejecutar la consulta de respaldo para CartonJugado',errorGeneral);
+        }
+      }
 
       if(registros.length===0){
         mostrarMensajeTablaCartones('Sin cartones registrados');
