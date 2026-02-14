@@ -522,6 +522,53 @@ function ensureAuth(roleExpected){
     });
 }
 
+function claimIncluyeRol(claims, role){
+  if(!claims || !role) return false;
+  if(claims.admin === true) return true;
+  if(claims.role === role) return true;
+  if(Array.isArray(claims.roles) && claims.roles.includes(role)) return true;
+  return false;
+}
+
+async function verificarRolFuerte(roleExpected = 'Superadmin', options = {}){
+  const { forceRefresh = true } = options;
+  await initFirebase();
+  const user = auth.currentUser;
+  if(!user){
+    return { ok: false, reason: 'NO_AUTH', claims: null, user: null };
+  }
+  const tokenResult = await user.getIdTokenResult(forceRefresh);
+  const claims = tokenResult?.claims || {};
+  if(claimIncluyeRol(claims, roleExpected)){
+    return { ok: true, reason: null, claims, user };
+  }
+  return { ok: false, reason: 'MISSING_CLAIM', claims, user };
+}
+
+async function reautenticarConPopup(){
+  await initFirebase();
+  const user = auth.currentUser;
+  if(!user){
+    throw new Error('Usuario no autenticado');
+  }
+
+  const providerId = user.providerData?.[0]?.providerId;
+  let providerInstance = null;
+  if(providerId === 'google.com'){
+    providerInstance = new firebase.auth.GoogleAuthProvider();
+    providerInstance.setCustomParameters({ prompt: 'select_account' });
+  }else if(providerId === 'apple.com'){
+    providerInstance = new firebase.auth.OAuthProvider('apple.com');
+    providerInstance.addScope('email');
+    providerInstance.addScope('name');
+  }
+
+  if(!providerInstance || typeof user.reauthenticateWithPopup !== 'function'){
+    throw new Error('Proveedor no soportado para reautenticación con popup');
+  }
+  await user.reauthenticateWithPopup(providerInstance);
+}
+
 let statusWatcher = null;
 function startUserStatusWatcher(){
   if(statusWatcher) return;
@@ -539,4 +586,4 @@ function startUserStatusWatcher(){
   },60000);
 }
 
-if (typeof module !== "undefined") { module.exports = { redirectByRole, ensureAuth, setupSuperadminExit }; }
+if (typeof module !== "undefined") { module.exports = { redirectByRole, ensureAuth, setupSuperadminExit, verificarRolFuerte, reautenticarConPopup }; }

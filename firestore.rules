@@ -27,6 +27,19 @@ service cloud.firestore {
       return isSystemRequest() || hasRole(['Superadmin', 'Administrador']);
     }
 
+    function hasStrongRole(roleEsperado) {
+      return isSignedIn()
+        && (
+          request.auth.token.admin == true
+          || request.auth.token.role == roleEsperado
+          || (request.auth.token.roles is list && request.auth.token.roles.hasAny([roleEsperado]))
+        );
+    }
+
+    function isStrongSuperadmin() {
+      return hasStrongRole('Superadmin');
+    }
+
     function isPrivilegedOperator() {
       return isAdmin() || hasRole(['Colaborador']);
     }
@@ -63,7 +76,7 @@ service cloud.firestore {
 
     match /Variablesglobales/{docId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow write: if docId == 'Parametros' ? isStrongSuperadmin() : isAdmin();
     }
 
     match /roles/{docId} {

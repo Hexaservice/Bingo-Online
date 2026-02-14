@@ -87,67 +87,6 @@
       cursor: pointer;
     }
 
-    #password-modal {
-      position: fixed;
-      inset: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0,0,0,0.55);
-      z-index: 1000;
-      padding: 20px;
-      font-family: Calibri, Arial, sans-serif;
-    }
-    #password-modal.visible {
-      display: flex;
-    }
-    #password-modal .modal-box {
-      background: #fff;
-      padding: 20px;
-      border-radius: 12px;
-      max-width: 320px;
-      width: 100%;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    }
-    #password-modal h3 {
-      margin-top: 0;
-      text-align: center;
-      font-family: 'Bangers', cursive;
-      letter-spacing: 1px;
-    }
-    #password-modal input[type="password"] {
-      width: 100%;
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      box-sizing: border-box;
-      margin-top: 10px;
-    }
-    #password-modal .modal-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      margin-top: 15px;
-    }
-    #password-modal button {
-      font-family: Calibri, Arial, sans-serif;
-      padding: 6px 14px;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      background: rgba(0, 170, 255, 0.8);
-      color: #fff;
-    }
-    #password-modal button#password-cancel {
-      background: #888;
-    }
-    #password-error {
-      display: none;
-      color: #c62828;
-      margin-top: 10px;
-      font-size: 0.85rem;
-      text-align: left;
-    }
 
     #user-pic {
       width: 40px;
@@ -194,21 +133,6 @@
     <button id="reportes-btn" class="menu-btn">Reportes Generales</button>
   </div>
 
-  <div id="password-modal" aria-hidden="true">
-    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="password-modal-title">
-      <h3 id="password-modal-title">Confirmar acceso</h3>
-      <p>Ingresa la contraseña de Superadmin para continuar.</p>
-      <input type="password" id="password-input" autocomplete="current-password" placeholder="Contraseña" />
-      <div id="password-error" role="alert"></div>
-      <div class="modal-actions">
-        <button type="button" id="password-cancel">Cancelar</button>
-        <button type="button" id="password-submit">Ingresar</button>
-      </div>
-    </div>
-  </div>
-
-
-
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
@@ -217,140 +141,23 @@
   <script src="js/notificationCenter.js"></script>
   <script>
   ensureAuth('Superadmin');
-  let contrasenaSuperadminCache=null;
-  let passwordLoadPromise=null;
-  function obtenerContrasenaSuperadmin(datos){
-    if(!datos || typeof datos !== 'object') return '';
-    const posiblesClaves=['contrasenasu','contrasenaSu','contrasenaSU','Contrasenasu','ContrasenaSu','ContrasenaSU'];
-    for(const clave of posiblesClaves){
-      const valor=datos[clave];
-      if(typeof valor==='string'){
-        const limpio=valor.trim();
-        if(limpio){return limpio;}
-      }else if(typeof valor==='number' && !Number.isNaN(valor)){
-        return valor.toString();
-      }
-    }
-    return '';
-  }
-  async function cargarPasswordSuperadmin(){
-    if(contrasenaSuperadminCache!==null) return contrasenaSuperadminCache;
-    if(passwordLoadPromise) return passwordLoadPromise;
-    passwordLoadPromise=(async()=>{
-      await initFirebase();
-      const doc=await db.collection('Variablesglobales').doc('Parametros').get();
-      if(doc.exists){
-        contrasenaSuperadminCache=obtenerContrasenaSuperadmin(doc.data()||{});
-      }else{
-        contrasenaSuperadminCache='';
-      }
-      return contrasenaSuperadminCache;
-    })();
-    try{
-      return await passwordLoadPromise;
-    }catch(error){
-      console.error('No se pudo obtener la contraseña de Superadmin',error);
-      contrasenaSuperadminCache=null;
-      throw error;
-    }finally{
-      passwordLoadPromise=null;
-    }
-  }
-  function solicitarPassword(expectedPassword){
-    const modal=document.getElementById('password-modal');
-    const input=document.getElementById('password-input');
-    const cancelarBtn=document.getElementById('password-cancel');
-    const ingresarBtn=document.getElementById('password-submit');
-    const errorEl=document.getElementById('password-error');
-    const esperado=(expectedPassword||'').toString();
-    if(!modal || !input || !cancelarBtn || !ingresarBtn){
-      return Promise.resolve(false);
-    }
-    return new Promise(resolve=>{
-      const mostrarError=mensaje=>{
-        if(errorEl){
-          errorEl.textContent=mensaje;
-          errorEl.style.display='block';
-        }else{
-          alert(mensaje);
-        }
-      };
-      const limpiar=()=>{
-        modal.classList.remove('visible');
-        modal.setAttribute('aria-hidden','true');
-        input.value='';
-        if(errorEl){
-          errorEl.textContent='';
-          errorEl.style.display='none';
-        }
-        ingresarBtn.removeEventListener('click',manejarSubmit);
-        cancelarBtn.removeEventListener('click',manejarCancelar);
-        input.removeEventListener('keydown',manejarKeydown);
-        modal.removeEventListener('click',manejarBackdrop);
-      };
-      const manejarSubmit=evento=>{
-        evento.preventDefault();
-        const valor=input.value.trim();
-        if(!valor){
-          mostrarError('Ingresa la contraseña.');
-          input.focus();
-          return;
-        }
-        if(valor!==esperado){
-          mostrarError('Contraseña incorrecta.');
-          input.select();
-          return;
-        }
-        limpiar();
-        resolve(true);
-      };
-      const manejarCancelar=evento=>{
-        evento.preventDefault();
-        limpiar();
-        resolve(false);
-      };
-      const manejarKeydown=evento=>{
-        if(evento.key==='Enter'){
-          manejarSubmit(evento);
-        }else if(evento.key==='Escape'){
-          manejarCancelar(evento);
-        }
-      };
-      const manejarBackdrop=evento=>{
-        if(evento.target===modal){
-          manejarCancelar(evento);
-        }
-      };
-      modal.classList.add('visible');
-      modal.setAttribute('aria-hidden','false');
-      if(errorEl){
-        errorEl.textContent='';
-        errorEl.style.display='none';
-      }
-      ingresarBtn.addEventListener('click',manejarSubmit);
-      cancelarBtn.addEventListener('click',manejarCancelar);
-      input.addEventListener('keydown',manejarKeydown);
-      modal.addEventListener('click',manejarBackdrop);
-      setTimeout(()=>input.focus({preventScroll:true}),50);
-    });
-  }
   async function intentarAbrirParametros(){
-    let contrasena;
     try{
-      contrasena=await cargarPasswordSuperadmin();
+      const verificacion = await verificarRolFuerte('Superadmin', { forceRefresh: true });
+      if(!verificacion.ok){
+        alert('No tienes claims de Superadmin vigentes. Vuelve a iniciar sesión o contacta al administrador del sistema.');
+        window.location.href='super.html';
+        return;
+      }
+
+      await reautenticarConPopup();
     }catch(error){
-      alert('No fue posible verificar la contraseña de Superadmin. Intenta nuevamente.');
+      console.error('No fue posible completar la autorización fuerte para Parámetros', error);
+      alert('No fue posible completar la reautenticación de Firebase. Intenta nuevamente.');
       return;
     }
-    if(!contrasena){
-      alert('No hay una contraseña configurada para Superadmin. Configúrala en el formulario de parámetros.');
-      window.location.href='parametros.html';
-      return;
-    }
-    const autorizado=await solicitarPassword(contrasena);
-    if(autorizado){
-      window.location.href='parametros.html';
-    }
+
+    window.location.href='parametros.html';
   }
   document.getElementById("acceder-usuario-btn").addEventListener("click",()=>{window.location.href="accederusuario.html";});
   document.getElementById("gestionar-usuarios-btn").addEventListener("click",()=>{window.location.href="gestionarusuarios.html";});
