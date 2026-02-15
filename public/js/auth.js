@@ -1,5 +1,6 @@
 let app, auth, db, provider, appleProvider, appName = 'BingOnline';
 const DISABLED_MSG = "Tu cuenta ha sido deshabilitada, Motivado posiblemente a que has incumplido una o más clausulas en nuestros Terminos y condiciones. Contacta con un administrador del sistema si necesitas información.";
+const STRONG_AUTH_SESSION_KEY = 'bo_superadmin_strong_auth';
 let firebaseInitPromise = null;
 let firebaseConfigLoadPromise = null;
 const nativeAlert = hasWindow() ? window.alert.bind(window) : null;
@@ -351,6 +352,10 @@ async function loginApple(){
 }
 
 function logout(){
+  if(hasWindow() && window.sessionStorage){
+    try{ window.sessionStorage.removeItem(STRONG_AUTH_SESSION_KEY); }
+    catch(error){ console.warn('No se pudo limpiar el estado de reautenticación', error); }
+  }
   auth.signOut();
 }
 
@@ -650,6 +655,49 @@ async function reautenticarConPopup(){
     throw new Error('Proveedor no soportado para reautenticación con popup');
   }
   await user.reauthenticateWithPopup(providerInstance);
+  registrarReautenticacionReciente(user);
+}
+
+function registrarReautenticacionReciente(user = auth?.currentUser){
+  if(!hasWindow() || !window.sessionStorage || !user?.uid) return;
+  try{
+    window.sessionStorage.setItem(STRONG_AUTH_SESSION_KEY, JSON.stringify({
+      uid: user.uid,
+      timestamp: Date.now()
+    }));
+  }catch(error){
+    console.warn('No se pudo registrar la reautenticación reciente', error);
+  }
+}
+
+function tieneReautenticacionReciente(options = {}){
+  const { maxAgeMs = 10 * 60 * 1000, incluirMetadata = true } = options;
+  const user = auth?.currentUser;
+  if(!user) return false;
+
+  if(hasWindow() && window.sessionStorage){
+    try{
+      const raw = window.sessionStorage.getItem(STRONG_AUTH_SESSION_KEY);
+      if(raw){
+        const parsed = JSON.parse(raw);
+        if(parsed?.uid === user.uid && Number.isFinite(parsed?.timestamp)){
+          if((Date.now() - parsed.timestamp) <= maxAgeMs){
+            return true;
+          }
+        }
+      }
+    }catch(error){
+      console.warn('No se pudo leer el estado de reautenticación reciente', error);
+    }
+  }
+
+  if(!incluirMetadata) return false;
+  const lastSignIn = user?.metadata?.lastSignInTime ? Date.parse(user.metadata.lastSignInTime) : NaN;
+  if(Number.isFinite(lastSignIn)){
+    return (Date.now() - lastSignIn) <= maxAgeMs;
+  }
+
+  return false;
 }
 
 let statusWatcher = null;
@@ -669,4 +717,4 @@ function startUserStatusWatcher(){
   },60000);
 }
 
-if (typeof module !== "undefined") { module.exports = { getUserRole, redirectByRole, ensureAuth, setupSuperadminExit, verificarRolFuerte, reautenticarConPopup }; }
+if (typeof module !== "undefined") { module.exports = { getUserRole, redirectByRole, ensureAuth, setupSuperadminExit, verificarRolFuerte, reautenticarConPopup, registrarReautenticacionReciente, tieneReautenticacionReciente }; }

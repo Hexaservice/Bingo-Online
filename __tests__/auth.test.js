@@ -1,10 +1,16 @@
 function setupWindow(){
+  const sessionStore = {};
   global.window = {
     location: { href: 'index.html', origin: 'https://app.test' },
     firebaseConfig: { projectId: 'demo-test' },
     alert: () => {},
     confirm: () => true,
-    prompt: () => ''
+    prompt: () => '',
+    sessionStorage: {
+      setItem: (key, value) => { sessionStore[key] = String(value); },
+      getItem: (key) => Object.prototype.hasOwnProperty.call(sessionStore, key) ? sessionStore[key] : null,
+      removeItem: (key) => { delete sessionStore[key]; }
+    }
   };
 }
 
@@ -166,4 +172,59 @@ describe('auth.js', () => {
       expect.objectContaining({ ok: true, reason: 'DOC_ROLE_FALLBACK' })
     );
   });
+  test('tieneReautenticacionReciente retorna true cuando existe registro reciente en sessionStorage', async () => {
+    setupWindow();
+    global.firebase = buildFirebaseMock();
+
+    const fakeUser = {
+      uid: 'uid-demo',
+      metadata: { lastSignInTime: '2000-01-01T00:00:00.000Z' }
+    };
+
+    const authFactory = global.firebase.auth;
+    authFactory.mockImplementation(() => ({
+      setPersistence: jest.fn(async () => undefined),
+      onAuthStateChanged: jest.fn(),
+      getRedirectResult: jest.fn(async () => ({})),
+      currentUser: fakeUser
+    }));
+
+    let registrarReautenticacionReciente, tieneReautenticacionReciente;
+    jest.isolateModules(() => {
+      ({ registrarReautenticacionReciente, tieneReautenticacionReciente } = require('../public/js/auth.js'));
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    registrarReautenticacionReciente(fakeUser);
+    expect(tieneReautenticacionReciente({ maxAgeMs: 60 * 1000, incluirMetadata: false })).toBe(true);
+  });
+
+  test('tieneReautenticacionReciente retorna false cuando no hay sesión reciente', async () => {
+    setupWindow();
+    global.firebase = buildFirebaseMock();
+
+    const fakeUser = {
+      uid: 'uid-demo-2',
+      metadata: { lastSignInTime: '2000-01-01T00:00:00.000Z' }
+    };
+
+    const authFactory = global.firebase.auth;
+    authFactory.mockImplementation(() => ({
+      setPersistence: jest.fn(async () => undefined),
+      onAuthStateChanged: jest.fn(),
+      getRedirectResult: jest.fn(async () => ({})),
+      currentUser: fakeUser
+    }));
+
+    let tieneReautenticacionReciente;
+    jest.isolateModules(() => {
+      ({ tieneReautenticacionReciente } = require('../public/js/auth.js'));
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(tieneReautenticacionReciente({ maxAgeMs: 60 * 1000 })).toBe(false);
+  });
+
 });
