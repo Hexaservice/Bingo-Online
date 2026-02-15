@@ -118,29 +118,6 @@ function getClientIp(req) {
   return req.ip || req.socket?.remoteAddress || 'unknown';
 }
 
-
-function approximateIp(ip) {
-  const rawIp = typeof ip === 'string' ? ip.trim() : '';
-  if (!rawIp) return 'unknown';
-
-  if (rawIp.includes('.')) {
-    const parts = rawIp.split('.');
-    if (parts.length === 4) {
-      return `${parts[0]}.${parts[1]}.${parts[2]}.0`;
-    }
-  }
-
-  if (rawIp.includes(':')) {
-    const compact = rawIp.replace(/^::ffff:/, '');
-    const parts = compact.split(':').filter(Boolean);
-    if (parts.length >= 3) {
-      return `${parts.slice(0, 3).join(':')}::`;
-    }
-  }
-
-  return rawIp;
-}
-
 function getAuthTimeFromToken(decodedToken) {
   const iat = Number(decodedToken?.iat || 0);
   return Number.isFinite(iat) && iat > 0 ? iat * 1000 : Date.now();
@@ -389,33 +366,12 @@ app.post('/admin/audit/parametros', async (req, res) => {
   const motivo = typeof req.body?.motivo === 'string' && req.body.motivo.trim()
     ? req.body.motivo.trim().slice(0, 160)
     : 'acceso_parametros';
-  const estado = typeof req.body?.estado === 'string' && req.body.estado.trim()
-    ? req.body.estado.trim().slice(0, 40)
-    : 'exitoso';
-  const detalle = typeof req.body?.detalle === 'string' && req.body.detalle.trim()
-    ? req.body.detalle.trim().slice(0, 240)
-    : null;
-  const contexto = typeof req.body?.contexto === 'string' && req.body.contexto.trim()
-    ? req.body.contexto.trim().slice(0, 120)
-    : null;
-  const ruta = typeof req.body?.ruta === 'string' && req.body.ruta.trim()
-    ? req.body.ruta.trim().slice(0, 200)
-    : null;
-
-  const ip = getClientIp(req);
-  const ipAproximada = approximateIp(ip);
 
   await admin.firestore().collection('adminAccessAudit').add({
     uid: decoded.uid,
     email: validation.email,
     timestamp: admin.firestore.FieldValue.serverTimestamp(),
-    motivo,
-    estado,
-    detalle,
-    contexto,
-    ruta,
-    ipHash: hashValue(ip),
-    ipAproximada
+    motivo
   });
 
   return res.json({ status: 'ok' });
@@ -501,6 +457,5 @@ module.exports = {
   startServer,
   hashValue,
   getClientIp,
-  getAuthTimeFromToken,
-  approximateIp
+  getAuthTimeFromToken
 };
