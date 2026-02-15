@@ -611,17 +611,26 @@ async function verificarRolFuerte(roleExpected = 'Superadmin', options = {}){
   if(!user){
     return { ok: false, reason: 'NO_AUTH', claims: null, user: null };
   }
-  const tokenResult = await user.getIdTokenResult(forceRefresh);
-  const claims = tokenResult?.claims || {};
+  let claims = {};
+  try{
+    const tokenResult = await user.getIdTokenResult(forceRefresh);
+    claims = tokenResult?.claims || {};
+  }catch(error){
+    console.warn('No se pudo leer el ID token para validar rol fuerte, se intentará con resincronización y rol persistente.', error);
+  }
   if(claimIncluyeRol(claims, roleExpected)){
     return { ok: true, reason: null, claims, user };
   }
 
-  await intentarResincronizarClaims(user, roleExpected);
-  const tokenPostSync = await user.getIdTokenResult(true);
-  const claimsPostSync = tokenPostSync?.claims || {};
-  if(claimIncluyeRol(claimsPostSync, roleExpected)){
-    return { ok: true, reason: 'CLAIMS_RESYNC', claims: claimsPostSync, user };
+  try{
+    await intentarResincronizarClaims(user, roleExpected);
+    const tokenPostSync = await user.getIdTokenResult(true);
+    const claimsPostSync = tokenPostSync?.claims || {};
+    if(claimIncluyeRol(claimsPostSync, roleExpected)){
+      return { ok: true, reason: 'CLAIMS_RESYNC', claims: claimsPostSync, user };
+    }
+  }catch(error){
+    console.warn('No fue posible resincronizar custom claims para validación fuerte.', error);
   }
 
   const { role } = await getUserRole(user);
@@ -644,7 +653,6 @@ async function reautenticarConPopup(){
   let providerInstance = null;
   if(providerId === 'google.com'){
     providerInstance = new firebase.auth.GoogleAuthProvider();
-    providerInstance.setCustomParameters({ prompt: 'select_account' });
   }else if(providerId === 'apple.com'){
     providerInstance = new firebase.auth.OAuthProvider('apple.com');
     providerInstance.addScope('email');
