@@ -79,7 +79,7 @@ service cloud.firestore {
     }
 
     match /Variablesglobales/{docId} {
-      allow read: if isSignedIn();
+      allow read: if docId == 'Parametros' ? isStrongSuperadmin() : isSignedIn();
       allow write: if docId == 'Parametros' ? isStrongSuperadmin() : isAdmin();
     }
 
