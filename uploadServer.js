@@ -5,6 +5,7 @@ const multer = require('multer');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const crypto = require('crypto');
 const admin = require('firebase-admin');
 
 const requiredEnv = ['GOOGLE_APPLICATION_CREDENTIALS', 'FIREBASE_STORAGE_BUCKET'];
@@ -103,6 +104,44 @@ function registrarAuditoria({ email, fileType, result, reason }) {
   );
 }
 
+function hashValue(value) {
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  const salt = process.env.ADMIN_SESSION_HASH_SALT || 'bingo-admin-session';
+  return crypto.createHash('sha256').update(`${salt}:${normalized}`).digest('hex');
+}
+
+function getClientIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.trim()) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.ip || req.socket?.remoteAddress || 'unknown';
+}
+
+function getAuthTimeFromToken(decodedToken) {
+  const iat = Number(decodedToken?.iat || 0);
+  return Number.isFinite(iat) && iat > 0 ? iat * 1000 : Date.now();
+}
+
+async function validarUsuarioSuperadmin(decodedToken) {
+  const email = decodedToken?.email;
+  if (!email) {
+    return { ok: false, status: 401, body: { error: 'Token sin correo asociado' } };
+  }
+
+  try {
+    const doc = await admin.firestore().collection('users').doc(email).get();
+    const role = doc.exists ? doc.data().role : undefined;
+    if (role !== 'Superadmin') {
+      return { ok: false, status: 403, body: { error: 'Acceso restringido a Superadmin' } };
+    }
+    return { ok: true, email, role };
+  } catch (error) {
+    console.error('Error validando usuario superadmin', error);
+    return { ok: false, status: 500, body: { error: 'Error verificando permisos', message: error.message } };
+  }
+}
+
 async function verificarToken(req, res, next) {
   const authHeader = req.headers.authorization || '';
   const match = authHeader.match(/^Bearer (.+)$/);
@@ -188,6 +227,156 @@ app.post('/syncClaims', verificarToken, async (req, res) => {
   }
 });
 
+app.post('/admin/session/register', async (req, res) => {
+  const authHeader = req.headers.authorization || '';
+  const match = authHeader.match(/^Bearer (.+)$/);
+  if (!match) {
+    return res.status(401).json({ error: 'No autorizado' });
+  }
+
+  let decoded;
+  try {
+    decoded = await admin.auth().verifyIdToken(match[1], true);
+  } catch (error) {
+    return res.status(401).json({ error: 'Token inválido' });
+  }
+
+  const validation = await validarUsuarioSuperadmin(decoded);
+  if (!validation.ok) {
+    return res.status(validation.status).json(validation.body);
+  }
+
+  const uid = decoded.uid;
+  const userAgent = req.headers['user-agent'] || '';
+  const ip = getClientIp(req);
+  const deviceId = typeof req.body?.deviceId === 'string' && req.body.deviceId.trim()
+    ? req.body.deviceId.trim().slice(0, 120)
+    : null;
+
+  if (!deviceId) {
+    return res.status(400).json({ error: 'deviceId requerido' });
+  }
+
+  const sessionRef = admin.firestore().collection('adminSessions').doc(uid);
+  const lastIssuedAt = getAuthTimeFromToken(decoded);
+  const now = Date.now();
+
+  let replaced = false;
+  let invalidateBefore = null;
+  let previousDeviceId = null;
+
+  await admin.firestore().runTransaction(async (tx) => {
+    const snapshot = await tx.get(sessionRef);
+    const previous = snapshot.exists ? snapshot.data() : null;
+    previousDeviceId = previous?.deviceId || null;
+    replaced = Boolean(previous && previous.deviceId && previous.deviceId !== deviceId);
+    invalidateBefore = replaced ? now : Number(previous?.invalidateBefore || 0);
+
+    tx.set(sessionRef, {
+      uid,
+      lastIssuedAt,
+      deviceId,
+      ipHash: hashValue(ip),
+      userAgentHash: hashValue(userAgent),
+      invalidateBefore: invalidateBefore || 0,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  });
+
+  if (replaced && process.env.ADMIN_SINGLE_DEVICE_MODE !== 'false') {
+    try {
+      await admin.auth().revokeRefreshTokens(uid);
+    } catch (error) {
+      console.error('No se pudieron revocar refresh tokens para superadmin', error);
+    }
+  }
+
+  await admin.firestore().collection('adminAccessAudit').add({
+    uid,
+    email: validation.email,
+    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    motivo: replaced ? 'new_session_replaced_previous' : 'new_session_registered',
+    previousDeviceId,
+    currentDeviceId: deviceId
+  });
+
+  return res.json({
+    status: 'ok',
+    replaced,
+    invalidateBefore: invalidateBefore || 0
+  });
+});
+
+app.post('/admin/session/status', async (req, res) => {
+  const authHeader = req.headers.authorization || '';
+  const match = authHeader.match(/^Bearer (.+)$/);
+  if (!match) {
+    return res.status(401).json({ error: 'No autorizado' });
+  }
+
+  let decoded;
+  try {
+    decoded = await admin.auth().verifyIdToken(match[1], true);
+  } catch (error) {
+    return res.status(401).json({ error: 'Token inválido' });
+  }
+
+  const validation = await validarUsuarioSuperadmin(decoded);
+  if (!validation.ok) {
+    return res.status(validation.status).json(validation.body);
+  }
+
+  const uid = decoded.uid;
+  const deviceId = typeof req.body?.deviceId === 'string' ? req.body.deviceId.trim() : '';
+  if (!deviceId) {
+    return res.status(400).json({ error: 'deviceId requerido' });
+  }
+
+  const snapshot = await admin.firestore().collection('adminSessions').doc(uid).get();
+  if (!snapshot.exists) {
+    return res.json({ valid: false, reason: 'SESSION_NOT_FOUND' });
+  }
+
+  const session = snapshot.data() || {};
+  const tokenIssuedAt = getAuthTimeFromToken(decoded);
+  const invalidateBefore = Number(session.invalidateBefore || 0);
+  const valid = session.deviceId === deviceId && tokenIssuedAt >= invalidateBefore;
+  return res.json({ valid, reason: valid ? null : 'SESSION_REPLACED' });
+});
+
+app.post('/admin/audit/parametros', async (req, res) => {
+  const authHeader = req.headers.authorization || '';
+  const match = authHeader.match(/^Bearer (.+)$/);
+  if (!match) {
+    return res.status(401).json({ error: 'No autorizado' });
+  }
+
+  let decoded;
+  try {
+    decoded = await admin.auth().verifyIdToken(match[1], true);
+  } catch (error) {
+    return res.status(401).json({ error: 'Token inválido' });
+  }
+
+  const validation = await validarUsuarioSuperadmin(decoded);
+  if (!validation.ok) {
+    return res.status(validation.status).json(validation.body);
+  }
+
+  const motivo = typeof req.body?.motivo === 'string' && req.body.motivo.trim()
+    ? req.body.motivo.trim().slice(0, 160)
+    : 'acceso_parametros';
+
+  await admin.firestore().collection('adminAccessAudit').add({
+    uid: decoded.uid,
+    email: validation.email,
+    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    motivo
+  });
+
+  return res.json({ status: 'ok' });
+});
+
 app.post('/upload', verificarToken, upload.single('file'), async (req, res) => {
   if (!req.file) {
     registrarAuditoria({ email: req.user?.email, result: 'rechazado', reason: 'Archivo requerido' });
@@ -265,5 +454,8 @@ module.exports = {
   getMissingRequiredEnv,
   validateRequiredEnv,
   initializeFirebase,
-  startServer
+  startServer,
+  hashValue,
+  getClientIp,
+  getAuthTimeFromToken
 };
