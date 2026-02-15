@@ -4429,7 +4429,7 @@ function toggleForma(idx){
     }
     const user=auth.currentUser;
     if(!user){
-      mostrarMensajeTablaCartones('Inicia sesión para ver tus cartones.');
+      mostrarMensajeTablaCartones('Inicia sesión para ver los cartones del sorteo.');
       return;
     }
     mostrarMensajeTablaCartones('Cargando cartones...');
@@ -4440,23 +4440,18 @@ function toggleForma(idx){
         .filter(Boolean);
       const idsObjetivo=[...new Set(posiblesIds)];
       const nombreSorteo=(currentSorteoNombre??'').toString().trim();
-      const camposUsuario=['userId','userid','uid','userUID','userUid'];
       const camposId=['sorteoId','sorteoid','idSorteo','idsorteo','sorteoID','IDSorteo','id_sorteo','sorteo'];
       const camposNombre=['sorteoNombre','nombreSorteo','nombresorteo','sorteo_name'];
 
-      camposUsuario.forEach(campo=>{
-        consultas.push({campo,valor:user.uid});
-      });
-
       camposId.forEach(campo=>{
         posiblesIds.forEach(valor=>{
-          consultas.push({campo,valor,usuario:user.uid});
+          consultas.push({campo,valor});
         });
       });
 
       if(nombreSorteo){
         camposNombre.forEach(campo=>{
-          consultas.push({campo,valor:nombreSorteo,usuario:user.uid});
+          consultas.push({campo,valor:nombreSorteo});
         });
       }
 
@@ -4467,10 +4462,7 @@ function toggleForma(idx){
         if(consultasVistas.has(llave)) continue;
         consultasVistas.add(llave);
         try{
-          let ref=db.collection('CartonJugado').where(consulta.campo,'==',consulta.valor);
-          if(consulta.usuario){
-            ref=ref.where('userId','==',consulta.usuario);
-          }
+          const ref=db.collection('CartonJugado').where(consulta.campo,'==',consulta.valor);
           const snap=await ref.get();
           if(!snap.empty){
             snaps.push(snap);
