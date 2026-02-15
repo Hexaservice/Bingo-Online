@@ -10,6 +10,24 @@ function hasWindow(){
   return typeof window !== 'undefined';
 }
 
+function normalizeRole(role){
+  if(typeof role !== 'string') return null;
+  const limpio = role.trim().toLowerCase();
+  if(!limpio) return null;
+  if(limpio === 'superadmin' || limpio === 'super administrador' || limpio === 'super-administrador') return 'Superadmin';
+  if(limpio === 'administrador' || limpio === 'admin') return 'Administrador';
+  if(limpio === 'colaborador') return 'Colaborador';
+  if(limpio === 'jugador' || limpio === 'player') return 'Jugador';
+  return role.trim();
+}
+
+function roleEquals(left, right){
+  const leftNormalized = normalizeRole(left);
+  const rightNormalized = normalizeRole(right);
+  if(!leftNormalized || !rightNormalized) return false;
+  return leftNormalized === rightNormalized;
+}
+
 function getConfigFromWindow(){
   if(!hasWindow()) return null;
   const cfg = window.firebaseConfig || window.__FIREBASE_CONFIG__;
@@ -372,11 +390,15 @@ async function getUserRole(user){
   try{
     const token = await user.getIdTokenResult(true);
     const claims = token?.claims || {};
-    if(typeof claims.role === 'string' && claims.role.trim()){
-      return { role: claims.role.trim(), exists: true };
+    const roleFromClaim = normalizeRole(claims.role);
+    if(roleFromClaim){
+      return { role: roleFromClaim, exists: true };
     }
-    if(Array.isArray(claims.roles) && claims.roles.length && typeof claims.roles[0] === 'string'){
-      return { role: claims.roles[0], exists: true };
+    if(Array.isArray(claims.roles) && claims.roles.length){
+      const roleFromArray = claims.roles.map(normalizeRole).find(Boolean);
+      if(roleFromArray){
+        return { role: roleFromArray, exists: true };
+      }
     }
   }catch(e){
     console.error('No se pudieron leer los custom claims del usuario', e);
@@ -389,7 +411,7 @@ async function getUserRole(user){
       return { role: 'Jugador', exists: false };
     }
     const data = doc.data() || {};
-    const rolPersistente = data.role || 'Jugador';
+    const rolPersistente = normalizeRole(data.role) || 'Jugador';
 
     if(rolPersistente && user && (rolPersistente === 'Superadmin' || rolPersistente === 'Administrador' || rolPersistente === 'Colaborador')){
       const resincronizado = await intentarResincronizarClaims(user, rolPersistente);
@@ -453,7 +475,7 @@ async function intentarResincronizarClaims(user, roleExpected){
 }
 
 function redirectByRole(role){
-  switch(role){
+  switch(normalizeRole(role)){
     case 'Colaborador':
       window.location.href = 'collab.html';
       break;
@@ -507,7 +529,9 @@ function setupSuperadminExit(buttonSelector = '#salir-super-btn', redirect = 'su
 }
 
 function ensureAuth(roleExpected){
-  const rolesEsperados = Array.isArray(roleExpected) ? roleExpected : (roleExpected ? [roleExpected] : []);
+  const rolesEsperados = (Array.isArray(roleExpected) ? roleExpected : (roleExpected ? [roleExpected] : []))
+    .map(normalizeRole)
+    .filter(Boolean);
   initFirebase()
     .then(() => {
       auth.onAuthStateChanged(async user => {
@@ -524,7 +548,7 @@ function ensureAuth(roleExpected){
           window.location.href = 'registrarse.html';
           return;
         }
-        if(rolesEsperados.length && !rolesEsperados.includes(role) && role !== 'Superadmin'){
+        if(rolesEsperados.length && !rolesEsperados.some(rol => roleEquals(rol, role)) && !roleEquals(role, 'Superadmin')){
           redirectByRole(role);
           return;
         }
@@ -570,8 +594,8 @@ function ensureAuth(roleExpected){
 function claimIncluyeRol(claims, role){
   if(!claims || !role) return false;
   if(claims.admin === true) return true;
-  if(claims.role === role) return true;
-  if(Array.isArray(claims.roles) && claims.roles.includes(role)) return true;
+  if(roleEquals(claims.role, role)) return true;
+  if(Array.isArray(claims.roles) && claims.roles.some(claimRole => roleEquals(claimRole, role))) return true;
   return false;
 }
 
@@ -596,7 +620,7 @@ async function verificarRolFuerte(roleExpected = 'Superadmin', options = {}){
   }
 
   const { role } = await getUserRole(user);
-  if(role === roleExpected){
+  if(roleEquals(role, roleExpected)){
     console.warn(`Autorización fuerte: se permitió acceso por rol persistente (${roleExpected}) aunque faltan custom claims vigentes.`);
     return { ok: true, reason: 'DOC_ROLE_FALLBACK', claims, user };
   }

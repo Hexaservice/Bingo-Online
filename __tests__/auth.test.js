@@ -136,4 +136,34 @@ describe('auth.js', () => {
       expect.objectContaining({ method: 'POST' })
     );
   });
+
+  test('verificarRolFuerte acepta variantes de mayúsculas/minúsculas en rol persistente', async () => {
+    setupWindow();
+    window.fetch = jest.fn(async () => ({ ok: false, status: 500 }));
+    global.fetch = window.fetch;
+    global.firebase = buildFirebaseMock({ userExists: true, role: 'superadmin' });
+
+    let verificarRolFuerte;
+    jest.isolateModules(() => {
+      ({ verificarRolFuerte } = require('../public/js/auth.js'));
+    });
+
+    const fakeUser = {
+      email: 'superadmin@correo.com',
+      getIdToken: jest.fn(async () => 'token-demo'),
+      getIdTokenResult: jest.fn(async () => ({ claims: {} }))
+    };
+
+    const authFactory = global.firebase.auth;
+    authFactory.mockImplementation(() => ({
+      setPersistence: jest.fn(async () => undefined),
+      onAuthStateChanged: jest.fn(),
+      getRedirectResult: jest.fn(async () => ({})),
+      currentUser: fakeUser
+    }));
+
+    await expect(verificarRolFuerte('Superadmin', { forceRefresh: true })).resolves.toEqual(
+      expect.objectContaining({ ok: true, reason: 'DOC_ROLE_FALLBACK' })
+    );
+  });
 });
