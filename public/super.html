@@ -141,22 +141,66 @@
   <script src="js/notificationCenter.js"></script>
   <script>
   ensureAuth('Superadmin');
+  function mostrarInstruccionEnrolamientoMFA(){
+    alert(
+      'Acceso bloqueado: la cuenta Superadmin debe tener MFA enrolado para entrar a Parámetros.\n\n'
+      + 'Pasos:\n'
+      + '1) En Firebase Authentication > Multi-factor, habilita TOTP o SMS según política.\n'
+      + '2) Inicia sesión como Superadmin y completa el enrolamiento del segundo factor.\n'
+      + '3) Reintenta el acceso desde este menú.'
+    );
+  }
+
   async function intentarAbrirParametros(){
+    const usuarioActual = auth?.currentUser || null;
     try{
       const verificacion = await verificarRolFuerte('Superadmin', { forceRefresh: true });
       if(!verificacion.ok){
+        if(usuarioActual){
+          await auditarAccesoParametros(usuarioActual, 'acceso_parametros_denegado_claims', {
+            estado: 'fallido',
+            detalle: 'Claims de Superadmin no vigentes',
+            contexto: 'super_menu'
+          });
+        }
         alert('No tienes claims de Superadmin vigentes. Vuelve a iniciar sesión o contacta al administrador del sistema.');
         window.location.href='super.html';
+        return;
+      }
+
+      if(!tieneMFAEnrolado(verificacion.user)){
+        if(verificacion.user){
+          await auditarAccesoParametros(verificacion.user, 'acceso_parametros_denegado_mfa_no_enrolado', {
+            estado: 'fallido',
+            detalle: 'Superadmin sin factores MFA enrolados',
+            contexto: 'super_menu'
+          });
+        }
+        mostrarInstruccionEnrolamientoMFA();
         return;
       }
 
       await reautenticarConPopup();
     }catch(error){
       console.error('No fue posible completar la autorización fuerte para Parámetros', error);
+      if(usuarioActual){
+        await auditarAccesoParametros(usuarioActual, 'acceso_parametros_denegado_reautenticacion', {
+          estado: 'fallido',
+          detalle: error?.message || 'Error durante reautenticación',
+          contexto: 'super_menu'
+        });
+      }
       alert('No fue posible completar la reautenticación de Firebase. Intenta nuevamente.');
       return;
     }
 
+    if(auth?.currentUser){
+      await auditarAccesoParametros(auth.currentUser, 'acceso_parametros_autorizado_super_menu', {
+        estado: 'exitoso',
+        detalle: 'Superadmin validado con claims + MFA',
+        contexto: 'super_menu'
+      });
+    }
     window.location.href='parametros.html';
   }
   document.getElementById("acceder-usuario-btn").addEventListener("click",()=>{window.location.href="accederusuario.html";});
