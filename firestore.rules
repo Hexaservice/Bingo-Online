@@ -185,7 +185,12 @@ service cloud.firestore {
 
     match /SimulacionesSorteo/{docId} {
       allow read: if isSignedIn();
-      allow write: if isPrivilegedOperator();
+      allow write: if isPrivilegedOperator()
+        || (
+          isSignedIn()
+          && request.resource.data.userId == request.auth.uid
+          && docId.matches('^[^_]+_' + request.auth.uid + '$')
+        );
     }
 
     match /{document=**} {
