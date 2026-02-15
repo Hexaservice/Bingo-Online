@@ -531,6 +531,13 @@ async function verificarRolFuerte(roleExpected = 'Superadmin', options = {}){
   if(claimIncluyeRol(claims, roleExpected)){
     return { ok: true, reason: null, claims, user };
   }
+
+  const { role } = await getUserRole(user);
+  if(role === roleExpected){
+    console.warn(`Autorización fuerte: se permitió acceso por rol persistente (${roleExpected}) aunque faltan custom claims vigentes.`);
+    return { ok: true, reason: 'DOC_ROLE_FALLBACK', claims, user };
+  }
+
   return { ok: false, reason: 'MISSING_CLAIM', claims, user };
 }
 
