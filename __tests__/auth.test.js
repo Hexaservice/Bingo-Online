@@ -143,7 +143,7 @@ describe('auth.js', () => {
     );
   });
 
-  test('verificarRolFuerte acepta variantes de mayúsculas/minúsculas en rol persistente', async () => {
+  test('verificarRolFuerte falla cuando no hay custom claims válidos', async () => {
     setupWindow();
     window.fetch = jest.fn(async () => ({ ok: false, status: 500 }));
     global.fetch = window.fetch;
@@ -169,7 +169,7 @@ describe('auth.js', () => {
     }));
 
     await expect(verificarRolFuerte('Superadmin', { forceRefresh: true })).resolves.toEqual(
-      expect.objectContaining({ ok: true, reason: 'DOC_ROLE_FALLBACK' })
+      expect.objectContaining({ ok: false, reason: 'MISSING_CLAIM' })
     );
   });
   test('tieneReautenticacionReciente retorna true cuando existe registro reciente en sessionStorage', async () => {
