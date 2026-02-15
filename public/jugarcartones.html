@@ -1131,7 +1131,7 @@
           </div>
       </div>
   </div>
-  <div id="info-cartones-modal" class="modal" onclick="this.style.display='none'">
+  <div id="info-cartones-modal" class="modal">
       <div class="modal-content" onclick="event.stopPropagation();">
           <h2 id="info-cartones-titulo"></h2>
           <div id="info-cartones-jugando" class="info-line"></div>
@@ -1269,6 +1269,7 @@
   const selladoCerrarBtn=document.getElementById('sellado-cerrar-btn');
   const CONSECUTIVOS_COLLECTION='ConsecutivosCarton';
   let unsubscribeConsecutivoCarton=null;
+  let unsubscribeInfoCartonesJugando=null;
   let ultimoNumeroCartonAsignado=0;
   let siguienteNumeroCarton=1;
   const premioCartonesGratisEl=document.getElementById('premio-cartones-gratis');
@@ -4305,7 +4306,42 @@ function toggleForma(idx){
     }
   }
 
-  async function cargarCartonesJugandoTabla(){
+  function renderizarFilasCartonesJugando(registros){
+    if(!infoCartonesTablaBody) return;
+    infoCartonesTablaBody.innerHTML='';
+    const total=registros.length;
+    registros.forEach((registro,index)=>{
+      const fila=document.createElement('tr');
+      const numeroTd=document.createElement('td');
+      numeroTd.className='numero-col';
+      numeroTd.textContent=formatearEnteroEs(total-index);
+      const aliasTd=document.createElement('td');
+      aliasTd.className='alias-col';
+      aliasTd.textContent=registro.alias;
+      const cartonTd=document.createElement('td');
+      cartonTd.className='carton-col';
+      cartonTd.textContent=registro.numeroTexto;
+      const tipoTd=document.createElement('td');
+      const tipoClase=registro.tipo==='GRATIS'?'gratis':'pagado';
+      tipoTd.className=`tipo-col ${tipoClase}`;
+      tipoTd.textContent=registro.tipo;
+      fila.append(numeroTd,aliasTd,cartonTd,tipoTd);
+      infoCartonesTablaBody.appendChild(fila);
+    });
+  }
+
+  function cerrarModalCartonesJugando(){
+    const modal=document.getElementById('info-cartones-modal');
+    if(modal){
+      modal.style.display='none';
+    }
+    if(typeof unsubscribeInfoCartonesJugando==='function'){
+      unsubscribeInfoCartonesJugando();
+      unsubscribeInfoCartonesJugando=null;
+    }
+  }
+
+  function suscribirCartonesJugandoTabla(){
     if(!infoCartonesTablaBody||!currentSorteo){
       return;
     }
@@ -4314,30 +4350,32 @@ function toggleForma(idx){
       mostrarMensajeTablaCartones('Inicia sesión para ver los cartones del sorteo.');
       return;
     }
+    if(typeof unsubscribeInfoCartonesJugando==='function'){
+      unsubscribeInfoCartonesJugando();
+      unsubscribeInfoCartonesJugando=null;
+    }
     mostrarMensajeTablaCartones('Cargando cartones...');
-    try{
-      const ref=db.collection('CartonJugado')
-        .where('sorteoId','==',currentSorteo)
-        .where('userId','==',user.uid)
-        .orderBy('cartonNum','asc');
-      const snap=await ref.get();
-
+    let query=db.collection('CartonJugado')
+      .where('sorteoId','==',currentSorteo);
+    if(user?.uid){
+      query=query.where('userId','==',user.uid);
+    }
+    query=query.orderBy('cartonNum','asc');
+    unsubscribeInfoCartonesJugando=query.onSnapshot((snap)=>{
       const registros=[];
       const idsVistos=new Set();
-      const agregarCarton=(doc)=>{
-          if(idsVistos.has(doc.id)) return;
-          idsVistos.add(doc.id);
-          const carton=normalizarCartonJugado(doc.data()||{});
-          registros.push({
-            alias:carton.alias,
-            numeroOrden:carton.cartonNum,
-            numeroTexto:carton.cartonTexto,
-            tipo:carton.tipoEtiqueta
-          });
-      };
-      snap.forEach(agregarCarton);
-
-      if(registros.length===0){
+      snap.forEach((doc)=>{
+        if(idsVistos.has(doc.id)) return;
+        idsVistos.add(doc.id);
+        const carton=normalizarCartonJugado(doc.data()||{});
+        registros.push({
+          alias:carton.alias,
+          numeroOrden:carton.cartonNum,
+          numeroTexto:carton.cartonTexto,
+          tipo:carton.tipoEtiqueta
+        });
+      });
+      if(snap.empty){
         mostrarMensajeTablaCartones('Sin cartones registrados');
         return;
       }
@@ -4347,30 +4385,11 @@ function toggleForma(idx){
         }
         return a.alias.localeCompare(b.alias,'es',{sensitivity:'base'});
       });
-      infoCartonesTablaBody.innerHTML='';
-      const total=registros.length;
-      registros.forEach((registro,index)=>{
-        const fila=document.createElement('tr');
-        const numeroTd=document.createElement('td');
-        numeroTd.className='numero-col';
-        numeroTd.textContent=formatearEnteroEs(total-index);
-        const aliasTd=document.createElement('td');
-        aliasTd.className='alias-col';
-        aliasTd.textContent=registro.alias;
-        const cartonTd=document.createElement('td');
-        cartonTd.className='carton-col';
-        cartonTd.textContent=registro.numeroTexto;
-        const tipoTd=document.createElement('td');
-        const tipoClase=registro.tipo==='GRATIS'?'gratis':'pagado';
-        tipoTd.className=`tipo-col ${tipoClase}`;
-        tipoTd.textContent=registro.tipo;
-        fila.append(numeroTd,aliasTd,cartonTd,tipoTd);
-        infoCartonesTablaBody.appendChild(fila);
-      });
-    }catch(error){
+      renderizarFilasCartonesJugando(registros);
+    },(error)=>{
       console.error('Error cargando cartones jugados para la tabla',error);
       mostrarMensajeTablaCartones('No se pudieron cargar los cartones.');
-    }
+    });
   }
 
   async function mostrarCartonesJugandoModal(){
@@ -4392,7 +4411,7 @@ function toggleForma(idx){
       modal.style.display='flex';
       reiniciarScrollModal(document.getElementById('info-cartones-tabla-wrapper'));
     }
-    await cargarCartonesJugandoTabla();
+    suscribirCartonesJugandoTabla();
   }
 
   function mostrarPremiosModal(){
@@ -4708,7 +4727,12 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
   document.getElementById('cartones-jugando-valor').addEventListener('click',mostrarCartonesJugandoModal);
   document.getElementById('cartones-gratis-jugando').addEventListener('click',mostrarCartonesJugandoModal);
   document.getElementById('premio-valor').addEventListener('click',mostrarPremiosModal);
-  document.getElementById('info-cartones-aceptar').addEventListener('click',()=>{document.getElementById('info-cartones-modal').style.display='none';});
+  document.getElementById('info-cartones-aceptar').addEventListener('click',cerrarModalCartonesJugando);
+  document.getElementById('info-cartones-modal').addEventListener('click',(event)=>{
+    if(event.target===event.currentTarget){
+      cerrarModalCartonesJugando();
+    }
+  });
   document.getElementById('premios-aceptar').addEventListener('click',()=>{document.getElementById('premios-modal').style.display='none';});
   document.getElementById('limpiar-btn').addEventListener('click',async()=>{if(await confirm('¿Deseas limpiar todas las jugadas del carton?')) limpiarcarton();});
   document.getElementById('azar-btn').addEventListener('click',async()=>{if(await confirm('¿Quieres cargar jugadas al azar?')) cargarAzar();});
