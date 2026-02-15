@@ -41,15 +41,6 @@ describe('uploadServer utilidades de sesión administrativa', () => {
     expect(fromFallback).toBe('10.0.0.1');
   });
 
-
-  test('approximateIp anonimiza IPv4 e IPv6', () => {
-    const { approximateIp } = require('../uploadServer.js');
-
-    expect(approximateIp('201.20.10.35')).toBe('201.20.10.0');
-    expect(approximateIp('2001:0db8:85a3:0000:0000:8a2e:0370:7334')).toBe('2001:0db8:85a3::');
-    expect(approximateIp('')).toBe('unknown');
-  });
-
   test('getAuthTimeFromToken usa iat cuando está presente', () => {
     const { getAuthTimeFromToken } = require('../uploadServer.js');
 

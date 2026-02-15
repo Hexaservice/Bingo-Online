@@ -5,6 +5,7 @@ const SUPERADMIN_DEVICE_KEY = 'bo_superadmin_device_id';
 let firebaseInitPromise = null;
 let firebaseConfigLoadPromise = null;
 let adminSessionWatcher = null;
+let lastAuditStamp = null;
 const nativeAlert = hasWindow() ? window.alert.bind(window) : null;
 const nativeConfirm = hasWindow() ? window.confirm.bind(window) : null;
 const nativePrompt = hasWindow() ? window.prompt.bind(window) : null;
@@ -506,110 +507,18 @@ async function registrarSesionSuperadmin(user, motivo = 'login'){
   }
 }
 
-async function auditarAccesoParametros(user, motivo = 'acceso_parametros', options = {}){
+async function auditarAccesoParametros(user, motivo = 'acceso_parametros'){
   if(!hasWindow() || !user) return;
-  const {
-    estado = 'exitoso',
-    detalle = '',
-    contexto = ''
-  } = options;
+  const pathname = window.location?.pathname || '';
+  if(!pathname.endsWith('/parametros.html') && !pathname.endsWith('parametros.html')) return;
+  const auditKey = `${user.uid}:${motivo}`;
+  if(lastAuditStamp === auditKey) return;
   try{
-    await postToAdminEndpoint('/admin/audit/parametros', user, {
-      motivo,
-      estado,
-      detalle,
-      contexto,
-      ruta: window.location?.pathname || ''
-    });
+    await postToAdminEndpoint('/admin/audit/parametros', user, { motivo });
+    lastAuditStamp = auditKey;
   }catch(error){
     console.warn('No se pudo registrar auditoría de acceso a parámetros', error);
   }
-}
-
-function obtenerFactoresMFAEnrolados(user = auth?.currentUser){
-  if(!user) return [];
-  const factors = user.multiFactor?.enrolledFactors;
-  return Array.isArray(factors) ? factors : [];
-}
-
-function tieneMFAEnrolado(user = auth?.currentUser){
-  return obtenerFactoresMFAEnrolados(user).length > 0;
-}
-
-async function resolverSegundoFactorReautenticacion(error){
-  const code = error?.code;
-  if(code !== 'auth/multi-factor-auth-required') throw error;
-
-  const resolver = error.resolver || firebase.auth.getMultiFactorResolver?.(auth, error);
-  if(!resolver){
-    throw new Error('No fue posible preparar el desafío de segundo factor.');
-  }
-
-  const hints = Array.isArray(resolver.hints) ? resolver.hints : [];
-  if(!hints.length){
-    throw new Error('La cuenta no tiene factores disponibles para completar MFA.');
-  }
-
-  let factorElegido = hints[0];
-  if(hints.length > 1){
-    const menu = hints
-      .map((hint, index) => `${index + 1}. ${hint.displayName || hint.factorId || 'factor'}`)
-      .join('\n');
-    const seleccionRaw = await window.prompt(`Selecciona el segundo factor para continuar:\n${menu}`, '1');
-    const seleccion = Number.parseInt(seleccionRaw, 10);
-    if(!Number.isFinite(seleccion) || seleccion < 1 || seleccion > hints.length){
-      throw new Error('FACTOR_MFA_INVALIDO');
-    }
-    factorElegido = hints[seleccion - 1];
-  }
-
-  if(factorElegido.factorId === firebase.auth.PhoneMultiFactorGenerator.FACTOR_ID){
-    const verifierContainerId = 'mfa-recaptcha-container';
-    let container = document.getElementById(verifierContainerId);
-    if(!container){
-      container = document.createElement('div');
-      container.id = verifierContainerId;
-      container.style.position = 'fixed';
-      container.style.left = '-9999px';
-      container.style.width = '1px';
-      container.style.height = '1px';
-      document.body.appendChild(container);
-    }
-
-    const recaptchaVerifier = new firebase.auth.RecaptchaVerifier(verifierContainerId, { size: 'invisible' });
-    const phoneAuthProvider = new firebase.auth.PhoneAuthProvider();
-    const verificationId = await phoneAuthProvider.verifyPhoneNumber({
-      multiFactorHint: factorElegido,
-      session: resolver.session
-    }, recaptchaVerifier);
-    const verificationCode = await window.prompt('Introduce el código SMS de verificación MFA');
-    if(!verificationCode){
-      throw new Error('CODIGO_MFA_REQUERIDO');
-    }
-    const cred = firebase.auth.PhoneAuthProvider.credential(verificationId, verificationCode.trim());
-    const assertion = firebase.auth.PhoneMultiFactorGenerator.assertion(cred);
-    await resolver.resolveSignIn(assertion);
-    return;
-  }
-
-  if(
-    factorElegido.factorId === 'totp'
-    && firebase.auth.TotpMultiFactorGenerator
-    && typeof firebase.auth.TotpMultiFactorGenerator.assertionForSignIn === 'function'
-  ){
-    const verificationCode = await window.prompt('Introduce el código TOTP de tu autenticador');
-    if(!verificationCode){
-      throw new Error('CODIGO_MFA_REQUERIDO');
-    }
-    const assertion = firebase.auth.TotpMultiFactorGenerator.assertionForSignIn(
-      factorElegido.uid,
-      verificationCode.trim()
-    );
-    await resolver.resolveSignIn(assertion);
-    return;
-  }
-
-  throw new Error('FACTOR_MFA_NO_SOPORTADO');
 }
 
 function stopAdminSessionWatcher(){
@@ -850,11 +759,7 @@ async function reautenticarConPopup(){
   if(!providerInstance || typeof user.reauthenticateWithPopup !== 'function'){
     throw new Error('Proveedor no soportado para reautenticación con popup');
   }
-  try{
-    await user.reauthenticateWithPopup(providerInstance);
-  }catch(error){
-    await resolverSegundoFactorReautenticacion(error);
-  }
+  await user.reauthenticateWithPopup(providerInstance);
   registrarReautenticacionReciente(user);
   await registrarSesionSuperadmin(user, 'reauth');
 }
@@ -918,4 +823,4 @@ function startUserStatusWatcher(){
   },60000);
 }
 
-if (typeof module !== "undefined") { module.exports = { getUserRole, redirectByRole, ensureAuth, setupSuperadminExit, verificarRolFuerte, reautenticarConPopup, registrarReautenticacionReciente, tieneReautenticacionReciente, tieneMFAEnrolado, obtenerFactoresMFAEnrolados, auditarAccesoParametros }; }
+if (typeof module !== "undefined") { module.exports = { getUserRole, redirectByRole, ensureAuth, setupSuperadminExit, verificarRolFuerte, reautenticarConPopup, registrarReautenticacionReciente, tieneReautenticacionReciente }; }
