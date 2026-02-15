@@ -2439,7 +2439,19 @@
   }
 
   function extraerAliasCarton(data){
-    const candidatos=[data?.alias,data?.aliascarton,data?.aliasCarton,data?.aliasJugador,data?.aliasjugador];
+    const candidatos=[
+      data?.alias,
+      data?.aliascarton,
+      data?.aliasCarton,
+      data?.aliasJugador,
+      data?.aliasjugador,
+      data?.nombre,
+      data?.nombreJugador,
+      data?.usuarioAlias,
+      data?.userAlias,
+      data?.perfil?.alias,
+      data?.jugador?.alias
+    ];
     for(const candidato of candidatos){
       const normalizado=normalizarAliasPerfil(candidato);
       if(normalizado){
@@ -2450,7 +2462,16 @@
   }
 
   function extraerNumeroCartonDatos(data){
-    const candidatos=[data?.cartonNum,data?.Ncarton,data?.carton];
+    const candidatos=[
+      data?.cartonNum,
+      data?.Ncarton,
+      data?.carton,
+      data?.numero,
+      data?.numeroCarton,
+      data?.cartonNumero,
+      data?.jugada?.cartonNum,
+      data?.jugador?.cartonNum
+    ];
     for(const candidato of candidatos){
       const numero=Number.parseInt(candidato,10);
       if(Number.isFinite(numero)){
@@ -2462,11 +2483,21 @@
   }
 
   function extraerTipoCartonDato(data){
-    const candidatos=[data?.tipocarton,data?.tipoCarton,data?.tipo];
+    const candidatos=[
+      data?.tipocarton,
+      data?.tipoCarton,
+      data?.tipo,
+      data?.categoria,
+      data?.cartonTipo,
+      data?.jugada?.tipocarton
+    ];
     for(const candidato of candidatos){
       const texto=(candidato??'').toString().trim().toLowerCase();
       if(texto){
-        return texto==='gratis'?'GRATIS':'PAGADO';
+        if(['gratis','free','bono'].includes(texto)){
+          return 'GRATIS';
+        }
+        return 'PAGADO';
       }
     }
     return 'PAGADO';
@@ -2490,14 +2521,26 @@
       data?.sorteoID,
       data?.IDSorteo,
       data?.id_sorteo,
-      data?.sorteo
+      data?.sorteo,
+      data?.sorteo?.id,
+      data?.sorteo?.sorteoId,
+      data?.sorteo?.docId,
+      data?.juego?.sorteoId
     ];
     const valores=[];
     candidatos.forEach(valor=>{
       if(valor===undefined || valor===null) return;
       if(typeof valor==='string' || typeof valor==='number'){
         const texto=String(valor).trim();
-        if(texto) valores.push(texto);
+        if(texto){
+          valores.push(texto);
+          if(texto.includes('/')){
+            const segmentos=texto.split('/').filter(Boolean);
+            if(segmentos.length){
+              valores.push(segmentos[segmentos.length-1]);
+            }
+          }
+        }
         return;
       }
       if(typeof valor==='object'){
@@ -2525,7 +2568,9 @@
       data?.sorteoNombre,
       data?.nombreSorteo,
       data?.nombresorteo,
-      data?.sorteo_name
+      data?.sorteo_name,
+      data?.sorteo?.nombre,
+      data?.juego?.sorteoNombre
     ]
       .map(valor=>(valor??'').toString().trim())
       .filter(Boolean);
