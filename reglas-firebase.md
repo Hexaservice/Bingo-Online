@@ -33,3 +33,14 @@ Agregar pruebas automatizadas con `@firebase/rules-unit-testing` para casos por 
 - `Colaborador` intentando promover roles → **denegado**.
 - `Administrador` gestionando transacciones permitidas → **autorizado**.
 - `Superadmin` en ruta administrativa global → **autorizado**.
+
+
+## Endurecimiento de acceso a Parámetros (MFA Superadmin)
+
+Antes de usar `public/super.html` -> `parametros.html`, habilitar MFA para la cuenta Superadmin en **Firebase Authentication**:
+
+1. Abrir **Authentication > Sign-in method > Multi-factor authentication**.
+2. Activar proveedor según política corporativa (recomendado: **TOTP**; alterno: **SMS**).
+3. Verificar que la cuenta Superadmin complete enrolamiento del segundo factor.
+4. Confirmar que los accesos fallidos/satisfactorios a Parámetros queden auditados en `adminAccessAudit`.
+

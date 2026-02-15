@@ -220,9 +220,13 @@
       if(!verificacion.ok){
         throw new Error('CLAIMS_SUPERADMIN_NO_VIGENTES');
       }
+      if(!tieneMFAEnrolado(verificacion.user)){
+        throw new Error('MFA_SUPERADMIN_NO_ENROLADO');
+      }
       if(!tieneReautenticacionReciente({ maxAgeMs: 10 * 60 * 1000 })){
         throw new Error('REAUTENTICACION_REQUERIDA_DESDE_MENU_SUPERADMIN');
       }
+      return verificacion.user;
     }
 
     async function migrarContrasenaLegacyParametros(){
@@ -356,14 +360,26 @@
           auth.onAuthStateChanged(async usuario=>{
             if(!usuario || parametrosYaInicializados) return;
             try{
-              await validarAutorizacionFuerteSuperadmin();
+              const usuarioValidado = await validarAutorizacionFuerteSuperadmin();
+              await auditarAccesoParametros(usuarioValidado, 'acceso_parametros', {
+                estado: 'exitoso',
+                detalle: 'Acceso autorizado con claims y MFA enrolado',
+                contexto: 'parametros_page'
+              });
               await iniciarParametros();
               parametrosYaInicializados=true;
             }catch(err){
               parametrosYaInicializados=false;
               console.error('Fallo al cargar parámetros tras autenticar',err);
+              await auditarAccesoParametros(usuario, 'acceso_parametros_denegado', {
+                estado: 'fallido',
+                detalle: err?.message || 'Fallo no identificado',
+                contexto: 'parametros_page'
+              });
               if(err && err.message === 'REAUTENTICACION_REQUERIDA_DESDE_MENU_SUPERADMIN'){
                 alert('Para abrir Parámetros Globales, vuelve al menú Superadmin y toca tu nombre para validar el acceso una sola vez.');
+              }else if(err && err.message === 'MFA_SUPERADMIN_NO_ENROLADO'){
+                alert('Acceso bloqueado: la cuenta Superadmin debe enrolar MFA (TOTP/SMS) en Firebase Authentication antes de abrir Parámetros.');
               }else if(err && err.message === 'CLAIMS_SUPERADMIN_NO_VIGENTES'){
                 alert('Tus claims de Superadmin no están vigentes, cierre y abra sesión.');
               }else{
