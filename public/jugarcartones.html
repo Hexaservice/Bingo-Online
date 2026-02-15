@@ -4434,57 +4434,24 @@ function toggleForma(idx){
     }
     mostrarMensajeTablaCartones('Cargando cartones...');
     try{
-      const consultas=[];
-      const posiblesIds=[currentSorteo,(currentSorteo??'').toString().trim()]
-        .map(valor=>(valor??'').toString().trim())
-        .filter(Boolean);
-      const idsObjetivo=[...new Set(posiblesIds)];
-      const nombreSorteo=(currentSorteoNombre??'').toString().trim();
-      const camposId=['sorteoId','sorteoid','idSorteo','idsorteo','sorteoID','IDSorteo','id_sorteo','sorteo'];
-      const camposNombre=['sorteoNombre','nombreSorteo','nombresorteo','sorteo_name'];
-
-      camposId.forEach(campo=>{
-        posiblesIds.forEach(valor=>{
-          consultas.push({campo,valor});
-        });
-      });
-
-      if(nombreSorteo){
-        camposNombre.forEach(campo=>{
-          consultas.push({campo,valor:nombreSorteo});
-        });
-      }
-
-      const snaps=[];
-      const consultasVistas=new Set();
-      for(const consulta of consultas){
-        const llave=`${consulta.campo}::${String(consulta.valor)}`;
-        if(consultasVistas.has(llave)) continue;
-        consultasVistas.add(llave);
-        try{
-          const ref=db.collection('CartonJugado').where(consulta.campo,'==',consulta.valor);
-          const snap=await ref.get();
-          if(!snap.empty){
-            snaps.push(snap);
-          }
-        }catch(errorConsulta){
-          console.warn(`Consulta alterna no disponible para ${consulta.campo}`,errorConsulta);
-        }
-      }
+      const ref=db.collection('CartonJugado')
+        .where('sorteoId','==',currentSorteo)
+        .where('userId','==',user.uid)
+        .orderBy('cartonNum','asc');
+      const snap=await ref.get();
 
       const registros=[];
       const idsVistos=new Set();
       const agregarCarton=(doc)=>{
           if(idsVistos.has(doc.id)) return;
           const data=doc.data()||{};
-          if(!cartonCoincideSorteo(data,{ids:idsObjetivo,nombre:nombreSorteo})) return;
           idsVistos.add(doc.id);
           const alias=extraerAliasCarton(data);
           const numero=extraerNumeroCartonDatos(data);
           const tipo=extraerTipoCartonDato(data);
           registros.push({alias,numeroOrden:numero.orden,numeroTexto:numero.texto,tipo});
       };
-      snaps.forEach(snap=>snap.forEach(agregarCarton));
+      snap.forEach(agregarCarton);
 
       if(registros.length===0){
         mostrarMensajeTablaCartones('Sin cartones registrados');
