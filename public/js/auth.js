@@ -1,8 +1,11 @@
 let app, auth, db, provider, appleProvider, appName = 'BingOnline';
 const DISABLED_MSG = "Tu cuenta ha sido deshabilitada, Motivado posiblemente a que has incumplido una o más clausulas en nuestros Terminos y condiciones. Contacta con un administrador del sistema si necesitas información.";
 const STRONG_AUTH_SESSION_KEY = 'bo_superadmin_strong_auth';
+const SUPERADMIN_DEVICE_KEY = 'bo_superadmin_device_id';
 let firebaseInitPromise = null;
 let firebaseConfigLoadPromise = null;
+let adminSessionWatcher = null;
+let lastAuditStamp = null;
 const nativeAlert = hasWindow() ? window.alert.bind(window) : null;
 const nativeConfirm = hasWindow() ? window.confirm.bind(window) : null;
 const nativePrompt = hasWindow() ? window.prompt.bind(window) : null;
@@ -352,6 +355,7 @@ async function loginApple(){
 }
 
 function logout(){
+  stopAdminSessionWatcher();
   if(hasWindow() && window.sessionStorage){
     try{ window.sessionStorage.removeItem(STRONG_AUTH_SESSION_KEY); }
     catch(error){ console.warn('No se pudo limpiar el estado de reautenticación', error); }
@@ -453,6 +457,97 @@ function resolverApiBaseParaClaims(){
   return '';
 }
 
+
+function getAdminApiBase(){
+  return resolverApiBaseParaClaims();
+}
+
+function getOrCreateSuperadminDeviceId(){
+  if(!hasWindow() || !window.localStorage) return `fallback-${Date.now()}`;
+  try{
+    const existing = window.localStorage.getItem(SUPERADMIN_DEVICE_KEY);
+    if(existing) return existing;
+    const candidate = (window.crypto && window.crypto.randomUUID)
+      ? window.crypto.randomUUID()
+      : `device-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    window.localStorage.setItem(SUPERADMIN_DEVICE_KEY, candidate);
+    return candidate;
+  }catch(error){
+    console.warn('No se pudo persistir el deviceId de superadmin', error);
+    return `fallback-${Date.now()}`;
+  }
+}
+
+async function postToAdminEndpoint(path, user, payload = {}){
+  if(!user || typeof fetch !== 'function') return null;
+  const apiBase = getAdminApiBase();
+  if(!apiBase) return null;
+  const token = await user.getIdToken(true);
+  const response = await fetch(`${apiBase}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+  if(!response.ok){
+    throw new Error(`HTTP ${response.status} en ${path}`);
+  }
+  return response.json();
+}
+
+async function registrarSesionSuperadmin(user, motivo = 'login'){
+  if(!user) return;
+  try{
+    const deviceId = getOrCreateSuperadminDeviceId();
+    await postToAdminEndpoint('/admin/session/register', user, { deviceId, motivo });
+  }catch(error){
+    console.warn('No se pudo registrar sesión administrativa activa', error);
+  }
+}
+
+async function auditarAccesoParametros(user, motivo = 'acceso_parametros'){
+  if(!hasWindow() || !user) return;
+  const pathname = window.location?.pathname || '';
+  if(!pathname.endsWith('/parametros.html') && !pathname.endsWith('parametros.html')) return;
+  const auditKey = `${user.uid}:${motivo}`;
+  if(lastAuditStamp === auditKey) return;
+  try{
+    await postToAdminEndpoint('/admin/audit/parametros', user, { motivo });
+    lastAuditStamp = auditKey;
+  }catch(error){
+    console.warn('No se pudo registrar auditoría de acceso a parámetros', error);
+  }
+}
+
+function stopAdminSessionWatcher(){
+  if(adminSessionWatcher){
+    clearInterval(adminSessionWatcher);
+    adminSessionWatcher = null;
+  }
+}
+
+function startAdminSessionWatcher(){
+  stopAdminSessionWatcher();
+  adminSessionWatcher = setInterval(async ()=>{
+    const user = auth?.currentUser;
+    if(!user) return;
+    try{
+      const deviceId = getOrCreateSuperadminDeviceId();
+      const response = await postToAdminEndpoint('/admin/session/status', user, { deviceId });
+      if(response && response.valid === false){
+        await auditarAccesoParametros(user, 'sesion_reemplazada_logout_forzado');
+        await window.alert('Tu sesión de Superadmin fue reemplazada por un nuevo inicio en otro dispositivo.');
+        logout();
+      }
+    }catch(error){
+      console.warn('No se pudo validar el estado de sesión administrativa', error);
+    }
+  }, 60000);
+}
+
+
 async function intentarResincronizarClaims(user, roleExpected){
   if(!user || !roleExpected || !hasWindow() || typeof fetch !== 'function') return false;
   const apiBase = resolverApiBaseParaClaims();
@@ -545,6 +640,7 @@ function ensureAuth(roleExpected){
             try{ window.notificationCenter.desvincularUsuario(); }
             catch(err){ console.error('No se pudo desvincular el centro de notificaciones', err); }
           }
+          stopAdminSessionWatcher();
           window.location.href='index.html';
           return;
         }
@@ -558,6 +654,13 @@ function ensureAuth(roleExpected){
           return;
         }
         window.currentRole = role;
+        if(roleEquals(role, 'Superadmin')){
+          await registrarSesionSuperadmin(user, 'login_or_refresh');
+          startAdminSessionWatcher();
+          await auditarAccesoParametros(user, 'acceso_parametros');
+        }else{
+          stopAdminSessionWatcher();
+        }
         const nombreVisible = (user.displayName && user.displayName.trim()) ? user.displayName : (user.email || '');
         const nameEl = document.getElementById('user-name');
         if (nameEl) nameEl.textContent = nombreVisible;
@@ -658,6 +761,7 @@ async function reautenticarConPopup(){
   }
   await user.reauthenticateWithPopup(providerInstance);
   registrarReautenticacionReciente(user);
+  await registrarSesionSuperadmin(user, 'reauth');
 }
 
 function registrarReautenticacionReciente(user = auth?.currentUser){
