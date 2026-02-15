@@ -4557,6 +4557,7 @@
   let simulacionEnRegistro = false;
   let simulacionModalMostrada = new Set();
   let simulacionCancelada = new Set();
+  let simulacionLocalNoPersistida = false;
   let suscripcionSimulacion = null;
   let modoSimulacionCartones = false;
   let simulacionActivaPrevia = false;
@@ -10091,6 +10092,7 @@
     simulacionSorteoActiva=false;
     simulacionDatosCargados=false;
     simulacionEnRegistro=false;
+    simulacionLocalNoPersistida=false;
     cartonesSimulacionActiva=new Map();
     cartonesGanadoresSimuladosPorForma=new Map();
     formasPorCartonSimulados=new Map();
@@ -10105,9 +10107,12 @@
   function actualizarModalSimulacionEstado(){
     const tieneGuardados=cartonesGuardadosJugador.size>0;
     if(modalSimulacionAvisoEl){
-      modalSimulacionAvisoEl.textContent=tieneGuardados
+      const avisoBase=tieneGuardados
         ? 'Usaremos tus cartones GUARDADOS para simular que juegas en el sorteo real, sin embargo no ganarás ningún premio.'
         : 'Necesitas tener cartones guardados para poder simular tu participación.';
+      modalSimulacionAvisoEl.textContent=simulacionLocalNoPersistida
+        ? `${avisoBase} (SIMULACIÓN LOCAL, NO PERSISTIDA: no pudimos guardarla por permisos.)`
+        : avisoBase;
     }
     if(modalSimulacionJugarBtn){
       modalSimulacionJugarBtn.disabled=!tieneGuardados || simulacionEnRegistro;
@@ -10155,6 +10160,7 @@
   }
 
   function procesarSimulacionSnapshot(doc){
+    simulacionLocalNoPersistida=false;
     if(!doc || !doc.exists){
       limpiarDatosSimulacion();
       calcularGanadores();
@@ -10201,27 +10207,28 @@
       return;
     }
     simulacionEnRegistro=true;
+    simulacionLocalNoPersistida=false;
     actualizarModalSimulacionEstado();
+    const cartonesPayload=guardados.map(carton=>{
+      const posiciones=Array.isArray(carton.posiciones)?carton.posiciones.map(p=>({
+        r:Number(p.r),
+        c:Number(p.c),
+        valor:normalizarNumero(p.valor ?? p.numero ?? p.value)
+      })).filter(p=>Number.isInteger(p.r)&&Number.isInteger(p.c)&&p.valor!==null):[];
+
+      const numeroCarton=normalizarNumero(
+        carton.cartonNum ?? carton.Ncarton ?? carton.numero ?? carton.numeroCarton
+      );
+
+      return {
+        id:carton.id||'',
+        userId:usuarioActual.uid,
+        alias:(carton.alias||carton.nombre||'').toString(),
+        cartonNum:Number.isFinite(numeroCarton)?numeroCarton:null,
+        posiciones
+      };
+    });
     try{
-      const cartonesPayload=guardados.map(carton=>{
-        const posiciones=Array.isArray(carton.posiciones)?carton.posiciones.map(p=>({
-          r:Number(p.r),
-          c:Number(p.c),
-          valor:normalizarNumero(p.valor ?? p.numero ?? p.value)
-        })).filter(p=>Number.isInteger(p.r)&&Number.isInteger(p.c)&&p.valor!==null):[];
-
-        const numeroCarton=normalizarNumero(
-          carton.cartonNum ?? carton.Ncarton ?? carton.numero ?? carton.numeroCarton
-        );
-
-        return {
-          id:carton.id||'',
-          userId:usuarioActual.uid,
-          alias:(carton.alias||carton.nombre||'').toString(),
-          cartonNum:Number.isFinite(numeroCarton)?numeroCarton:null,
-          posiciones
-        };
-      });
       const payload={
         userId:usuarioActual.uid,
         sorteoId:activeSorteoId,
@@ -10239,7 +10246,16 @@
       cerrarModalSimulacion();
     }catch(err){
       console.error('No se pudo registrar la simulación',err);
-      alert('No pudimos registrar tu simulación. Intenta nuevamente.');
+      if(err?.code==='permission-denied'){
+        simulacionLocalNoPersistida=true;
+        cargarCartonesSimulacionDesdeLista(cartonesPayload);
+        calcularGanadores();
+        actualizarModalSimulacionEstado();
+        alert('Se activó una simulación local (no persistida) porque no tienes permisos para guardarla.');
+        cerrarModalSimulacion();
+      }else{
+        alert('No pudimos registrar tu simulación. Intenta nuevamente.');
+      }
     }finally{
       simulacionEnRegistro=false;
       actualizarModalSimulacionEstado();
