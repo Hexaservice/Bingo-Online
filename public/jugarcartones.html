@@ -2439,145 +2439,28 @@
   }
 
   function extraerAliasCarton(data){
-    const candidatos=[
-      data?.alias,
-      data?.aliascarton,
-      data?.aliasCarton,
-      data?.aliasJugador,
-      data?.aliasjugador,
-      data?.nombre,
-      data?.nombreJugador,
-      data?.usuarioAlias,
-      data?.userAlias,
-      data?.perfil?.alias,
-      data?.jugador?.alias
-    ];
-    for(const candidato of candidatos){
-      const normalizado=normalizarAliasPerfil(candidato);
-      if(normalizado){
-        return normalizado;
-      }
-    }
-    return 'Sin alias';
+    const alias=normalizarAliasPerfil(data?.alias);
+    return alias||'Sin alias';
   }
 
   function extraerNumeroCartonDatos(data){
-    const candidatos=[
-      data?.cartonNum,
-      data?.Ncarton,
-      data?.carton,
-      data?.numero,
-      data?.numeroCarton,
-      data?.cartonNumero,
-      data?.jugada?.cartonNum,
-      data?.jugador?.cartonNum
-    ];
-    for(const candidato of candidatos){
-      const numero=Number.parseInt(candidato,10);
-      if(Number.isFinite(numero)){
-        return {orden:numero,texto:String(numero).padStart(4,'0')};
-      }
+    const numero=Number.parseInt(data?.cartonNum??data?.Ncarton,10);
+    if(Number.isFinite(numero)){
+      return {orden:numero,texto:String(numero).padStart(4,'0')};
     }
-    const texto=candidatos.find(valor=>valor!==undefined&&valor!==null&&valor!=='');
-    return {orden:-Infinity,texto:texto?String(texto):'----'};
+    return {orden:-Infinity,texto:'----'};
   }
-
-  function extraerTipoCartonDato(data){
-    const candidatos=[
-      data?.tipocarton,
-      data?.tipoCarton,
-      data?.tipo,
-      data?.categoria,
-      data?.cartonTipo,
-      data?.jugada?.tipocarton
-    ];
-    for(const candidato of candidatos){
-      const texto=(candidato??'').toString().trim().toLowerCase();
-      if(texto){
-        if(['gratis','free','bono'].includes(texto)){
-          return 'GRATIS';
-        }
-        return 'PAGADO';
-      }
-    }
-    return 'PAGADO';
-  }
-
-  function normalizarTextoComparacion(valor){
-    return (valor??'')
-      .toString()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g,'')
-      .trim()
-      .toLowerCase();
-  }
-
-  function extraerPosiblesValoresIdSorteo(data){
-    const candidatos=[
-      data?.sorteoId,
-      data?.sorteoid,
-      data?.idSorteo,
-      data?.idsorteo,
-      data?.sorteoID,
-      data?.IDSorteo,
-      data?.id_sorteo,
-      data?.sorteo,
-      data?.sorteo?.id,
-      data?.sorteo?.sorteoId,
-      data?.sorteo?.docId,
-      data?.juego?.sorteoId
-    ];
-    const valores=[];
-    candidatos.forEach(valor=>{
-      if(valor===undefined || valor===null) return;
-      if(typeof valor==='string' || typeof valor==='number'){
-        const texto=String(valor).trim();
-        if(texto){
-          valores.push(texto);
-          if(texto.includes('/')){
-            const segmentos=texto.split('/').filter(Boolean);
-            if(segmentos.length){
-              valores.push(segmentos[segmentos.length-1]);
-            }
-          }
-        }
-        return;
-      }
-      if(typeof valor==='object'){
-        const idRef=(valor?.id??'').toString().trim();
-        if(idRef) valores.push(idRef);
-        const pathRef=(valor?.path??'').toString().trim();
-        if(pathRef){
-          valores.push(pathRef);
-          const segmentos=pathRef.split('/').filter(Boolean);
-          if(segmentos.length) valores.push(segmentos[segmentos.length-1]);
-        }
-      }
-    });
-    return [...new Set(valores)];
-  }
-
-  function cartonCoincideSorteo(data, opciones={}){
-    const idsObjetivo=[...new Set((Array.isArray(opciones.ids)?opciones.ids:[])
-      .map(valor=>(valor??'').toString().trim())
-      .filter(Boolean))];
-    const nombreObjetivo=(opciones.nombre??'').toString();
-    const nombreObjetivoNormalizado=normalizarTextoComparacion(nombreObjetivo);
-    const idsData=extraerPosiblesValoresIdSorteo(data);
-    const nombresData=[
-      data?.sorteoNombre,
-      data?.nombreSorteo,
-      data?.nombresorteo,
-      data?.sorteo_name,
-      data?.sorteo?.nombre,
-      data?.juego?.sorteoNombre
-    ]
-      .map(valor=>(valor??'').toString().trim())
-      .filter(Boolean);
-
-    const coincideId=idsData.some(id=>idsObjetivo.includes(id));
-    const coincideNombre=!!nombreObjetivoNormalizado && nombresData.some(nombre=>normalizarTextoComparacion(nombre)===nombreObjetivoNormalizado);
-    return coincideId || coincideNombre;
+  function normalizarCartonJugado(data){
+    const numero=extraerNumeroCartonDatos(data);
+    const tipo=(data?.tipocarton||'').toString().trim().toLowerCase()==='gratis'?'gratis':'pagado';
+    return {
+      alias:extraerAliasCarton(data),
+      cartonNum:numero.orden,
+      cartonTexto:numero.texto,
+      tipocarton:tipo,
+      tipoEtiqueta:tipo==='gratis'?'GRATIS':'PAGADO',
+      posiciones:Array.isArray(data?.posiciones)?data.posiciones:[]
+    };
   }
 
   function normalizarCelularPerfil(valor){
@@ -3911,9 +3794,6 @@ function toggleForma(idx){
       throw new Error('No tienes créditos ni cartones gratis disponibles.');
     }
 
-    await initServerTime();
-    const fechaActual=fechaServidor();
-    const horaActual=horaServidor();
     const consecutivoRef=db.collection(CONSECUTIVOS_COLLECTION).doc(currentSorteo);
     const cartonRef=db.collection('CartonJugado').doc();
 
@@ -4001,16 +3881,18 @@ function toggleForma(idx){
           ultimoNumero:siguienteNumero,
           actualizado:firebase.firestore.FieldValue.serverTimestamp()
         },{merge:true});
+        // Esquema oficial mínimo de CartonJugado:
+        // { userId, sorteoId, sorteoNombre, cartonNum, Ncarton, tipocarton, alias, posiciones, createdAt }
         tx.set(cartonRef,{
           userId:user.uid,
-          alias,
           sorteoId:currentSorteo,
+          sorteoNombre:currentSorteoNombre,
           cartonNum:siguienteNumero,
           Ncarton:String(siguienteNumero).padStart(4,'0'),
           tipocarton:tipoCarton,
+          alias,
           posiciones,
-          fecha:fechaActual,
-          hora:horaActual
+          createdAt:firebase.firestore.FieldValue.serverTimestamp()
         });
         return {
           numero:siguienteNumero,
@@ -4444,12 +4326,14 @@ function toggleForma(idx){
       const idsVistos=new Set();
       const agregarCarton=(doc)=>{
           if(idsVistos.has(doc.id)) return;
-          const data=doc.data()||{};
           idsVistos.add(doc.id);
-          const alias=extraerAliasCarton(data);
-          const numero=extraerNumeroCartonDatos(data);
-          const tipo=extraerTipoCartonDato(data);
-          registros.push({alias,numeroOrden:numero.orden,numeroTexto:numero.texto,tipo});
+          const carton=normalizarCartonJugado(doc.data()||{});
+          registros.push({
+            alias:carton.alias,
+            numeroOrden:carton.cartonNum,
+            numeroTexto:carton.cartonTexto,
+            tipo:carton.tipoEtiqueta
+          });
       };
       snap.forEach(agregarCarton);
 
@@ -4541,22 +4425,16 @@ function toggleForma(idx){
     const btnEditar=document.getElementById('editar-jugado-btn');
     const botones=document.getElementById('jugados-buttons');
     const snap=await db.collection('CartonJugado').where('userId','==',user.uid).where('sorteoId','==',currentSorteo).get();
-    const docs=[];
-    snap.forEach(d=>docs.push({id:d.id,...d.data()}));
-    const parseNumero=valor=>{
-      if(valor===undefined||valor===null) return Number.MAX_SAFE_INTEGER;
-      const num=parseInt(valor,10);
-      return Number.isNaN(num)?Number.MAX_SAFE_INTEGER:num;
-    };
-    const ordenados=docs
-      .slice()
-      .sort((a,b)=>{
-        const na=parseNumero(a.cartonNum??a.Ncarton);
-        const nb=parseNumero(b.cartonNum??b.Ncarton);
-        if(na!==nb) return na-nb;
-        if(a.tipocarton===b.tipocarton) return 0;
-        return a.tipocarton==='gratis'?-1:1;
-      });
+    const ordenados=[];
+    snap.forEach(d=>{
+      const carton=normalizarCartonJugado(d.data()||{});
+      ordenados.push({id:d.id,...carton});
+    });
+    ordenados.sort((a,b)=>{
+      if(a.cartonNum!==b.cartonNum) return a.cartonNum-b.cartonNum;
+      if(a.tipocarton===b.tipocarton) return 0;
+      return a.tipocarton==='gratis'?-1:1;
+    });
     if(ordenados.length===0){
       grid.innerHTML='<div class="no-cartones">No has jugado ningún cartón en este sorteo</div>';
       botones.style.display='none';
@@ -4589,7 +4467,7 @@ function toggleForma(idx){
       wrap.appendChild(crearMiniCarton(data.posiciones));
       box.appendChild(wrap);
       const bnum=document.createElement('div');
-      const cn=data.cartonNum!==undefined?data.cartonNum.toString().padStart(4,'0'):'----';
+      const cn=data.cartonTexto||'----';
       bnum.className='mini-num';
       bnum.textContent=`Cartón: ${cn}`;
       box.appendChild(bnum);
