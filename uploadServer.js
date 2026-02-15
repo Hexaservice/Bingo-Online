@@ -155,6 +155,39 @@ app.post('/toggleUser', verificarToken, async (req, res) => {
   }
 });
 
+app.post('/syncClaims', verificarToken, async (req, res) => {
+  const email = req.user?.email;
+  if (!email) {
+    return res.status(401).json({ error: 'No autorizado' });
+  }
+
+  try {
+    const [profileDoc, userRecord] = await Promise.all([
+      admin.firestore().collection('users').doc(email).get(),
+      admin.auth().getUserByEmail(email)
+    ]);
+
+    const role = profileDoc.exists ? profileDoc.data()?.role : undefined;
+    if (!role) {
+      return res.status(400).json({ error: 'Rol no encontrado en el perfil del usuario' });
+    }
+
+    const nextClaims = {
+      ...(userRecord.customClaims || {}),
+      role,
+      roles: [role],
+      admin: role === 'Superadmin' || role === 'Administrador'
+    };
+
+    await admin.auth().setCustomUserClaims(userRecord.uid, nextClaims);
+
+    return res.json({ status: 'ok', role });
+  } catch (e) {
+    console.error('Error sincronizando custom claims', e);
+    return res.status(500).json({ error: 'Error sincronizando custom claims', message: e.message });
+  }
+});
+
 app.post('/upload', verificarToken, upload.single('file'), async (req, res) => {
   if (!req.file) {
     registrarAuditoria({ email: req.user?.email, result: 'rechazado', reason: 'Archivo requerido' });
