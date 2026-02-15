@@ -616,7 +616,7 @@ async function verificarRolFuerte(roleExpected = 'Superadmin', options = {}){
     const tokenResult = await user.getIdTokenResult(forceRefresh);
     claims = tokenResult?.claims || {};
   }catch(error){
-    console.warn('No se pudo leer el ID token para validar rol fuerte, se intentará con resincronización y rol persistente.', error);
+    console.warn('No se pudo leer el ID token para validar rol fuerte, se intentará con resincronización de claims.', error);
   }
   if(claimIncluyeRol(claims, roleExpected)){
     return { ok: true, reason: null, claims, user };
@@ -631,12 +631,6 @@ async function verificarRolFuerte(roleExpected = 'Superadmin', options = {}){
     }
   }catch(error){
     console.warn('No fue posible resincronizar custom claims para validación fuerte.', error);
-  }
-
-  const { role } = await getUserRole(user);
-  if(roleEquals(role, roleExpected)){
-    console.warn(`Autorización fuerte: se permitió acceso por rol persistente (${roleExpected}) aunque faltan custom claims vigentes.`);
-    return { ok: true, reason: 'DOC_ROLE_FALLBACK', claims, user };
   }
 
   return { ok: false, reason: 'MISSING_CLAIM', claims, user };

@@ -218,7 +218,7 @@
     async function validarAutorizacionFuerteSuperadmin(){
       const verificacion = await verificarRolFuerte('Superadmin', { forceRefresh: true });
       if(!verificacion.ok){
-        throw new Error('Sin claims de Superadmin vigentes');
+        throw new Error('CLAIMS_SUPERADMIN_NO_VIGENTES');
       }
       if(!tieneReautenticacionReciente({ maxAgeMs: 10 * 60 * 1000 })){
         throw new Error('REAUTENTICACION_REQUERIDA_DESDE_MENU_SUPERADMIN');
@@ -364,6 +364,8 @@
               console.error('Fallo al cargar parámetros tras autenticar',err);
               if(err && err.message === 'REAUTENTICACION_REQUERIDA_DESDE_MENU_SUPERADMIN'){
                 alert('Para abrir Parámetros Globales, vuelve al menú Superadmin y toca tu nombre para validar el acceso una sola vez.');
+              }else if(err && err.message === 'CLAIMS_SUPERADMIN_NO_VIGENTES'){
+                alert('Tus claims de Superadmin no están vigentes, cierre y abra sesión.');
               }else{
                 alert('Tu sesión no cumple la autorización fuerte de Superadmin para acceder a Parámetros.');
               }
