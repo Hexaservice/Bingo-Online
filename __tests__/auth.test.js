@@ -1,6 +1,6 @@
 function setupWindow(){
   global.window = {
-    location: { href: 'index.html' },
+    location: { href: 'index.html', origin: 'https://app.test' },
     firebaseConfig: { projectId: 'demo-test' },
     alert: () => {},
     confirm: () => true,
@@ -108,5 +108,32 @@ describe('auth.js', () => {
 
     redirectByRole('RolX');
     expect(window.location.href).toBe('player.html');
+  });
+
+  test('getUserRole intenta resincronizar claims cuando el rol persistente es administrativo', async () => {
+    setupWindow();
+    window.fetch = jest.fn(async () => ({ ok: true, status: 200 }));
+    global.fetch = window.fetch;
+    global.firebase = buildFirebaseMock({ userExists: true, role: 'Superadmin' });
+
+    let getUserRole;
+    jest.isolateModules(() => {
+      ({ getUserRole } = require('../public/js/auth.js'));
+    });
+
+    const fakeUser = {
+      email: 'superadmin@correo.com',
+      getIdToken: jest.fn(async () => 'token-demo'),
+      getIdTokenResult: jest
+        .fn()
+        .mockResolvedValueOnce({ claims: {} })
+        .mockResolvedValueOnce({ claims: { role: 'Superadmin', roles: ['Superadmin'] } })
+    };
+
+    await expect(getUserRole(fakeUser)).resolves.toEqual({ role: 'Superadmin', exists: true });
+    expect(window.fetch).toHaveBeenCalledWith(
+      'https://app.test/syncClaims',
+      expect.objectContaining({ method: 'POST' })
+    );
   });
 });

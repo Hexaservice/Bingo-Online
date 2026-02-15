@@ -389,10 +389,66 @@ async function getUserRole(user){
       return { role: 'Jugador', exists: false };
     }
     const data = doc.data() || {};
-    return { role: data.role || 'Jugador', exists: true };
+    const rolPersistente = data.role || 'Jugador';
+
+    if(rolPersistente && user && (rolPersistente === 'Superadmin' || rolPersistente === 'Administrador' || rolPersistente === 'Colaborador')){
+      const resincronizado = await intentarResincronizarClaims(user, rolPersistente);
+      if(resincronizado){
+        try{
+          const tokenActualizado = await user.getIdTokenResult(true);
+          const claimsActualizados = tokenActualizado?.claims || {};
+          if(claimIncluyeRol(claimsActualizados, rolPersistente)){
+            return { role: rolPersistente, exists: true };
+          }
+        }catch(syncErr){
+          console.warn('Se intentó revalidar claims luego de resincronizar, pero falló la lectura del token', syncErr);
+        }
+      }
+    }
+
+    return { role: rolPersistente, exists: true };
   }catch(e){
     console.error('No se pudo leer el perfil de usuario para determinar su rol', e);
     return { role: 'Jugador', exists: false };
+  }
+}
+
+function resolverApiBaseParaClaims(){
+  if(!hasWindow()) return '';
+  const endpoint = typeof window.UPLOAD_ENDPOINT === 'string' ? window.UPLOAD_ENDPOINT.trim() : '';
+  if(endpoint){
+    return endpoint.replace(/\/upload\/?$/, '');
+  }
+  const origin = window.location?.origin;
+  if(origin){
+    return origin;
+  }
+  return '';
+}
+
+async function intentarResincronizarClaims(user, roleExpected){
+  if(!user || !roleExpected || !hasWindow() || typeof fetch !== 'function') return false;
+  const apiBase = resolverApiBaseParaClaims();
+  if(!apiBase) return false;
+
+  try{
+    const token = await user.getIdToken(true);
+    const response = await fetch(`${apiBase}/syncClaims`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ roleExpected })
+    });
+    if(!response.ok){
+      console.warn('No se pudo resincronizar custom claims automáticamente', response.status);
+      return false;
+    }
+    return true;
+  }catch(error){
+    console.warn('Falló la resincronización automática de custom claims', error);
+    return false;
   }
 }
 
@@ -530,6 +586,13 @@ async function verificarRolFuerte(roleExpected = 'Superadmin', options = {}){
   const claims = tokenResult?.claims || {};
   if(claimIncluyeRol(claims, roleExpected)){
     return { ok: true, reason: null, claims, user };
+  }
+
+  await intentarResincronizarClaims(user, roleExpected);
+  const tokenPostSync = await user.getIdTokenResult(true);
+  const claimsPostSync = tokenPostSync?.claims || {};
+  if(claimIncluyeRol(claimsPostSync, roleExpected)){
+    return { ok: true, reason: 'CLAIMS_RESYNC', claims: claimsPostSync, user };
   }
 
   const { role } = await getUserRole(user);
