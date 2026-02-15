@@ -4427,6 +4427,11 @@ function toggleForma(idx){
     if(!infoCartonesTablaBody||!currentSorteo){
       return;
     }
+    const user=auth.currentUser;
+    if(!user){
+      mostrarMensajeTablaCartones('Inicia sesión para ver tus cartones.');
+      return;
+    }
     mostrarMensajeTablaCartones('Cargando cartones...');
     try{
       const consultas=[];
@@ -4435,18 +4440,23 @@ function toggleForma(idx){
         .filter(Boolean);
       const idsObjetivo=[...new Set(posiblesIds)];
       const nombreSorteo=(currentSorteoNombre??'').toString().trim();
+      const camposUsuario=['userId','userid','uid','userUID','userUid'];
       const camposId=['sorteoId','sorteoid','idSorteo','idsorteo','sorteoID','IDSorteo','id_sorteo','sorteo'];
       const camposNombre=['sorteoNombre','nombreSorteo','nombresorteo','sorteo_name'];
 
+      camposUsuario.forEach(campo=>{
+        consultas.push({campo,valor:user.uid});
+      });
+
       camposId.forEach(campo=>{
         posiblesIds.forEach(valor=>{
-          consultas.push({campo,valor});
+          consultas.push({campo,valor,usuario:user.uid});
         });
       });
 
       if(nombreSorteo){
         camposNombre.forEach(campo=>{
-          consultas.push({campo,valor:nombreSorteo});
+          consultas.push({campo,valor:nombreSorteo,usuario:user.uid});
         });
       }
 
@@ -4457,7 +4467,11 @@ function toggleForma(idx){
         if(consultasVistas.has(llave)) continue;
         consultasVistas.add(llave);
         try{
-          const snap=await db.collection('CartonJugado').where(consulta.campo,'==',consulta.valor).get();
+          let ref=db.collection('CartonJugado').where(consulta.campo,'==',consulta.valor);
+          if(consulta.usuario){
+            ref=ref.where('userId','==',consulta.usuario);
+          }
+          const snap=await ref.get();
           if(!snap.empty){
             snaps.push(snap);
           }
@@ -4479,15 +4493,6 @@ function toggleForma(idx){
           registros.push({alias,numeroOrden:numero.orden,numeroTexto:numero.texto,tipo});
       };
       snaps.forEach(snap=>snap.forEach(agregarCarton));
-
-      if(registros.length===0){
-        try{
-          const snapGeneral=await db.collection('CartonJugado').get();
-          snapGeneral.forEach(agregarCarton);
-        }catch(errorGeneral){
-          console.warn('No se pudo ejecutar la consulta de respaldo para CartonJugado',errorGeneral);
-        }
-      }
 
       if(registros.length===0){
         mostrarMensajeTablaCartones('Sin cartones registrados');
