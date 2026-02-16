@@ -149,6 +149,37 @@ async function deleteCollectionBySorteoId({ db, collectionName, sorteoId, pageSi
   return deleted;
 }
 
+async function countCollectionBySorteoId({ db, collectionName, sorteoId, pageSize = 400 }) {
+  let count = 0;
+  let lastDoc = null;
+
+  while (true) {
+    let query = db
+      .collection(collectionName)
+      .where('sorteoId', '==', sorteoId)
+      .orderBy('__name__')
+      .limit(pageSize);
+
+    if (lastDoc) {
+      query = query.startAfter(lastDoc);
+    }
+
+    const snapshot = await query.get();
+    if (snapshot.empty) {
+      break;
+    }
+
+    count += snapshot.size;
+    lastDoc = snapshot.docs[snapshot.docs.length - 1];
+
+    if (snapshot.size < pageSize) {
+      break;
+    }
+  }
+
+  return count;
+}
+
 async function deleteDocumentById({ db, collectionName, docId }) {
   const ref = db.collection(collectionName).doc(docId);
   const snapshot = await ref.get();
@@ -159,6 +190,38 @@ async function deleteDocumentById({ db, collectionName, docId }) {
 
   await ref.delete();
   return 1;
+}
+
+async function countDocumentById({ db, collectionName, docId }) {
+  const ref = db.collection(collectionName).doc(docId);
+  const snapshot = await ref.get();
+  return snapshot.exists ? 1 : 0;
+}
+
+async function getPurgeCounts({ db, sorteoId, dryRun }) {
+  return {
+    CartonJugado: dryRun
+      ? await countCollectionBySorteoId({ db, collectionName: 'CartonJugado', sorteoId })
+      : await deleteCollectionBySorteoId({ db, collectionName: 'CartonJugado', sorteoId }),
+    ConsecutivosCarton: dryRun
+      ? await countDocumentById({ db, collectionName: 'ConsecutivosCarton', docId: sorteoId })
+      : await deleteDocumentById({ db, collectionName: 'ConsecutivosCarton', docId: sorteoId }),
+    SorteosCentroPagos: dryRun
+      ? await countDocumentById({ db, collectionName: 'SorteosCentroPagos', docId: sorteoId })
+      : await deleteDocumentById({ db, collectionName: 'SorteosCentroPagos', docId: sorteoId }),
+    cantos: dryRun
+      ? await countDocumentById({ db, collectionName: 'cantos', docId: sorteoId })
+      : await deleteDocumentById({ db, collectionName: 'cantos', docId: sorteoId }),
+    cantarsorteos: dryRun
+      ? await countDocumentById({ db, collectionName: 'cantarsorteos', docId: sorteoId })
+      : await deleteDocumentById({ db, collectionName: 'cantarsorteos', docId: sorteoId }),
+    formas: dryRun
+      ? await countCollectionBySorteoId({ db, collectionName: 'formas', sorteoId })
+      : await deleteCollectionBySorteoId({ db, collectionName: 'formas', sorteoId }),
+    sorteos: dryRun
+      ? await countDocumentById({ db, collectionName: 'sorteos', docId: sorteoId })
+      : await deleteDocumentById({ db, collectionName: 'sorteos', docId: sorteoId })
+  };
 }
 
 async function validarUsuarioSuperadmin(decodedToken) {
@@ -416,7 +479,9 @@ app.post('/admin/audit/parametros', async (req, res) => {
 });
 
 app.post('/admin/purge-sorteo', verificarToken, async (req, res) => {
-  const { sorteoId, sorteoNombre } = req.body || {};
+  const { sorteoId, sorteoNombre, dryRun } = req.body || {};
+  const normalizedDryRun = dryRun === true;
+  const PREVIEW_VALID_WINDOW_MS = 10 * 60 * 1000;
 
   if (!['Superadmin', 'Administrador'].includes(req.user?.role)) {
     return res.status(403).json({ error: 'Acceso restringido a roles administrativos' });
@@ -434,58 +499,58 @@ app.post('/admin/purge-sorteo', verificarToken, async (req, res) => {
   const db = admin.firestore();
 
   try {
-    const deletedCounts = {
-      CartonJugado: await deleteCollectionBySorteoId({
-        db,
-        collectionName: 'CartonJugado',
-        sorteoId: normalizedSorteoId
-      }),
-      ConsecutivosCarton: await deleteDocumentById({
-        db,
-        collectionName: 'ConsecutivosCarton',
-        docId: normalizedSorteoId
-      }),
-      SorteosCentroPagos: await deleteDocumentById({
-        db,
-        collectionName: 'SorteosCentroPagos',
-        docId: normalizedSorteoId
-      }),
-      cantos: await deleteDocumentById({
-        db,
-        collectionName: 'cantos',
-        docId: normalizedSorteoId
-      }),
-      cantarsorteos: await deleteDocumentById({
-        db,
-        collectionName: 'cantarsorteos',
-        docId: normalizedSorteoId
-      }),
-      formas: await deleteCollectionBySorteoId({
-        db,
-        collectionName: 'formas',
-        sorteoId: normalizedSorteoId
-      }),
-      sorteos: await deleteDocumentById({
-        db,
-        collectionName: 'sorteos',
-        docId: normalizedSorteoId
-      })
-    };
+    if (!normalizedDryRun) {
+      const recentPreviewSnapshot = await db
+        .collection('adminAccessAudit')
+        .where('uid', '==', req.user?.uid || null)
+        .orderBy('timestamp', 'desc')
+        .limit(20)
+        .get();
+
+      const recentPreview = recentPreviewSnapshot.docs.find((doc) => {
+        const data = doc.data() || {};
+        return data.motivo === 'purge_sorteo_preview' && data.sorteoId === normalizedSorteoId;
+      });
+
+      if (!recentPreview) {
+        return res.status(409).json({
+          error: 'Debes hacer una previsualización antes de depurar este sorteo.'
+        });
+      }
+
+      const previewData = recentPreview.data() || {};
+      const previewAtMs = previewData.timestamp?.toMillis ? previewData.timestamp.toMillis() : 0;
+      if (!previewAtMs || Date.now() - previewAtMs > PREVIEW_VALID_WINDOW_MS) {
+        return res.status(409).json({
+          error: 'La previsualización expiró. Genera una nueva antes de depurar.',
+          previewValidWindowMs: PREVIEW_VALID_WINDOW_MS
+        });
+      }
+    }
+
+    const deletedCounts = await getPurgeCounts({
+      db,
+      sorteoId: normalizedSorteoId,
+      dryRun: normalizedDryRun
+    });
 
     await db.collection('adminAccessAudit').add({
       uid: req.user?.uid || null,
       email: req.user?.email || 'desconocido',
       role: req.user?.role || 'desconocido',
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      motivo: 'purge_sorteo',
+      motivo: normalizedDryRun ? 'purge_sorteo_preview' : 'purge_sorteo',
       sorteoId: normalizedSorteoId,
       sorteoNombre: normalizedSorteoNombre,
+      dryRun: normalizedDryRun,
       deletedCounts
     });
 
     return res.json({
       status: 'ok',
       sorteoId: normalizedSorteoId,
+      dryRun: normalizedDryRun,
+      previewValidWindowMs: PREVIEW_VALID_WINDOW_MS,
       deletedCounts
     });
   } catch (error) {
@@ -576,5 +641,8 @@ module.exports = {
   getClientIp,
   getAuthTimeFromToken,
   deleteCollectionBySorteoId,
-  deleteDocumentById
+  deleteDocumentById,
+  countCollectionBySorteoId,
+  countDocumentById,
+  getPurgeCounts
 };
