@@ -145,6 +145,14 @@
       background: linear-gradient(135deg, #ef4444, #b91c1c);
     }
 
+    .accion-previsualizar {
+      width: 100%;
+      height: 56px;
+      margin: 0 0 6px;
+      font-size: 1.2rem;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    }
+
     .accion-depurar:disabled {
       cursor: not-allowed;
       opacity: 0.55;
@@ -178,6 +186,7 @@
       <div id="sorteos-lista" class="sorteos-lista" aria-live="polite">
         Cargando sorteos...
       </div>
+      <button id="previsualizar-btn" class="menu-btn accion-previsualizar" disabled>Previsualizar</button>
       <button id="depurar-btn" class="menu-btn accion-depurar" disabled>Depurar</button>
       <div id="estado" class="estado" aria-live="polite"></div>
     </div>
@@ -193,11 +202,15 @@
     ensureAuth('Administrador');
 
     const listaSorteosEl = document.getElementById('sorteos-lista');
+    const previsualizarBtn = document.getElementById('previsualizar-btn');
     const depurarBtn = document.getElementById('depurar-btn');
     const estadoEl = document.getElementById('estado');
+    const PREVIEW_VALID_WINDOW_MS = 10 * 60 * 1000;
 
     let sorteos = [];
     let sorteoSeleccionado = null;
+    let previsualizacionReciente = null;
+    let previewEnCurso = false;
     let depuracionEnCurso = false;
 
     function setEstado(mensaje, tipo = '') {
@@ -206,7 +219,18 @@
     }
 
     function actualizarBotonDepurar() {
-      depurarBtn.disabled = !sorteoSeleccionado || depuracionEnCurso;
+      const hayPreviewValida = !!(
+        sorteoSeleccionado
+        && previsualizacionReciente
+        && previsualizacionReciente.sorteoId === sorteoSeleccionado.id
+        && (Date.now() - previsualizacionReciente.timestampMs) <= PREVIEW_VALID_WINDOW_MS
+      );
+      const operacionEnCurso = depuracionEnCurso || previewEnCurso;
+
+      previsualizarBtn.disabled = !sorteoSeleccionado || operacionEnCurso;
+      previsualizarBtn.textContent = previewEnCurso ? 'Previsualizando...' : 'Previsualizar';
+
+      depurarBtn.disabled = !sorteoSeleccionado || operacionEnCurso || !hayPreviewValida;
       depurarBtn.textContent = depuracionEnCurso ? 'Depurando...' : 'Depurar';
     }
 
@@ -230,6 +254,9 @@
         radio.id = `sorteo-${index}`;
         radio.addEventListener('change', () => {
           sorteoSeleccionado = sorteo;
+          if (previsualizacionReciente?.sorteoId !== sorteo.id) {
+            previsualizacionReciente = null;
+          }
           setEstado(`Sorteo seleccionado: ${sorteo.nombre} (${sorteo.id}).`);
           actualizarBotonDepurar();
         });
@@ -274,6 +301,18 @@
     async function depurarSorteo() {
       if (depuracionEnCurso || !sorteoSeleccionado) return;
 
+      const hayPreviewValida = !!(
+        previsualizacionReciente
+        && previsualizacionReciente.sorteoId === sorteoSeleccionado.id
+        && (Date.now() - previsualizacionReciente.timestampMs) <= PREVIEW_VALID_WINDOW_MS
+      );
+
+      if (!hayPreviewValida) {
+        setEstado('Debes generar una previsualización reciente del mismo sorteo antes de depurar.', 'error');
+        actualizarBotonDepurar();
+        return;
+      }
+
       const mensajeConfirmacion =
         `¿Segura que deseas borrar en cascada todos los datos del sorteo ${sorteoSeleccionado.nombre}?\n\n` +
         'Esta acción eliminará registros relacionados en múltiples colecciones y no se puede deshacer.';
@@ -305,7 +344,8 @@
           },
           body: JSON.stringify({
             sorteoId: sorteoSeleccionado.id,
-            sorteoNombre: sorteoSeleccionado.nombre
+            sorteoNombre: sorteoSeleccionado.nombre,
+            dryRun: false
           })
         });
 
@@ -324,6 +364,7 @@
           'ok'
         );
 
+        previsualizacionReciente = null;
         await cargarSorteos();
       } catch (error) {
         console.error('Error depurando sorteo', error);
@@ -334,6 +375,65 @@
       }
     }
 
+    async function previsualizarSorteo() {
+      if (previewEnCurso || !sorteoSeleccionado) return;
+
+      previewEnCurso = true;
+      actualizarBotonDepurar();
+      setEstado(`Generando previsualización para ${sorteoSeleccionado.nombre} (${sorteoSeleccionado.id})...`);
+
+      try {
+        await initFirebase();
+        const user = auth.currentUser;
+        if (!user) {
+          throw new Error('No hay sesión activa para autorizar la previsualización.');
+        }
+
+        const idToken = await user.getIdToken(true);
+        const apiBase = typeof getAdminApiBase === 'function' ? getAdminApiBase() : '';
+        const response = await fetch(`${apiBase}/admin/purge-sorteo`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${idToken}`
+          },
+          body: JSON.stringify({
+            sorteoId: sorteoSeleccionado.id,
+            sorteoNombre: sorteoSeleccionado.nombre,
+            dryRun: true
+          })
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(payload.error || payload.message || `Error HTTP ${response.status}`);
+        }
+
+        const conteos = payload.deletedCounts || {};
+        const resumen = Object.keys(conteos)
+          .map((key) => `• ${key}: ${conteos[key]}`)
+          .join('\n');
+
+        previsualizacionReciente = {
+          sorteoId: sorteoSeleccionado.id,
+          timestampMs: Date.now()
+        };
+
+        setEstado(
+          `Previsualización completada para ${sorteoSeleccionado.nombre} (${sorteoSeleccionado.id}).\n\nDocumentos detectados:\n${resumen}`,
+          'ok'
+        );
+      } catch (error) {
+        console.error('Error previsualizando depuración', error);
+        previsualizacionReciente = null;
+        setEstado(`No se pudo generar la previsualización: ${error.message}`, 'error');
+      } finally {
+        previewEnCurso = false;
+        actualizarBotonDepurar();
+      }
+    }
+
+    previsualizarBtn.addEventListener('click', previsualizarSorteo);
     depurarBtn.addEventListener('click', depurarSorteo);
     cargarSorteos();
   </script>
