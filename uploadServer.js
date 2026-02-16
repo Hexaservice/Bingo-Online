@@ -123,6 +123,44 @@ function getAuthTimeFromToken(decodedToken) {
   return Number.isFinite(iat) && iat > 0 ? iat * 1000 : Date.now();
 }
 
+async function deleteCollectionBySorteoId({ db, collectionName, sorteoId, pageSize = 200 }) {
+  let deleted = 0;
+
+  while (true) {
+    const snapshot = await db
+      .collection(collectionName)
+      .where('sorteoId', '==', sorteoId)
+      .limit(pageSize)
+      .get();
+
+    if (snapshot.empty) {
+      break;
+    }
+
+    const batch = db.batch();
+    snapshot.docs.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+
+    await batch.commit();
+    deleted += snapshot.size;
+  }
+
+  return deleted;
+}
+
+async function deleteDocumentById({ db, collectionName, docId }) {
+  const ref = db.collection(collectionName).doc(docId);
+  const snapshot = await ref.get();
+
+  if (!snapshot.exists) {
+    return 0;
+  }
+
+  await ref.delete();
+  return 1;
+}
+
 async function validarUsuarioSuperadmin(decodedToken) {
   const email = decodedToken?.email;
   if (!email) {
@@ -168,7 +206,7 @@ async function verificarToken(req, res, next) {
     if (!['Superadmin', 'Administrador'].includes(role)) {
       return res.status(403).json({ error: 'Acceso restringido a roles administrativos' });
     }
-    req.user = { email, role };
+    req.user = { uid: decoded.uid, email, role };
     next();
   } catch (e) {
     console.error('Error obteniendo el rol del usuario', e);
@@ -377,6 +415,85 @@ app.post('/admin/audit/parametros', async (req, res) => {
   return res.json({ status: 'ok' });
 });
 
+app.post('/admin/purge-sorteo', verificarToken, async (req, res) => {
+  const { sorteoId, sorteoNombre } = req.body || {};
+
+  if (!['Superadmin', 'Administrador'].includes(req.user?.role)) {
+    return res.status(403).json({ error: 'Acceso restringido a roles administrativos' });
+  }
+
+  if (typeof sorteoId !== 'string' || !sorteoId.trim()) {
+    return res.status(400).json({ error: 'sorteoId es obligatorio' });
+  }
+
+  const normalizedSorteoId = sorteoId.trim();
+  const normalizedSorteoNombre = typeof sorteoNombre === 'string' && sorteoNombre.trim()
+    ? sorteoNombre.trim().slice(0, 200)
+    : null;
+
+  const db = admin.firestore();
+
+  try {
+    const deletedCounts = {
+      CartonJugado: await deleteCollectionBySorteoId({
+        db,
+        collectionName: 'CartonJugado',
+        sorteoId: normalizedSorteoId
+      }),
+      ConsecutivosCarton: await deleteDocumentById({
+        db,
+        collectionName: 'ConsecutivosCarton',
+        docId: normalizedSorteoId
+      }),
+      SorteosCentroPagos: await deleteDocumentById({
+        db,
+        collectionName: 'SorteosCentroPagos',
+        docId: normalizedSorteoId
+      }),
+      cantos: await deleteDocumentById({
+        db,
+        collectionName: 'cantos',
+        docId: normalizedSorteoId
+      }),
+      cantarsorteos: await deleteDocumentById({
+        db,
+        collectionName: 'cantarsorteos',
+        docId: normalizedSorteoId
+      }),
+      formas: await deleteCollectionBySorteoId({
+        db,
+        collectionName: 'formas',
+        sorteoId: normalizedSorteoId
+      }),
+      sorteos: await deleteDocumentById({
+        db,
+        collectionName: 'sorteos',
+        docId: normalizedSorteoId
+      })
+    };
+
+    await db.collection('adminAccessAudit').add({
+      uid: req.user?.uid || null,
+      email: req.user?.email || 'desconocido',
+      role: req.user?.role || 'desconocido',
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      motivo: 'purge_sorteo',
+      sorteoId: normalizedSorteoId,
+      sorteoNombre: normalizedSorteoNombre,
+      deletedCounts
+    });
+
+    return res.json({
+      status: 'ok',
+      sorteoId: normalizedSorteoId,
+      deletedCounts
+    });
+  } catch (error) {
+    console.error('Error purgando sorteo', error);
+    return res.status(500).json({ error: 'Error purgando sorteo', message: error.message });
+  }
+});
+
 app.post('/upload', verificarToken, upload.single('file'), async (req, res) => {
   if (!req.file) {
     registrarAuditoria({ email: req.user?.email, result: 'rechazado', reason: 'Archivo requerido' });
@@ -457,5 +574,7 @@ module.exports = {
   startServer,
   hashValue,
   getClientIp,
-  getAuthTimeFromToken
+  getAuthTimeFromToken,
+  deleteCollectionBySorteoId,
+  deleteDocumentById
 };
