@@ -87,6 +87,82 @@
       font-size: 1rem;
       line-height: 1.45;
     }
+
+    .panel-depuracion {
+      margin-top: 18px;
+      text-align: left;
+      font-family: 'Poppins', Arial, sans-serif;
+    }
+
+    .panel-depuracion h3 {
+      margin: 0 0 10px;
+      color: #111827;
+      font-size: 1.1rem;
+      font-family: 'Poppins', Arial, sans-serif;
+    }
+
+    .sorteos-lista {
+      max-height: 280px;
+      overflow: auto;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      padding: 8px;
+      background: #f8fafc;
+      margin-bottom: 12px;
+    }
+
+    .sorteo-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #fff;
+      padding: 8px;
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+
+    .sorteo-item:last-child { margin-bottom: 0; }
+
+    .sorteo-item strong {
+      display: block;
+      color: #111827;
+      font-size: 0.95rem;
+    }
+
+    .sorteo-item span {
+      display: block;
+      color: #4b5563;
+      font-size: 0.82rem;
+    }
+
+    .accion-depurar {
+      width: 100%;
+      height: 56px;
+      margin: 10px 0;
+      font-size: 1.2rem;
+      background: linear-gradient(135deg, #ef4444, #b91c1c);
+    }
+
+    .accion-depurar:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .estado {
+      min-height: 24px;
+      margin-top: 4px;
+      color: #111827;
+      font-size: 0.95rem;
+      line-height: 1.4;
+      white-space: pre-wrap;
+    }
+
+    .estado.error { color: #b91c1c; }
+    .estado.ok { color: #166534; }
   </style>
   <link rel="stylesheet" href="css/desktopFrame.css">
 </head>
@@ -95,7 +171,16 @@
 
   <h2>Depurar Base de Datos</h2>
   <div class="content-box">
-    <p>Página preparada para herramientas de depuración de base de datos.</p>
+    <p>Selecciona un sorteo para borrar en cascada toda su data relacionada.</p>
+
+    <div class="panel-depuracion">
+      <h3>Sorteos disponibles</h3>
+      <div id="sorteos-lista" class="sorteos-lista" aria-live="polite">
+        Cargando sorteos...
+      </div>
+      <button id="depurar-btn" class="menu-btn accion-depurar" disabled>Depurar</button>
+      <div id="estado" class="estado" aria-live="polite"></div>
+    </div>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
@@ -106,6 +191,151 @@
   <script src="js/notificationCenter.js"></script>
   <script>
     ensureAuth('Administrador');
+
+    const listaSorteosEl = document.getElementById('sorteos-lista');
+    const depurarBtn = document.getElementById('depurar-btn');
+    const estadoEl = document.getElementById('estado');
+
+    let sorteos = [];
+    let sorteoSeleccionado = null;
+    let depuracionEnCurso = false;
+
+    function setEstado(mensaje, tipo = '') {
+      estadoEl.className = `estado ${tipo}`.trim();
+      estadoEl.textContent = mensaje || '';
+    }
+
+    function actualizarBotonDepurar() {
+      depurarBtn.disabled = !sorteoSeleccionado || depuracionEnCurso;
+      depurarBtn.textContent = depuracionEnCurso ? 'Depurando...' : 'Depurar';
+    }
+
+    function renderSorteos() {
+      sorteoSeleccionado = null;
+      if (!Array.isArray(sorteos) || sorteos.length === 0) {
+        listaSorteosEl.textContent = 'No hay sorteos disponibles para depurar.';
+        actualizarBotonDepurar();
+        return;
+      }
+
+      listaSorteosEl.innerHTML = '';
+      sorteos.forEach((sorteo, index) => {
+        const label = document.createElement('label');
+        label.className = 'sorteo-item';
+
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'sorteo-seleccion';
+        radio.value = sorteo.id;
+        radio.id = `sorteo-${index}`;
+        radio.addEventListener('change', () => {
+          sorteoSeleccionado = sorteo;
+          setEstado(`Sorteo seleccionado: ${sorteo.nombre} (${sorteo.id}).`);
+          actualizarBotonDepurar();
+        });
+
+        const txt = document.createElement('div');
+        const nombre = document.createElement('strong');
+        nombre.textContent = sorteo.nombre;
+        const id = document.createElement('span');
+        id.textContent = `ID: ${sorteo.id}`;
+        txt.appendChild(nombre);
+        txt.appendChild(id);
+
+        label.appendChild(radio);
+        label.appendChild(txt);
+        listaSorteosEl.appendChild(label);
+      });
+    }
+
+    async function cargarSorteos() {
+      setEstado('Cargando sorteos...');
+      try {
+        await initFirebase();
+        const snap = await db.collection('sorteos').get();
+        sorteos = [];
+        snap.forEach((doc) => {
+          const data = doc.data() || {};
+          sorteos.push({
+            id: doc.id,
+            nombre: (typeof data.nombre === 'string' && data.nombre.trim()) ? data.nombre.trim() : '(Sin nombre)'
+          });
+        });
+        sorteos.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+        renderSorteos();
+        setEstado(`Se cargaron ${sorteos.length} sorteo(s).`);
+      } catch (error) {
+        console.error('No se pudieron cargar los sorteos', error);
+        listaSorteosEl.textContent = 'Error cargando los sorteos.';
+        setEstado('No se pudieron cargar los sorteos. Intenta nuevamente.', 'error');
+      }
+    }
+
+    async function depurarSorteo() {
+      if (depuracionEnCurso || !sorteoSeleccionado) return;
+
+      const mensajeConfirmacion =
+        `¿Segura que deseas borrar en cascada todos los datos del sorteo ${sorteoSeleccionado.nombre}?\n\n` +
+        'Esta acción eliminará registros relacionados en múltiples colecciones y no se puede deshacer.';
+
+      const confirmado = await window.confirm(mensajeConfirmacion);
+      if (!confirmado) {
+        setEstado('Depuración cancelada por la usuaria.');
+        return;
+      }
+
+      depuracionEnCurso = true;
+      actualizarBotonDepurar();
+      setEstado(`Depuración en progreso para ${sorteoSeleccionado.nombre} (${sorteoSeleccionado.id})...`);
+
+      try {
+        await initFirebase();
+        const user = auth.currentUser;
+        if (!user) {
+          throw new Error('No hay sesión activa para autorizar la depuración.');
+        }
+
+        const idToken = await user.getIdToken(true);
+        const apiBase = typeof getAdminApiBase === 'function' ? getAdminApiBase() : '';
+        const response = await fetch(`${apiBase}/admin/purge-sorteo`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${idToken}`
+          },
+          body: JSON.stringify({
+            sorteoId: sorteoSeleccionado.id,
+            sorteoNombre: sorteoSeleccionado.nombre
+          })
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(payload.error || payload.message || `Error HTTP ${response.status}`);
+        }
+
+        const conteos = payload.deletedCounts || {};
+        const resumen = Object.keys(conteos)
+          .map((key) => `• ${key}: ${conteos[key]}`)
+          .join('\n');
+
+        setEstado(
+          `Depuración completada para ${sorteoSeleccionado.nombre} (${sorteoSeleccionado.id}).\n\nConteos eliminados:\n${resumen}`,
+          'ok'
+        );
+
+        await cargarSorteos();
+      } catch (error) {
+        console.error('Error depurando sorteo', error);
+        setEstado(`No se pudo completar la depuración: ${error.message}`, 'error');
+      } finally {
+        depuracionEnCurso = false;
+        actualizarBotonDepurar();
+      }
+    }
+
+    depurarBtn.addEventListener('click', depurarSorteo);
+    cargarSorteos();
   </script>
   <script src="js/backNavigation.js"></script>
 </body>
