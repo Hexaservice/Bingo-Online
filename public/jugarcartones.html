@@ -1324,6 +1324,7 @@
     posicionMano:null,
     etiquetaSeguimiento:null,
     permitirVolteoCentro:false,
+    permitirSeleccionCarton:false,
     celdasTemporales:new Set(),
     autoSeleccionModalId:0,
     focoElemento:null,
@@ -1579,7 +1580,7 @@
     await moverManoAElemento(celda,{position:'right',...HAND_ARRI_IZQ_CELDA_OFFSET,track:false,waitMs:120});
   }
 
-  function posicionarMensajeTutorialCarton(mensaje,{colorTexto=''}={}){
+  function posicionarMensajeTutorialCarton(mensaje,{colorTexto='',mensajeHtml=''}={}){
     const tablero=document.getElementById('bingo-board');
     if(!tablero) return;
     const formaNombreEl=document.getElementById('forma-nombre');
@@ -1599,8 +1600,14 @@
       mascara:{radioExpandido:220,intensidad:0.5},
       ...(colorTexto?{colorTexto}:{})
     };
-    posicionarEtiquetaTutorial(referenciaEtiqueta.getBoundingClientRect(),mensaje,opcionesEtiqueta);
-    iniciarSeguimientoEtiqueta(referenciaEtiqueta,mensaje,opcionesEtiqueta);
+    posicionarEtiquetaTutorial(referenciaEtiqueta.getBoundingClientRect(),mensaje,{
+      ...opcionesEtiqueta,
+      ...(mensajeHtml?{mensajeHtml}:{}),
+    });
+    iniciarSeguimientoEtiqueta(referenciaEtiqueta,mensaje,{
+      ...opcionesEtiqueta,
+      ...(mensajeHtml?{mensajeHtml}:{}),
+    });
   }
 
   function clamp(value,min,max){
@@ -1824,10 +1831,12 @@
       minTop=null,
       evitarElementos=[],
       colorTexto='',
+      mensajeHtml='',
       mascara={}
     }=opciones;
+    const claveMensaje=mensajeHtml||mensaje;
     const mensajePrevio=tutorialLabel.dataset.mensaje ?? '';
-    const necesitaReinicio=tutorialLabel.style.display!=='flex' || mensajePrevio!==mensaje;
+    const necesitaReinicio=tutorialLabel.style.display!=='flex' || mensajePrevio!==claveMensaje;
     const maxAncho=Math.min(480,viewportWidth*0.9);
     const tamanoFuente=Math.max(16,Math.min(22,maxAncho/18));
     tutorialLabel.style.maxWidth=`${maxAncho}px`;
@@ -1836,8 +1845,8 @@
     tutorialLabel.style.padding=`${Math.max(16,tamanoFuente*0.75)}px ${Math.max(20,tamanoFuente*0.95)}px`;
     tutorialLabel.style.color=colorTexto||'';
     if(necesitaReinicio){
-      tutorialLabel.textContent=mensaje;
-      tutorialLabel.dataset.mensaje=mensaje;
+      tutorialLabel[mensajeHtml?'innerHTML':'textContent']=mensajeHtml||mensaje;
+      tutorialLabel.dataset.mensaje=claveMensaje;
       tutorialLabel.style.display='flex';
       tutorialLabel.classList.add('adaptado');
       tutorialLabel.classList.remove('tutorial-label-visible');
@@ -1845,8 +1854,8 @@
       tutorialLabel.style.left='0px';
       tutorialLabel.style.top='0px';
     }else{
-      tutorialLabel.textContent=mensaje;
-      tutorialLabel.dataset.mensaje=mensaje;
+      tutorialLabel[mensajeHtml?'innerHTML':'textContent']=mensajeHtml||mensaje;
+      tutorialLabel.dataset.mensaje=claveMensaje;
     }
     actualizarMascaraTutorial(rect,mascara);
 
@@ -2112,12 +2121,13 @@
     {
       id:'recorrido-carton',
       ejecutar:async ({token})=>{
-        const mensaje='Pulsa uno de los números para seleccionarlo, Nota: no se pueden repetir números en la misma columna';
+        const mensaje='Pulsa una de las celdas del cartón para elegir tu jugada, Nota: no se pueden repetir números en la misma columna';
+        const mensajeHtml='Pulsa una de las celdas del cartón para elegir tu jugada, <span style="color:#d60000;">Nota:</span> no se pueden repetir números en la misma columna';
         if(tutorialHand){
           tutorialHand.src='img/Mano-arri-izq.png';
           tutorialHand.classList.remove('tutorial-hand-pulse');
         }
-        posicionarMensajeTutorialCarton(mensaje);
+        posicionarMensajeTutorialCarton(mensaje,{mensajeHtml});
         const ruta=obtenerSecuenciaCeldasSerpenteo();
         for(const punto of ruta){
           if(tutorialCancelado(token)) return;
@@ -2255,6 +2265,7 @@
     const token=tutorialState.token;
     const paso=tutorialSteps[tutorialState.indice];
     tutorialState.permitirVolteoCentro=Boolean(paso?.id==='voltear-carton' && tutorialState.activo);
+    tutorialState.permitirSeleccionCarton=Boolean(paso?.id==='recorrido-carton' && tutorialState.activo);
     if(!paso){
       tutorialState.auto.ejecutando=false;
       return;
@@ -2358,6 +2369,7 @@
     cancelarTutorialEnCurso();
     limpiarFocoTutorial();
     tutorialState.permitirVolteoCentro=false;
+    tutorialState.permitirSeleccionCarton=false;
     limpiarNumerosTemporalesTutorial();
     if(tutorialToggle){
       tutorialToggle.classList.add('activo');
@@ -2393,6 +2405,7 @@
     limpiarMascaraTutorial();
     limpiarFocoTutorial();
     tutorialState.permitirVolteoCentro=false;
+    tutorialState.permitirSeleccionCarton=false;
     limpiarNumerosTemporalesTutorial();
     if(tutorialToggle){
       tutorialToggle.classList.remove('activo');
@@ -3318,7 +3331,13 @@ function toggleForma(idx){
           maxSpan.textContent='----';
           info.appendChild(maxSpan);
           td.appendChild(info);
-          td.addEventListener('click',intentarVoltearDesdeCentro);
+          td.addEventListener('click',()=>{
+            if(tutorialState.activo && tutorialState.permitirSeleccionCarton){
+              openModal(td,{tutorialAuto:false});
+              return;
+            }
+            intentarVoltearDesdeCentro();
+          });
         }else{
           td.addEventListener('click',()=>openModal(td));
         }
