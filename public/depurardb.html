@@ -94,11 +94,64 @@
       font-family: 'Poppins', Arial, sans-serif;
     }
 
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
     .panel-depuracion h3 {
-      margin: 0 0 10px;
+      margin: 0;
       color: #111827;
       font-size: 1.1rem;
       font-family: 'Poppins', Arial, sans-serif;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 42px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .switch input { display: none; }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .3s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider { background-color: #4caf50; }
+    input:checked + .slider:before { transform: translateX(18px); }
+
+    .panel-body {
+      display: none;
+    }
+
+    .panel-body.visible {
+      display: block;
     }
 
     .sorteos-lista {
@@ -112,7 +165,8 @@
     }
 
     .sorteo-item {
-      display: flex;
+      display: grid;
+      grid-template-columns: auto 1fr;
       align-items: center;
       gap: 8px;
       border: 1px solid #e5e7eb;
@@ -126,15 +180,46 @@
     .sorteo-item:last-child { margin-bottom: 0; }
 
     .sorteo-item strong {
-      display: block;
       color: #111827;
       font-size: 0.95rem;
     }
 
     .sorteo-item span {
-      display: block;
       color: #4b5563;
       font-size: 0.82rem;
+    }
+
+    .sorteo-detalles {
+      min-width: 0;
+    }
+
+    .linea-principal,
+    .linea-secundaria {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .linea-secundaria { margin-top: 2px; }
+
+    .estado-sorteo {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      flex-shrink: 0;
+    }
+
+    .estado-activo { color: #15803d; }
+    .estado-inactivo { color: #b91c1c; }
+    .estado-archivado { color: #7c2d12; }
+
+    .fecha-creacion {
+      color: #1e3a8a;
+      font-weight: 700;
+      font-size: 0.8rem;
+      flex-shrink: 0;
     }
 
     .accion-depurar {
@@ -182,13 +267,22 @@
     <p>Selecciona un sorteo para borrar en cascada toda su data relacionada.</p>
 
     <div class="panel-depuracion">
-      <h3>Sorteos disponibles</h3>
-      <div id="sorteos-lista" class="sorteos-lista" aria-live="polite">
-        Cargando sorteos...
+      <div class="section-header">
+        <h3>Depurar Sorteos</h3>
+        <label class="switch" title="Mostrar sección Depurar Sorteos">
+          <input type="checkbox" id="toggle-depuracion" aria-label="Mostrar sección Depurar Sorteos">
+          <span class="slider"></span>
+        </label>
       </div>
-      <button id="previsualizar-btn" class="menu-btn accion-previsualizar" disabled>Previsualizar</button>
-      <button id="depurar-btn" class="menu-btn accion-depurar" disabled>Depurar</button>
-      <div id="estado" class="estado" aria-live="polite"></div>
+      <div id="panel-depuracion-body" class="panel-body" aria-hidden="true">
+        <h3>Sorteos disponibles</h3>
+        <div id="sorteos-lista" class="sorteos-lista" aria-live="polite">
+          Cargando sorteos...
+        </div>
+        <button id="previsualizar-btn" class="menu-btn accion-previsualizar" disabled>Previsualizar</button>
+        <button id="depurar-btn" class="menu-btn accion-depurar" disabled>Depurar</button>
+        <div id="estado" class="estado" aria-live="polite"></div>
+      </div>
     </div>
   </div>
 
@@ -205,6 +299,9 @@
     const previsualizarBtn = document.getElementById('previsualizar-btn');
     const depurarBtn = document.getElementById('depurar-btn');
     const estadoEl = document.getElementById('estado');
+    const toggleDepuracionEl = document.getElementById('toggle-depuracion');
+    const panelDepuracionBodyEl = document.getElementById('panel-depuracion-body');
+    const volverBtn = document.getElementById('volver-btn');
     const PREVIEW_VALID_WINDOW_MS = 10 * 60 * 1000;
 
     let sorteos = [];
@@ -232,6 +329,45 @@
 
       depurarBtn.disabled = !sorteoSeleccionado || operacionEnCurso || !hayPreviewValida;
       depurarBtn.textContent = depuracionEnCurso ? 'Depurando...' : 'Depurar';
+    }
+
+    function resolverEstadoSorteo(sorteo = {}) {
+      const condicion = (sorteo.condicion || '').toString().trim().toUpperCase();
+      const estado = (sorteo.estado || '').toString().trim().toUpperCase();
+
+      if (condicion === 'ARCHIVADO') {
+        return { label: 'ARCHIVADO', className: 'estado-archivado' };
+      }
+
+      if (estado === 'ACTIVO') {
+        return { label: 'ACTIVO', className: 'estado-activo' };
+      }
+
+      return { label: 'INACTIVO', className: 'estado-inactivo' };
+    }
+
+    function formatearFechaCreacion(sorteo = {}) {
+      const valor = sorteo.creado || sorteo.creadoEn || sorteo.createdAt || sorteo.fechaCreacion || null;
+      let fecha = null;
+
+      if (valor && typeof valor.toDate === 'function') {
+        fecha = valor.toDate();
+      } else if (valor instanceof Date) {
+        fecha = valor;
+      } else if (typeof valor === 'string' || typeof valor === 'number') {
+        const parsed = new Date(valor);
+        if (!Number.isNaN(parsed.getTime())) {
+          fecha = parsed;
+        }
+      }
+
+      if (!fecha) return 'Sin fecha';
+
+      return fecha.toLocaleDateString('es-VE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
     }
 
     function renderSorteos() {
@@ -262,12 +398,37 @@
         });
 
         const txt = document.createElement('div');
+        txt.className = 'sorteo-detalles';
+
+        const lineaPrincipal = document.createElement('div');
+        lineaPrincipal.className = 'linea-principal';
+
         const nombre = document.createElement('strong');
         nombre.textContent = sorteo.nombre;
+
+        const estado = resolverEstadoSorteo(sorteo);
+        const estadoEl = document.createElement('span');
+        estadoEl.className = `estado-sorteo ${estado.className}`;
+        estadoEl.textContent = estado.label;
+
+        lineaPrincipal.appendChild(nombre);
+        lineaPrincipal.appendChild(estadoEl);
+
+        const lineaSecundaria = document.createElement('div');
+        lineaSecundaria.className = 'linea-secundaria';
+
         const id = document.createElement('span');
         id.textContent = `ID: ${sorteo.id}`;
-        txt.appendChild(nombre);
-        txt.appendChild(id);
+
+        const fechaCreacion = document.createElement('span');
+        fechaCreacion.className = 'fecha-creacion';
+        fechaCreacion.textContent = formatearFechaCreacion(sorteo);
+
+        lineaSecundaria.appendChild(id);
+        lineaSecundaria.appendChild(fechaCreacion);
+
+        txt.appendChild(lineaPrincipal);
+        txt.appendChild(lineaSecundaria);
 
         label.appendChild(radio);
         label.appendChild(txt);
@@ -285,7 +446,13 @@
           const data = doc.data() || {};
           sorteos.push({
             id: doc.id,
-            nombre: (typeof data.nombre === 'string' && data.nombre.trim()) ? data.nombre.trim() : '(Sin nombre)'
+            nombre: (typeof data.nombre === 'string' && data.nombre.trim()) ? data.nombre.trim() : '(Sin nombre)',
+            estado: data.estado || '',
+            condicion: data.condicion || '',
+            creado: data.creado,
+            creadoEn: data.creadoEn,
+            createdAt: data.createdAt,
+            fechaCreacion: data.fechaCreacion
           });
         });
         sorteos.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
@@ -296,6 +463,39 @@
         listaSorteosEl.textContent = 'Error cargando los sorteos.';
         setEstado('No se pudieron cargar los sorteos. Intenta nuevamente.', 'error');
       }
+    }
+
+    async function ejecutarPurgeSorteo({ dryRun }) {
+      await initFirebase();
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('No hay sesión activa para autorizar la depuración.');
+      }
+
+      const idToken = await user.getIdToken(true);
+      const apiBase = typeof getAdminApiBase === 'function' ? getAdminApiBase() : '';
+      const response = await fetch(`${apiBase}/admin/purge-sorteo`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`
+        },
+        body: JSON.stringify({
+          sorteoId: sorteoSeleccionado.id,
+          sorteoNombre: sorteoSeleccionado.nombre,
+          dryRun
+        })
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const mensajeError = payload.error || payload.message || `Error HTTP ${response.status}`;
+        if (response.status === 405) {
+          throw new Error('Error HTTP 405: el endpoint /admin/purge-sorteo no está aceptando POST en esta URL. Revisa UPLOAD_ENDPOINT, rewrites de Firebase Hosting y que uploadServer esté desplegado/corriendo.');
+        }
+        throw new Error(mensajeError);
+      }
+      return payload;
     }
 
     async function depurarSorteo() {
@@ -328,31 +528,7 @@
       setEstado(`Depuración en progreso para ${sorteoSeleccionado.nombre} (${sorteoSeleccionado.id})...`);
 
       try {
-        await initFirebase();
-        const user = auth.currentUser;
-        if (!user) {
-          throw new Error('No hay sesión activa para autorizar la depuración.');
-        }
-
-        const idToken = await user.getIdToken(true);
-        const apiBase = typeof getAdminApiBase === 'function' ? getAdminApiBase() : '';
-        const response = await fetch(`${apiBase}/admin/purge-sorteo`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${idToken}`
-          },
-          body: JSON.stringify({
-            sorteoId: sorteoSeleccionado.id,
-            sorteoNombre: sorteoSeleccionado.nombre,
-            dryRun: false
-          })
-        });
-
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(payload.error || payload.message || `Error HTTP ${response.status}`);
-        }
+        const payload = await ejecutarPurgeSorteo({ dryRun: false });
 
         const conteos = payload.deletedCounts || {};
         const resumen = Object.keys(conteos)
@@ -383,31 +559,7 @@
       setEstado(`Generando previsualización para ${sorteoSeleccionado.nombre} (${sorteoSeleccionado.id})...`);
 
       try {
-        await initFirebase();
-        const user = auth.currentUser;
-        if (!user) {
-          throw new Error('No hay sesión activa para autorizar la previsualización.');
-        }
-
-        const idToken = await user.getIdToken(true);
-        const apiBase = typeof getAdminApiBase === 'function' ? getAdminApiBase() : '';
-        const response = await fetch(`${apiBase}/admin/purge-sorteo`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${idToken}`
-          },
-          body: JSON.stringify({
-            sorteoId: sorteoSeleccionado.id,
-            sorteoNombre: sorteoSeleccionado.nombre,
-            dryRun: true
-          })
-        });
-
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(payload.error || payload.message || `Error HTTP ${response.status}`);
-        }
+        const payload = await ejecutarPurgeSorteo({ dryRun: true });
 
         const conteos = payload.deletedCounts || {};
         const resumen = Object.keys(conteos)
@@ -433,8 +585,26 @@
       }
     }
 
+    function togglePanelDepuracion() {
+      const visible = !!toggleDepuracionEl.checked;
+      panelDepuracionBodyEl.classList.toggle('visible', visible);
+      panelDepuracionBodyEl.setAttribute('aria-hidden', String(!visible));
+    }
+
+    function volverAlMenuAdministrador() {
+      window.location.href = 'admin.html';
+    }
+
     previsualizarBtn.addEventListener('click', previsualizarSorteo);
     depurarBtn.addEventListener('click', depurarSorteo);
+    toggleDepuracionEl.addEventListener('change', togglePanelDepuracion);
+    volverBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      volverAlMenuAdministrador();
+    });
+
+    toggleDepuracionEl.checked = false;
+    togglePanelDepuracion();
     cargarSorteos();
   </script>
   <script src="js/backNavigation.js"></script>
