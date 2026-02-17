@@ -679,6 +679,20 @@
     #fecha-hora{margin-top:auto;padding-top:12px;}
     #derechos{font-size:0.6rem;padding-bottom:12px;}
     .info-line{font-family:'Bangers',cursive;font-size:1.5rem;text-align:center;}
+    #info-cartones-diagnostico{
+      display:none;
+      font-family:'Poppins',sans-serif;
+      font-size:0.95rem;
+      padding:8px 10px;
+      border-radius:8px;
+      border:1px solid #f6b26b;
+      background:#fff3cd;
+      color:#8a4b08;
+      text-align:center;
+      font-weight:600;
+      margin-top:-4px;
+    }
+    #info-cartones-diagnostico.visible{display:block;}
     .text-forma-gratis{font-family:'Bangers',cursive;font-weight:bold;color:purple;font-size:1.1rem;text-align:center;}
     #premios-titulo,#info-cartones-titulo,#back-premios-titulo{font-size:1.1rem;text-align:center;font-family:'Bangers',cursive;}
     #premios-modal .modal-content{align-items:center;width:min(960px,95vw);max-height:90vh;overflow-y:auto;padding:clamp(16px,2.5vw,32px);gap:clamp(14px,2vw,24px);}
@@ -1139,6 +1153,7 @@
           <h2 id="info-cartones-titulo"></h2>
           <div id="info-cartones-jugando" class="info-line"></div>
           <div id="info-cartones-gratis" class="info-line"></div>
+          <div id="info-cartones-diagnostico"></div>
           <div class="modal-buttons">
             <button id="info-cartones-aceptar" class="action-btn">Aceptar</button>
           </div>
@@ -1318,6 +1333,7 @@
   const cartonProcessingSpinner=cartonProcessingOverlay?cartonProcessingOverlay.querySelector('.carton-processing-spinner'):null;
   const cartonToast=document.getElementById('carton-toast');
   const infoCartonesTablaBody=document.getElementById('info-cartones-tabla-body');
+  const infoCartonesDiagnostico=document.getElementById('info-cartones-diagnostico');
   const tutorialState={
     activo:false,
     indice:0,
@@ -2458,6 +2474,39 @@
     celda.textContent=mensaje;
     fila.appendChild(celda);
     infoCartonesTablaBody.appendChild(fila);
+  }
+
+  function actualizarResumenCartonesModal({totalRegistrado=0,gratisRegistrado=0,tieneErrorCarga=false}={}){
+    const pagadosRegistrados=Math.max(0,totalRegistrado-gratisRegistrado);
+    const totalOficial=toNumberSafe(cartonesJugando,0)+toNumberSafe(cartonesGratisJugando,0);
+
+    const cj=document.getElementById('info-cartones-jugando');
+    if(cj){
+      cj.innerHTML=`Cartones jugando: <strong style="color:purple;">${formatearEnteroEs(cartonesJugando)}</strong> <span style="font-size:0.75em;">(oficial) / <strong style="color:#0b1b4d;">${formatearEnteroEs(pagadosRegistrados)}</strong> registrado</span>`;
+    }
+
+    const cg=document.getElementById('info-cartones-gratis');
+    if(cg){
+      cg.innerHTML=`Cartones Gratis jugando: <strong style="color:${COLOR_CARTONES_GRATIS_MODAL};">${formatearEnteroEs(cartonesGratisJugando)}</strong> <span style="font-size:0.75em;">(oficial) / <strong style="color:#0b1b4d;">${formatearEnteroEs(gratisRegistrado)}</strong> registrado</span>`;
+    }
+
+    if(!infoCartonesDiagnostico){
+      return;
+    }
+    const hayDiferenciaTotales=totalOficial!==totalRegistrado;
+    const hayDiferenciaGratis=toNumberSafe(cartonesGratisJugando,0)!==gratisRegistrado;
+    if(tieneErrorCarga){
+      infoCartonesDiagnostico.classList.add('visible');
+      infoCartonesDiagnostico.textContent='Error de carga de cartones. Reintenta en unos segundos.';
+      return;
+    }
+    if(hayDiferenciaTotales||hayDiferenciaGratis){
+      infoCartonesDiagnostico.classList.add('visible');
+      infoCartonesDiagnostico.textContent='Datos en sincronización: los contadores oficiales aún no coinciden con los cartones registrados.';
+      return;
+    }
+    infoCartonesDiagnostico.classList.remove('visible');
+    infoCartonesDiagnostico.textContent='';
   }
 
   function extraerAliasCarton(data){
@@ -4452,9 +4501,13 @@ function toggleForma(idx){
         });
       });
 
-      if(registros.length===0){
+      const totalRegistrado=registros.length;
+      const gratisRegistrado=registros.filter((registro)=>registro.tipo==='GRATIS').length;
+      actualizarResumenCartonesModal({totalRegistrado,gratisRegistrado,tieneErrorCarga:huboError});
+
+      if(totalRegistrado===0){
         const mensaje=huboError
-          ? 'No se pudieron cargar algunos cartones. Intenta de nuevo en unos segundos.'
+          ? 'Error al cargar cartones: intenta nuevamente en unos segundos.'
           : 'Sin cartones registrados';
         mostrarMensajeTablaCartones(mensaje);
         return;
@@ -4500,10 +4553,7 @@ function toggleForma(idx){
     titulo.innerHTML=`<span style="color:purple;">CARTONES JUGANDO SORTEO:</span><br><span id="info-cartones-nombre">${currentSorteoNombre}</span>`;
     const infoNombre=document.getElementById('info-cartones-nombre');
     infoNombre.style.color=currentSorteoTipo==='Sorteo Diario'?'green':'orange';
-    const cj=document.getElementById('info-cartones-jugando');
-    cj.innerHTML=`Cartones jugando: <strong style="color:purple;">${cartonesJugando}</strong>`;
-    const cg=document.getElementById('info-cartones-gratis');
-    cg.innerHTML=`Cartones Gratis jugando: <strong style="color:${COLOR_CARTONES_GRATIS_MODAL};">${formatearEnteroEs(cartonesGratisJugando)}</strong>`;
+    actualizarResumenCartonesModal();
     const modal=document.getElementById('info-cartones-modal');
     if(modal){
       modal.style.display='flex';
