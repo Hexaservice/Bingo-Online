@@ -4381,16 +4381,43 @@ function toggleForma(idx){
       unsubscribeInfoCartonesJugando();
       unsubscribeInfoCartonesJugando=null;
     }
+
+    const filtros=[
+      {campo:'sorteoId',valor:currentSorteo}
+    ];
+    const nombreSorteoNormalizado=(currentSorteoNombre||'').toString().trim();
+    if(nombreSorteoNormalizado){
+      filtros.push({campo:'sorteoNombre',valor:nombreSorteoNormalizado});
+    }
+
     mostrarMensajeTablaCartones('Cargando cartones...');
-    const query=db.collection('CartonJugado')
-      .where('sorteoId','==',currentSorteo);
-    unsubscribeInfoCartonesJugando=query.onSnapshot((snap)=>{
+
+    const docsPorId=new Map();
+    const snapshotsPorFiltro=new Map();
+    let huboError=false;
+    const unsubscribers=[];
+
+    const renderizarDesdeSnapshots=()=>{
+      docsPorId.clear();
+      snapshotsPorFiltro.forEach((snap)=>{
+        snap.forEach((doc)=>{
+          const data=doc.data()||{};
+          const sorteoIdData=(data.sorteoId??'').toString().trim();
+          const sorteoNombreData=(data.sorteoNombre??'').toString().trim();
+          const coincideId=sorteoIdData!=='' && sorteoIdData===currentSorteo;
+          const coincideNombre=nombreSorteoNormalizado!==''
+            && sorteoNombreData!==''
+            && sorteoNombreData.localeCompare(nombreSorteoNormalizado,'es',{sensitivity:'base'})===0;
+          if(!coincideId && !coincideNombre){
+            return;
+          }
+          docsPorId.set(doc.id,data);
+        });
+      });
+
       const registros=[];
-      const idsVistos=new Set();
-      snap.forEach((doc)=>{
-        if(idsVistos.has(doc.id)) return;
-        idsVistos.add(doc.id);
-        const carton=normalizarCartonJugado(doc.data()||{});
+      docsPorId.forEach((data)=>{
+        const carton=normalizarCartonJugado(data);
         registros.push({
           alias:carton.alias,
           numeroOrden:carton.cartonNum,
@@ -4398,10 +4425,15 @@ function toggleForma(idx){
           tipo:carton.tipoEtiqueta
         });
       });
+
       if(registros.length===0){
-        mostrarMensajeTablaCartones('Sin cartones registrados');
+        const mensaje=huboError
+          ? 'No se pudieron cargar algunos cartones. Intenta de nuevo en unos segundos.'
+          : 'Sin cartones registrados';
+        mostrarMensajeTablaCartones(mensaje);
         return;
       }
+
       registros.sort((a,b)=>{
         if(b.numeroOrden!==a.numeroOrden){
           return b.numeroOrden-a.numeroOrden;
@@ -4409,10 +4441,27 @@ function toggleForma(idx){
         return a.alias.localeCompare(b.alias,'es',{sensitivity:'base'});
       });
       renderizarFilasCartonesJugando(registros);
-    },(error)=>{
-      console.error('Error cargando cartones jugados para la tabla',error);
-      mostrarMensajeTablaCartones('No se pudieron cargar los cartones.');
+    };
+
+    filtros.forEach((filtro)=>{
+      const key=`${filtro.campo}:${filtro.valor}`;
+      const query=db.collection('CartonJugado').where(filtro.campo,'==',filtro.valor);
+      const unsubscribe=query.onSnapshot((snap)=>{
+        snapshotsPorFiltro.set(key,snap);
+        renderizarDesdeSnapshots();
+      },(error)=>{
+        huboError=true;
+        console.error('Error cargando cartones jugados para la tabla',filtro,error);
+        renderizarDesdeSnapshots();
+      });
+      unsubscribers.push(unsubscribe);
     });
+
+    unsubscribeInfoCartonesJugando=()=>{
+      unsubscribers.forEach((fn)=>{
+        if(typeof fn==='function') fn();
+      });
+    };
   }
 
   async function mostrarCartonesJugandoModal(){
