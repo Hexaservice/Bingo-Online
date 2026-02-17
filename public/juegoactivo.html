@@ -7491,6 +7491,21 @@
     return resultado;
   }
 
+  function normalizarPosicionesCarton(posiciones){
+    const lista=Array.isArray(posiciones)?posiciones:[];
+    const resultado=[];
+    lista.forEach(pos=>{
+      if(!pos) return;
+      const fila=Number(pos.r ?? pos.row ?? pos.fila);
+      const col=Number(pos.c ?? pos.col ?? pos.columna);
+      const valor=normalizarNumero(pos.valor ?? pos.numero ?? pos.value);
+      if(Number.isInteger(fila) && Number.isInteger(col) && valor!==null){
+        resultado.push({r:fila,c:col,valor});
+      }
+    });
+    return resultado;
+  }
+
   function obtenerPosicionesNormalizadas(forma){
     if(!forma) return [];
     if(Array.isArray(forma.posicionesNormalizadas) && forma.posicionesNormalizadas.length){
@@ -10128,17 +10143,14 @@
 
   function construirCartonSimulacion(carton){
     if(!carton) return null;
-    const posicionesRaw=Array.isArray(carton.posiciones)?carton.posiciones:[];
-    const posiciones=posicionesRaw
-      .map(p=>({r:Number(p.r),c:Number(p.c),valor:normalizarNumero(p.valor ?? p.numero ?? p.value)}))
-      .filter(p=>Number.isInteger(p.r)&&Number.isInteger(p.c)&&p.valor!==null);
+    const posiciones=normalizarPosicionesCarton(carton.posiciones);
     const valorPorPos=new Map();
     posiciones.forEach(p=>valorPorPos.set(`${p.r}-${p.c}`,p.valor));
     const idCarton=carton.id || carton.cartonId || '';
     return {
       id:idCarton,
-      userId:carton.userId || '',
-      alias:carton.alias || carton.nombre || '',
+      userId:carton.userId || carton.usuarioId || carton.uid || '',
+      alias:carton.alias || carton.nombre || carton.aliascarton || carton.aliasCarton || '',
       cartonNum:carton.cartonNum ?? carton.Ncarton ?? carton.numero ?? carton.numeroCarton,
       posiciones,
       valorPorPos
@@ -10428,22 +10440,21 @@
     const mapa=new Map();
     snapshot.forEach(doc=>{
       const data=doc.data()||{};
-      const posicionesRaw=Array.isArray(data.posiciones)?data.posiciones:[];
-      const posiciones=posicionesRaw
-        .map(p=>({r:Number(p.r),c:Number(p.c),valor:normalizarNumero(p.valor ?? p.numero ?? p.value)}))
-        .filter(p=>Number.isInteger(p.r)&&Number.isInteger(p.c)&&p.valor!==null);
+      const posiciones=normalizarPosicionesCarton(data.posiciones);
       const valorPorPos=new Map();
       posiciones.forEach(p=>{
         valorPorPos.set(`${p.r}-${p.c}`,p.valor);
       });
       mapa.set(doc.id,{
         id:doc.id,
-        sorteoId:data.sorteoId,
-        userId:data.userId||'',
-        alias:data.alias||'',
-        cartonNum:data.cartonNum,
-        Ncarton:data.Ncarton,
-        tipocarton:data.tipocarton||'pagado',
+        sorteoId:data.sorteoId || data.sorteoid || data.idSorteo || '',
+        userId:data.userId||data.usuarioId||data.uid||'',
+        email:data.email||data.gmail||data.IDbilletera||'',
+        gmail:data.gmail||data.email||data.IDbilletera||'',
+        alias:data.alias||data.aliascarton||data.aliasCarton||'',
+        cartonNum:data.cartonNum ?? data.Ncarton ?? data.carton ?? data.numero ?? null,
+        Ncarton:data.Ncarton ?? data.cartonNum ?? data.carton ?? null,
+        tipocarton:normalizarTipoCarton(data),
         posiciones,
         valorPorPos
       });
@@ -10540,17 +10551,14 @@
       const mapa=new Map();
       snapshot.forEach(doc=>{
         const data=doc.data()||{};
-        const posicionesRaw=Array.isArray(data.posiciones)?data.posiciones:[];
-        const posiciones=posicionesRaw
-          .map(p=>({r:Number(p.r),c:Number(p.c),valor:normalizarNumero(p.valor ?? p.numero ?? p.value)}))
-          .filter(p=>Number.isInteger(p.r)&&Number.isInteger(p.c)&&p.valor!==null);
+        const posiciones=normalizarPosicionesCarton(data.posiciones);
         const valorPorPos=new Map();
         posiciones.forEach(p=>{
           valorPorPos.set(`${p.r}-${p.c}`,p.valor);
         });
         mapa.set(doc.id,{
           id:doc.id,
-          userId:data.userId||'',
+          userId:data.userId||data.usuarioId||data.uid||'',
           alias:data.alias||data.nombre||'',
           nombre:data.nombre||data.alias||'',
           nombreGuardado:data.nombre||data.alias||'',
