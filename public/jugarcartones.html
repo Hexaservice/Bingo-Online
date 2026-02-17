@@ -4382,12 +4382,8 @@ function toggleForma(idx){
       unsubscribeInfoCartonesJugando=null;
     }
     mostrarMensajeTablaCartones('Cargando cartones...');
-    let query=db.collection('CartonJugado')
+    const query=db.collection('CartonJugado')
       .where('sorteoId','==',currentSorteo);
-    if(user?.uid){
-      query=query.where('userId','==',user.uid);
-    }
-    query=query.orderBy('cartonNum','asc');
     unsubscribeInfoCartonesJugando=query.onSnapshot((snap)=>{
       const registros=[];
       const idsVistos=new Set();
@@ -4402,7 +4398,7 @@ function toggleForma(idx){
           tipo:carton.tipoEtiqueta
         });
       });
-      if(snap.empty){
+      if(registros.length===0){
         mostrarMensajeTablaCartones('Sin cartones registrados');
         return;
       }
