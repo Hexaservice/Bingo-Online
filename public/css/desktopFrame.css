@@ -1,15 +1,33 @@
 :root {
-  --app-desktop-max-width: 520px;
+  --app-desktop-single-column-max-width: 520px;
+  --app-desktop-max-width: var(--app-desktop-single-column-max-width);
+  --app-desktop-wide-max-width: 1200px;
+  --app-desktop-wide-shell-padding: clamp(20px, 3vw, 40px);
 }
 
 @media (min-width: 1024px) {
-  body {
-    --app-desktop-side-padding: max(16px, calc((100vw - var(--app-desktop-max-width)) / 2));
-    padding-inline: var(--app-desktop-side-padding);
+  body.desktop-single-column {
+    --app-desktop-single-column-side-padding: max(16px, calc((100vw - var(--app-desktop-single-column-max-width)) / 2));
+    padding-inline: var(--app-desktop-single-column-side-padding);
     box-sizing: border-box;
   }
 
-  .back-btn {
-    left: max(8px, calc((100vw - var(--app-desktop-max-width)) / 2 + 8px));
+  body:not(.desktop-single-column) {
+    padding-inline: 0;
+  }
+
+  body:not(.desktop-single-column) .desktop-shell {
+    width: min(100%, var(--app-desktop-wide-max-width));
+    margin-inline: auto;
+    padding-inline: var(--app-desktop-wide-shell-padding);
+    box-sizing: border-box;
+  }
+
+  body.desktop-single-column .back-btn {
+    left: max(8px, calc((100vw - var(--app-desktop-single-column-max-width)) / 2 + 8px));
+  }
+
+  body:not(.desktop-single-column) .back-btn {
+    left: max(8px, calc((100vw - min(100vw, var(--app-desktop-wide-max-width))) / 2 + var(--app-desktop-wide-shell-padding) + 8px));
   }
 }
