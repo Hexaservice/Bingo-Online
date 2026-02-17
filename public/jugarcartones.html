@@ -2461,12 +2461,17 @@
   }
 
   function extraerAliasCarton(data){
-    const alias=normalizarAliasPerfil(data?.alias);
+    const alias=normalizarAliasPerfil(
+      data?.alias
+      ??data?.aliascarton
+      ??data?.aliasCarton
+      ??data?.aliasJugador
+    );
     return alias||'Sin alias';
   }
 
   function extraerNumeroCartonDatos(data){
-    const numero=Number.parseInt(data?.cartonNum??data?.Ncarton,10);
+    const numero=Number.parseInt(data?.cartonNum??data?.Ncarton??data?.carton,10);
     if(Number.isFinite(numero)){
       return {orden:numero,texto:String(numero).padStart(4,'0')};
     }
@@ -2474,7 +2479,8 @@
   }
   function normalizarCartonJugado(data){
     const numero=extraerNumeroCartonDatos(data);
-    const tipo=(data?.tipocarton||'').toString().trim().toLowerCase()==='gratis'?'gratis':'pagado';
+    const tipoFuente=(data?.tipocarton??data?.tipoCarton??data?.tipo??'').toString().trim().toLowerCase();
+    const tipo=tipoFuente==='gratis'?'gratis':'pagado';
     return {
       alias:extraerAliasCarton(data),
       cartonNum:numero.orden,
@@ -4368,6 +4374,25 @@ function toggleForma(idx){
     }
   }
 
+  function coincideSorteoCarton(data,currentSorteoId,currentSorteoNombre){
+    const idActual=(currentSorteoId??'').toString().trim();
+    const nombreActual=(currentSorteoNombre??'').toString().trim();
+    const candidatosId=[data?.sorteoId,data?.idSorteo,data?.sorteo];
+    const candidatosNombre=[data?.sorteoNombre,data?.sorteo];
+
+    const coincideId=idActual!=='' && candidatosId.some((valor)=>{
+      const texto=(valor??'').toString().trim();
+      return texto!=='' && texto===idActual;
+    });
+
+    const coincideNombre=nombreActual!=='' && candidatosNombre.some((valor)=>{
+      const texto=(valor??'').toString().trim();
+      return texto!=='' && texto.localeCompare(nombreActual,'es',{sensitivity:'base'})===0;
+    });
+
+    return coincideId || coincideNombre;
+  }
+
   function suscribirCartonesJugandoTabla(){
     if(!infoCartonesTablaBody||!currentSorteo){
       return;
@@ -4389,6 +4414,13 @@ function toggleForma(idx){
     if(nombreSorteoNormalizado){
       filtros.push({campo:'sorteoNombre',valor:nombreSorteoNormalizado});
     }
+    if(currentSorteo){
+      filtros.push({campo:'idSorteo',valor:currentSorteo});
+      filtros.push({campo:'sorteo',valor:currentSorteo});
+    }
+    if(nombreSorteoNormalizado){
+      filtros.push({campo:'sorteo',valor:nombreSorteoNormalizado});
+    }
 
     mostrarMensajeTablaCartones('Cargando cartones...');
 
@@ -4402,13 +4434,7 @@ function toggleForma(idx){
       snapshotsPorFiltro.forEach((snap)=>{
         snap.forEach((doc)=>{
           const data=doc.data()||{};
-          const sorteoIdData=(data.sorteoId??'').toString().trim();
-          const sorteoNombreData=(data.sorteoNombre??'').toString().trim();
-          const coincideId=sorteoIdData!=='' && sorteoIdData===currentSorteo;
-          const coincideNombre=nombreSorteoNormalizado!==''
-            && sorteoNombreData!==''
-            && sorteoNombreData.localeCompare(nombreSorteoNormalizado,'es',{sensitivity:'base'})===0;
-          if(!coincideId && !coincideNombre){
+          if(!coincideSorteoCarton(data,currentSorteo,nombreSorteoNormalizado)){
             return;
           }
           docsPorId.set(doc.id,data);
