@@ -4459,6 +4459,7 @@ function toggleForma(idx){
     const filtros=[
       {campo:'sorteoId',valor:currentSorteo}
     ];
+    const debugCartonesJugando=window.DEBUG_CARTONES_JUGANDO===true;
     const nombreSorteoNormalizado=(currentSorteoNombre||'').toString().trim();
     if(nombreSorteoNormalizado){
       filtros.push({campo:'sorteoNombre',valor:nombreSorteoNormalizado});
@@ -4471,19 +4472,31 @@ function toggleForma(idx){
       filtros.push({campo:'sorteo',valor:nombreSorteoNormalizado});
     }
 
+    if(debugCartonesJugando){
+      console.debug('[CartonesJugandoTabla] Filtro activo',{
+        sorteoId:currentSorteo,
+        sorteoNombre:nombreSorteoNormalizado
+      });
+    }
+
     mostrarMensajeTablaCartones('Cargando cartones...');
 
     const docsPorId=new Map();
     const snapshotsPorFiltro=new Map();
+    const docsRecibidosPorFiltro=new Map();
     let huboError=false;
     const unsubscribers=[];
 
     const renderizarDesdeSnapshots=()=>{
       docsPorId.clear();
+      let docsRecibidosQuery=0;
+      let docsDescartadosNoCoincidir=0;
       snapshotsPorFiltro.forEach((snap)=>{
+        docsRecibidosQuery+=snap.size;
         snap.forEach((doc)=>{
           const data=doc.data()||{};
           if(!coincideSorteoCarton(data,currentSorteo,nombreSorteoNormalizado)){
+            docsDescartadosNoCoincidir+=1;
             return;
           }
           docsPorId.set(doc.id,data);
@@ -4503,9 +4516,29 @@ function toggleForma(idx){
 
       const totalRegistrado=registros.length;
       const gratisRegistrado=registros.filter((registro)=>registro.tipo==='GRATIS').length;
+
+      if(debugCartonesJugando){
+        console.debug('[CartonesJugandoTabla] Diagnóstico de render',{
+          docsPorQuery:[...docsRecibidosPorFiltro.entries()].map(([key,cantidad])=>({query:key,docs:cantidad})),
+          docsRecibidosQuery,
+          docsDescartadosNoCoincidir,
+          docsParaRender:totalRegistrado
+        });
+      }
+
       actualizarResumenCartonesModal({totalRegistrado,gratisRegistrado,tieneErrorCarga:huboError});
 
       if(totalRegistrado===0){
+        const jugadosHeader=toNumberSafe(document.getElementById('cartones-jugando-valor')?.textContent,0);
+        const gratisHeader=toNumberSafe(document.getElementById('cartones-gratis-jugando')?.textContent,0);
+        if(jugadosHeader>0 || gratisHeader>0){
+          console.warn('[CartonesJugandoTabla] Se obtuvo 0 cartones para render, pero el header indica cartones en juego. Revisa el esquema/campos del documento (por ejemplo: sorteoId, sorteoNombre, idSorteo o sorteo) para asegurar que coincidan con el filtro activo.',{
+            sorteoId:currentSorteo,
+            sorteoNombre:nombreSorteoNormalizado,
+            jugadosHeader,
+            gratisHeader
+          });
+        }
         const mensaje=huboError
           ? 'Error al cargar cartones: intenta nuevamente en unos segundos.'
           : 'Sin cartones registrados';
@@ -4527,9 +4560,11 @@ function toggleForma(idx){
       const query=db.collection('CartonJugado').where(filtro.campo,'==',filtro.valor);
       const unsubscribe=query.onSnapshot((snap)=>{
         snapshotsPorFiltro.set(key,snap);
+        docsRecibidosPorFiltro.set(key,snap.size);
         renderizarDesdeSnapshots();
       },(error)=>{
         huboError=true;
+        docsRecibidosPorFiltro.set(key,0);
         console.error('Error cargando cartones jugados para la tabla',filtro,error);
         renderizarDesdeSnapshots();
       });
