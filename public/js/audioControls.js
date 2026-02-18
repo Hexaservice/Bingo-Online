@@ -1,10 +1,32 @@
 (function() {
-  const DEFAULT_VOLUME = 0.22;
-  const AUDIO_USER_CONSENT_KEY = 'audio:enabledByUser';
+  const DEFAULTS = Object.freeze({
+    masterVolume: 1,
+    musicVolume: 0.22,
+    sfxVolume: 1,
+    muted: false,
+  });
+
+  const STORAGE_KEYS = Object.freeze({
+    masterVolume: 'audio:masterVolume',
+    musicVolume: 'audio:musicVolume',
+    sfxVolume: 'audio:sfxVolume',
+    muted: 'audio:muted',
+    consent: 'audio:enabledByUser',
+  });
+
+  function clamp01(value, fallback) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.min(Math.max(parsed, 0), 1);
+  }
+
+  function porcentaje(value) {
+    return `${Math.round(clamp01(value, 0) * 100)}%`;
+  }
 
   function usuarioHabilitoAudio() {
     try {
-      return localStorage.getItem(AUDIO_USER_CONSENT_KEY) === 'true';
+      return localStorage.getItem(STORAGE_KEYS.consent) === 'true';
     } catch (_) {
       return false;
     }
@@ -12,7 +34,28 @@
 
   function guardarConsentimientoAudio() {
     try {
-      localStorage.setItem(AUDIO_USER_CONSENT_KEY, 'true');
+      localStorage.setItem(STORAGE_KEYS.consent, 'true');
+    } catch (_) {}
+  }
+
+  function leerEstadoAudio() {
+    const estado = { ...DEFAULTS };
+    try {
+      estado.masterVolume = clamp01(localStorage.getItem(STORAGE_KEYS.masterVolume), DEFAULTS.masterVolume);
+      estado.musicVolume = clamp01(localStorage.getItem(STORAGE_KEYS.musicVolume), DEFAULTS.musicVolume);
+      estado.sfxVolume = clamp01(localStorage.getItem(STORAGE_KEYS.sfxVolume), DEFAULTS.sfxVolume);
+      const mutedRaw = localStorage.getItem(STORAGE_KEYS.muted);
+      estado.muted = mutedRaw === null ? DEFAULTS.muted : mutedRaw === 'true';
+    } catch (_) {}
+    return estado;
+  }
+
+  function guardarEstadoAudio(estado) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.masterVolume, String(estado.masterVolume));
+      localStorage.setItem(STORAGE_KEYS.musicVolume, String(estado.musicVolume));
+      localStorage.setItem(STORAGE_KEYS.sfxVolume, String(estado.sfxVolume));
+      localStorage.setItem(STORAGE_KEYS.muted, String(estado.muted));
     } catch (_) {}
   }
 
@@ -65,19 +108,6 @@
     return manager;
   }
 
-  function obtenerEstadoAudio(prefix) {
-    const mutedRaw = localStorage.getItem(`${prefix}:muted`);
-    const volumeRaw = parseFloat(localStorage.getItem(`${prefix}:volume`));
-    const muted = mutedRaw === null ? false : mutedRaw === 'true';
-    const volume = Number.isFinite(volumeRaw) ? Math.min(Math.max(volumeRaw, 0), 1) : DEFAULT_VOLUME;
-    return { muted, volume };
-  }
-
-  function guardarEstadoAudio(prefix, estado) {
-    localStorage.setItem(`${prefix}:muted`, String(estado.muted));
-    localStorage.setItem(`${prefix}:volume`, String(estado.volume));
-  }
-
   function resolverFuenteAudioDesdeId(audioId) {
     if (!audioId) return null;
     const audioEl = document.getElementById(audioId);
@@ -97,6 +127,41 @@
     };
   }
 
+  function registrarTecladoBoton(elemento) {
+    if (!elemento) return;
+    elemento.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      elemento.click();
+    });
+  }
+
+  function aplicarPasoRangeConTeclado(input) {
+    if (!input) return;
+    input.addEventListener('keydown', (event) => {
+      const key = event.key;
+      if (!['ArrowLeft', 'ArrowRight', 'ArrowDown', 'ArrowUp', 'Home', 'End', 'PageUp', 'PageDown'].includes(key)) {
+        return;
+      }
+
+      const step = Number(input.step) || 0.05;
+      const pageStep = step * 4;
+      let current = clamp01(input.value, 0);
+
+      if (key === 'Home') current = 0;
+      if (key === 'End') current = 1;
+      if (key === 'ArrowLeft' || key === 'ArrowDown') current -= step;
+      if (key === 'ArrowRight' || key === 'ArrowUp') current += step;
+      if (key === 'PageDown') current -= pageStep;
+      if (key === 'PageUp') current += pageStep;
+
+      const normalized = clamp01(current, 0);
+      event.preventDefault();
+      input.value = normalized.toFixed(2);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  }
+
   function initBingoAudioControl(config) {
     if (!config || !window.audioManager) return;
 
@@ -104,9 +169,14 @@
       containerId,
       toggleId,
       volumeId,
+      masterVolumeId,
+      sfxVolumeId,
+      resetId,
+      statusId,
+      masterValueId,
+      musicValueId,
+      sfxValueId,
       audioId,
-      storageKeyPrefix = 'bingoAudio',
-      defaultVolume = DEFAULT_VOLUME,
       musicTrackId = 'bg-music',
       musicManifestKey = null,
       sfxEvents = {},
@@ -115,10 +185,17 @@
 
     const container = document.getElementById(containerId);
     const toggle = document.getElementById(toggleId);
-    const volumeInput = document.getElementById(volumeId);
+    const musicInput = document.getElementById(volumeId);
+    const masterInput = document.getElementById(masterVolumeId);
+    const sfxInput = document.getElementById(sfxVolumeId);
+    const resetBtn = document.getElementById(resetId);
+    const statusEl = document.getElementById(statusId);
+    const masterValueEl = document.getElementById(masterValueId);
+    const musicValueEl = document.getElementById(musicValueId);
+    const sfxValueEl = document.getElementById(sfxValueId);
     const volumeWrap = container?.querySelector('.audio-control__volume');
 
-    if (!container || !toggle || !volumeInput) return;
+    if (!container || !toggle || !musicInput || !masterInput || !sfxInput || !resetBtn) return;
 
     const musicDescriptor = resolverDescriptorDesdeManifest(musicManifestKey);
     const musicSrc = resolverFuenteAudioDesdeId(audioId);
@@ -135,18 +212,46 @@
       window.audioManager.registerSfxEvent(eventName, resolvedSource, cfg);
     });
 
-    let estado = obtenerEstadoAudio(storageKeyPrefix);
-    if (!Number.isFinite(estado.volume)) {
-      estado.volume = defaultVolume;
-    }
-
+    let estado = leerEstadoAudio();
     let hideTimer = null;
     const promptGlobalAudio = obtenerPromptGlobalAudio();
 
+    function actualizarEtiquetas() {
+      const masterPct = porcentaje(estado.masterVolume);
+      const musicPct = porcentaje(estado.musicVolume);
+      const sfxPct = porcentaje(estado.sfxVolume);
+
+      masterValueEl && (masterValueEl.textContent = masterPct);
+      musicValueEl && (musicValueEl.textContent = musicPct);
+      sfxValueEl && (sfxValueEl.textContent = sfxPct);
+
+      masterInput.setAttribute('aria-valuetext', `Volumen general ${masterPct}`);
+      musicInput.setAttribute('aria-valuetext', `Volumen de música ${musicPct}`);
+      sfxInput.setAttribute('aria-valuetext', `Volumen de efectos ${sfxPct}`);
+    }
+
     function actualizarUI() {
-      container.classList.toggle('is-muted', estado.muted);
-      toggle.setAttribute('aria-pressed', String(!estado.muted));
-      toggle.setAttribute('title', estado.muted ? 'Activar sonido' : 'Silenciar sonido');
+      const muted = estado.muted;
+      container.classList.toggle('is-muted', muted);
+      toggle.setAttribute('aria-pressed', String(!muted));
+      toggle.setAttribute('aria-label', muted ? 'Activar todo el audio' : 'Silenciar todo el audio');
+      toggle.setAttribute('title', muted ? 'Activar sonido' : 'Silenciar sonido');
+
+      if (statusEl) {
+        statusEl.textContent = muted ? '🔇 Audio silenciado' : '🔊 Audio activo';
+      }
+
+      masterInput.value = estado.masterVolume.toFixed(2);
+      musicInput.value = estado.musicVolume.toFixed(2);
+      sfxInput.value = estado.sfxVolume.toFixed(2);
+      actualizarEtiquetas();
+    }
+
+    function aplicarGanancias() {
+      window.audioManager.setVolume('master', estado.masterVolume);
+      window.audioManager.setVolume('music', estado.musicVolume);
+      window.audioManager.setVolume('sfx', estado.sfxVolume);
+      window.audioManager.setMuted(estado.muted);
     }
 
     function ocultarVolumen() {
@@ -159,12 +264,10 @@
       if (!volumeWrap) return;
       volumeWrap.hidden = false;
       volumeWrap.setAttribute('aria-hidden', 'false');
-      if (hideTimer) {
-        clearTimeout(hideTimer);
-      }
+      if (hideTimer) clearTimeout(hideTimer);
       hideTimer = setTimeout(() => {
         ocultarVolumen();
-      }, 5000);
+      }, 7000);
     }
 
     function mostrarPromptAudio() {
@@ -178,6 +281,7 @@
 
     async function desbloquearAudioYMusica({ fadeInMs = 0 } = {}) {
       await window.audioManager.init();
+      aplicarGanancias();
       if (!estado.muted && (musicDescriptor || musicSrc)) {
         await window.audioManager.playMusic(musicTrackId, { fadeInMs });
       }
@@ -194,42 +298,60 @@
           return;
         }
         ocultarPromptAudio();
-      } catch (err) {
-        if (!desdePrompt) {
-          mostrarPromptAudio();
-        }
+      } catch (_) {
+        if (!desdePrompt) mostrarPromptAudio();
       }
     }
 
-    function aplicarEstadoInicial() {
-      window.audioManager.setVolume('music', estado.volume);
-      window.audioManager.setMuted(estado.muted);
-      volumeInput.value = estado.volume.toFixed(2);
-      if (estado.muted) {
-        ocultarVolumen();
-      }
+    function persistirYRefrescar() {
+      aplicarGanancias();
+      guardarEstadoAudio(estado);
       actualizarUI();
     }
 
     toggle.addEventListener('click', async () => {
-      estado.muted = window.audioManager.toggleMute();
+      estado.muted = !estado.muted;
       if (estado.muted) {
         ocultarVolumen();
       } else {
         await intentarReproducirMusica();
         mostrarVolumenTemporal();
       }
-      guardarEstadoAudio(storageKeyPrefix, estado);
-      actualizarUI();
+      persistirYRefrescar();
     });
 
-    volumeInput.addEventListener('input', () => {
-      const value = parseFloat(volumeInput.value);
-      if (!Number.isFinite(value)) return;
-      estado.volume = Math.min(Math.max(value, 0), 1);
-      window.audioManager.setVolume('music', estado.volume);
-      guardarEstadoAudio(storageKeyPrefix, estado);
+    masterInput.addEventListener('input', async () => {
+      estado.masterVolume = clamp01(masterInput.value, estado.masterVolume);
+      estado.muted = false;
+      await intentarReproducirMusica();
+      mostrarVolumenTemporal();
+      persistirYRefrescar();
     });
+
+    musicInput.addEventListener('input', async () => {
+      estado.musicVolume = clamp01(musicInput.value, estado.musicVolume);
+      estado.muted = false;
+      await intentarReproducirMusica();
+      mostrarVolumenTemporal();
+      persistirYRefrescar();
+    });
+
+    sfxInput.addEventListener('input', () => {
+      estado.sfxVolume = clamp01(sfxInput.value, estado.sfxVolume);
+      estado.muted = false;
+      mostrarVolumenTemporal();
+      persistirYRefrescar();
+    });
+
+    resetBtn.addEventListener('click', async () => {
+      estado = { ...DEFAULTS };
+      await intentarReproducirMusica();
+      mostrarVolumenTemporal();
+      persistirYRefrescar();
+    });
+
+    [toggle, resetBtn].forEach(registrarTecladoBoton);
+    [masterInput, musicInput, sfxInput].forEach(aplicarPasoRangeConTeclado);
 
     const manejarPrimerGesto = async () => {
       try {
@@ -245,7 +367,8 @@
       await desbloquearAudioYMusica({ fadeInMs: 900 });
     });
 
-    aplicarEstadoInicial();
+    persistirYRefrescar();
+
     if (!estado.muted && usuarioHabilitoAudio()) {
       intentarReproducirMusica();
     } else {
@@ -261,9 +384,9 @@
     window.bingoAudioState = estado;
   }
 
-  function reproducirSonidoGanador(eventName = 'winner', storageKeyPrefix = 'bingoAudio') {
+  function reproducirSonidoGanador(eventName = 'winner') {
     if (!window.audioManager) return;
-    const estado = obtenerEstadoAudio(storageKeyPrefix);
+    const estado = leerEstadoAudio();
     if (estado.muted) return;
     window.audioManager.playSfx(eventName).catch(() => {});
   }
