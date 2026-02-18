@@ -27,6 +27,8 @@
       this.musicDuckToken = 0;
       this.initialized = false;
       this.pendingInitPromise = null;
+      this.autoplayBlocked = false;
+      this.autoplayProbeDone = false;
 
       this.manifestStorageKey = 'bingoAudioManifestCache';
       this.manifest = null;
@@ -157,19 +159,8 @@
 
         this.applyGains();
 
-        const unlock = () => {
-          this.init().catch(() => {});
-        };
-
-        ['pointerdown', 'touchstart', 'keydown'].forEach((eventName) => {
-          document.addEventListener(eventName, unlock, { once: true });
-        });
-
+        await this.tryAutoplayUnlock();
         this.initialized = true;
-
-        if (this.audioContext.state === 'suspended') {
-          await this.audioContext.resume();
-        }
       })();
 
       try {
@@ -177,6 +168,47 @@
       } finally {
         this.pendingInitPromise = null;
       }
+    }
+
+    async tryAutoplayUnlock() {
+      if (!this.audioContext) return false;
+
+      let blocked = false;
+
+      if (this.audioContext.state !== 'running') {
+        try {
+          await this.audioContext.resume();
+        } catch (_) {
+          blocked = true;
+        }
+      }
+
+      if (this.audioContext.state !== 'running') {
+        blocked = true;
+      }
+
+      if (!blocked && !this.autoplayProbeDone) {
+        this.autoplayProbeDone = true;
+        try {
+          const probeGain = this.audioContext.createGain();
+          probeGain.gain.value = 0;
+          probeGain.connect(this.audioContext.destination);
+          const probeSource = this.audioContext.createBufferSource();
+          probeSource.buffer = this.audioContext.createBuffer(1, 1, this.audioContext.sampleRate || 44100);
+          probeSource.connect(probeGain);
+          probeSource.start(0);
+          probeSource.stop(this.audioContext.currentTime + 0.01);
+        } catch (_) {
+          blocked = true;
+        }
+      }
+
+      this.autoplayBlocked = blocked;
+      return !blocked;
+    }
+
+    isAutoplayBlocked() {
+      return !!this.autoplayBlocked;
     }
 
     async fetchAndDecode(src) {
@@ -221,9 +253,10 @@
       }
     }
 
-    async playMusic(trackId) {
+    async playMusic(trackId, options = {}) {
       if (!trackId) return;
       this.currentMusicTrackId = trackId;
+      const fadeInMs = Number.isFinite(options.fadeInMs) ? Math.max(0, options.fadeInMs) : 0;
 
       const sourceDescriptor = this.musicTracks.get(trackId);
       if (!sourceDescriptor) return;
@@ -243,6 +276,15 @@
       source.buffer = buffer;
       source.loop = true;
       source.connect(this.musicGain);
+
+      if (fadeInMs > 0) {
+        const now = this.audioContext.currentTime;
+        const targetGain = this.muted ? 0 : this.musicVolume;
+        this.musicGain.gain.cancelScheduledValues(now);
+        this.musicGain.gain.setValueAtTime(0, now);
+        this.musicGain.gain.linearRampToValueAtTime(targetGain, now + fadeInMs / 1000);
+      }
+
       source.start(0);
       this.currentMusicSource = source;
     }

@@ -1,5 +1,69 @@
 (function() {
   const DEFAULT_VOLUME = 0.22;
+  const AUDIO_USER_CONSENT_KEY = 'audio:enabledByUser';
+
+  function usuarioHabilitoAudio() {
+    try {
+      return localStorage.getItem(AUDIO_USER_CONSENT_KEY) === 'true';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function guardarConsentimientoAudio() {
+    try {
+      localStorage.setItem(AUDIO_USER_CONSENT_KEY, 'true');
+    } catch (_) {}
+  }
+
+  function obtenerPromptGlobalAudio() {
+    if (window.__bingoAudioPromptManager) {
+      return window.__bingoAudioPromptManager;
+    }
+
+    let promptEl = null;
+    let onEnable = null;
+
+    function crearPrompt() {
+      if (promptEl) return promptEl;
+      promptEl = document.createElement('div');
+      promptEl.className = 'audio-control__prompt audio-control__prompt--global';
+      promptEl.setAttribute('role', 'dialog');
+      promptEl.setAttribute('aria-live', 'polite');
+      promptEl.setAttribute('aria-hidden', 'true');
+      promptEl.innerHTML =
+        '<p>Tu navegador bloqueó el audio automático. Toca para activarlo.</p>' +
+        '<button type="button" class="audio-control__prompt-btn">Activar audio</button>';
+
+      promptEl.querySelector('.audio-control__prompt-btn')?.addEventListener('click', async () => {
+        if (typeof onEnable === 'function') {
+          await onEnable();
+        }
+      });
+
+      document.body.appendChild(promptEl);
+      return promptEl;
+    }
+
+    const manager = {
+      setEnableHandler(handler) {
+        onEnable = handler;
+      },
+      show() {
+        const el = crearPrompt();
+        el.classList.add('is-visible');
+        el.removeAttribute('aria-hidden');
+      },
+      hide() {
+        if (!promptEl) return;
+        promptEl.classList.remove('is-visible');
+        promptEl.setAttribute('aria-hidden', 'true');
+      },
+    };
+
+    window.__bingoAudioPromptManager = manager;
+    return manager;
+  }
 
   function obtenerEstadoAudio(prefix) {
     const mutedRaw = localStorage.getItem(`${prefix}:muted`);
@@ -46,7 +110,7 @@
       musicTrackId = 'bg-music',
       musicManifestKey = null,
       sfxEvents = {},
-      mostrarPrompt = false,
+      mostrarPrompt = true,
     } = config;
 
     const container = document.getElementById(containerId);
@@ -77,7 +141,7 @@
     }
 
     let hideTimer = null;
-    let promptEl = null;
+    const promptGlobalAudio = obtenerPromptGlobalAudio();
 
     function actualizarUI() {
       container.classList.toggle('is-muted', estado.muted);
@@ -103,47 +167,32 @@
       }, 5000);
     }
 
-    function crearPromptAudio() {
-      if (!mostrarPrompt || promptEl) return;
-      promptEl = document.createElement('div');
-      promptEl.className = 'audio-control__prompt';
-      promptEl.setAttribute('role', 'dialog');
-      promptEl.setAttribute('aria-live', 'polite');
-      promptEl.setAttribute('aria-hidden', 'true');
-      promptEl.innerHTML =
-        '<p>Para escuchar la música necesitamos tu interacción.</p>' +
-        '<button type="button" class="audio-control__prompt-btn">Activar audio</button>';
-
-      const promptBtn = promptEl.querySelector('.audio-control__prompt-btn');
-      promptBtn?.addEventListener('click', async () => {
-        await window.audioManager.init();
-        if (!estado.muted) {
-          await window.audioManager.playMusic(musicTrackId);
-        }
-        ocultarPromptAudio();
-      });
-      container.appendChild(promptEl);
-    }
-
     function mostrarPromptAudio() {
       if (!mostrarPrompt) return;
-      crearPromptAudio();
-      if (!promptEl) return;
-      promptEl.classList.add('is-visible');
-      promptEl.removeAttribute('aria-hidden');
+      promptGlobalAudio.show();
     }
 
     function ocultarPromptAudio() {
-      if (!promptEl) return;
-      promptEl.classList.remove('is-visible');
-      promptEl.setAttribute('aria-hidden', 'true');
+      promptGlobalAudio.hide();
+    }
+
+    async function desbloquearAudioYMusica({ fadeInMs = 0 } = {}) {
+      await window.audioManager.init();
+      if (!estado.muted && (musicDescriptor || musicSrc)) {
+        await window.audioManager.playMusic(musicTrackId, { fadeInMs });
+      }
+      guardarConsentimientoAudio();
+      ocultarPromptAudio();
     }
 
     async function intentarReproducirMusica(desdePrompt = false) {
       if (estado.muted || (!musicDescriptor && !musicSrc)) return;
       try {
-        await window.audioManager.init();
-        await window.audioManager.playMusic(musicTrackId);
+        await desbloquearAudioYMusica();
+        if (window.audioManager.isAutoplayBlocked?.()) {
+          mostrarPromptAudio();
+          return;
+        }
         ocultarPromptAudio();
       } catch (err) {
         if (!desdePrompt) {
@@ -182,19 +231,31 @@
       guardarEstadoAudio(storageKeyPrefix, estado);
     });
 
-    ['pointerdown', 'touchstart', 'keydown'].forEach((evento) => {
-      document.addEventListener(
-        evento,
-        () => {
-          window.audioManager.init().catch(() => {});
-        },
-        { once: true }
-      );
+    const manejarPrimerGesto = async () => {
+      try {
+        await desbloquearAudioYMusica({ fadeInMs: 900 });
+      } catch (_) {}
+    };
+
+    ['pointerdown', 'keydown'].forEach((evento) => {
+      document.addEventListener(evento, manejarPrimerGesto, { once: true });
+    });
+
+    promptGlobalAudio.setEnableHandler(async () => {
+      await desbloquearAudioYMusica({ fadeInMs: 900 });
     });
 
     aplicarEstadoInicial();
-    if (!estado.muted) {
+    if (!estado.muted && usuarioHabilitoAudio()) {
       intentarReproducirMusica();
+    } else {
+      window.audioManager.init().then(() => {
+        if (window.audioManager.isAutoplayBlocked?.()) {
+          mostrarPromptAudio();
+        }
+      }).catch(() => {
+        mostrarPromptAudio();
+      });
     }
 
     window.bingoAudioState = estado;
