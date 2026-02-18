@@ -4384,6 +4384,102 @@
       },
     },
   });
+
+  const AUDIO_EVENTS = Object.freeze({
+    DRAW_NUMBER: 'DRAW_NUMBER',
+    MARK_CELL: 'MARK_CELL',
+    MODAL_OPEN: 'MODAL_OPEN',
+    MODAL_CLOSE: 'MODAL_CLOSE',
+    WINNER: 'WINNER',
+    TIE: 'TIE',
+  });
+
+  const AUDIO_EVENT_CONFIG = Object.freeze({
+    [AUDIO_EVENTS.DRAW_NUMBER]: {
+      manifestKey: 'sfx.drawNumber',
+      throttleMs: 550,
+      priority: 1,
+    },
+    [AUDIO_EVENTS.MARK_CELL]: {
+      manifestKey: 'sfx.markCell',
+      throttleMs: 450,
+      priority: 1,
+    },
+    [AUDIO_EVENTS.MODAL_OPEN]: {
+      manifestKey: 'sfx.openModal',
+      throttleMs: 280,
+      priority: 2,
+    },
+    [AUDIO_EVENTS.MODAL_CLOSE]: {
+      manifestKey: 'sfx.openModal',
+      throttleMs: 280,
+      priority: 2,
+    },
+    [AUDIO_EVENTS.WINNER]: {
+      manifestKey: 'sfx.win',
+      critical: true,
+      duckAmount: 0.3,
+      duckDurationMs: 2200,
+      duckFadeMs: 260,
+      throttleMs: 1400,
+      priority: 3,
+    },
+    [AUDIO_EVENTS.TIE]: {
+      manifestKey: 'sfx.win',
+      critical: true,
+      duckAmount: 0.32,
+      duckDurationMs: 2200,
+      duckFadeMs: 260,
+      throttleMs: 1400,
+      priority: 3,
+    },
+  });
+
+  const audioEventLastPlayedAt = new Map();
+  let audioLastPriority = 0;
+  let audioLastPriorityAt = 0;
+  const AUDIO_PRIORITY_LOCK_MS = 900;
+
+  function registrarEventosAudioJuego(){
+    if(!window.audioManager || typeof window.audioManager.registerSfxEvent !== 'function') return;
+    Object.entries(AUDIO_EVENT_CONFIG).forEach(([eventName, config])=>{
+      if(!config?.manifestKey) return;
+      window.audioManager.registerSfxEvent(eventName, { manifestKey: config.manifestKey }, {
+        critical: !!config.critical,
+        duckAmount: config.duckAmount,
+        duckDurationMs: config.duckDurationMs,
+        duckFadeMs: config.duckFadeMs,
+      });
+    });
+  }
+
+  function playGameAudioEvent(eventName, options={}){
+    if(!eventName || !window.audioManager || typeof window.audioManager.playSfx !== 'function') return;
+    const base = AUDIO_EVENT_CONFIG[eventName] || {};
+    const now = Date.now();
+    const throttleMs = Number.isFinite(options.throttleMs)
+      ? options.throttleMs
+      : (Number.isFinite(base.throttleMs) ? base.throttleMs : 0);
+    const priority = Number.isFinite(options.priority)
+      ? options.priority
+      : (Number.isFinite(base.priority) ? base.priority : 1);
+    const force = options.force === true;
+    const lastAt = audioEventLastPlayedAt.get(eventName) || 0;
+
+    if(!force && throttleMs > 0 && now - lastAt < throttleMs){
+      return;
+    }
+    if(!force && audioLastPriority > priority && now - audioLastPriorityAt < AUDIO_PRIORITY_LOCK_MS){
+      return;
+    }
+
+    audioEventLastPlayedAt.set(eventName, now);
+    audioLastPriority = priority;
+    audioLastPriorityAt = now;
+    window.audioManager.playSfx(eventName).catch(()=>{});
+  }
+
+  registrarEventosAudioJuego();
   const sinSorteoContenedorEl = document.getElementById('sin-sorteo-contenedor');
   const seleccionarFinalizadoBtn = document.getElementById('seleccionar-finalizado-btn');
   const sinSorteoMensajeEl = document.getElementById('sin-sorteo-mensaje');
@@ -4651,12 +4747,14 @@
     }
     whatsappModalEl.classList.add('activa');
     whatsappModalEl.setAttribute('aria-hidden','false');
+    playGameAudioEvent(AUDIO_EVENTS.MODAL_OPEN);
   }
 
   function cerrarModalWhatsapp(){
     if(!whatsappModalEl) return;
     whatsappModalEl.classList.remove('activa');
     whatsappModalEl.setAttribute('aria-hidden','true');
+    playGameAudioEvent(AUDIO_EVENTS.MODAL_CLOSE, { throttleMs: 180 });
   }
 
   function formatearDosDigitos(valor){
@@ -5855,6 +5953,7 @@
     if(!modalFormasSinGanadoresEl) return;
     modalFormasSinGanadoresEl.classList.remove('activa');
     modalFormasSinGanadoresEl.setAttribute('aria-hidden','true');
+    playGameAudioEvent(AUDIO_EVENTS.MODAL_CLOSE, { throttleMs: 200 });
   }
 
   function reiniciarAlertaFormasSinGanadores(){
@@ -6630,6 +6729,7 @@
       return;
     }
     complementariosAvisoEl.classList.add('activa');
+    playGameAudioEvent(AUDIO_EVENTS.MODAL_OPEN, { priority: 2 });
     complementariosAvisoEl.setAttribute('aria-hidden','false');
     if(complementariosAvisoAceptarBtn){
       complementariosAvisoAceptarBtn.focus({ preventScroll: true });
@@ -6639,6 +6739,7 @@
   function cerrarAvisoComplementarios(){
     if(!complementariosAvisoEl) return;
     complementariosAvisoEl.classList.remove('activa');
+    playGameAudioEvent(AUDIO_EVENTS.MODAL_CLOSE, { throttleMs: 180 });
     complementariosAvisoEl.setAttribute('aria-hidden','true');
   }
 
@@ -9169,6 +9270,7 @@
     }
     modalCelebracionEl.classList.add('activa');
     modalCelebracionEl.setAttribute('aria-hidden','false');
+    playGameAudioEvent(AUDIO_EVENTS.MODAL_OPEN, { priority: 2 });
     celebracionModalActiva = true;
     iniciarConfetiCelebracion(esSimulacion);
     modalCelebracionAceptarBtn?.focus({preventScroll:true});
@@ -9178,6 +9280,7 @@
     if(!modalCelebracionEl) return;
     modalCelebracionEl.classList.remove('activa');
     modalCelebracionEl.setAttribute('aria-hidden','true');
+    playGameAudioEvent(AUDIO_EVENTS.MODAL_CLOSE, { throttleMs: 200 });
     celebracionModalActiva = false;
     if(modalCelebracionListaEl){
       modalCelebracionListaEl.innerHTML='';
@@ -9190,6 +9293,7 @@
     modalSinPremioMensajeEl.textContent = '😅 Esta vez no ganaste ningún premio, te invitamos a seguir jugando al Bingo Online y podrás ser un feliz ganador 😊';
     modalSinPremioEl.classList.add('activa');
     modalSinPremioEl.setAttribute('aria-hidden','false');
+    playGameAudioEvent(AUDIO_EVENTS.MODAL_OPEN, { priority: 2 });
     modalSinPremioActiva = true;
     modalSinPremioAceptarBtn?.focus({preventScroll:true});
   }
@@ -9198,6 +9302,7 @@
     if(!modalSinPremioEl) return;
     modalSinPremioEl.classList.remove('activa');
     modalSinPremioEl.setAttribute('aria-hidden','true');
+    playGameAudioEvent(AUDIO_EVENTS.MODAL_CLOSE, { throttleMs: 200 });
     modalSinPremioActiva = false;
   }
 
@@ -9206,6 +9311,8 @@
     modalSegundoLugarMensajeEl.textContent = mensaje;
     modalSegundoLugarEl.classList.add('activa');
     modalSegundoLugarEl.setAttribute('aria-hidden','false');
+    playGameAudioEvent(AUDIO_EVENTS.MODAL_OPEN, { priority: 2 });
+    playGameAudioEvent(AUDIO_EVENTS.TIE, { priority: 3 });
     modalSegundoLugarActiva = true;
     modalSegundoLugarAceptarBtn?.focus({preventScroll:true});
   }
@@ -9214,6 +9321,7 @@
     if(!modalSegundoLugarEl) return;
     modalSegundoLugarEl.classList.remove('activa');
     modalSegundoLugarEl.setAttribute('aria-hidden','true');
+    playGameAudioEvent(AUDIO_EVENTS.MODAL_CLOSE, { throttleMs: 200 });
     modalSegundoLugarActiva = false;
   }
 
@@ -9355,7 +9463,7 @@
     if(detalles.length){
       mostrarModalCelebracionGanador(detalles, esSimulacion);
       if(!esSimulacion){
-        reproducirSonidoGanador('winner', 'bingoAudio');
+        playGameAudioEvent(AUDIO_EVENTS.WINNER, { priority: 3, force: true });
       }
     }
   }
@@ -9757,12 +9865,14 @@
     actualizarModalGanadoresConExtras([]);
     modalGanadores.classList.add('activa');
     modalGanadores.setAttribute('aria-hidden','false');
+    playGameAudioEvent(AUDIO_EVENTS.MODAL_OPEN, { priority: 2 });
     modalCerrarBtn?.focus({ preventScroll: true });
   }
 
 
   function cerrarModal(){
     modalGanadores.classList.remove('activa');
+    playGameAudioEvent(AUDIO_EVENTS.MODAL_CLOSE, { throttleMs: 180 });
     actualizarModalPremioForma(null);
   }
 
@@ -10110,6 +10220,7 @@
     if(!modalSimulacionEl) return;
     modalSimulacionEl.classList.remove('activa');
     modalSimulacionEl.setAttribute('aria-hidden','true');
+    playGameAudioEvent(AUDIO_EVENTS.MODAL_CLOSE, { throttleMs: 180 });
   }
 
   function actualizarModalSimulacionEstado(){
@@ -10132,6 +10243,7 @@
     actualizarModalSimulacionEstado();
     modalSimulacionEl.classList.add('activa');
     modalSimulacionEl.setAttribute('aria-hidden','false');
+    playGameAudioEvent(AUDIO_EVENTS.MODAL_OPEN, { priority: 2 });
   }
 
   function construirCartonSimulacion(carton){
@@ -10290,6 +10402,20 @@
     abrirModalSimulacion();
   }
 
+  function existeNumeroMarcadoEnCartones(numeros){
+    if(!Array.isArray(numeros) || !numeros.length) return false;
+    const setNumeros = new Set(numeros.map(num=>Number(num)).filter(Number.isFinite));
+    if(!setNumeros.size) return false;
+    const cartonesJugador = obtenerCartonesJugadorActual();
+    return cartonesJugador.some(carton=>{
+      const posiciones = Array.isArray(carton?.posiciones) ? carton.posiciones : [];
+      return posiciones.some(pos=>{
+        const numero = normalizarNumero(pos?.valor ?? pos?.numero ?? pos?.value);
+        return numero !== null && setNumeros.has(Number(numero));
+      });
+    });
+  }
+
   function procesarCantos(data){
     const payload=Array.isArray(data)?{numeros:data}:data&&typeof data==='object'?data:{};
     const cantosPrevios=Array.isArray(cantosOrdenados)?new Set(cantosOrdenados):new Set();
@@ -10388,6 +10514,12 @@
     actualizarConductoEsferas(nuevosCantos, cantosPrevios.size===0, permitirAnimacionConducto);
     if(nuevosPenalizados.length){
       resaltarCeldasPenalizadasTemporalmente(nuevosPenalizados);
+    }
+    if(nuevosCantos.length){
+      playGameAudioEvent(AUDIO_EVENTS.DRAW_NUMBER);
+      if(existeNumeroMarcadoEnCartones(nuevosCantos)){
+        playGameAudioEvent(AUDIO_EVENTS.MARK_CELL);
+      }
     }
     const nuevosComplementarios=nuevosCantos.filter(esCantoComplementario);
     if(nuevosComplementarios.length){
@@ -10660,6 +10792,7 @@
     if(!modalSorteosFinalizadosEl) return;
     modalSorteosFinalizadosEl.classList.remove('activa');
     modalSorteosFinalizadosEl.setAttribute('aria-hidden','true');
+    playGameAudioEvent(AUDIO_EVENTS.MODAL_CLOSE, { throttleMs: 180 });
   }
 
   function renderListaSorteosFinalizados(lista){
@@ -10751,6 +10884,7 @@
     if(!modalSorteosFinalizadosEl || cargandoSorteosFinalizados) return;
     modalSorteosFinalizadosEl.classList.add('activa');
     modalSorteosFinalizadosEl.setAttribute('aria-hidden','false');
+    playGameAudioEvent(AUDIO_EVENTS.MODAL_OPEN, { priority: 2 });
     if(modalSorteosFinalizadosMensajeEl){
       modalSorteosFinalizadosMensajeEl.textContent='Cargando sorteos disponibles...';
     }
