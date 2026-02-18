@@ -117,13 +117,14 @@
   function resolverDescriptorDesdeManifest(manifestKey) {
     if (!manifestKey || !window.audioManager?.getManifestNode) return null;
     const descriptor = window.audioManager.getManifestNode(manifestKey);
-    if (!descriptor?.urlPrimary) return null;
+    if (!descriptor) return null;
     return {
       manifestKey,
-      urlPrimary: descriptor.urlPrimary,
-      urlFallback: descriptor.urlFallback || null,
       license: descriptor.license || null,
       attribution: descriptor.attribution || null,
+      preload: descriptor.preload || null,
+      maxBytes: descriptor.maxBytes || null,
+      normalizationGain: descriptor.normalizationGain || null,
     };
   }
 

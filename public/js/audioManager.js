@@ -32,6 +32,8 @@
 
       this.manifestStorageKey = 'bingoAudioManifestCache';
       this.manifest = null;
+      this.defaultMaxSfxBytes = 120 * 1024;
+      this.defaultMaxMusicBytes = 1024 * 1024;
     }
 
     getCachedManifest() {
@@ -80,12 +82,61 @@
         .reduce((acc, segment) => (acc && acc[segment] ? acc[segment] : null), manifest);
     }
 
+    resolveSources(node = {}) {
+      const preferredFormats = Array.isArray(node.preferredFormats) && node.preferredFormats.length
+        ? node.preferredFormats
+        : ['mp3', 'ogg'];
+
+      const candidates = [];
+      if (Array.isArray(node.sources)) {
+        node.sources.forEach((source) => {
+          if (source?.url) {
+            candidates.push({
+              url: source.url,
+              format: (source.format || '').toLowerCase() || null,
+              kind: source.kind || null,
+            });
+          }
+        });
+      }
+
+      if (node.urlPrimary) {
+        candidates.push({ url: node.urlPrimary, format: (node.formatPrimary || '').toLowerCase() || null, kind: 'primary' });
+      }
+      if (node.urlFallback) {
+        candidates.push({ url: node.urlFallback, format: (node.formatFallback || '').toLowerCase() || null, kind: 'fallback' });
+      }
+
+      const dedup = new Set();
+      const ordered = [];
+
+      preferredFormats.forEach((format) => {
+        candidates.forEach((candidate) => {
+          if (!candidate?.url || dedup.has(candidate.url)) return;
+          if (candidate.format && candidate.format !== format) return;
+          dedup.add(candidate.url);
+          ordered.push(candidate.url);
+        });
+      });
+
+      candidates.forEach((candidate) => {
+        if (!candidate?.url || dedup.has(candidate.url)) return;
+        dedup.add(candidate.url);
+        ordered.push(candidate.url);
+      });
+
+      return ordered;
+    }
+
     normalizeSourceDescriptor(source) {
       if (!source) return null;
       if (typeof source === 'string') {
         return {
-          urlPrimary: source,
-          urlFallback: null,
+          urls: [source],
+          preferredFormats: ['mp3', 'ogg'],
+          normalizationGain: 1,
+          category: 'sfx',
+          maxBytes: this.defaultMaxSfxBytes,
         };
       }
 
@@ -93,36 +144,53 @@
         const manifestNode = this.getManifestNode(source.manifestKey);
         if (manifestNode) {
           return {
-            urlPrimary: manifestNode.urlPrimary || null,
-            urlFallback: manifestNode.urlFallback || null,
+            urls: this.resolveSources(manifestNode),
+            preferredFormats: manifestNode.preferredFormats || ['mp3', 'ogg'],
             license: manifestNode.license || null,
             attribution: manifestNode.attribution || null,
+            normalizationGain: Number.isFinite(manifestNode.normalizationGain)
+              ? clamp(manifestNode.normalizationGain, 0.1, 2)
+              : 1,
+            category: manifestNode.category || source.category || 'sfx',
+            maxBytes: Number.isFinite(manifestNode.maxBytes)
+              ? Math.max(32 * 1024, Math.floor(manifestNode.maxBytes))
+              : (manifestNode.category === 'music' ? this.defaultMaxMusicBytes : this.defaultMaxSfxBytes),
+            preload: manifestNode.preload || source.preload || null,
+            preloadCritical: !!manifestNode.preloadCritical,
           };
         }
       }
 
+      const urls = this.resolveSources(source);
       return {
-        urlPrimary: source.urlPrimary || source.src || null,
-        urlFallback: source.urlFallback || null,
+        urls,
+        preferredFormats: source.preferredFormats || ['mp3', 'ogg'],
         license: source.license || null,
         attribution: source.attribution || null,
+        normalizationGain: Number.isFinite(source.normalizationGain) ? clamp(source.normalizationGain, 0.1, 2) : 1,
+        category: source.category || 'sfx',
+        maxBytes: Number.isFinite(source.maxBytes)
+          ? Math.max(32 * 1024, Math.floor(source.maxBytes))
+          : (source.category === 'music' ? this.defaultMaxMusicBytes : this.defaultMaxSfxBytes),
+        preload: source.preload || null,
+        preloadCritical: !!source.preloadCritical,
       };
     }
 
     registerMusicTrack(trackId, source) {
       if (!trackId || !source) return;
       const descriptor = this.normalizeSourceDescriptor(source);
-      if (!descriptor?.urlPrimary) return;
+      if (!descriptor?.urls?.length) return;
       this.musicTracks.set(trackId, descriptor);
     }
 
     registerSfxEvent(eventName, source, options = {}) {
       if (!eventName || !source) return;
       const descriptor = this.normalizeSourceDescriptor(source);
-      if (!descriptor?.urlPrimary) return;
+      if (!descriptor?.urls?.length) return;
       this.sfxEvents.set(eventName, {
         source: descriptor,
-        critical: !!options.critical,
+        critical: !!options.critical || !!descriptor.preloadCritical,
         duckAmount: Number.isFinite(options.duckAmount) ? clamp(options.duckAmount, 0.05, 1) : 0.35,
         duckDurationMs: Number.isFinite(options.duckDurationMs) ? Math.max(120, options.duckDurationMs) : 1800,
         duckFadeMs: Number.isFinite(options.duckFadeMs) ? Math.max(50, options.duckFadeMs) : 220,
@@ -211,7 +279,7 @@
       return !!this.autoplayBlocked;
     }
 
-    async fetchAndDecode(src) {
+    async fetchAndDecode(src, descriptor = null) {
       if (!this.audioContext) {
         await this.init();
       }
@@ -220,7 +288,20 @@
       if (!response.ok) {
         throw new Error(`No se pudo descargar audio: ${src}`);
       }
+
+      const maxBytes = Number.isFinite(descriptor?.maxBytes)
+        ? descriptor.maxBytes
+        : (descriptor?.category === 'music' ? this.defaultMaxMusicBytes : this.defaultMaxSfxBytes);
+      const contentLength = Number(response.headers.get('content-length'));
+      if (Number.isFinite(contentLength) && contentLength > maxBytes) {
+        throw new Error(`Audio supera límite recomendado (${contentLength} > ${maxBytes}): ${src}`);
+      }
+
       const data = await response.arrayBuffer();
+      if (data.byteLength > maxBytes) {
+        throw new Error(`Audio supera límite recomendado (${data.byteLength} > ${maxBytes}): ${src}`);
+      }
+
       const decoded = await this.audioContext.decodeAudioData(data);
       this.buffers.set(src, decoded);
       return decoded;
@@ -228,29 +309,54 @@
 
     async loadBufferBySource(source) {
       const descriptor = this.normalizeSourceDescriptor(source);
-      if (!descriptor?.urlPrimary) return null;
+      if (!descriptor?.urls?.length) return null;
 
-      const { urlPrimary, urlFallback } = descriptor;
+      const urls = descriptor.urls;
 
-      if (this.buffers.has(urlPrimary)) {
-        return this.buffers.get(urlPrimary);
-      }
-
-      try {
-        return await this.fetchAndDecode(urlPrimary);
-      } catch (primaryError) {
-        if (!urlFallback) {
-          throw primaryError;
+      for (let i = 0; i < urls.length; i += 1) {
+        const url = urls[i];
+        if (this.buffers.has(url)) {
+          if (urls[0] && !this.buffers.has(urls[0])) {
+            this.buffers.set(urls[0], this.buffers.get(url));
+          }
+          return this.buffers.get(url);
         }
 
-        if (this.buffers.has(urlFallback)) {
-          return this.buffers.get(urlFallback);
+        try {
+          const decoded = await this.fetchAndDecode(url, descriptor);
+          if (urls[0] && url !== urls[0]) {
+            this.buffers.set(urls[0], decoded);
+          }
+          return decoded;
+        } catch (err) {
+          if (i === urls.length - 1) {
+            throw err;
+          }
         }
-
-        const fallbackBuffer = await this.fetchAndDecode(urlFallback);
-        this.buffers.set(urlPrimary, fallbackBuffer);
-        return fallbackBuffer;
       }
+
+      return null;
+    }
+
+    async preloadCriticalSfx() {
+      const criticalSources = [];
+      this.sfxEvents.forEach((config) => {
+        if (config?.critical && config?.source) {
+          criticalSources.push(config.source);
+        }
+      });
+
+      const uniqueKeys = new Set();
+      const jobs = criticalSources
+        .filter((source) => {
+          const key = source.urls?.[0] || '';
+          if (!key || uniqueKeys.has(key)) return false;
+          uniqueKeys.add(key);
+          return true;
+        })
+        .map((source) => this.loadBufferBySource(source).catch(() => null));
+
+      await Promise.all(jobs);
     }
 
     async playMusic(trackId, options = {}) {
@@ -275,7 +381,13 @@
       const source = this.audioContext.createBufferSource();
       source.buffer = buffer;
       source.loop = true;
-      source.connect(this.musicGain);
+
+      const sourceGain = this.audioContext.createGain();
+      sourceGain.gain.value = Number.isFinite(sourceDescriptor.normalizationGain)
+        ? sourceDescriptor.normalizationGain
+        : 1;
+      source.connect(sourceGain);
+      sourceGain.connect(this.musicGain);
 
       if (fadeInMs > 0) {
         const now = this.audioContext.currentTime;
@@ -301,12 +413,19 @@
 
       const source = this.audioContext.createBufferSource();
       source.buffer = buffer;
-      source.connect(this.sfxGain);
+
+      const sourceGain = this.audioContext.createGain();
+      sourceGain.gain.value = Number.isFinite(eventConfig.source.normalizationGain)
+        ? eventConfig.source.normalizationGain
+        : 1;
+      source.connect(sourceGain);
+      sourceGain.connect(this.sfxGain);
 
       this.activeSfxNodes.add(source);
       source.onended = () => {
         this.activeSfxNodes.delete(source);
         source.disconnect();
+        sourceGain.disconnect();
       };
 
       source.start(0);
