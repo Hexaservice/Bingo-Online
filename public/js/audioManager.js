@@ -27,17 +27,99 @@
       this.musicDuckToken = 0;
       this.initialized = false;
       this.pendingInitPromise = null;
+
+      this.manifestStorageKey = 'bingoAudioManifestCache';
+      this.manifest = null;
     }
 
-    registerMusicTrack(trackId, src) {
-      if (!trackId || !src) return;
-      this.musicTracks.set(trackId, src);
+    getCachedManifest() {
+      try {
+        const raw = localStorage.getItem(this.manifestStorageKey);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.manifestVersion) return null;
+        return parsed;
+      } catch (_) {
+        return null;
+      }
     }
 
-    registerSfxEvent(eventName, src, options = {}) {
-      if (!eventName || !src) return;
+    setCachedManifest(manifest) {
+      if (!manifest || !manifest.manifestVersion) return;
+      try {
+        localStorage.setItem(this.manifestStorageKey, JSON.stringify(manifest));
+      } catch (_) {}
+    }
+
+    loadManifest() {
+      if (this.manifest) return this.manifest;
+
+      const runtimeManifest = window.BINGO_AUDIO_MANIFEST;
+      const cachedManifest = this.getCachedManifest();
+
+      if (runtimeManifest?.manifestVersion) {
+        this.manifest = runtimeManifest;
+        if (cachedManifest?.manifestVersion !== runtimeManifest.manifestVersion) {
+          this.setCachedManifest(runtimeManifest);
+        }
+        return this.manifest;
+      }
+
+      this.manifest = cachedManifest || null;
+      return this.manifest;
+    }
+
+    getManifestNode(path) {
+      if (!path) return null;
+      const manifest = this.loadManifest();
+      if (!manifest) return null;
+      return String(path)
+        .split('.')
+        .reduce((acc, segment) => (acc && acc[segment] ? acc[segment] : null), manifest);
+    }
+
+    normalizeSourceDescriptor(source) {
+      if (!source) return null;
+      if (typeof source === 'string') {
+        return {
+          urlPrimary: source,
+          urlFallback: null,
+        };
+      }
+
+      if (source.manifestKey) {
+        const manifestNode = this.getManifestNode(source.manifestKey);
+        if (manifestNode) {
+          return {
+            urlPrimary: manifestNode.urlPrimary || null,
+            urlFallback: manifestNode.urlFallback || null,
+            license: manifestNode.license || null,
+            attribution: manifestNode.attribution || null,
+          };
+        }
+      }
+
+      return {
+        urlPrimary: source.urlPrimary || source.src || null,
+        urlFallback: source.urlFallback || null,
+        license: source.license || null,
+        attribution: source.attribution || null,
+      };
+    }
+
+    registerMusicTrack(trackId, source) {
+      if (!trackId || !source) return;
+      const descriptor = this.normalizeSourceDescriptor(source);
+      if (!descriptor?.urlPrimary) return;
+      this.musicTracks.set(trackId, descriptor);
+    }
+
+    registerSfxEvent(eventName, source, options = {}) {
+      if (!eventName || !source) return;
+      const descriptor = this.normalizeSourceDescriptor(source);
+      if (!descriptor?.urlPrimary) return;
       this.sfxEvents.set(eventName, {
-        src,
+        source: descriptor,
         critical: !!options.critical,
         duckAmount: Number.isFinite(options.duckAmount) ? clamp(options.duckAmount, 0.05, 1) : 0.35,
         duckDurationMs: Number.isFinite(options.duckDurationMs) ? Math.max(120, options.duckDurationMs) : 1800,
@@ -97,32 +179,57 @@
       }
     }
 
-    async loadBufferBySrc(src) {
-      if (!src) return null;
-      if (this.buffers.has(src)) {
-        return this.buffers.get(src);
-      }
-
+    async fetchAndDecode(src) {
       if (!this.audioContext) {
         await this.init();
       }
 
       const response = await fetch(src);
+      if (!response.ok) {
+        throw new Error(`No se pudo descargar audio: ${src}`);
+      }
       const data = await response.arrayBuffer();
       const decoded = await this.audioContext.decodeAudioData(data);
       this.buffers.set(src, decoded);
       return decoded;
     }
 
+    async loadBufferBySource(source) {
+      const descriptor = this.normalizeSourceDescriptor(source);
+      if (!descriptor?.urlPrimary) return null;
+
+      const { urlPrimary, urlFallback } = descriptor;
+
+      if (this.buffers.has(urlPrimary)) {
+        return this.buffers.get(urlPrimary);
+      }
+
+      try {
+        return await this.fetchAndDecode(urlPrimary);
+      } catch (primaryError) {
+        if (!urlFallback) {
+          throw primaryError;
+        }
+
+        if (this.buffers.has(urlFallback)) {
+          return this.buffers.get(urlFallback);
+        }
+
+        const fallbackBuffer = await this.fetchAndDecode(urlFallback);
+        this.buffers.set(urlPrimary, fallbackBuffer);
+        return fallbackBuffer;
+      }
+    }
+
     async playMusic(trackId) {
       if (!trackId) return;
       this.currentMusicTrackId = trackId;
 
-      const src = this.musicTracks.get(trackId);
-      if (!src) return;
+      const sourceDescriptor = this.musicTracks.get(trackId);
+      if (!sourceDescriptor) return;
 
       await this.init();
-      const buffer = await this.loadBufferBySrc(src);
+      const buffer = await this.loadBufferBySource(sourceDescriptor);
       if (!buffer) return;
 
       if (this.currentMusicSource) {
@@ -147,7 +254,7 @@
       if (this.activeSfxNodes.size >= this.maxSfxConcurrency) return;
 
       await this.init();
-      const buffer = await this.loadBufferBySrc(eventConfig.src);
+      const buffer = await this.loadBufferBySource(eventConfig.source);
       if (!buffer) return;
 
       const source = this.audioContext.createBufferSource();
