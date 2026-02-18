@@ -20,6 +20,19 @@
     return audioEl?.currentSrc || audioEl?.src || null;
   }
 
+  function resolverDescriptorDesdeManifest(manifestKey) {
+    if (!manifestKey || !window.audioManager?.getManifestNode) return null;
+    const descriptor = window.audioManager.getManifestNode(manifestKey);
+    if (!descriptor?.urlPrimary) return null;
+    return {
+      manifestKey,
+      urlPrimary: descriptor.urlPrimary,
+      urlFallback: descriptor.urlFallback || null,
+      license: descriptor.license || null,
+      attribution: descriptor.attribution || null,
+    };
+  }
+
   function initBingoAudioControl(config) {
     if (!config || !window.audioManager) return;
 
@@ -31,6 +44,7 @@
       storageKeyPrefix = 'bingoAudio',
       defaultVolume = DEFAULT_VOLUME,
       musicTrackId = 'bg-music',
+      musicManifestKey = null,
       sfxEvents = {},
       mostrarPrompt = false,
     } = config;
@@ -42,16 +56,19 @@
 
     if (!container || !toggle || !volumeInput) return;
 
+    const musicDescriptor = resolverDescriptorDesdeManifest(musicManifestKey);
     const musicSrc = resolverFuenteAudioDesdeId(audioId);
-    if (musicSrc) {
-      window.audioManager.registerMusicTrack(musicTrackId, musicSrc);
+    if (musicDescriptor || musicSrc) {
+      window.audioManager.registerMusicTrack(musicTrackId, musicDescriptor || musicSrc);
     }
 
     Object.entries(sfxEvents).forEach(([eventName, cfg]) => {
       if (!cfg) return;
+      const manifestDescriptor = resolverDescriptorDesdeManifest(cfg.manifestKey);
       const src = cfg.src || resolverFuenteAudioDesdeId(cfg.audioId);
-      if (!src) return;
-      window.audioManager.registerSfxEvent(eventName, src, cfg);
+      const resolvedSource = manifestDescriptor || src;
+      if (!resolvedSource) return;
+      window.audioManager.registerSfxEvent(eventName, resolvedSource, cfg);
     });
 
     let estado = obtenerEstadoAudio(storageKeyPrefix);
@@ -123,7 +140,7 @@
     }
 
     async function intentarReproducirMusica(desdePrompt = false) {
-      if (estado.muted || !musicSrc) return;
+      if (estado.muted || (!musicDescriptor && !musicSrc)) return;
       try {
         await window.audioManager.init();
         await window.audioManager.playMusic(musicTrackId);
