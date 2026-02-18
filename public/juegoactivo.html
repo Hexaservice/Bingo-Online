@@ -4349,6 +4349,7 @@
   <script src="js/auth.js"></script>
   <script src="js/notificationCenter.js"></script>
   <script src="js/timezone.js"></script>
+  <script src="js/audioManager.js"></script>
   <script src="js/audioControls.js"></script>
   <script>
   ensureAuth();
@@ -4374,7 +4375,16 @@
     audioId: 'bg-audio-game',
     storageKeyPrefix: 'bingoAudio',
     defaultVolume: 0.22,
-    unlockAudioIds: ['win-audio'],
+    musicTrackId: 'game-background',
+    sfxEvents: {
+      winner: {
+        audioId: 'win-audio',
+        critical: true,
+        duckAmount: 0.3,
+        duckDurationMs: 2200,
+        duckFadeMs: 260,
+      },
+    },
   });
   const sinSorteoContenedorEl = document.getElementById('sin-sorteo-contenedor');
   const seleccionarFinalizadoBtn = document.getElementById('seleccionar-finalizado-btn');
@@ -9347,7 +9357,7 @@
     if(detalles.length){
       mostrarModalCelebracionGanador(detalles, esSimulacion);
       if(!esSimulacion){
-        reproducirSonidoGanador('win-audio', 'bingoAudio');
+        reproducirSonidoGanador('winner', 'bingoAudio');
       }
     }
   }
