@@ -1507,6 +1507,26 @@
     return reemplazado.replace(/_{2,}/g, '_').replace(/^_+|_+$/g, '') || 'registro';
   }
 
+  function obtenerCandidatosBilleteraId(...valores){
+    const vistos = new Set();
+    const candidatos = [];
+    valores.forEach(valor=>{
+      if(typeof valor !== 'string') return;
+      const limpio = valor.trim();
+      if(!limpio) return;
+      if(!vistos.has(limpio)){
+        vistos.add(limpio);
+        candidatos.push(limpio);
+      }
+      const normalizado = normalizarEmail(limpio);
+      if(normalizado && !vistos.has(normalizado)){
+        vistos.add(normalizado);
+        candidatos.push(normalizado);
+      }
+    });
+    return candidatos;
+  }
+
   function normalizarInfoUsuario(id, data = {}){
     const email = (data.email || id || '').toString();
     let nombre = (data.nombre || data.name || '').toString().trim();
@@ -1893,13 +1913,13 @@
   }
 
   async function acreditarPremioAutomaticoCentroPagos({ docId, ganador, sorteoNombre, timestamp }){
-    const email = normalizarEmail(ganador.gmail);
+    const billeteraIds = obtenerCandidatosBilleteraId(ganador.gmail, ganador.email, ganador.IDbilletera);
+    const email = normalizarEmail(ganador.gmail || ganador.email || billeteraIds[0] || '');
     const alias = ganador.alias || '';
-    if(!email){
+    if(!email || !billeteraIds.length){
       throw new Error(`Ganador sin email válido para acreditación automática: ${alias || docId}`);
     }
     const premioRef = db.collection('PremiosSorteos').doc(docId);
-    const billeteraRef = db.collection('Billetera').doc(email);
     const transaccionRef = db.collection('transacciones').doc(`premio_${docId}`);
     const creditos = Number(ganador.creditos) || 0;
     const cartonesGratis = Number(ganador.cartonesGratis) || 0;
@@ -1911,7 +1931,20 @@
         return;
       }
 
-      const billeteraSnap = await tx.get(billeteraRef);
+      let billeteraRef = db.collection('Billetera').doc(billeteraIds[0]);
+      let billeteraSnap = null;
+      for(const billeteraId of billeteraIds){
+        const ref = db.collection('Billetera').doc(billeteraId);
+        const snap = await tx.get(ref);
+        if(snap.exists){
+          billeteraRef = ref;
+          billeteraSnap = snap;
+          break;
+        }
+      }
+      if(!billeteraSnap){
+        billeteraSnap = await tx.get(billeteraRef);
+      }
       const billeteraData = billeteraSnap.exists ? (billeteraSnap.data() || {}) : {};
       const nuevosCreditos = (Number(billeteraData.creditos) || 0) + creditos;
       const nuevosCartones = (Number(billeteraData.CartonesGratis) || 0) + cartonesGratis;
