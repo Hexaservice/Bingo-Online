@@ -2582,6 +2582,26 @@
     return valor.trim().toLowerCase();
   }
 
+  function obtenerCandidatosBilleteraId(...valores){
+    const vistos = new Set();
+    const candidatos = [];
+    valores.forEach(valor=>{
+      if(typeof valor !== 'string') return;
+      const limpio = valor.trim();
+      if(!limpio) return;
+      if(!vistos.has(limpio)){
+        vistos.add(limpio);
+        candidatos.push(limpio);
+      }
+      const normalizado = normalizarEmail(limpio);
+      if(normalizado && !vistos.has(normalizado)){
+        vistos.add(normalizado);
+        candidatos.push(normalizado);
+      }
+    });
+    return candidatos;
+  }
+
   function sanitizarId(valor){
     const texto = (valor || '').toString();
     const limpio = texto.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
@@ -4393,8 +4413,9 @@
     try {
       await asegurarDbListo();
       const identidad = await resolverIdentidadPersona(carton);
-      const email = normalizarEmail(identidad.email);
-      if(!email){
+      const billeteraIds = obtenerCandidatosBilleteraId(identidad.email, carton?.email, carton?.gmail, carton?.IDbilletera);
+      const email = normalizarEmail(identidad.email || billeteraIds[0] || '');
+      if(!email || !billeteraIds.length){
         return;
       }
       const premioTotal = obtenerCreditosForma(forma);
@@ -4408,7 +4429,6 @@
       const timestamp = getServerTimestamp();
       const premioRef = db.collection('PremiosSorteos').doc(premioId);
       const transaccionRef = db.collection('transacciones').doc(`premio_${premioId}`);
-      const billeteraRef = db.collection('Billetera').doc(email);
       await db.runTransaction(async tx => {
         const premioSnap = await tx.get(premioRef);
         if(premioSnap.exists){
@@ -4417,7 +4437,20 @@
             return;
           }
         }
-        const billeteraSnap = await tx.get(billeteraRef);
+        let billeteraRef = db.collection('Billetera').doc(billeteraIds[0]);
+        let billeteraSnap = null;
+        for(const billeteraId of billeteraIds){
+          const ref = db.collection('Billetera').doc(billeteraId);
+          const snap = await tx.get(ref);
+          if(snap.exists){
+            billeteraRef = ref;
+            billeteraSnap = snap;
+            break;
+          }
+        }
+        if(!billeteraSnap){
+          billeteraSnap = await tx.get(billeteraRef);
+        }
         const datosBilletera = billeteraSnap.exists ? billeteraSnap.data() : {};
         const nuevosCreditos = (Number(datosBilletera.creditos) || 0) + (Number(creditos) || 0);
         const nuevosCartones = (Number(datosBilletera.CartonesGratis) || 0) + (Number(cartonesGratis) || 0);
@@ -4504,8 +4537,9 @@
     try {
       await asegurarDbListo();
       const identidad = await resolverIdentidadPersona(carton);
-      const email = normalizarEmail(identidad.email);
-      if(!email){
+      const billeteraIds = obtenerCandidatosBilleteraId(identidad.email, carton?.email, carton?.gmail, carton?.IDbilletera);
+      const email = normalizarEmail(identidad.email || billeteraIds[0] || '');
+      if(!email || !billeteraIds.length){
         return;
       }
       const sorteoNombre = (currentSorteoData?.nombre || '').toString();
@@ -4515,7 +4549,6 @@
       const timestamp = getServerTimestamp();
       const premioRef = db.collection('PremiosSorteos').doc(premioId);
       const transaccionRef = db.collection('transacciones').doc(`premio2_${premioId}`);
-      const billeteraRef = db.collection('Billetera').doc(email);
       await db.runTransaction(async tx => {
         const premioSnap = await tx.get(premioRef);
         if(premioSnap.exists){
@@ -4524,7 +4557,20 @@
             return;
           }
         }
-        const billeteraSnap = await tx.get(billeteraRef);
+        let billeteraRef = db.collection('Billetera').doc(billeteraIds[0]);
+        let billeteraSnap = null;
+        for(const billeteraId of billeteraIds){
+          const ref = db.collection('Billetera').doc(billeteraId);
+          const snap = await tx.get(ref);
+          if(snap.exists){
+            billeteraRef = ref;
+            billeteraSnap = snap;
+            break;
+          }
+        }
+        if(!billeteraSnap){
+          billeteraSnap = await tx.get(billeteraRef);
+        }
         const datosBilletera = billeteraSnap.exists ? billeteraSnap.data() : {};
         const nuevosCartones = (Number(datosBilletera.CartonesGratis) || 0) + (Number(cartonesGratis) || 0);
         const payloadPremio = {
