@@ -74,7 +74,7 @@ service cloud.firestore {
 
     match /Billetera/{email} {
       allow read: if isAdmin() || isOwner(email);
-      allow create, update: if isAdmin() || isOwner(email);
+      allow create, update: if isAdmin() || isOwner(email) || isPrivilegedOperator();
       allow delete: if isAdmin();
     }
 
@@ -89,8 +89,14 @@ service cloud.firestore {
 
     match /transacciones/{id} {
       allow read: if isAdmin() || (isSignedIn() && resource.data.IDbilletera == request.auth.token.email);
-      allow create: if isAdmin() || (isSignedIn() && request.resource.data.IDbilletera == request.auth.token.email);
-      allow update, delete: if isAdmin();
+      allow create: if isAdmin()
+        || (isSignedIn() && request.resource.data.IDbilletera == request.auth.token.email)
+        || (isPrivilegedOperator() && request.resource.data.tipotrans == 'premio');
+      allow update: if isAdmin()
+        || (isPrivilegedOperator()
+          && resource.data.tipotrans == 'premio'
+          && request.resource.data.tipotrans == 'premio');
+      allow delete: if isAdmin();
     }
 
     match /CartonGuardado/{id} {
