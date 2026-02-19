@@ -4454,6 +4454,7 @@
         const datosBilletera = billeteraSnap.exists ? billeteraSnap.data() : {};
         const nuevosCreditos = (Number(datosBilletera.creditos) || 0) + (Number(creditos) || 0);
         const nuevosCartones = (Number(datosBilletera.CartonesGratis) || 0) + (Number(cartonesGratis) || 0);
+        const idBilleteraFinal = billeteraRef.id;
         const payloadPremio = {
           sorteoId: currentSorteoId,
           sorteoNombre,
@@ -4485,9 +4486,9 @@
           userIds: identidad.userId ? [identidad.userId] : [],
           cartonId: carton.id || carton.cartonId || '',
           formaIdx: Number(forma?.idx) || null,
-          generadoDesde: 'cantarsorteos'
+          generadoDesde: 'cantarsorteos',
+          idBilletera: idBilleteraFinal
         };
-        if(email){ payloadPremio.idBilletera = email; }
         tx.set(premioRef, payloadPremio, { merge: true });
         if(Number(creditos) || Number(cartonesGratis)){
           tx.set(billeteraRef, { creditos: nuevosCreditos, CartonesGratis: nuevosCartones }, { merge: true });
@@ -4503,7 +4504,7 @@
             Monto: montoTransaccion,
             cartonesGratis: cartonesNumero,
             estado: 'REALIZADO',
-            IDbilletera: email,
+            IDbilletera: idBilleteraFinal,
             fechasolicitud: '',
             horasolicitud: '',
             fechagestion: fechaGestion,
@@ -4573,6 +4574,7 @@
         }
         const datosBilletera = billeteraSnap.exists ? billeteraSnap.data() : {};
         const nuevosCartones = (Number(datosBilletera.CartonesGratis) || 0) + (Number(cartonesGratis) || 0);
+        const idBilleteraFinal = billeteraRef.id;
         const payloadPremio = {
           sorteoId: currentSorteoId,
           sorteoNombre,
@@ -4604,9 +4606,9 @@
           userIds: identidad.userId ? [identidad.userId] : [],
           cartonId: carton.id || carton.cartonId || '',
           formaIdx: Number(forma?.idx) || null,
-          generadoDesde: 'cantarsorteos'
+          generadoDesde: 'cantarsorteos',
+          idBilletera: idBilleteraFinal
         };
-        if(email){ payloadPremio.idBilletera = email; }
         tx.set(premioRef, payloadPremio, { merge: true });
         if(Number(cartonesGratis)){
           tx.set(billeteraRef, { CartonesGratis: nuevosCartones }, { merge: true });
@@ -4620,7 +4622,7 @@
             Monto: cartonesNumero,
             cartonesGratis: cartonesNumero,
             estado: 'REALIZADO',
-            IDbilletera: email,
+            IDbilletera: idBilleteraFinal,
             fechasolicitud: '',
             horasolicitud: '',
             fechagestion: fechaGestion,
