@@ -2664,12 +2664,19 @@
     }
     let info = null;
     try {
-      await asegurarDbListo();
-      const snap = await db.collection('users').where('uid','==',clave).limit(1).get();
-      if(!snap.empty){
-        const doc = snap.docs[0];
-        info = normalizarInfoUsuario(doc.id, doc.data() || {});
-        almacenarUsuarioEnCaches(info);
+      info = await obtenerUsuarioPorDocId(clave);
+    } catch (err) {
+      console.warn('No se pudo obtener usuario por coincidencia directa de userId', err);
+    }
+    try {
+      if(!info){
+        await asegurarDbListo();
+        const snap = await db.collection('users').where('uid','==',clave).limit(1).get();
+        if(!snap.empty){
+          const doc = snap.docs[0];
+          info = normalizarInfoUsuario(doc.id, doc.data() || {});
+          almacenarUsuarioEnCaches(info);
+        }
       }
     } catch (err) {
       console.warn('No se pudo obtener usuario por UID', err);
