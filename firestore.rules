@@ -89,7 +89,7 @@ service cloud.firestore {
 
     match /transacciones/{id} {
       allow read: if isAdmin() || (isSignedIn() && resource.data.IDbilletera == request.auth.token.email);
-      allow create: if isSignedIn() && request.resource.data.IDbilletera == request.auth.token.email;
+      allow create: if isAdmin() || (isSignedIn() && request.resource.data.IDbilletera == request.auth.token.email);
       allow update, delete: if isAdmin();
     }
 
