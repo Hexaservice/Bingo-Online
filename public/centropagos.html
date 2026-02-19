@@ -509,11 +509,7 @@
 </head>
 <body>
   <button id="volver-btn" class="menu-btn back-btn" data-compact-back="true"><span class="icon">&#9664;</span><span class="label">Volver</span></button>
-  <h2 class="titulo-principal">APROBACIÓN DE PAGOS</h2>
-  <div class="acciones-top">
-    <button id="pagos-pendientes-btn" class="btn-pagos-pendientes">Pagos pendientes</button>
-  </div>
-
+  <h2 class="titulo-principal">GESTIÓN DE PAGOS</h2>
   <section class="section" id="premios-section">
     <div class="section-header">
       <h3>PREMIOS JUGADORES</h3>
@@ -523,11 +519,7 @@
       </div>
     </div>
     <div id="premios-content">
-      <div class="acciones">
-        <button class="icon-btn" id="premios-aprobar"><span class="icon check">&#10004;</span><span>Aprobar</span></button>
-        <button class="icon-btn" id="premios-archivar"><span class="icon">&#128194;</span><span>Archivar</span></button>
-        <button class="icon-btn" id="premios-ver-archivo"><span class="icon">&#128230;</span><span>Archivo</span></button>
-      </div>
+      <div class="acciones"></div>
       <table id="tabla-premios">
         <colgroup>
           <col style="width:6%">
@@ -535,8 +527,7 @@
           <col style="width:16%">
           <col style="width:12%">
           <col style="width:18%">
-          <col style="width:14%">
-          <col style="width:4%">
+          <col style="width:24%">
         </colgroup>
         <thead>
           <tr class="filtros">
@@ -549,10 +540,9 @@
               <select id="filtro-premios-estado">
                 <option value="">Estado</option>
                 <option value="PENDIENTE">Pendiente</option>
-                <option value="APROBADO">Aprobado</option>
+                <option value="REALIZADO">Realizado</option>
               </select>
             </th>
-            <th><span id="premios-marcar" class="check-header">✔</span></th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -569,19 +559,14 @@
       </div>
     </div>
     <div id="pagos-content">
-      <div class="acciones">
-        <button class="icon-btn" id="pagos-aprobar"><span class="icon check">&#10004;</span><span>Aprobar</span></button>
-        <button class="icon-btn" id="pagos-archivar"><span class="icon">&#128194;</span><span>Archivar</span></button>
-        <button class="icon-btn" id="pagos-ver-archivo"><span class="icon">&#128230;</span><span>Archivo</span></button>
-      </div>
+      <div class="acciones"></div>
       <table id="tabla-pagos">
         <colgroup>
           <col style="width:6%">
           <col style="width:30%">
           <col style="width:18%">
           <col style="width:20%">
-          <col style="width:16%">
-          <col style="width:10%">
+          <col style="width:26%">
         </colgroup>
         <thead>
           <tr class="filtros">
@@ -593,10 +578,9 @@
               <select id="filtro-pagos-estado">
                 <option value="">Estado</option>
                 <option value="PENDIENTE">Pendiente</option>
-                <option value="APROBADO">Aprobado</option>
+                <option value="REALIZADO">Realizado</option>
               </select>
             </th>
-            <th><span id="pagos-marcar" class="check-header">✔</span></th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -1493,7 +1477,7 @@
           if(snap.exists){
             const data = snap.data() || {};
             const estadoActual = (data.estado || '').toString().trim().toUpperCase();
-            if(estadoActual === 'APROBADO'){ return; }
+            if(estadoActual === 'REALIZADO'){ return; }
           }
           tx.set(ref, payload, { merge: true });
         });
@@ -1652,58 +1636,7 @@
       return candidatos.some(valor=>typeof valor === 'string' && valor.toLowerCase().trim() === 'finalizado');
     }
 
-    async function procesarPagosPendientes(){
-      const btn = document.getElementById('pagos-pendientes-btn');
-      if(btn){
-        btn.disabled = true;
-        btn.textContent = 'Procesando...';
-      }
-      try {
-        await ensureFirebaseListo();
-        const db = dbRef();
-        const finalizadosSnap = await db.collection('sorteos').get();
-        const pendientes = [];
-        finalizadosSnap.forEach(doc=>{
-          const data = doc.data() || {};
-          const finalizado = esSorteoFinalizado(data);
-          const solicitudesGeneradas = data.solicitudesPagosGeneradas === true;
-          if(finalizado && !solicitudesGeneradas){
-            pendientes.push({ id: doc.id, data });
-          }
-        });
-        if(!pendientes.length){
-          alert('En este momento NO hay pagos pendientes de ningún sorteo FINALIZADO.');
-          return;
-        }
-        let procesados = 0;
-        let errores = 0;
-        for(const sorteo of pendientes){
-          try {
-            const ctx = cpCrearContextoSorteo(sorteo.id, sorteo.data);
-            await cpGenerarSolicitudesParaSorteo(ctx, { incluirPremios: false });
-            procesados++;
-          } catch (err) {
-            errores++;
-            console.error('Error generando solicitudes para el sorteo', sorteo.id, err);
-          }
-        }
-        if(procesados === 0 && errores > 0){
-          alert('No fue posible generar las solicitudes pendientes. Revisa la consola para más detalles.');
-        } else if(errores > 0){
-          alert(`Se generaron solicitudes para ${procesados} sorteo(s), pero ${errores} presentaron errores. Revisa la consola para más detalles.`);
-        } else {
-          alert(`Se generaron solicitudes para ${procesados} sorteo(s) finalizados. Las tablas se actualizarán en breve.`);
-        }
-      } catch (err) {
-        console.error('Error verificando pagos pendientes', err);
-        alert('No fue posible verificar los pagos pendientes. Inténtalo nuevamente.');
-      } finally {
-        if(btn){
-          btn.disabled = false;
-          btn.textContent = 'Pagos pendientes';
-        }
-      }
-    }
+
 
     function escapeHtml(texto = ''){
       const fuente = texto == null ? '' : String(texto);
@@ -1743,7 +1676,8 @@
 
     function normalizarEstado(valor){
       const texto = (valor || '').toString().trim().toUpperCase();
-      if(texto === 'APROBADO' || texto === 'PENDIENTE' || texto === 'ARCHIVADO') return texto;
+      if(texto === 'APROBADO') return 'REALIZADO';
+      if(texto === 'REALIZADO' || texto === 'PENDIENTE' || texto === 'ARCHIVADO') return texto;
       return 'PENDIENTE';
     }
 
@@ -1756,8 +1690,8 @@
           db.collection('PremiosSorteos').where('sorteoId', '==', sorteoId).get(),
           db.collection('PagosAdministracion').where('sorteoId', '==', sorteoId).get()
         ]);
-        const hayPremiosPendientes = premiosSnap.docs.some(doc=>normalizarEstado(doc.data()?.estado) !== 'APROBADO');
-        const hayPagosPendientes = pagosSnap.docs.some(doc=>normalizarEstado(doc.data()?.estado) !== 'APROBADO');
+        const hayPremiosPendientes = premiosSnap.docs.some(doc=>normalizarEstado(doc.data()?.estado) !== 'REALIZADO');
+        const hayPagosPendientes = pagosSnap.docs.some(doc=>normalizarEstado(doc.data()?.estado) !== 'REALIZADO');
         const indicadorCompletado = !hayPremiosPendientes && !hayPagosPendientes;
         const payload = {
           pagosCentroAprobados: indicadorCompletado,
@@ -1959,21 +1893,21 @@
       if(!tbody) return;
       const { mostrarArchivo = false, tipo } = opciones;
       if(!lista.length){
-        const columnasTabla = tipo==='premios' ? 7 : (tipo==='colaboradores' ? 6 : 6);
+        const columnasTabla = tipo==='premios' ? 6 : (tipo==='colaboradores' ? 6 : 5);
         tbody.innerHTML = `<tr><td colspan="${columnasTabla}"><div class="mensaje-tabla">No hay registros para mostrar.</div></td></tr>`;
         return;
       }
       const filas = lista.map((item, indice)=>{
       const numero = indice + 1;
-      const estadoClase = item.estado === 'APROBADO' ? 'estado-aprobado' : (item.estado === 'PENDIENTE' ? 'estado-pendiente' : 'estado-archivado');
+      const estadoClase = item.estado === 'REALIZADO' ? 'estado-aprobado' : (item.estado === 'PENDIENTE' ? 'estado-pendiente' : 'estado-archivado');
       const rolNormalizado = normalizarTipoUsuario(item.tipo || item.estado || '');
       const estadoHtml = tipo === 'colaboradores'
         ? construirRolBadgeHtml(rolNormalizado)
         : `<span class="${estadoClase}">${escapeHtml(item.estado)}</span>`;
-        const disabled = mostrarArchivo ? 'disabled' : '';
         const gmailAttr = escapeHtml(item.gmail || '');
         const aliasAttr = escapeHtml(item.alias || '');
         const nombreAttr = escapeHtml(item.nombre || '');
+        const disabled = mostrarArchivo ? 'disabled' : '';
         if(tipo === 'premios'){
           return `<tr data-id="${item.id}">
             <td>${numero}</td>
@@ -1982,7 +1916,6 @@
             <td class="cart">${formatNumber.format(item.cartones)}</td>
             <td>${escapeHtml(item.fechaMostrar)}</td>
             <td class="estado">${estadoHtml}</td>
-            <td><input type="checkbox" data-id="${item.id}" ${disabled}></td>
           </tr>`;
         }
         if(tipo === 'colaboradores'){
@@ -2009,7 +1942,6 @@
           <td class="creditos">${formatNumberEntero.format(Math.round(item.creditos))}</td>
           <td>${escapeHtml(item.fechaMostrar)}</td>
           <td class="estado">${estadoHtml}</td>
-          <td><input type="checkbox" data-id="${item.id}" ${disabled}></td>
         </tr>`;
       }).join('');
       tbody.innerHTML = filas;
@@ -2123,16 +2055,6 @@
     }
 
     function actualizarEstadoBotones(){
-      const premiosAprobar = document.getElementById('premios-aprobar');
-      const premiosArchivar = document.getElementById('premios-archivar');
-      if(premiosAprobar) premiosAprobar.disabled = mostrarPremiosArchivo;
-      if(premiosArchivar) premiosArchivar.disabled = mostrarPremiosArchivo;
-      const pagosAprobar = document.getElementById('pagos-aprobar');
-      const pagosArchivar = document.getElementById('pagos-archivar');
-      if(pagosAprobar) pagosAprobar.disabled = mostrarPagosArchivo;
-      if(pagosArchivar) pagosArchivar.disabled = mostrarPagosArchivo;
-      document.getElementById('premios-ver-archivo').classList.toggle('archivo-activo', mostrarPremiosArchivo);
-      document.getElementById('pagos-ver-archivo').classList.toggle('archivo-activo', mostrarPagosArchivo);
       const colabAprobar = document.getElementById('colaboradores-aprobar');
       if(colabAprobar) colabAprobar.disabled = false;
     }
@@ -2143,13 +2065,13 @@
         premiosActivos.forEach(registro => {
           if(!registro.sorteoId) return;
           const info = estadoPorSorteo.get(registro.sorteoId) || { pendientesPremios: 0, pendientesPagos: 0 };
-          if(registro.estado !== 'APROBADO'){ info.pendientesPremios = (info.pendientesPremios || 0) + 1; }
+          if(registro.estado !== 'REALIZADO'){ info.pendientesPremios = (info.pendientesPremios || 0) + 1; }
           estadoPorSorteo.set(registro.sorteoId, info);
         });
         pagosAdminActivos.forEach(registro => {
           if(!registro.sorteoId) return;
           const info = estadoPorSorteo.get(registro.sorteoId) || { pendientesPremios: 0, pendientesPagos: 0 };
-          if(registro.estado !== 'APROBADO'){ info.pendientesPagos = (info.pendientesPagos || 0) + 1; }
+          if(registro.estado !== 'REALIZADO'){ info.pendientesPagos = (info.pendientesPagos || 0) + 1; }
           estadoPorSorteo.set(registro.sorteoId, info);
         });
         premiosArchivados.forEach(registro => {
@@ -2217,7 +2139,7 @@
           tipotrans: tipoTransaccion,
           origen,
           Monto: monto,
-          estado: 'APROBADO',
+          estado: 'REALIZADO',
           IDbilletera: enRegistro.billetera,
           fechasolicitud: '',
           horasolicitud: '',
@@ -2282,7 +2204,7 @@
       for(const id of ids){
         const registro = premiosMapa.get(id);
         if(!registro){ console.warn('Premio no encontrado', id); continue; }
-        if(registro.estado === 'APROBADO'){ continue; }
+        if(registro.estado === 'REALIZADO'){ continue; }
         try {
           await db.runTransaction(async tx => {
             const ref = db.collection('PremiosSorteos').doc(id);
@@ -2290,9 +2212,9 @@
             if(!snap.exists) return;
             const data = snap.data();
             const estadoActual = normalizarEstado(data.estado);
-            if(estadoActual === 'APROBADO') return;
+            if(estadoActual === 'REALIZADO') return;
             tx.update(ref, {
-              estado: 'APROBADO',
+              estado: 'REALIZADO',
               fechaGestion: fechaServidor(),
               horaGestion: horaServidor(),
               gestionadoPor: authInstance().currentUser?.email || '',
@@ -2326,7 +2248,7 @@
       for(const id of ids){
         const registro = pagosAdminMapa.get(id);
         if(!registro){ console.warn('Pago no encontrado', id); continue; }
-        if(registro.estado === 'APROBADO'){ continue; }
+        if(registro.estado === 'REALIZADO'){ continue; }
         try {
           await db.runTransaction(async tx => {
             const ref = db.collection('PagosAdministracion').doc(id);
@@ -2334,9 +2256,9 @@
             if(!snap.exists) return;
             const data = snap.data();
             const estadoActual = normalizarEstado(data.estado);
-            if(estadoActual === 'APROBADO') return;
+            if(estadoActual === 'REALIZADO') return;
             tx.update(ref, {
-              estado: 'APROBADO',
+              estado: 'REALIZADO',
               fechaGestion: fechaServidor(),
               horaGestion: horaServidor(),
               gestionadoPor: authInstance().currentUser?.email || '',
@@ -2498,45 +2420,6 @@
     }
 
     function configurarBotones(){
-      document.getElementById('premios-marcar').addEventListener('click', ()=>seleccionarTodos('tabla-premios'));
-      document.getElementById('pagos-marcar').addEventListener('click', ()=>seleccionarTodos('tabla-pagos'));
-
-      const pagosPendientesBtn = document.getElementById('pagos-pendientes-btn');
-      if(pagosPendientesBtn){
-        pagosPendientesBtn.addEventListener('click', procesarPagosPendientes);
-      }
-
-      document.getElementById('premios-aprobar').addEventListener('click', async()=>{
-        const seleccion = obtenerSeleccion('tabla-premios');
-        if(!seleccion.length){ alert('Selecciona al menos un registro.'); return; }
-        await aprobarPremios(seleccion);
-      });
-      document.getElementById('premios-archivar').addEventListener('click', async()=>{
-        const seleccion = obtenerSeleccion('tabla-premios');
-        if(!seleccion.length){ alert('Selecciona registros para archivar.'); return; }
-        if(!(await confirm('¿Deseas archivar los registros seleccionados?'))) return;
-        await archivarRegistros(seleccion, 'premios');
-      });
-      document.getElementById('premios-ver-archivo').addEventListener('click', ()=>{
-        mostrarPremiosArchivo = !mostrarPremiosArchivo;
-        renderPremios();
-      });
-
-      document.getElementById('pagos-aprobar').addEventListener('click', async()=>{
-        const seleccion = obtenerSeleccion('tabla-pagos');
-        if(!seleccion.length){ alert('Selecciona al menos un registro.'); return; }
-        await aprobarPagos(seleccion);
-      });
-      document.getElementById('pagos-archivar').addEventListener('click', async()=>{
-        const seleccion = obtenerSeleccion('tabla-pagos');
-        if(!seleccion.length){ alert('Selecciona registros para archivar.'); return; }
-        if(!(await confirm('¿Deseas archivar los registros seleccionados?'))) return;
-        await archivarRegistros(seleccion, 'pagos');
-      });
-      document.getElementById('pagos-ver-archivo').addEventListener('click', ()=>{
-        mostrarPagosArchivo = !mostrarPagosArchivo;
-        renderPagos();
-      });
 
       document.getElementById('colaboradores-marcar').addEventListener('click', ()=>seleccionarTodos('tabla-colaboradores'));
       document.getElementById('colaboradores-aprobar').addEventListener('click', async()=>{

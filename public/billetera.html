@@ -540,7 +540,7 @@
               <select id="filtro-estado">
                 <option value="">ESTADO</option>
                 <option value="PENDIENTE">Pendiente</option>
-                <option value="APROBADO">Aprobado</option>
+                <option value="REALIZADO">Realizado</option>
                 <option value="ANULADO">Anulado</option>
               </select>
             </th>
@@ -1838,7 +1838,8 @@
         data.fechasolicitud=formatearFecha(data.fechasolicitud);
         data.fechagestion=formatearFecha(data.fechagestion);
         const tipoNormalizado = normalizarTipoTransaccion(data);
-        transacciones.push({id:doc.id,...data, tipotrans: tipoNormalizado});
+        const estadoNormalizado = (data.estado||'').toString().trim().toUpperCase()==='APROBADO' ? 'REALIZADO' : (data.estado||'');
+        transacciones.push({id:doc.id,...data, estado: estadoNormalizado, tipotrans: tipoNormalizado});
       });
       transacciones.sort((a,b)=>{
         const da=parseFechaHora(a.fechagestion||a.fechasolicitud,a.horagestion||a.horasolicitud);
@@ -1877,7 +1878,7 @@
         const f=formatearFecha(t.estado==='PENDIENTE'?t.fechasolicitud:t.fechagestion);
         if(fecha && f!==fecha) return;
         if(estado && t.estado!==estado) return;
-        const estadoColor=t.estado==='PENDIENTE'?'orange':t.estado==='ANULADO'?'red':t.estado==='APROBADO'?'green':'black';
+        const estadoColor=t.estado==='PENDIENTE'?'orange':t.estado==='ANULADO'?'red':t.estado==='REALIZADO'?'green':'black';
         const tr=document.createElement('tr');
         const montoFmt=parseFloat(t.Monto).toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
         const tipoTrans=(t.tipotrans||'').toLowerCase();
@@ -1888,11 +1889,11 @@
         const esPago=tipoTrans==='pago';
         const esPremioCartones=esPremio && cartonesGratisNum>0 && (Number(t.Monto)||0)===cartonesGratisNum;
         const esResaltado=esPremio||esPago;
-        const colorTipo=esRecarga?'green':esRetiro?'red':'#1b5e20';
+        const colorTipo=esRecarga?'green':esRetiro?'red':(esPremio?'#1b5e20':'#1b5e20');
         const montoTexto=esPremioCartones?String(cartonesGratisNum):montoFmt;
         const montoStyle=esPremioCartones
-          ? 'background:#6a1b9a;color:#fff;'
-          : (esResaltado?`background:#1b5e20;color:#fff;`:`color:${colorTipo};`);
+          ? 'background:#6a1b9a;color:#fff;font-weight:800;'
+          : (esPremio?'color:#0a7d2a;font-weight:800;':(esPago?`background:#1b5e20;color:#fff;`:`color:${colorTipo};`));
         const fechaStyle=esResaltado?`color:#1b5e20;`:'';
         const celdas = [
           { texto: String(n) },
