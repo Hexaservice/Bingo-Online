@@ -1881,18 +1881,23 @@
         const tr=document.createElement('tr');
         const montoFmt=parseFloat(t.Monto).toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
         const tipoTrans=(t.tipotrans||'').toLowerCase();
+        const cartonesGratisNum=Number(t.cartonesGratis)||0;
         const esRecarga=tipoTrans==='recarga';
         const esRetiro=tipoTrans==='retiro';
         const esPremio=tipoTrans==='premio';
         const esPago=tipoTrans==='pago';
+        const esPremioCartones=esPremio && cartonesGratisNum>0 && (Number(t.Monto)||0)===cartonesGratisNum;
         const esResaltado=esPremio||esPago;
         const colorTipo=esRecarga?'green':esRetiro?'red':'#1b5e20';
-        const montoStyle=esResaltado?`background:#1b5e20;color:#fff;`:`color:${colorTipo};`;
+        const montoTexto=esPremioCartones?String(cartonesGratisNum):montoFmt;
+        const montoStyle=esPremioCartones
+          ? 'background:#6a1b9a;color:#fff;'
+          : (esResaltado?`background:#1b5e20;color:#fff;`:`color:${colorTipo};`);
         const fechaStyle=esResaltado?`color:#1b5e20;`:'';
         const celdas = [
           { texto: String(n) },
           { texto: tipoTrans.toUpperCase(), style: `color:${colorTipo}` },
-          { texto: montoFmt, style: montoStyle, className: 'celda-monto' },
+          { texto: montoTexto, style: montoStyle, className: 'celda-monto' },
           { texto: f, style: fechaStyle, className: 'celda-fecha' },
           { texto: t.estado || '', style: `color:${estadoColor}` }
         ];
@@ -2026,10 +2031,17 @@
 
       function mostrarDetalleMonto(t){
         const solicitado=t.tipotrans==='retiro'?parseFloat(t.MontoSolicitado||t.Monto):parseFloat(t.Monto);
+        const cartonesGratisNum=Number(t.cartonesGratis)||0;
+        const esPremioCartones=(t.tipotrans==='premio') && cartonesGratisNum>0 && (Number(t.Monto)||0)===cartonesGratisNum;
         const comB=t.tipotrans==='retiro'?solicitado*porcentajeRetiro/100:0;
         const comG=t.tipotrans==='retiro'?solicitado*porcentajeAdministra/100:0;
         const total=parseFloat(t.Monto);
         const cont=document.querySelector('#modal-detalle .contenido');
+        if(esPremioCartones){
+          cont.innerHTML=
+            `<div style="font-weight:bold;background:#6a1b9a;color:#fff;padding:8px;border-radius:8px;">Cartones gratis ganados: ${cartonesGratisNum}</div>`+
+            `<button id='modal-ok'>Aceptar</button>`;
+        }else
         if(t.tipotrans==='premio' || t.tipotrans==='pago'){
           cont.innerHTML=
             `<div style="font-weight:bold;color:#1b5e20;">Total recibido: ${total.toFixed(2)}</div>`+
