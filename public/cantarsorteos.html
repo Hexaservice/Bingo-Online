@@ -4454,11 +4454,14 @@
         }
         const transSnap = await tx.get(transaccionRef);
         if(!transSnap.exists){
+          const creditosNumero = Number(creditos) || 0;
+          const cartonesNumero = Number(cartonesGratis) || 0;
+          const montoTransaccion = creditosNumero > 0 ? creditosNumero : cartonesNumero;
           tx.set(transaccionRef, {
             tipotrans: 'premio',
             origen: 'premios_jugadores',
-            Monto: Number(creditos) || 0,
-            cartonesGratis: Number(cartonesGratis) || 0,
+            Monto: montoTransaccion,
+            cartonesGratis: cartonesNumero,
             estado: 'APROBADO',
             IDbilletera: email,
             fechasolicitud: '',
@@ -4557,11 +4560,12 @@
         }
         const transSnap = await tx.get(transaccionRef);
         if(!transSnap.exists){
+          const cartonesNumero = Number(cartonesGratis) || 0;
           tx.set(transaccionRef, {
             tipotrans: 'premio',
             origen: 'premios_segundo_lugar',
-            Monto: 0,
-            cartonesGratis: Number(cartonesGratis) || 0,
+            Monto: cartonesNumero,
+            cartonesGratis: cartonesNumero,
             estado: 'APROBADO',
             IDbilletera: email,
             fechasolicitud: '',
