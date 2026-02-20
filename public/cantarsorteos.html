@@ -4385,8 +4385,12 @@
   async function existeEventoGanadorFinalizado(eventoGanadorId){
     const eventoSeguro = sanitizarId(eventoGanadorId || '');
     if(!eventoSeguro) return false;
-    const snapshot = await db.collection('PremiosSorteos').where('eventoGanadorId', '==', eventoSeguro).get();
-    return snapshot.docs.some(doc=>estadoPagoPremioFinalizado(doc.data()?.estado));
+    const doc = await db.collection('PremiosSorteos').doc(eventoSeguro).get();
+    if(!doc.exists) return false;
+    const data = doc.data() || {};
+    const winnerKey = sanitizarId(data.eventoGanadorId || data.winnerKey || doc.id);
+    if(winnerKey !== eventoSeguro) return false;
+    return estadoPagoPremioFinalizado(data.estado);
   }
 
   function construirIdPremioSegundoLugar(sorteoId, formaIdx, cartonId){

@@ -1490,6 +1490,16 @@
       return cpConstruirIdSolicitud(ctx.sorteoId, email || alias || 'ganador');
     }
 
+    function cpExtraerComponentesEventoGanador(eventoGanadorId){
+      const limpio = cpSanitizarId(eventoGanadorId || '');
+      if(!limpio) return null;
+      const match = limpio.match(/^(?:[^_]+__)?(.+?)__f([^_]+?)__(.+)$/);
+      if(!match) return null;
+      const formaIdx = Number(match[2]);
+      if(!Number.isFinite(formaIdx)) return null;
+      return { sorteoId: match[1], formaIdx, cartonId: match[3] };
+    }
+
     async function cpActualizarDocumentoCentroPagos(ctx, ref, payload){
       try {
         await ctx.db.runTransaction(async tx => {
@@ -1534,6 +1544,8 @@
           creditosGanados: Number(ganador.creditos) || 0,
           cartonesGratis: Number(ganador.cartonesGratis) || 0,
           cartonesGanados: Number(ganador.cartonesGanadores) || 0,
+          cartonId: (ganador.cartonesIds?.[0] || ganador.cartonId || '').toString(),
+          formaIdx: Number(ganador?.formas?.[0]?.idx),
           formasGanadoras: ganador.formas || [],
             estado: validarEstadoGuardado('PENDIENTE', `PremiosSorteos:${docId}`),
           fechaGanado: timestamp,
@@ -1742,6 +1754,10 @@
 
     function prepararPremio(id, data = {}){
       const winnerKey = (data.winnerKey || data.eventoGanadorId || id || '').toString();
+      if(!winnerKey){
+        console.warn('Premio omitido por falta de eventoGanadorId/winnerKey', { id, data });
+        return null;
+      }
       const gmail = (data.gmail || data.email || '').toString();
       const gmailRender = gmail || (winnerKey.includes('@') ? winnerKey : '');
       const alias = (data.alias || data.aliasJugador || data.aliasGanador || '').toString();
@@ -2124,6 +2140,47 @@
       }
     }
 
+    async function acreditarPremioBackend(enRegistro){
+      const eventoGanadorId = cpSanitizarId(enRegistro.eventoGanadorId || enRegistro.winnerKey || enRegistro.id || '');
+      if(!eventoGanadorId){ throw new Error('Falta eventoGanadorId para acreditar premio.'); }
+      const componentes = cpExtraerComponentesEventoGanador(eventoGanadorId);
+      if(!componentes){ throw new Error('No se pudieron extraer los componentes de eventoGanadorId.'); }
+      const user = authInstance().currentUser;
+      const apiBase = (typeof getAdminApiBase === 'function' ? getAdminApiBase() : '').replace(/\/$/, '');
+      if(!user || !apiBase){ throw new Error('Falta sesión autenticada o API base para acreditar premio.'); }
+      const token = await user.getIdToken();
+      const requestId = `cp-${eventoGanadorId}-${Date.now()}`;
+      const response = await fetch(`${apiBase}/acreditarPremioEvento`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          'X-Request-Id': requestId
+        },
+        body: JSON.stringify({
+          sorteoId: componentes.sorteoId,
+          formaIdx: componentes.formaIdx,
+          cartonId: componentes.cartonId,
+          userId: enRegistro.userId || '',
+          email: enRegistro.billetera || enRegistro.gmail || '',
+          alias: enRegistro.alias || '',
+          monto: Number(enRegistro.creditos) || 0,
+          cartonesGratis: Number(enRegistro.cartones) || 0,
+          eventoGanadorId,
+          origen: 'premios_jugadores',
+          referencia: 'PREMIO',
+          tipoRegistro: 'GANADOR_SORTEO',
+          source: 'centropagos/aprobarPremios',
+          requestId
+        })
+      });
+      if(!response.ok){
+        const errorData = await response.json().catch(()=>({}));
+        throw new Error(errorData?.error || `HTTP ${response.status}`);
+      }
+      return response.json().catch(()=>({ status: 'ok' }));
+    }
+
     async function registrarTransaccionPremio(enRegistro){
       const monto = Number(enRegistro.creditos) || 0;
       if(!enRegistro.billetera || monto <= 0) return;
@@ -2131,35 +2188,11 @@
         if(typeof fechaServidor !== 'function' || typeof horaServidor !== 'function'){
           await initServerTime();
         }
-        const origen = (enRegistro.origen || '').toString().toLowerCase();
-        let tipoTransaccion = (enRegistro.tipotrans || '').toString().toLowerCase();
-        const rolInterno = (enRegistro.rolInterno || enRegistro.rolinterno || '').toString();
-        if(origen === 'pagos_administracion' && tipoTransaccion !== 'ajuste_colaborador'){
-          tipoTransaccion = 'pago';
-        } else if(origen === 'premios_jugadores'){
-          if(!tipoTransaccion || tipoTransaccion === 'pago'){
-            tipoTransaccion = 'premio';
-          }
-        }
-        if(!tipoTransaccion){
-          tipoTransaccion = 'premio';
-        }
-        const referenciaBase = (enRegistro.referencia || '').toString().trim();
-        const referencia = referenciaBase
-          || (tipoTransaccion === 'pago'
-            ? 'PAGO'
-            : tipoTransaccion === 'ajuste_colaborador'
-              ? 'AJUSTE_MANUAL'
-              : 'PREMIO');
-        const sorteoNombre = (enRegistro.sorteoNombre
-          || (tipoTransaccion === 'pago'
-            ? 'Pago a colaborador'
-            : (referenciaBase === 'ASIGNACION_MANUAL' ? 'Asignación manual' : ''))).toString();
         await dbRef().collection('transacciones').add({
-          tipotrans: tipoTransaccion,
-          origen,
+          tipotrans: (enRegistro.tipotrans || 'pago').toString().toLowerCase(),
+          origen: (enRegistro.origen || 'pagos_administracion').toString().toLowerCase(),
           Monto: monto,
-          estado: validarEstadoGuardado('REALIZADO', 'TransaccionPremio'),
+          estado: validarEstadoGuardado('REALIZADO', 'TransaccionPagoAdministracion'),
           IDbilletera: enRegistro.billetera,
           fechasolicitud: '',
           horasolicitud: '',
@@ -2167,29 +2200,14 @@
           horagestion: typeof horaServidor === 'function' ? horaServidor() : '',
           usuariogestor: authInstance().currentUser?.email || '',
           rolusuario: window.currentRole || '',
-          referencia,
+          referencia: (enRegistro.referencia || 'PAGO').toString(),
           sorteoId: enRegistro.sorteoId || '',
-          sorteoNombre,
-          rolInterno,
-          rolinterno: rolInterno
+          sorteoNombre: (enRegistro.sorteoNombre || 'Pago a colaborador').toString(),
+          creadoEn: firebase.firestore.FieldValue.serverTimestamp()
         });
       } catch (err) {
-        console.error('No se pudo registrar la transacción de premio', err);
+        console.error('No se pudo registrar la transacción de pago administrativo', err);
       }
-    }
-
-    async function acreditarPremio(enRegistro){
-      const db = dbRef();
-      if(!enRegistro.billetera) return;
-      await db.runTransaction(async tx => {
-        const billeteraRef = db.collection('Billetera').doc(enRegistro.billetera);
-        const billeteraDoc = await tx.get(billeteraRef);
-        const datos = billeteraDoc.exists ? billeteraDoc.data() : {};
-        const nuevosCreditos = (Number(datos.creditos) || 0) + enRegistro.creditos;
-        const nuevosCartones = (Number(datos.CartonesGratis) || 0) + enRegistro.cartones;
-        tx.set(billeteraRef, { creditos: nuevosCreditos, CartonesGratis: nuevosCartones }, { merge: true });
-      });
-      await registrarTransaccionPremio({ ...enRegistro, origen: enRegistro.origen || 'premios_jugadores' });
     }
 
     async function acreditarPago(enRegistro){
@@ -2226,22 +2244,7 @@
         if(!registro){ console.warn('Premio no encontrado', id); continue; }
         if(registro.estado === 'REALIZADO'){ continue; }
         try {
-          await db.runTransaction(async tx => {
-            const ref = db.collection('PremiosSorteos').doc(id);
-            const snap = await tx.get(ref);
-            if(!snap.exists) return;
-            const data = snap.data();
-            const estadoActual = normalizarEstado(data.estado);
-            if(estadoActual === 'REALIZADO') return;
-            tx.update(ref, {
-              estado: validarEstadoGuardado('REALIZADO', `PremiosSorteos:${id}`),
-              fechaGestion: fechaServidor(),
-              horaGestion: horaServidor(),
-              gestionadoPor: authInstance().currentUser?.email || '',
-              rolGestor: window.currentRole || ''
-            });
-          });
-          await acreditarPremio(registro);
+          await acreditarPremioBackend(registro);
           if(registro.sorteoId){
             sorteosActualizados.add(registro.sorteoId);
           }
@@ -2638,6 +2641,7 @@
         premiosMapa.clear();
         snapshot.forEach(doc => {
           const registro = prepararPremio(doc.id, doc.data());
+          if(!registro) return;
           premiosActivos.push(registro);
           premiosMapa.set(doc.id, registro);
         });
@@ -2648,6 +2652,7 @@
         premiosArchivoMapa.clear();
         snapshot.forEach(doc => {
           const registro = prepararPremio(doc.id, doc.data());
+          if(!registro) return;
           registro.estado = normalizarEstado(doc.data().estado || 'ARCHIVADO');
           premiosArchivados.push(registro);
           premiosArchivoMapa.set(doc.id, registro);

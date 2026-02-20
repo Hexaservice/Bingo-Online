@@ -327,6 +327,24 @@ function buildPremioDocId({ sorteoId, formaIdx, cartonId, prefijo = '' }) {
   return prefijo ? `${sanitize(prefijo)}__${baseId}` : baseId;
 }
 
+function extractEventoGanadorIdComponents(eventoGanadorId) {
+  const normalized = normalizeString(eventoGanadorId, 220);
+  if (!normalized) return null;
+
+  const [, maybeSorteoId = '', maybeForma = '', maybeCartonId = ''] = normalized.match(/^(?:[^_]+__)?(.+?)__f([^_]+?)__(.+)$/) || [];
+  const parsedFormaIdx = Number(maybeForma);
+
+  if (!maybeSorteoId || !maybeCartonId || !Number.isFinite(parsedFormaIdx)) {
+    return null;
+  }
+
+  return {
+    sorteoId: maybeSorteoId,
+    formaIdx: parsedFormaIdx,
+    cartonId: maybeCartonId
+  };
+}
+
 function normalizeSorteoState(value) {
   return normalizeString(String(value || ''), 40).toUpperCase();
 }
@@ -648,7 +666,9 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
     referencia,
     tipoRegistro,
     segundoLugar,
-    alias
+    alias,
+    requestId,
+    source
   } = req.body || {};
 
   const normalizedSorteoId = normalizeString(sorteoId, 120);
@@ -664,14 +684,29 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
   const normalizedReferencia = normalizeString(referencia, 80) || 'PREMIO';
   const normalizedTipoRegistro = normalizeString(tipoRegistro, 80) || 'GANADOR_SORTEO';
   const normalizedSegundoLugar = Boolean(segundoLugar);
-  const normalizedEventoGanadorId = normalizeString(
-    eventoGanadorId,
-    220
-  ) || buildPremioDocId({ sorteoId: normalizedSorteoId, formaIdx: normalizedFormaIdx, cartonId: normalizedCartonId });
+  const normalizedEventoGanadorId = normalizeString(eventoGanadorId, 220);
+  const normalizedRequestId = normalizeString(
+    requestId || req.headers['x-request-id'] || req.headers['x-correlation-id'] || '',
+    120
+  ) || `acred-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const normalizedSource = normalizeString(source, 120) || 'backend/acreditarPremioEvento';
 
   if (!normalizedSorteoId || !normalizedCartonId || normalizedFormaIdx === null || !normalizedEventoGanadorId) {
     return res.status(400).json({
       error: 'Entradas inválidas. Se requiere sorteoId, formaIdx, cartonId y eventoGanadorId.'
+    });
+  }
+
+  const expectedEventoGanadorId = buildPremioDocId({
+    sorteoId: normalizedSorteoId,
+    formaIdx: normalizedFormaIdx,
+    cartonId: normalizedCartonId,
+    prefijo: normalizedSegundoLugar ? 'segundo' : ''
+  });
+
+  if (normalizedEventoGanadorId !== expectedEventoGanadorId) {
+    return res.status(409).json({
+      error: 'eventoGanadorId no coincide con sorteoId, formaIdx y cartonId.'
     });
   }
 
@@ -725,7 +760,7 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
       const premioActual = premioSnap.exists ? premioSnap.data() || {} : null;
       const estadoPremio = normalizePremioTransactionState(premioActual?.estado);
       if (estadoPremio === EstadosPagoPremio.ESTADOS_CANONICOS.REALIZADO) {
-        return { status: 'ok', idempotent: true, premioId: normalizedEventoGanadorId };
+        return { status: 'ok', idempotent: true, premioId: normalizedEventoGanadorId, requestId: normalizedRequestId };
       }
 
       const billeteraCandidates = getBilleteraCandidates({
@@ -778,6 +813,8 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           cartonesGratis: normalizedCartonesGratis,
           eventoGanadorId: normalizedEventoGanadorId,
           winnerKey: normalizedEventoGanadorId,
+          version: normalizeNumber(premioActual?.version) + 1,
+          processedAt: timestamp,
           tipoRegistro: normalizedTipoRegistro,
           segundoLugar: normalizedSegundoLugar,
           idBilletera: billeteraRef.id,
@@ -786,7 +823,10 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           fechaRegistro: premioActual?.fechaRegistro || timestamp,
           creadoEn: premioActual?.creadoEn || timestamp,
           fechaGanado: timestamp,
-          generadoDesde: 'backend/acreditarPremioEvento',
+          source: normalizedSource,
+          requestId: normalizedRequestId,
+          processedBy: req.user?.email || '',
+          generadoDesde: normalizedSource,
           gestionadoPor: req.user?.email || '',
           rolGestor: req.user?.role || '',
           fechaGestion,
@@ -805,39 +845,65 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
         { merge: true }
       );
 
-      if (!transaccionSnap.exists) {
-        tx.set(
-          transaccionRef,
-          {
-            tipotrans: 'premio',
-            origen: normalizedOrigen,
-            Monto: normalizedMonto > 0 ? normalizedMonto : normalizedCartonesGratis,
-            cartonesGratis: normalizedCartonesGratis,
-            estado: 'REALIZADO',
-            IDbilletera: billeteraRef.id,
-            fechasolicitud: '',
-            horasolicitud: '',
-            fechagestion: fechaGestion,
-            horagestion: horaGestion,
-            usuariogestor: req.user?.email || '',
-            rolusuario: req.user?.role || '',
-            referencia: normalizedReferencia,
-            sorteoId: normalizedSorteoId,
-            sorteoNombre,
-            eventoGanadorId: normalizedEventoGanadorId,
-            tipoRegistro: normalizedTipoRegistro,
-            segundoLugar: normalizedSegundoLugar,
-            creadoEn: timestamp
-          },
-          { merge: true }
-        );
-      }
+      tx.set(
+        transaccionRef,
+        {
+          tipotrans: 'premio',
+          origen: normalizedOrigen,
+          Monto: normalizedMonto > 0 ? normalizedMonto : normalizedCartonesGratis,
+          cartonesGratis: normalizedCartonesGratis,
+          estado: 'REALIZADO',
+          IDbilletera: billeteraRef.id,
+          fechasolicitud: '',
+          horasolicitud: '',
+          fechagestion: fechaGestion,
+          horagestion: horaGestion,
+          usuariogestor: req.user?.email || '',
+          rolusuario: req.user?.role || '',
+          referencia: normalizedReferencia,
+          sorteoId: normalizedSorteoId,
+          sorteoNombre,
+          eventoGanadorId: normalizedEventoGanadorId,
+          winnerKey: normalizedEventoGanadorId,
+          tipoRegistro: normalizedTipoRegistro,
+          segundoLugar: normalizedSegundoLugar,
+          source: normalizedSource,
+          requestId: normalizedRequestId,
+          processedBy: req.user?.email || '',
+          processedAt: timestamp,
+          creadoEn: transaccionSnap.exists ? (transaccionSnap.data()?.creadoEn || timestamp) : timestamp,
+          actualizadoEn: timestamp
+        },
+        { merge: true }
+      );
+
+      const auditoriaRef = db.collection('AcreditacionAuditoriaTecnica').doc(`${normalizedEventoGanadorId}__${normalizedRequestId}`);
+      tx.set(
+        auditoriaRef,
+        {
+          eventoGanadorId: normalizedEventoGanadorId,
+          winnerKey: normalizedEventoGanadorId,
+          sorteoId: normalizedSorteoId,
+          cartonId: normalizedCartonId,
+          formaIdx: normalizedFormaIdx,
+          requestId: normalizedRequestId,
+          source: normalizedSource,
+          processedBy: req.user?.email || '',
+          role: req.user?.role || '',
+          billeteraId: billeteraRef.id,
+          monto: normalizedMonto,
+          cartonesGratis: normalizedCartonesGratis,
+          processedAt: timestamp
+        },
+        { merge: true }
+      );
 
       return {
         status: 'ok',
         idempotent: false,
         premioId: normalizedEventoGanadorId,
-        billeteraId: billeteraRef.id
+        billeteraId: billeteraRef.id,
+        requestId: normalizedRequestId
       };
     });
 
@@ -951,5 +1017,6 @@ module.exports = {
   countDocumentById,
   getPurgeCounts,
   canAccreditForSorteoState,
-  buildPremioDocId
+  buildPremioDocId,
+  extractEventoGanadorIdComponents
 };

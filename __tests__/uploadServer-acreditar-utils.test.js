@@ -29,4 +29,15 @@ describe('uploadServer utilidades de acreditación', () => {
 
     expect(id).toBe('auto_premio__sorteo_1__f2__carton_abc');
   });
+
+  test('extractEventoGanadorIdComponents obtiene sorteo, forma y carton', () => {
+    const { extractEventoGanadorIdComponents } = require('../uploadServer.js');
+
+    expect(extractEventoGanadorIdComponents('segundo__sorteo_a__f3__carton_77')).toEqual({
+      sorteoId: 'sorteo_a',
+      formaIdx: 3,
+      cartonId: 'carton_77'
+    });
+    expect(extractEventoGanadorIdComponents('invalido')).toBeNull();
+  });
 });
