@@ -8,13 +8,22 @@ describe('uploadServer utilidades de acreditación', () => {
     jest.resetModules();
   });
 
-  test('canAccreditForSorteoState permite solo Jugando y Finalizado', () => {
-    const { canAccreditForSorteoState } = require('../uploadServer.js');
+  test('isSorteoEligibleForAutoPrize permite estados operativos y transicionales válidos', () => {
+    const { isSorteoEligibleForAutoPrize } = require('../uploadServer.js');
 
-    expect(canAccreditForSorteoState('Jugando')).toBe(true);
-    expect(canAccreditForSorteoState('FINALIZADO')).toBe(true);
-    expect(canAccreditForSorteoState('Activo')).toBe(false);
-    expect(canAccreditForSorteoState('Sellado')).toBe(false);
+    expect(isSorteoEligibleForAutoPrize({ estado: 'Jugando', premiosCorteCerrado: false })).toBe(true);
+    expect(isSorteoEligibleForAutoPrize({ estado: 'FINALIZADO', premiosCorteCerrado: false })).toBe(true);
+    expect(isSorteoEligibleForAutoPrize({ estado: 'sellado', premiosCorteCerrado: false })).toBe(true);
+    expect(isSorteoEligibleForAutoPrize({ estado: 'Finalizando', premiosCorteCerrado: false })).toBe(true);
+  });
+
+  test('isSorteoEligibleForAutoPrize rechaza estados incompatibles y corte cerrado', () => {
+    const { isSorteoEligibleForAutoPrize } = require('../uploadServer.js');
+
+    expect(isSorteoEligibleForAutoPrize({ estado: 'Activo', premiosCorteCerrado: false })).toBe(false);
+    expect(isSorteoEligibleForAutoPrize({ estado: 'Inactivo', premiosCorteCerrado: false })).toBe(false);
+    expect(isSorteoEligibleForAutoPrize({ estado: 'Archivado', premiosCorteCerrado: false })).toBe(false);
+    expect(isSorteoEligibleForAutoPrize({ estado: 'Jugando', premiosCorteCerrado: true })).toBe(false);
   });
 
   test('buildPremioDocId genera id sanitizado y estable', () => {

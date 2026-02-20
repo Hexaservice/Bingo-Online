@@ -8,6 +8,7 @@ const path = require('path');
 const crypto = require('crypto');
 const admin = require('firebase-admin');
 const EstadosPagoPremio = require('./public/js/estadoPagoPremio.js');
+const { isSorteoEligibleForAutoPrize } = require('./public/js/sorteoAutoPrizeEligibility.js');
 
 const requiredEnv = ['GOOGLE_APPLICATION_CREDENTIALS', 'FIREBASE_STORAGE_BUCKET'];
 
@@ -348,17 +349,8 @@ function extractEventoGanadorIdComponents(eventoGanadorId) {
   };
 }
 
-function normalizeSorteoState(value) {
-  return normalizeString(String(value || ''), 40).toUpperCase();
-}
-
 function normalizePremioTransactionState(value) {
   return EstadosPagoPremio.normalizarLectura(value);
-}
-
-function canAccreditForSorteoState(value) {
-  const allowed = new Set(['JUGANDO', 'FINALIZADO']);
-  return allowed.has(normalizeSorteoState(value));
 }
 
 function getBilleteraCandidates({ userEmail, cartonData, payloadUserId }) {
@@ -747,10 +739,17 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
       }
 
       const sorteoData = sorteoSnap.data() || {};
-      if (Boolean(sorteoData?.premiosCorteCerrado)) {
-        throw new Error('SORTEO_CORTE_CERRADO');
-      }
-      if (!canAccreditForSorteoState(sorteoData.estado)) {
+      // Estados compatibles con acreditación automática: etapas activas/finales del flujo
+      // (Sellado/Jugando/Finalizando/Finalizado) siempre que el corte de premios siga abierto.
+      // Se rechaza solamente cuando el estado es incompatible con premiación (p.ej. Activo/Inactivo/Archivado)
+      // o cuando el corte ya fue cerrado explícitamente.
+      if (!isSorteoEligibleForAutoPrize({
+        estado: sorteoData.estado,
+        premiosCorteCerrado: sorteoData?.premiosCorteCerrado
+      })) {
+        if (Boolean(sorteoData?.premiosCorteCerrado)) {
+          throw new Error('SORTEO_CORTE_CERRADO');
+        }
         throw new Error('SORTEO_ESTADO_INVALIDO');
       }
 
@@ -1167,7 +1166,7 @@ module.exports = {
   countCollectionBySorteoId,
   countDocumentById,
   getPurgeCounts,
-  canAccreditForSorteoState,
+  isSorteoEligibleForAutoPrize,
   buildPremioDocId,
   extractEventoGanadorIdComponents
 };
