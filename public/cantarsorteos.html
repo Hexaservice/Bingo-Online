@@ -264,6 +264,25 @@
       gap: 20px;
       flex-wrap: wrap;
     }
+    #acreditaciones-pendientes-alerta {
+      display: none;
+      margin-top: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #c62828, #ef5350);
+      box-shadow: 0 0 10px rgba(198,40,40,0.5);
+      letter-spacing: 0.3px;
+      animation: pulso-destacado 1.7s ease-in-out infinite;
+    }
+    #acreditaciones-pendientes-alerta.visible {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
     #valor-carton, #cartones-jugando {
       display: flex;
       align-items: center;
@@ -1571,6 +1590,7 @@
           <span class="valor extra" id="cartones-gratis-jugando">0</span>
         </div>
       </div>
+      <div id="acreditaciones-pendientes-alerta" role="status" aria-live="polite"></div>
     </div>
   </section>
   <section id="detalle-container">
@@ -1791,6 +1811,7 @@
   const valorCartonEl = document.getElementById('valor-carton-valor');
   const cartonesPagosEl = document.getElementById('cartones-jugando-valor');
   const cartonesGratisEl = document.getElementById('cartones-gratis-jugando');
+  const acreditacionesPendientesAlertaEl = document.getElementById('acreditaciones-pendientes-alerta');
   const detalleContainer = document.getElementById('detalle-container');
   const sorteoNombreEl = document.getElementById('sorteo-nombre');
   const estadoActualEl = document.getElementById('estado-actual');
@@ -1912,6 +1933,196 @@
   const premiosSegundoLugarProcesados = new Set();
   const premiosSegundoLugarEnCurso = new Set();
   const advertenciasGanadorSinEmail = new Set();
+  const ACREDITACIONES_PENDIENTES_COLLECTION = 'AcreditacionesPendientes';
+  const MAX_INTENTOS_ACREDITACION = 5;
+  const REINTENTO_BASE_MS = 15000;
+  const REINTENTO_MAX_MS = 5 * 60 * 1000;
+  let acreditacionesPendientesUnsub = null;
+  let reintentoPendientesTimeout = null;
+  let reintentoPendientesEnCurso = false;
+
+  function obtenerBackoffReintento(intentos = 1){
+    const intentoSeguro = Math.max(1, Number(intentos) || 1);
+    const factor = Math.max(1, intentoSeguro - 1);
+    const valor = REINTENTO_BASE_MS * (2 ** factor);
+    return Math.min(REINTENTO_MAX_MS, valor);
+  }
+
+  function actualizarIndicadorAcreditacionesPendientes(cantidad = 0){
+    if(!acreditacionesPendientesAlertaEl) return;
+    const total = Math.max(0, Number(cantidad) || 0);
+    if(total <= 0){
+      acreditacionesPendientesAlertaEl.classList.remove('visible');
+      acreditacionesPendientesAlertaEl.textContent = '';
+      return;
+    }
+    acreditacionesPendientesAlertaEl.classList.add('visible');
+    acreditacionesPendientesAlertaEl.textContent = `⚠ Premios pendientes de acreditar: ${total}`;
+  }
+
+  function programarReintentoPendientes(ms = REINTENTO_BASE_MS){
+    const espera = Math.max(1000, Number(ms) || REINTENTO_BASE_MS);
+    if(reintentoPendientesTimeout){
+      clearTimeout(reintentoPendientesTimeout);
+    }
+    reintentoPendientesTimeout = setTimeout(()=>{
+      reintentoPendientesTimeout = null;
+      reintentarAcreditacionesPendientes().catch(err=>{
+        console.warn('No se pudo ejecutar el reintento de acreditaciones pendientes', err);
+      });
+    }, espera);
+  }
+
+  async function registrarAcreditacionPendiente({ eventoGanadorId, sorteoId, cartonId, error, intentos = 1, payload = {}, tipo = 'automatico' } = {}){
+    const eventoSeguro = sanitizarId(eventoGanadorId || '');
+    if(!eventoSeguro) return;
+    await asegurarDbListo();
+    const intentosActuales = Math.max(1, Number(intentos) || 1);
+    const backoffMs = obtenerBackoffReintento(intentosActuales);
+    const nextRetryAt = new Date(Date.now() + backoffMs);
+    await db.collection(ACREDITACIONES_PENDIENTES_COLLECTION).doc(eventoSeguro).set({
+      eventoGanadorId: eventoSeguro,
+      sorteoId: sorteoId || currentSorteoId || '',
+      cartonId: cartonId || '',
+      error: String(error || 'Error desconocido en acreditación').slice(0, 500),
+      intentos: intentosActuales,
+      estado: 'PENDIENTE',
+      tipo,
+      payload,
+      nextRetryAt: firebase.firestore.Timestamp.fromDate(nextRetryAt),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    programarReintentoPendientes(backoffMs);
+  }
+
+  async function marcarAcreditacionPendienteRealizada({ eventoGanadorId, requestId = '' } = {}){
+    const eventoSeguro = sanitizarId(eventoGanadorId || '');
+    if(!eventoSeguro) return;
+    await asegurarDbListo();
+    await db.collection(ACREDITACIONES_PENDIENTES_COLLECTION).doc(eventoSeguro).set({
+      eventoGanadorId: eventoSeguro,
+      estado: 'REALIZADO',
+      error: '',
+      requestId: requestId || '',
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  }
+
+  async function escucharAcreditacionesPendientes(){
+    await asegurarDbListo();
+    if(acreditacionesPendientesUnsub){
+      acreditacionesPendientesUnsub();
+      acreditacionesPendientesUnsub = null;
+    }
+    acreditacionesPendientesUnsub = db.collection(ACREDITACIONES_PENDIENTES_COLLECTION)
+      .onSnapshot(snapshot=>{
+        let pendientes = 0;
+        snapshot.forEach(doc=>{
+          const data = doc.data() || {};
+          if((data.estado || '').toString().toUpperCase() !== 'REALIZADO'){
+            pendientes += 1;
+          }
+        });
+        actualizarIndicadorAcreditacionesPendientes(pendientes);
+        if(pendientes > 0){
+          programarReintentoPendientes(3000);
+        }
+      }, err=>{
+        console.warn('No se pudo escuchar la colección técnica de acreditaciones pendientes', err);
+      });
+  }
+
+  async function ejecutarReintentoPendienteDoc(doc){
+    const data = doc?.data ? (doc.data() || {}) : {};
+    const estado = (data.estado || '').toString().toUpperCase();
+    if(estado === 'REALIZADO') return;
+    const eventoGanadorId = sanitizarId(data.eventoGanadorId || doc.id);
+    if(!eventoGanadorId) return;
+    const payload = data.payload && typeof data.payload === 'object' ? data.payload : null;
+    if(!payload){
+      return;
+    }
+    const nextRetryDate = data.nextRetryAt?.toDate ? data.nextRetryAt.toDate() : null;
+    if(nextRetryDate instanceof Date && nextRetryDate.getTime() > Date.now()){
+      return;
+    }
+    const intentosActuales = Math.max(0, Number(data.intentos) || 0);
+    if(intentosActuales >= MAX_INTENTOS_ACREDITACION){
+      await db.collection(ACREDITACIONES_PENDIENTES_COLLECTION).doc(eventoGanadorId).set({
+        estado: 'TOPE_REINTENTOS',
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      return;
+    }
+    try {
+      await ejecutarAcreditacionBackend({
+        payload,
+        premioId: eventoGanadorId,
+        eventoGanadorId,
+        sorteoId: data.sorteoId || payload.sorteoId || currentSorteoId || '',
+        cartonId: data.cartonId || payload.cartonId || '',
+        tipo: data.tipo || 'automatico',
+        marcarProcesado: true
+      });
+    } catch (err) {
+      await registrarAcreditacionPendiente({
+        eventoGanadorId,
+        sorteoId: data.sorteoId || payload.sorteoId || currentSorteoId || '',
+        cartonId: data.cartonId || payload.cartonId || '',
+        error: err?.message || String(err),
+        intentos: intentosActuales + 1,
+        payload,
+        tipo: data.tipo || 'automatico'
+      });
+    }
+  }
+
+  async function reintentarAcreditacionesPendientes(){
+    if(reintentoPendientesEnCurso) return;
+    reintentoPendientesEnCurso = true;
+    try {
+      await asegurarDbListo();
+      const snap = await db.collection(ACREDITACIONES_PENDIENTES_COLLECTION).limit(100).get();
+      const tareas = [];
+      snap.forEach(doc=>{
+        tareas.push(ejecutarReintentoPendienteDoc(doc));
+      });
+      if(tareas.length){
+        await Promise.allSettled(tareas);
+      }
+    } catch (err) {
+      console.warn('Fallo el proceso de reintento de acreditaciones pendientes', err);
+    } finally {
+      reintentoPendientesEnCurso = false;
+    }
+  }
+
+  async function ejecutarAcreditacionBackend({ payload, premioId, eventoGanadorId, sorteoId, cartonId, tipo = 'automatico', marcarProcesado = false, destinoProcesados = null } = {}){
+    const user = auth?.currentUser;
+    const apiBase = (typeof getAdminApiBase === 'function' ? getAdminApiBase() : '').replace(/\/$/, '');
+    if(!user || !apiBase){
+      throw new Error('Falta sesión de administrador o API base para acreditar premio.');
+    }
+    const token = await user.getIdToken();
+    const response = await fetch(`${apiBase}/acreditarPremioEvento`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json().catch(()=>({}));
+    if(!response.ok){
+      throw new Error(data?.error || `HTTP ${response.status}`);
+    }
+    const requestId = data?.requestId || data?.id || '';
+    await marcarAcreditacionPendienteRealizada({ eventoGanadorId, requestId });
+    if(marcarProcesado && destinoProcesados && premioId){
+      destinoProcesados.add(premioId);
+    }
+    return data;
+  }
 
   function manejarAceptarConfirmacionCanto(){
     cerrarConfirmacionCanto(true);
@@ -2313,6 +2524,7 @@
             adminActual = null;
             sorteoCookieKey = sorteoCookieDefaultKey;
             restauracionPendiente = false;
+            actualizarIndicadorAcreditacionesPendientes(0);
             if(resolverAuthListo){ resolverAuthListo(); resolverAuthListo = null; }
             return;
           }
@@ -2328,6 +2540,7 @@
           restauracionPendiente = true;
           try {
             await verificarSorteoPersistidoAlEntrar({ mostrarFallback: false });
+            await escucharAcreditacionesPendientes();
           } catch (err) {
             console.error('No se pudo restaurar el sorteo tras la autenticación.', err);
           }
@@ -4484,13 +4697,6 @@
       const ganadoresNumero = Math.max(1, Number(totalGanadores) || 1);
       const creditos = ganadoresNumero > 0 ? Math.floor(Number(premioTotal) / ganadoresNumero) : 0;
       const cartonesGratis = obtenerCartonesGratisPorGanador(forma, ganadoresNumero);
-      const user = auth?.currentUser;
-      const apiBase = (typeof getAdminApiBase === 'function' ? getAdminApiBase() : '').replace(/\/$/, '');
-      if(!user || !apiBase){
-        console.warn('No se pudo acreditar premio automático vía backend por falta de sesión o API base.');
-        return;
-      }
-      const token = await user.getIdToken();
       const payload = {
         sorteoId: currentSorteoId,
         formaIdx: Number(forma?.idx) || 0,
@@ -4501,21 +4707,38 @@
       };
       if(userId) payload.userId = userId;
       if(email) payload.email = normalizarEmail(email);
-      const response = await fetch(`${apiBase}/acreditarPremioEvento`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
+      await ejecutarAcreditacionBackend({
+        payload,
+        premioId,
+        eventoGanadorId,
+        sorteoId: currentSorteoId,
+        cartonId: payload.cartonId,
+        tipo: 'automatico',
+        marcarProcesado: true,
+        destinoProcesados: premiosAutomaticosProcesados
       });
-      if(!response.ok){
-        const data = await response.json().catch(()=>({}));
-        throw new Error(data?.error || `HTTP ${response.status}`);
-      }
-      premiosAutomaticosProcesados.add(premioId);
     } catch (err) {
       console.error('Error acreditando premio automático', err);
+      try {
+        await registrarAcreditacionPendiente({
+          eventoGanadorId,
+          sorteoId: currentSorteoId,
+          cartonId: carton.id || carton.cartonId || '',
+          error: err?.message || String(err),
+          intentos: 1,
+          payload: {
+            sorteoId: currentSorteoId,
+            formaIdx: Number(forma?.idx) || 0,
+            cartonId: carton.id || carton.cartonId || '',
+            monto: Math.floor((Number(obtenerCreditosForma(forma)) || 0) / Math.max(1, Number(totalGanadores) || 1)),
+            cartonesGratis: Number(obtenerCartonesGratisPorGanador(forma, Math.max(1, Number(totalGanadores) || 1))) || 0,
+            eventoGanadorId
+          },
+          tipo: 'automatico'
+        });
+      } catch (guardarErr) {
+        console.warn('No se pudo registrar la acreditación automática pendiente', guardarErr);
+      }
     } finally {
       premiosAutomaticosEnCurso.delete(premioId);
     }
@@ -4546,13 +4769,6 @@
       if(!email && !userId){
         return;
       }
-      const user = auth?.currentUser;
-      const apiBase = (typeof getAdminApiBase === 'function' ? getAdminApiBase() : '').replace(/\/$/, '');
-      if(!user || !apiBase){
-        console.warn('No se pudo acreditar premio de segundo lugar vía backend por falta de sesión o API base.');
-        return;
-      }
-      const token = await user.getIdToken();
       const payload = {
         sorteoId: currentSorteoId,
         formaIdx: Number(forma?.idx) || 0,
@@ -4569,21 +4785,44 @@
       };
       if(userId) payload.userId = userId;
       if(email) payload.email = normalizarEmail(email);
-      const response = await fetch(`${apiBase}/acreditarPremioEvento`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
+      await ejecutarAcreditacionBackend({
+        payload,
+        premioId,
+        eventoGanadorId,
+        sorteoId: currentSorteoId,
+        cartonId: payload.cartonId,
+        tipo: 'segundo_lugar',
+        marcarProcesado: true,
+        destinoProcesados: premiosSegundoLugarProcesados
       });
-      if(!response.ok){
-        const data = await response.json().catch(()=>({}));
-        throw new Error(data?.error || `HTTP ${response.status}`);
-      }
-      premiosSegundoLugarProcesados.add(premioId);
     } catch (err) {
       console.error('Error acreditando premio segundo lugar', err);
+      try {
+        await registrarAcreditacionPendiente({
+          eventoGanadorId,
+          sorteoId: currentSorteoId,
+          cartonId: carton.id || carton.cartonId || '',
+          error: err?.message || String(err),
+          intentos: 1,
+          payload: {
+            sorteoId: currentSorteoId,
+            formaIdx: Number(forma?.idx) || 0,
+            cartonId: carton.id || carton.cartonId || '',
+            alias: carton?.alias || '',
+            monto: 0,
+            cartonesGratis: Number(cartonesGratis) || 0,
+            eventoGanadorId,
+            prefijoTransaccion: 'premio2',
+            origen: 'premios_segundo_lugar',
+            referencia: 'PREMIO_SEGUNDO_LUGAR',
+            tipoRegistro: 'SEGUNDO_LUGAR_SORTEO',
+            segundoLugar: true
+          },
+          tipo: 'segundo_lugar'
+        });
+      } catch (guardarErr) {
+        console.warn('No se pudo registrar la acreditación de segundo lugar pendiente', guardarErr);
+      }
     } finally {
       premiosSegundoLugarEnCurso.delete(premioId);
     }
