@@ -521,6 +521,8 @@
     <div id="premios-content">
       <div class="acciones">
         <button class="icon-btn" id="premios-archivo"><span class="icon">&#128193;</span><span>Archivo</span></button>
+        <button class="icon-btn" id="acreditaciones-reencolar"><span class="icon">&#10227;</span><span>Reencolar TOPE</span></button>
+        <button class="icon-btn" id="premios-reconciliar"><span class="icon">&#128269;</span><span>Reconciliar</span></button>
         <span class="switch-label" id="premios-auditoria-label">Vista de auditoría: Procesados / Con error / Reintentos</span>
       </div>
       <table id="tabla-premios">
@@ -553,6 +555,29 @@
         </thead>
         <tbody></tbody>
       </table>
+
+      <div id="acreditaciones-tope-panel" style="margin-top:8px;">
+        <div class="acciones">
+          <span class="switch-label" id="acreditaciones-tope-label">Acreditaciones técnicas en TOPE_REINTENTOS</span>
+        </div>
+        <table id="tabla-acreditaciones-tope">
+          <colgroup>
+            <col style="width:6%">
+            <col style="width:20%">
+            <col style="width:16%">
+            <col style="width:10%">
+            <col style="width:18%">
+            <col style="width:24%">
+            <col style="width:6%">
+          </colgroup>
+          <thead>
+            <tr class="filtros">
+              <th>N°</th><th>Evento</th><th>Sorteo</th><th>Intentos</th><th>Próx. reintento</th><th>Error</th><th><span id="acreditaciones-tope-marcar" class="check-header">✔</span></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
   </section>
 
@@ -687,6 +712,8 @@
     const pagosAdminArchivoMapa = new Map();
     const pagosColaboradoresMapa = new Map();
     const pagosColaboradoresEdicion = new Map();
+    const acreditacionesTopeActivas = [];
+    const acreditacionesTopeMapa = new Map();
     const usuariosInfoCache = new Map();
 
     let unsubscribePremios = null;
@@ -695,6 +722,7 @@
     let unsubscribePagosArchivo = null;
     let unsubscribeColaboradores = null;
     let unsubscribeUsuariosCentro = null;
+    let unsubscribeAcreditacionesTope = null;
 
     const formatNumber = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2, minimumFractionDigits: 0 });
     const formatNumberEntero = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 0, minimumFractionDigits: 0 });
@@ -1986,6 +2014,132 @@
       capa.classList.remove('activo');
     }
 
+
+    function prepararAcreditacionTope(id, data = {}){
+      const estado = normalizarEstado(data.estado);
+      if(estado !== 'TOPE_REINTENTOS') return null;
+      const nextRetryDate = data.nextRetryAt?.toDate ? data.nextRetryAt.toDate() : null;
+      const eventoGanadorId = (data.eventoGanadorId || id || '').toString();
+      return {
+        id,
+        eventoGanadorId,
+        sorteoId: (data.sorteoId || '').toString(),
+        cartonId: (data.cartonId || '').toString(),
+        intentos: Math.max(0, Number(data.intentos) || 0),
+        estado,
+        nextRetryAt: nextRetryDate,
+        nextRetryAtTexto: nextRetryDate instanceof Date ? nextRetryDate.toLocaleString('es-ES') : '-',
+        error: (data.error || '').toString().slice(0, 160),
+        payload: (data.payload && typeof data.payload === 'object') ? data.payload : null
+      };
+    }
+
+    function renderAcreditacionesTope(){
+      const tbody = document.querySelector('#tabla-acreditaciones-tope tbody');
+      if(!tbody) return;
+      const lista = [...acreditacionesTopeActivas].sort((a,b)=>(b.intentos-a.intentos) || ((b.nextRetryAt?.getTime?.()||0)-(a.nextRetryAt?.getTime?.()||0)));
+      if(!lista.length){
+        tbody.innerHTML = '<tr><td colspan="7"><div class="mensaje-tabla">No hay registros en TOPE_REINTENTOS.</div></td></tr>';
+        return;
+      }
+      tbody.innerHTML = lista.map((item, idx)=>`<tr data-id="${item.id}"><td>${idx+1}</td><td>${escapeHtml(item.eventoGanadorId)}</td><td>${escapeHtml(item.sorteoId || '-')}</td><td>${item.intentos}</td><td>${escapeHtml(item.nextRetryAtTexto)}</td><td>${escapeHtml(item.error || '-')}</td><td><input type="checkbox" data-id="${item.id}"></td></tr>`).join('');
+    }
+
+    function obtenerSeleccionAcreditacionesTope(){
+      const checks = Array.from(document.querySelectorAll('#tabla-acreditaciones-tope tbody input[type="checkbox"]:checked'));
+      return checks.map(chk=>chk.dataset.id).filter(Boolean);
+    }
+
+    async function registrarAuditoriaReencolado({ ids = [], motivo = '' } = {}){
+      if(!ids.length) return;
+      const db = dbRef();
+      const user = authInstance().currentUser;
+      const email = (user?.email || 'desconocido').toString();
+      const rol = (window.currentRole || '').toString();
+      const razon = (motivo || '').toString().trim() || 'Sin motivo especificado';
+      await Promise.all(ids.map(async (id)=>{
+        const ref = db.collection('AcreditacionesPendientesAuditoria').doc();
+        await ref.set({
+          accion: 'REENCOLAR_TOPE_REINTENTOS',
+          registroId: id,
+          motivo: razon.slice(0, 400),
+          ejecutadoPor: email,
+          rolEjecutor: rol,
+          ejecutadoAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }));
+    }
+
+    async function reencolarAcreditacionesTope(ids = []){
+      if(!ids.length){ alert('No hay registros seleccionados para reencolar.'); return; }
+      const motivo = await window.prompt('Indica el motivo del relanzamiento manual:');
+      if(motivo === null) return;
+      const motivoFinal = String(motivo || '').trim();
+      if(!motivoFinal){ alert('Debes ingresar un motivo para continuar.'); return; }
+      const db = dbRef();
+      const ahora = firebase.firestore.Timestamp.fromDate(new Date());
+      const user = authInstance().currentUser;
+      const batch = db.batch();
+      ids.forEach((id)=>{
+        const ref = db.collection('AcreditacionesPendientes').doc(id);
+        batch.set(ref, {
+          estado: 'PENDIENTE',
+          intentos: 0,
+          nextRetryAt: ahora,
+          relanzadoManual: {
+            por: user?.email || '',
+            rol: window.currentRole || '',
+            motivo: motivoFinal.slice(0, 400),
+            fecha: firebase.firestore.FieldValue.serverTimestamp()
+          },
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      });
+      await batch.commit();
+      await registrarAuditoriaReencolado({ ids, motivo: motivoFinal });
+      alert(`Se reencolaron ${ids.length} registro(s) en TOPE_REINTENTOS.`);
+    }
+
+    async function ejecutarReconciliacionPremios(){
+      const db = dbRef();
+      const [premiosSnap, pendientesSnap] = await Promise.all([
+        db.collection('PremiosSorteos').get(),
+        db.collection('AcreditacionesPendientes').get()
+      ]);
+      const pendientesMap = new Map();
+      pendientesSnap.forEach(doc=>{
+        const data = doc.data() || {};
+        const evento = (data.eventoGanadorId || doc.id || '').toString();
+        if(evento){ pendientesMap.set(evento, { id: doc.id, estado: normalizarEstado(data.estado) }); }
+      });
+      const huerfanos = [];
+      premiosSnap.forEach(doc=>{
+        const data = doc.data() || {};
+        const estado = normalizarEstado(data.estado);
+        if(estado === 'REALIZADO' || estado === 'ARCHIVADO') return;
+        const eventoGanadorId = (data.eventoGanadorId || doc.id || '').toString();
+        const pendiente = pendientesMap.get(eventoGanadorId);
+        if(!pendiente || pendiente.estado === 'REALIZADO'){
+          huerfanos.push({ id: doc.id, eventoGanadorId, sorteoId: (data.sorteoId || '').toString(), estado });
+        }
+      });
+      await db.collection('AcreditacionesReconciliacion').add({
+        tipo: 'PREMIOS_VS_ACREDITACIONES',
+        totalPremios: premiosSnap.size,
+        totalPendientes: pendientesSnap.size,
+        totalHuerfanos: huerfanos.length,
+        huerfanos: huerfanos.slice(0, 200),
+        ejecutadoPor: authInstance().currentUser?.email || '',
+        ejecutadoAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      if(!huerfanos.length){
+        mostrarModalInfo('Reconciliación completada', 'No se detectaron premios huérfanos no realizados.');
+        return;
+      }
+      const preview = huerfanos.slice(0, 8).map(item=>`• ${item.eventoGanadorId || item.id} | sorteo ${item.sorteoId || '-'} | ${item.estado}`).join('\n');
+      mostrarModalInfo('Premios huérfanos detectados', `Se detectaron ${huerfanos.length} premio(s) huérfano(s).\n${preview}`);
+    }
+
     function renderTabla(lista, tbodyId, opciones = {}){
       const tbody = document.querySelector(`#${tbodyId} tbody`);
       if(!tbody) return;
@@ -2535,6 +2689,26 @@
         renderPagos();
       });
 
+      const reencolarBtn = document.getElementById('acreditaciones-reencolar');
+      if(reencolarBtn){
+        reencolarBtn.addEventListener('click', async()=>{
+          const seleccion = obtenerSeleccionAcreditacionesTope();
+          const ids = seleccion.length ? seleccion : acreditacionesTopeActivas.map(item=>item.id);
+          if(!ids.length){ alert('No hay registros en TOPE_REINTENTOS para reencolar.'); return; }
+          await reencolarAcreditacionesTope(ids);
+        });
+      }
+      const reconciliarBtn = document.getElementById('premios-reconciliar');
+      if(reconciliarBtn){
+        reconciliarBtn.addEventListener('click', async()=>{
+          await ejecutarReconciliacionPremios();
+        });
+      }
+      const marcarTope = document.getElementById('acreditaciones-tope-marcar');
+      if(marcarTope){
+        marcarTope.addEventListener('click', ()=>seleccionarTodos('tabla-acreditaciones-tope'));
+      }
+
       document.getElementById('colaboradores-marcar').addEventListener('click', ()=>seleccionarTodos('tabla-colaboradores'));
       document.getElementById('colaboradores-aprobar').addEventListener('click', async()=>{
         const seleccion = obtenerSeleccion('tabla-colaboradores');
@@ -2754,6 +2928,25 @@
         });
         if(mostrarPagosArchivo) renderPagos();
       });
+
+      unsubscribeAcreditacionesTope = db.collection('AcreditacionesPendientes')
+        .where('estado','==','TOPE_REINTENTOS')
+        .onSnapshot(snapshot => {
+          acreditacionesTopeActivas.length = 0;
+          acreditacionesTopeMapa.clear();
+          snapshot.forEach(doc=>{
+            const registro = prepararAcreditacionTope(doc.id, doc.data() || {});
+            if(!registro) return;
+            acreditacionesTopeActivas.push(registro);
+            acreditacionesTopeMapa.set(doc.id, registro);
+          });
+          const label = document.getElementById('acreditaciones-tope-label');
+          if(label){
+            label.textContent = `Acreditaciones técnicas en TOPE_REINTENTOS: ${acreditacionesTopeActivas.length}`;
+          }
+          renderAcreditacionesTope();
+        }, err => console.error('Error escuchando AcreditacionesPendientes en TOPE_REINTENTOS', err));
+
       unsubscribeUsuariosCentro = db.collection('users').onSnapshot(async snapshot => {
         colaboradoresBase.length = 0;
         pagosColaboradoresEdicion.clear();
@@ -2823,7 +3016,8 @@
         unsubscribePremiosArchivo,
         unsubscribePagos,
         unsubscribePagosArchivo,
-        unsubscribeUsuariosCentro
+        unsubscribeUsuariosCentro,
+        unsubscribeAcreditacionesTope
       ].forEach(unsub=>{
         if(typeof unsub === 'function') unsub();
       });
