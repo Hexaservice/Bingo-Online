@@ -637,7 +637,13 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
     email,
     monto,
     cartonesGratis,
-    eventoGanadorId
+    eventoGanadorId,
+    prefijoTransaccion,
+    origen,
+    referencia,
+    tipoRegistro,
+    segundoLugar,
+    alias
   } = req.body || {};
 
   const normalizedSorteoId = normalizeString(sorteoId, 120);
@@ -647,6 +653,12 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
   const normalizedCartonesGratis = Math.max(0, Math.floor(normalizeNumber(cartonesGratis)));
   const normalizedUserId = normalizeString(userId, 160);
   const normalizedEmail = normalizeString(email, 160).toLowerCase();
+  const normalizedAlias = normalizeString(alias, 160);
+  const normalizedPrefijoTransaccion = normalizeString(prefijoTransaccion, 40).replace(/[^\w-]/g, '') || 'premio';
+  const normalizedOrigen = normalizeString(origen, 80) || 'premios_jugadores';
+  const normalizedReferencia = normalizeString(referencia, 80) || 'PREMIO';
+  const normalizedTipoRegistro = normalizeString(tipoRegistro, 80) || 'GANADOR_SORTEO';
+  const normalizedSegundoLugar = Boolean(segundoLugar);
   const normalizedEventoGanadorId = normalizeString(
     eventoGanadorId,
     220
@@ -674,7 +686,7 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
       const sorteoRef = db.collection('sorteos').doc(normalizedSorteoId);
       const cartonRef = db.collection('CartonJugado').doc(normalizedCartonId);
       const premioRef = db.collection('PremiosSorteos').doc(normalizedEventoGanadorId);
-      const transaccionRef = db.collection('transacciones').doc(`premio_${normalizedEventoGanadorId}`);
+      const transaccionRef = db.collection('transacciones').doc(`${normalizedPrefijoTransaccion}_${normalizedEventoGanadorId}`);
 
       const [sorteoSnap, cartonSnap, premioSnap, transaccionSnap] = await Promise.all([
         tx.get(sorteoRef),
@@ -688,6 +700,9 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
       }
 
       const sorteoData = sorteoSnap.data() || {};
+      if (Boolean(sorteoData?.premiosCorteCerrado)) {
+        throw new Error('SORTEO_CORTE_CERRADO');
+      }
       if (!canAccreditForSorteoState(sorteoData.estado)) {
         throw new Error('SORTEO_ESTADO_INVALIDO');
       }
@@ -747,6 +762,9 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           sorteoNombre,
           email: normalizedEmail || billeteraRef.id,
           gmail: normalizedEmail || billeteraRef.id,
+          alias: normalizedAlias || cartonData.alias || '',
+          aliasJugador: normalizedAlias || cartonData.alias || '',
+          aliasGanador: normalizedAlias || cartonData.alias || '',
           userId: normalizedUserId || cartonData.userId || null,
           cartonId: normalizedCartonId,
           formaIdx: normalizedFormaIdx,
@@ -755,6 +773,8 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           cartonesGratis: normalizedCartonesGratis,
           eventoGanadorId: normalizedEventoGanadorId,
           winnerKey: normalizedEventoGanadorId,
+          tipoRegistro: normalizedTipoRegistro,
+          segundoLugar: normalizedSegundoLugar,
           idBilletera: billeteraRef.id,
           estado: 'REALIZADO',
           actualizadoEn: timestamp,
@@ -785,7 +805,7 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           transaccionRef,
           {
             tipotrans: 'premio',
-            origen: 'premios_jugadores',
+            origen: normalizedOrigen,
             Monto: normalizedMonto > 0 ? normalizedMonto : normalizedCartonesGratis,
             cartonesGratis: normalizedCartonesGratis,
             estado: 'REALIZADO',
@@ -796,10 +816,12 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
             horagestion: horaGestion,
             usuariogestor: req.user?.email || '',
             rolusuario: req.user?.role || '',
-            referencia: 'PREMIO',
+            referencia: normalizedReferencia,
             sorteoId: normalizedSorteoId,
             sorteoNombre,
             eventoGanadorId: normalizedEventoGanadorId,
+            tipoRegistro: normalizedTipoRegistro,
+            segundoLugar: normalizedSegundoLugar,
             creadoEn: timestamp
           },
           { merge: true }
@@ -821,6 +843,9 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
     }
     if (error.message === 'SORTEO_ESTADO_INVALIDO') {
       return res.status(409).json({ error: 'El sorteo no está en estado elegible para acreditar premios.' });
+    }
+    if (error.message === 'SORTEO_CORTE_CERRADO') {
+      return res.status(409).json({ error: 'El sorteo ya tiene corte de premios cerrado.' });
     }
     if (error.message === 'CARTON_NO_EXISTE' || error.message === 'CARTON_NO_PERTENECE_SORTEO') {
       return res.status(409).json({ error: 'El cartón no es elegible para el sorteo indicado.' });
