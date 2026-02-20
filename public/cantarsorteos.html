@@ -1774,6 +1774,7 @@
   <script src="js/notificationCenter.js"></script>
   <script src="js/timezone.js"></script>
   <script src="js/estadoPagoPremio.js"></script>
+  <script src="js/sorteoAutoPrizeEligibility.js"></script>
   <script>
   ensureAuth('Administrador');
   initServerTime().then(()=>{
@@ -1791,6 +1792,16 @@
 
   function estadoPagoPremioFinalizado(valor){
     return window.EstadosPagoPremio.estaFinalizado(valor);
+  }
+
+  function sorteoElegibleParaPremioAutomatico(data){
+    if(!window.SorteoAutoPrizeEligibility || typeof window.SorteoAutoPrizeEligibility.isSorteoEligibleForAutoPrize !== 'function'){
+      return false;
+    }
+    return window.SorteoAutoPrizeEligibility.isSorteoEligibleForAutoPrize({
+      estado: data?.estado,
+      premiosCorteCerrado: data?.premiosCorteCerrado
+    });
   }
 
   let sorteos = [];
@@ -4672,6 +4683,7 @@
 
   async function acreditarPremioAutomatico({ carton, forma, totalGanadores }){
     if(!carton || !forma || !currentSorteoId) return;
+    if(!sorteoElegibleParaPremioAutomatico(currentSorteoData)) return;
     const cartonReferencia = carton.id || carton.cartonId || carton.carton || carton.userId || carton.usuarioId || '';
     const eventoGanadorId = buildPremioId({ sorteoId: currentSorteoId, formaIdx: forma?.idx, cartonId: cartonReferencia });
     const premioId = eventoGanadorId;
@@ -4746,6 +4758,7 @@
 
   async function acreditarPremioSegundoLugar({ carton, forma }){
     if(!carton || !forma || !currentSorteoId) return;
+    if(!sorteoElegibleParaPremioAutomatico(currentSorteoData)) return;
     const cartonReferencia = carton.id || carton.cartonId || carton.carton || carton.userId || carton.usuarioId || '';
     const eventoGanadorId = buildPremioId({ sorteoId: currentSorteoId, formaIdx: forma?.idx, cartonId: cartonReferencia, prefijo: 'segundo' });
     const premioId = eventoGanadorId;
