@@ -1654,10 +1654,11 @@
           email: emailBase,
           alias: aliasBase || cacheado.alias || '',
           nombre: cacheado.nombre || '',
-          userId: cacheado.uid || userIdBase || ''
+          userId: cacheado.uid || userIdBase || '',
+          role: (cacheado.role || '').toString()
         };
       }
-      return { email: emailBase, alias: aliasBase, nombre: '', userId: userIdBase };
+      return { email: emailBase, alias: aliasBase, nombre: '', userId: userIdBase, role: '' };
     }
     let info = null;
     if(userIdBase){
@@ -1673,7 +1674,8 @@
       email: normalizarEmail(info?.email || emailBase),
       alias: aliasBase || (info?.alias || ''),
       nombre: info?.nombre || info?.name || '',
-      userId: info?.uid || userIdBase || ''
+      userId: info?.uid || userIdBase || '',
+      role: (info?.role || '').toString()
     };
     if(!resultado.nombre && info){
       const nombreInferido = [info.name, info.apellido].filter(Boolean).join(' ').trim();
@@ -1754,7 +1756,8 @@
           alias: identidad.alias || candidato.alias || '',
           nombre: identidad.nombre || candidato.nombre || '',
           userIds: new Set(),
-          creditos: 0
+          creditos: 0,
+          role: (identidad.role || '').toString()
         });
       }
       const registro = mapa.get(clave);
@@ -1766,14 +1769,23 @@
       if(!registro.alias && (candidato.alias || identidad.alias)){
         registro.alias = identidad.alias || candidato.alias || '';
       }
+      if(!registro.role && identidad.role){
+        registro.role = identidad.role;
+      }
     }
     return Array.from(mapa.values()).map(item=>({
       gmail: item.gmail,
       alias: item.alias,
       nombre: item.nombre,
       userIds: Array.from(item.userIds),
-      creditos: item.creditos
+      creditos: item.creditos,
+      role: (item.role || '').toString()
     }));
+  }
+
+  function esRolAdministrativo(role = ''){
+    const valor = (role || '').toString().trim().toLowerCase();
+    return ['admin', 'administrador', 'superadmin'].includes(valor);
   }
 
   async function obtenerGanadoresAgrupados(){
@@ -2042,21 +2054,90 @@
     });
   }
 
-  async function generarSolicitudesCentroPagos(){
+  async function detectarPremiosAcreditadosEnVivo(){
+    if(sorteoData?.premiosAcreditadosEnVivo === true || sorteoData?.premiosYaAcreditados === true){
+      return true;
+    }
+    try {
+      await ensureFirebaseReady();
+      const snap = await db.collection('PremiosSorteos')
+        .where('sorteoId', '==', sorteoId)
+        .where('generadoDesde', '==', 'cantarsorteos')
+        .limit(1)
+        .get();
+      return !snap.empty;
+    } catch (err) {
+      console.warn('No se pudo verificar si los premios ya fueron acreditados en vivo', err);
+      return false;
+    }
+  }
+
+  async function actualizarFlagsOrquestacionCentroPagos({ timestamp, solicitudesPagosGeneradas }){
+    const lote = db.batch();
+    const payload = {
+      solicitudesPagosGeneradas: Boolean(solicitudesPagosGeneradas),
+      solicitudesPagosActualizadasEn: timestamp,
+      pagosCentroAprobados: false,
+      pagosCentroActualizadosEn: timestamp
+    };
+    lote.set(db.collection('sorteos').doc(sorteoId), payload, { merge: true });
+    lote.set(db.collection('cantarsorteos').doc(sorteoId), payload, { merge: true });
+    await lote.commit();
+  }
+
+  async function generarSolicitudesCentroPagos(opciones = {}){
     mostrarLoading('Generando solicitudes para Centro de Pagos, por favor espera');
+    const incluirPremios = opciones.incluirPremios !== false;
     const timestamp = firebase.firestore.FieldValue.serverTimestamp();
     const sorteoNombre = (sorteoData?.nombre || '').toString();
-    const { lista: ganadores, totalCreditos, totalCartonesGratis } = await obtenerGanadoresAgrupados();
-    mostrarLoading('Generando solicitudes para Centro de Pagos, por favor espera');
-    const colaboradores = await obtenerColaboradoresProcesados();
+    let ganadores = [];
+    let ganadoresOmitidos = 0;
+    let totalCreditos = 0;
+    let totalCartonesGratis = 0;
+    if(incluirPremios){
+      const premiosData = await obtenerGanadoresAgrupados();
+      ganadores = premiosData.lista;
+      totalCreditos = premiosData.totalCreditos;
+      totalCartonesGratis = premiosData.totalCartonesGratis;
+    } else {
+      const premiosData = await obtenerGanadoresAgrupados();
+      ganadoresOmitidos = (premiosData.lista || []).length;
+    }
+    const participantes = await obtenerColaboradoresProcesados();
+    const administrativos = participantes.filter(item=>esRolAdministrativo(item.role));
+    const colaboradores = participantes.filter(item=>!esRolAdministrativo(item.role));
     const operaciones = [];
 
-    ganadores.forEach(ganador => {
-      const email = normalizarEmail(ganador.gmail);
-      const alias = ganador.alias || '';
-      const docId = construirIdGanador(ganador);
-      const eventoGanadorId = sanitizarId(docId);
-      operaciones.push(acreditarPremioAutomaticoCentroPagos({ docId, ganador, sorteoNombre, timestamp, eventoGanadorId }));
+    if(incluirPremios){
+      ganadores.forEach(ganador => {
+        const docId = construirIdGanador(ganador);
+        const eventoGanadorId = sanitizarId(docId);
+        operaciones.push(acreditarPremioAutomaticoCentroPagos({ docId, ganador, sorteoNombre, timestamp, eventoGanadorId }));
+      });
+    }
+
+    administrativos.forEach(administrativo => {
+      const email = normalizarEmail(administrativo.gmail);
+      const docId = construirIdSolicitud(`${sorteoId}_admin`, email || administrativo.alias || 'administrativo');
+      const payload = {
+        sorteoId,
+        sorteoNombre,
+        gmail: email || '',
+        email: email || '',
+        nombre: administrativo.nombre || administrativo.alias || '',
+        alias: administrativo.alias || '',
+        creditos: Number(administrativo.creditos) || 0,
+        estado: 'PENDIENTE',
+        fechaAsignacion: timestamp,
+        fecha: timestamp,
+        creadoEn: timestamp,
+        actualizadoEn: timestamp,
+        tipoRegistro: 'ADMINISTRATIVO_SORTEO',
+        rolInterno: (administrativo.role || '').toString(),
+        userIds: administrativo.userIds || [],
+        generadoDesde: 'pdfresultados'
+      };
+      operaciones.push(actualizarDocumentoCentroPagos(db.collection('PagosAdministracion').doc(docId), payload));
     });
 
     colaboradores.forEach(colaborador => {
@@ -2086,16 +2167,24 @@
     const resumenPayload = {
       sorteoId,
       sorteoNombre,
-      totalGanadores: ganadores.length,
+      totalGanadores: incluirPremios ? ganadores.length : 0,
+      totalAdministrativos: administrativos.length,
       totalColaboradores: colaboradores.length,
-      totalCreditosPremios: totalCreditos,
-      totalCartonesGratis,
-      ganadores: ganadores.map(item => ({
+      totalCreditosPremios: incluirPremios ? totalCreditos : 0,
+      totalCartonesGratis: incluirPremios ? totalCartonesGratis : 0,
+      ganadores: incluirPremios ? ganadores.map(item => ({
         gmail: normalizarEmail(item.gmail || ''),
         alias: item.alias || '',
         creditos: Number(item.creditos) || 0,
         cartonesGratis: Number(item.cartonesGratis) || 0,
         cartonesGanadores: Number(item.cartonesGanadores) || 0
+      })) : [],
+      administrativos: administrativos.map(item => ({
+        gmail: normalizarEmail(item.gmail || ''),
+        alias: item.alias || '',
+        nombre: item.nombre || '',
+        rolInterno: (item.role || '').toString(),
+        creditos: Number(item.creditos) || 0
       })),
       colaboradores: colaboradores.map(item => ({
         gmail: normalizarEmail(item.gmail || ''),
@@ -2106,17 +2195,26 @@
       generadoDesde: 'pdfresultados'
     };
     operaciones.push(resumenRef.set(resumenPayload, { merge: true }));
-
-    const indicadorPagosPayload = {
-      pagosCentroAprobados: false,
-      pagosCentroActualizadosEn: timestamp
-    };
-    operaciones.push(db.collection('sorteos').doc(sorteoId).set(indicadorPagosPayload, { merge: true }));
-    operaciones.push(db.collection('cantarsorteos').doc(sorteoId).set(indicadorPagosPayload, { merge: true }).catch(err=>{
-      console.warn('No se pudo actualizar el indicador de pagos en cantarsorteos', sorteoId, err);
-    }));
-
     await Promise.all(operaciones);
+
+    await actualizarFlagsOrquestacionCentroPagos({ timestamp, solicitudesPagosGeneradas: true });
+    return {
+      incluirPremios,
+      premiosOmitidos: incluirPremios ? 0 : ganadoresOmitidos,
+      ganadores: ganadores.length,
+      administrativos: administrativos.length,
+      colaboradores: colaboradores.length
+    };
+  }
+
+  async function orquestarCierreSorteoPdfListo(){
+    const yaAcreditadosEnVivo = await detectarPremiosAcreditadosEnVivo();
+    const incluirPremios = !yaAcreditadosEnVivo;
+    const resumen = await generarSolicitudesCentroPagos({ incluirPremios });
+    return {
+      ...resumen,
+      premiosAcreditadosEnVivo: yaAcreditadosEnVivo
+    };
   }
 
   function obtenerPosicionesForma(forma){
@@ -3504,18 +3602,27 @@
         pdfActualizadoEn: timestamp,
         pdfUrl: eliminar,
         pdfStoragePath: eliminar,
-        pdfresul: 'si',
-        solicitudesPagosGeneradas: false,
-        solicitudesPagosActualizadasEn: timestamp
+        pdfresul: 'si'
       };
       await Promise.all([
         db.collection('sorteos').doc(sorteoId).set(payload, { merge: true }),
         db.collection('cantarsorteos').doc(sorteoId).set(payload, { merge: true })
       ]);
+      const resultadoOrquestacion = await orquestarCierreSorteoPdfListo();
       if(sorteoData){
         sorteoData.pdfresul = 'si';
+        sorteoData.solicitudesPagosGeneradas = true;
+        sorteoData.pagosCentroAprobados = false;
       }
-      alert('El sorteo se marcó como PDF listo. Ahora podrás gestionar las solicitudes desde el Centro de Pagos.');
+      const detallePremios = resultadoOrquestacion.premiosAcreditadosEnVivo
+        ? `Premios omitidos por ya acreditados en vivo: ${resultadoOrquestacion.premiosOmitidos}.`
+        : `Premios procesados: ${resultadoOrquestacion.ganadores}.`;
+      alert(
+        `El sorteo se marcó como PDF listo y se ejecutó la orquestación de pagos.\n`+
+        `${detallePremios}\n`+
+        `Solicitudes administrativas creadas: ${resultadoOrquestacion.administrativos}.\n`+
+        `Solicitudes de colaboradores creadas: ${resultadoOrquestacion.colaboradores}.`
+      );
       window.location.href = 'cantarsorteos.html';
     } catch (err) {
       console.error('Error actualizando el estado del PDF', err);
