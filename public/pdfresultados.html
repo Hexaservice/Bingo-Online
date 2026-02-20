@@ -1404,6 +1404,7 @@
 
   const params = new URLSearchParams(window.location.search);
   const sorteoId = params.get('s');
+  const COMPAT_ORQUESTAR_PAGOS_AL_CONFIRMAR_PDF = false;
   if(!sorteoId){
     alert('No se indicó un sorteo.');
     window.location.href = 'cantarsorteos.html';
@@ -3521,22 +3522,28 @@
         db.collection('sorteos').doc(sorteoId).set(payload, { merge: true }),
         db.collection('cantarsorteos').doc(sorteoId).set(payload, { merge: true })
       ]);
-      const resultadoOrquestacion = await orquestarCierreSorteoPdfListo();
       if(sorteoData){
         sorteoData.pdfresul = 'si';
-        sorteoData.solicitudesPagosGeneradas = true;
-        sorteoData.pagosCentroAprobados = false;
       }
-      const mensajeCorte = resultadoOrquestacion.corteYaEjecutado
-        ? 'El corte de premios ya estaba ejecutado, no se reprocesaron solicitudes.'
-        : `Premios consolidados: ${resultadoOrquestacion.ganadores}.`;
-      alert(
-        `El sorteo se marcó como PDF listo y se ejecutó la orquestación de pagos.\n`+
-        `${mensajeCorte}\n`+
-        `Solicitudes administrativas creadas: ${resultadoOrquestacion.administrativos}.\n`+
-        `Solicitudes de colaboradores creadas: ${resultadoOrquestacion.colaboradores}.\n`+
-        `Pagos administrativos automáticos aplicados: ${resultadoOrquestacion.pagosAdministrativosAutomaticos || 0}.`
-      );
+      if(COMPAT_ORQUESTAR_PAGOS_AL_CONFIRMAR_PDF){
+        const resultadoOrquestacion = await orquestarCierreSorteoPdfListo();
+        if(sorteoData){
+          sorteoData.solicitudesPagosGeneradas = true;
+          sorteoData.pagosCentroAprobados = false;
+        }
+        const mensajeCorte = resultadoOrquestacion.corteYaEjecutado
+          ? 'El corte de premios ya estaba ejecutado, no se reprocesaron solicitudes.'
+          : `Premios consolidados: ${resultadoOrquestacion.ganadores}.`;
+        alert(
+          `El sorteo se marcó como PDF listo y se ejecutó la orquestación de pagos.\n`+
+          `${mensajeCorte}\n`+
+          `Solicitudes administrativas creadas: ${resultadoOrquestacion.administrativos}.\n`+
+          `Solicitudes de colaboradores creadas: ${resultadoOrquestacion.colaboradores}.\n`+
+          `Pagos administrativos automáticos aplicados: ${resultadoOrquestacion.pagosAdministrativosAutomaticos || 0}.`
+        );
+      } else {
+        alert('El sorteo se marcó como PDF listo. La generación de premios/pagos se realiza manualmente desde Centro de Pagos.');
+      }
       window.location.href = 'cantarsorteos.html';
     } catch (err) {
       console.error('Error actualizando el estado del PDF', err);
