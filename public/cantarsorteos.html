@@ -4427,112 +4427,42 @@
       const identidad = await resolverIdentidadPersona(carton);
       const billeteraIds = obtenerCandidatosBilleteraId(identidad.email, carton?.email, carton?.gmail, carton?.IDbilletera);
       const email = normalizarEmail(identidad.email || billeteraIds[0] || '');
-      if(!email || !billeteraIds.length){
+      const userId = identidad.userId || carton?.userId || carton?.usuarioId || '';
+      if(!email && !userId){
         return;
       }
       const premioTotal = obtenerCreditosForma(forma);
       const ganadoresNumero = Math.max(1, Number(totalGanadores) || 1);
       const creditos = ganadoresNumero > 0 ? Math.floor(Number(premioTotal) / ganadoresNumero) : 0;
       const cartonesGratis = obtenerCartonesGratisPorGanador(forma, ganadoresNumero);
-      const sorteoNombre = (currentSorteoData?.nombre || '').toString();
-      const ahora = getServerNow();
-      const fechaGestion = formatearFechaCorta(ahora);
-      const horaGestion = formatearHoraCorta(ahora);
-      const timestamp = getServerTimestamp();
-      const premioRef = db.collection('PremiosSorteos').doc(premioId);
-      const transaccionRef = db.collection('transacciones').doc(`premio_${premioId}`);
-      await db.runTransaction(async tx => {
-        const premioSnap = await tx.get(premioRef);
-        if(premioSnap.exists){
-          const estadoActual = (premioSnap.data()?.estado || '').toString().trim().toUpperCase();
-          if(estadoActual === 'REALIZADO' || estadoActual === 'APROBADO'){
-            return;
-          }
-        }
-        let billeteraRef = db.collection('Billetera').doc(billeteraIds[0]);
-        let billeteraSnap = null;
-        for(const billeteraId of billeteraIds){
-          const ref = db.collection('Billetera').doc(billeteraId);
-          const snap = await tx.get(ref);
-          if(snap.exists){
-            billeteraRef = ref;
-            billeteraSnap = snap;
-            break;
-          }
-        }
-        if(!billeteraSnap){
-          billeteraSnap = await tx.get(billeteraRef);
-        }
-        const datosBilletera = billeteraSnap.exists ? billeteraSnap.data() : {};
-        const nuevosCreditos = (Number(datosBilletera.creditos) || 0) + (Number(creditos) || 0);
-        const nuevosCartones = (Number(datosBilletera.CartonesGratis) || 0) + (Number(cartonesGratis) || 0);
-        const idBilleteraFinal = billeteraRef.id;
-        const payloadPremio = {
+      const user = auth?.currentUser;
+      const apiBase = (typeof getAdminApiBase === 'function' ? getAdminApiBase() : '').replace(/\/$/, '');
+      if(!user || !apiBase){
+        console.warn('No se pudo acreditar premio automático vía backend por falta de sesión o API base.');
+        return;
+      }
+      const token = await user.getIdToken();
+      const response = await fetch(`${apiBase}/acreditarPremioEvento`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
           sorteoId: currentSorteoId,
-          sorteoNombre,
-          gmail: email,
-          email,
-          alias: identidad.alias || carton.alias || '',
-          aliasJugador: identidad.alias || carton.alias || '',
-          aliasGanador: identidad.alias || carton.alias || '',
-          creditos: Number(creditos) || 0,
-          creditosGanados: Number(creditos) || 0,
-          cartonesGratis: Number(cartonesGratis) || 0,
-          cartonesGanados: 1,
-          formasGanadoras: [{
-            idx: Number(forma?.idx) || null,
-            nombre: forma?.nombre || '',
-            creditos: Number(creditos) || 0,
-            cartonesGratis: Number(cartonesGratis) || 0
-          }],
-          estado: 'REALIZADO',
-          fechaGanado: timestamp,
-          fechaRegistro: timestamp,
-          creadoEn: timestamp,
-          actualizadoEn: timestamp,
-          fechaGestion,
-          horaGestion,
-          gestionadoPor: auth?.currentUser?.email || '',
-          rolGestor: window.currentRole || '',
-          tipoRegistro: 'GANADOR_SORTEO',
-          eventoGanadorId,
-          winnerKey: eventoGanadorId,
-          userIds: identidad.userId ? [identidad.userId] : [],
+          formaIdx: Number(forma?.idx) || 0,
           cartonId: carton.id || carton.cartonId || '',
-          formaIdx: Number(forma?.idx) || null,
-          generadoDesde: 'cantarsorteos',
-          idBilletera: idBilleteraFinal
-        };
-        tx.set(premioRef, payloadPremio, { merge: true });
-        if(Number(creditos) || Number(cartonesGratis)){
-          tx.set(billeteraRef, { creditos: nuevosCreditos, CartonesGratis: nuevosCartones }, { merge: true });
-        }
-        const transSnap = await tx.get(transaccionRef);
-        if(!transSnap.exists){
-          const creditosNumero = Number(creditos) || 0;
-          const cartonesNumero = Number(cartonesGratis) || 0;
-          const montoTransaccion = creditosNumero > 0 ? creditosNumero : cartonesNumero;
-          tx.set(transaccionRef, {
-            tipotrans: 'premio',
-            origen: 'premios_jugadores',
-            Monto: montoTransaccion,
-            cartonesGratis: cartonesNumero,
-            estado: 'REALIZADO',
-            IDbilletera: idBilleteraFinal,
-            fechasolicitud: '',
-            horasolicitud: '',
-            fechagestion: fechaGestion,
-            horagestion: horaGestion,
-            usuariogestor: auth?.currentUser?.email || '',
-            rolusuario: window.currentRole || '',
-            referencia: 'PREMIO',
-            sorteoId: currentSorteoId,
-            sorteoNombre,
-            rolInterno: '',
-            rolinterno: ''
-          }, { merge: true });
-        }
+          userId,
+          email,
+          monto: Number(creditos) || 0,
+          cartonesGratis: Number(cartonesGratis) || 0,
+          eventoGanadorId
+        })
       });
+      if(!response.ok){
+        const data = await response.json().catch(()=>({}));
+        throw new Error(data?.error || `HTTP ${response.status}`);
+      }
       premiosAutomaticosProcesados.add(premioId);
     } catch (err) {
       console.error('Error acreditando premio automático', err);

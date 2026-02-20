@@ -277,6 +277,75 @@ async function verificarToken(req, res, next) {
   }
 }
 
+async function verificarOperadorPrivilegiado(req, res, next) {
+  const authHeader = req.headers.authorization || '';
+  const match = authHeader.match(/^Bearer (.+)$/);
+  if (!match) {
+    return res.status(401).json({ error: 'No autorizado' });
+  }
+
+  let decoded;
+  try {
+    decoded = await admin.auth().verifyIdToken(match[1]);
+  } catch (e) {
+    console.error('Error verificando token', e);
+    return res.status(401).json({ error: 'Token inválido' });
+  }
+
+  const email = decoded.email;
+  if (!email) {
+    return res.status(401).json({ error: 'Token sin correo asociado' });
+  }
+
+  try {
+    const doc = await admin.firestore().collection('users').doc(email).get();
+    const role = doc.exists ? doc.data().role : undefined;
+    if (!['Superadmin', 'Administrador', 'Colaborador'].includes(role)) {
+      return res.status(403).json({ error: 'Acceso restringido a operadores autorizados' });
+    }
+    req.user = { uid: decoded.uid, email, role };
+    next();
+  } catch (e) {
+    console.error('Error obteniendo el rol del usuario', e);
+    return res.status(500).json({ error: 'Error verificando permisos', message: e.message });
+  }
+}
+
+function normalizeString(value, maxLength = 200) {
+  return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
+}
+
+function normalizeNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function buildPremioDocId({ sorteoId, formaIdx, cartonId, prefijo = '' }) {
+  const sanitize = (value) => normalizeString(String(value || ''), 120).replace(/[^\w-]/g, '_');
+  const baseId = `${sanitize(sorteoId)}__f${sanitize(formaIdx)}__${sanitize(cartonId)}`;
+  return prefijo ? `${sanitize(prefijo)}__${baseId}` : baseId;
+}
+
+function normalizeSorteoState(value) {
+  return normalizeString(String(value || ''), 40).toUpperCase();
+}
+
+function canAccreditForSorteoState(value) {
+  const allowed = new Set(['JUGANDO', 'FINALIZADO']);
+  return allowed.has(normalizeSorteoState(value));
+}
+
+function getBilleteraCandidates({ userEmail, cartonData, payloadUserId }) {
+  const values = [
+    normalizeString(userEmail, 160).toLowerCase(),
+    normalizeString(payloadUserId, 160).toLowerCase(),
+    normalizeString(cartonData?.email, 160).toLowerCase(),
+    normalizeString(cartonData?.gmail, 160).toLowerCase(),
+    normalizeString(cartonData?.IDbilletera, 160)
+  ].filter(Boolean);
+  return Array.from(new Set(values));
+}
+
 app.post('/toggleUser', verificarToken, async (req, res) => {
   const { email, disabled } = req.body || {};
   if (!email || typeof disabled !== 'boolean') {
@@ -559,6 +628,212 @@ app.post('/admin/purge-sorteo', verificarToken, async (req, res) => {
   }
 });
 
+app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, res) => {
+  const {
+    sorteoId,
+    formaIdx,
+    cartonId,
+    userId,
+    email,
+    monto,
+    cartonesGratis,
+    eventoGanadorId
+  } = req.body || {};
+
+  const normalizedSorteoId = normalizeString(sorteoId, 120);
+  const normalizedCartonId = normalizeString(cartonId, 120);
+  const normalizedFormaIdx = Number.isFinite(Number(formaIdx)) ? Number(formaIdx) : null;
+  const normalizedMonto = Math.max(0, Math.floor(normalizeNumber(monto)));
+  const normalizedCartonesGratis = Math.max(0, Math.floor(normalizeNumber(cartonesGratis)));
+  const normalizedUserId = normalizeString(userId, 160);
+  const normalizedEmail = normalizeString(email, 160).toLowerCase();
+  const normalizedEventoGanadorId = normalizeString(
+    eventoGanadorId,
+    220
+  ) || buildPremioDocId({ sorteoId: normalizedSorteoId, formaIdx: normalizedFormaIdx, cartonId: normalizedCartonId });
+
+  if (!normalizedSorteoId || !normalizedCartonId || normalizedFormaIdx === null || !normalizedEventoGanadorId) {
+    return res.status(400).json({
+      error: 'Entradas inválidas. Se requiere sorteoId, formaIdx, cartonId y eventoGanadorId.'
+    });
+  }
+
+  if (!normalizedMonto && !normalizedCartonesGratis) {
+    return res.status(400).json({ error: 'Debe existir monto o cartonesGratis mayor que cero.' });
+  }
+
+  if (!normalizedEmail && !normalizedUserId) {
+    return res.status(400).json({ error: 'Se requiere userId o email.' });
+  }
+
+  const db = admin.firestore();
+  const timestamp = admin.firestore.FieldValue.serverTimestamp();
+
+  try {
+    const result = await db.runTransaction(async (tx) => {
+      const sorteoRef = db.collection('sorteos').doc(normalizedSorteoId);
+      const cartonRef = db.collection('CartonJugado').doc(normalizedCartonId);
+      const premioRef = db.collection('PremiosSorteos').doc(normalizedEventoGanadorId);
+      const transaccionRef = db.collection('transacciones').doc(`premio_${normalizedEventoGanadorId}`);
+
+      const [sorteoSnap, cartonSnap, premioSnap, transaccionSnap] = await Promise.all([
+        tx.get(sorteoRef),
+        tx.get(cartonRef),
+        tx.get(premioRef),
+        tx.get(transaccionRef)
+      ]);
+
+      if (!sorteoSnap.exists) {
+        throw new Error('SORTEO_NO_EXISTE');
+      }
+
+      const sorteoData = sorteoSnap.data() || {};
+      if (!canAccreditForSorteoState(sorteoData.estado)) {
+        throw new Error('SORTEO_ESTADO_INVALIDO');
+      }
+
+      if (!cartonSnap.exists) {
+        throw new Error('CARTON_NO_EXISTE');
+      }
+
+      const cartonData = cartonSnap.data() || {};
+      const cartonSorteoId = normalizeString(cartonData.sorteoId, 120);
+      if (cartonSorteoId !== normalizedSorteoId) {
+        throw new Error('CARTON_NO_PERTENECE_SORTEO');
+      }
+
+      const premioActual = premioSnap.exists ? premioSnap.data() || {} : null;
+      const estadoPremio = normalizeSorteoState(premioActual?.estado);
+      if (estadoPremio === 'REALIZADO' || estadoPremio === 'APROBADO') {
+        return { status: 'ok', idempotent: true, premioId: normalizedEventoGanadorId };
+      }
+
+      const billeteraCandidates = getBilleteraCandidates({
+        userEmail: normalizedEmail,
+        payloadUserId: normalizedUserId,
+        cartonData
+      });
+      if (!billeteraCandidates.length) {
+        throw new Error('BILLETERA_NO_IDENTIFICABLE');
+      }
+
+      let billeteraRef = db.collection('Billetera').doc(billeteraCandidates[0]);
+      let billeteraSnap = null;
+      for (const billeteraId of billeteraCandidates) {
+        const candidateRef = db.collection('Billetera').doc(billeteraId);
+        const candidateSnap = await tx.get(candidateRef);
+        if (candidateSnap.exists) {
+          billeteraRef = candidateRef;
+          billeteraSnap = candidateSnap;
+          break;
+        }
+      }
+      if (!billeteraSnap) {
+        billeteraSnap = await tx.get(billeteraRef);
+      }
+
+      const billeteraActual = billeteraSnap.exists ? billeteraSnap.data() || {} : {};
+      const nuevosCreditos = normalizeNumber(billeteraActual.creditos) + normalizedMonto;
+      const nuevosCartones = normalizeNumber(billeteraActual.CartonesGratis) + normalizedCartonesGratis;
+      const sorteoNombre = normalizeString(sorteoData.nombre, 200);
+      const fecha = new Date();
+      const fechaGestion = fecha.toISOString().slice(0, 10).split('-').reverse().join('/');
+      const horaGestion = fecha.toTimeString().slice(0, 5);
+
+      tx.set(
+        premioRef,
+        {
+          sorteoId: normalizedSorteoId,
+          sorteoNombre,
+          email: normalizedEmail || billeteraRef.id,
+          gmail: normalizedEmail || billeteraRef.id,
+          userId: normalizedUserId || cartonData.userId || null,
+          cartonId: normalizedCartonId,
+          formaIdx: normalizedFormaIdx,
+          creditos: normalizedMonto,
+          creditosGanados: normalizedMonto,
+          cartonesGratis: normalizedCartonesGratis,
+          eventoGanadorId: normalizedEventoGanadorId,
+          winnerKey: normalizedEventoGanadorId,
+          idBilletera: billeteraRef.id,
+          estado: 'REALIZADO',
+          actualizadoEn: timestamp,
+          fechaRegistro: premioActual?.fechaRegistro || timestamp,
+          creadoEn: premioActual?.creadoEn || timestamp,
+          fechaGanado: timestamp,
+          generadoDesde: 'backend/acreditarPremioEvento',
+          gestionadoPor: req.user?.email || '',
+          rolGestor: req.user?.role || '',
+          fechaGestion,
+          horaGestion
+        },
+        { merge: true }
+      );
+
+      tx.set(
+        billeteraRef,
+        {
+          creditos: nuevosCreditos,
+          CartonesGratis: nuevosCartones,
+          actualizadoEn: timestamp
+        },
+        { merge: true }
+      );
+
+      if (!transaccionSnap.exists) {
+        tx.set(
+          transaccionRef,
+          {
+            tipotrans: 'premio',
+            origen: 'premios_jugadores',
+            Monto: normalizedMonto > 0 ? normalizedMonto : normalizedCartonesGratis,
+            cartonesGratis: normalizedCartonesGratis,
+            estado: 'REALIZADO',
+            IDbilletera: billeteraRef.id,
+            fechasolicitud: '',
+            horasolicitud: '',
+            fechagestion: fechaGestion,
+            horagestion: horaGestion,
+            usuariogestor: req.user?.email || '',
+            rolusuario: req.user?.role || '',
+            referencia: 'PREMIO',
+            sorteoId: normalizedSorteoId,
+            sorteoNombre,
+            eventoGanadorId: normalizedEventoGanadorId,
+            creadoEn: timestamp
+          },
+          { merge: true }
+        );
+      }
+
+      return {
+        status: 'ok',
+        idempotent: false,
+        premioId: normalizedEventoGanadorId,
+        billeteraId: billeteraRef.id
+      };
+    });
+
+    return res.json(result);
+  } catch (error) {
+    if (error.message === 'SORTEO_NO_EXISTE') {
+      return res.status(404).json({ error: 'No existe el sorteo indicado.' });
+    }
+    if (error.message === 'SORTEO_ESTADO_INVALIDO') {
+      return res.status(409).json({ error: 'El sorteo no está en estado elegible para acreditar premios.' });
+    }
+    if (error.message === 'CARTON_NO_EXISTE' || error.message === 'CARTON_NO_PERTENECE_SORTEO') {
+      return res.status(409).json({ error: 'El cartón no es elegible para el sorteo indicado.' });
+    }
+    if (error.message === 'BILLETERA_NO_IDENTIFICABLE') {
+      return res.status(409).json({ error: 'No se pudo resolver la billetera destino del premio.' });
+    }
+
+    console.error('Error acreditando premio por evento', error);
+    return res.status(500).json({ error: 'Error acreditando premio', message: error.message });
+  }
+});
+
 app.post('/upload', verificarToken, upload.single('file'), async (req, res) => {
   if (!req.file) {
     registrarAuditoria({ email: req.user?.email, result: 'rechazado', reason: 'Archivo requerido' });
@@ -644,5 +919,7 @@ module.exports = {
   deleteDocumentById,
   countCollectionBySorteoId,
   countDocumentById,
-  getPurgeCounts
+  getPurgeCounts,
+  canAccreditForSorteoState,
+  buildPremioDocId
 };
