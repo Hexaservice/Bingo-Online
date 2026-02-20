@@ -178,6 +178,7 @@
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
   <script src="js/logoSwitcher.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/estadoPagoPremio.js"></script>
   <script src="js/notificationCenter.js"></script>
   <script src="js/timezone.js"></script>
   <script>
@@ -360,7 +361,21 @@
       badgeRet.style.display=pendientesRet?'inline-flex':'none';
     }
     function abreviar(mail){return mail.split('@')[0];}
-    function estadoColor(e){return e==='APROBADO'?'green':e==='ANULADO'?'red':'orange';}
+    function estadoNormalizadoComparable(valor){
+      const texto=(valor||'').toString().trim().toUpperCase();
+      if(window.EstadosPagoPremio && typeof window.EstadosPagoPremio.normalizarLectura==='function'){
+        return window.EstadosPagoPremio.normalizarLectura(texto, texto || 'PENDIENTE');
+      }
+      return texto==='APROBADO'?'REALIZADO':texto;
+    }
+    function estadoEsAprobado(valor){
+      const estado=estadoNormalizadoComparable(valor);
+      return estado==='REALIZADO' || estado==='APROBADO';
+    }
+    function estadoColor(e){
+      if(estadoEsAprobado(e)) return 'green';
+      return e==='ANULADO'?'red':'orange';
+    }
     async function mostrarInfoGmail(mail){
       const overlay=document.createElement('div');
       Object.assign(overlay.style,{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center'});
@@ -477,7 +492,7 @@
         if(filtrosRec.banco && (t.bancoreceptor||'')!==filtrosRec.banco)return false;
         if(filtrosRec.ref && !(t.referencia||'').toString().includes(filtrosRec.ref))return false;
         if(filtrosRec.fecha && fecha!==filtrosRec.fecha)return false;
-        if(filtrosRec.estado && t.estado!==filtrosRec.estado)return false;
+        if(filtrosRec.estado && estadoNormalizadoComparable(t.estado)!==estadoNormalizadoComparable(filtrosRec.estado))return false;
         return true;
       });
       let i=visibles.length;
@@ -521,7 +536,7 @@
         if(filtrosRet.banco && (t.bancoreceptor||'')!==filtrosRet.banco)return false;
         if(filtrosRet.ref && !(t.referencia||'').toString().includes(filtrosRet.ref))return false;
         if(filtrosRet.fecha && fecha!==filtrosRet.fecha)return false;
-        if(filtrosRet.estado && t.estado!==filtrosRet.estado)return false;
+        if(filtrosRet.estado && estadoNormalizadoComparable(t.estado)!==estadoNormalizadoComparable(filtrosRet.estado))return false;
         return true;
       });
       let i=visibles.length;
@@ -568,7 +583,7 @@
         const refTd=c.closest('tr').children[4];
         const id=c.dataset.id;
         const estado=c.dataset.estado;
-        if(c.checked && (estado==='PENDIENTE' || estado==='APROBADO')){
+        if(c.checked && (estado==='PENDIENTE' || estadoEsAprobado(estado))){
           refTd.contentEditable=true;
         }else{
           refTd.contentEditable=false;
@@ -788,7 +803,7 @@
           if(t.estado==='ANULADO'){
             hasAnulado=true;
             chk.checked=false;
-          }else if(t.estado==='APROBADO'){
+          }else if(estadoEsAprobado(t.estado)){
             hasAprobado=true;
             chk.checked=false;
           }else{
@@ -811,7 +826,7 @@
         const invalid=registros.filter(t=>t.estado!=='PENDIENTE');
         if(invalid.length){
           invalid.forEach(t=>document.querySelector(`#tabla-recargas input[data-id="${t.id}"]`).checked=false);
-          const hasAprobado=invalid.some(t=>t.estado==='APROBADO');
+          const hasAprobado=invalid.some(t=>estadoEsAprobado(t.estado));
           alert(hasAprobado?'No se pueden Anular Transacciones APROBADAS':'Solo se pueden Anular Transacciones PENDIENTES');
           return;
         }
@@ -871,7 +886,7 @@
         for(const chk of sel){
           const ref=chk.closest('tr').children[4].textContent.trim();
           const t=datosRet.find(x=>x.id===chk.dataset.id);
-          if(t.estado==='APROBADO'){
+          if(estadoEsAprobado(t.estado)){
             alert('No se pueden aprobar las transacciones APROBADAS');
             chk.checked=false;
           }else if(t.estado==='PENDIENTE'){
@@ -921,7 +936,7 @@
         const invalid=registros.filter(t=>t.estado!=='PENDIENTE');
         if(invalid.length){
           invalid.forEach(t=>document.querySelector(`#tabla-retiros input[data-id="${t.id}"]`).checked=false);
-          const hasAprobado=invalid.some(t=>t.estado==='APROBADO');
+          const hasAprobado=invalid.some(t=>estadoEsAprobado(t.estado));
           alert(hasAprobado?'No se pueden Anular Transacciones APROBADAS':'Solo se pueden Anular Transacciones PENDIENTES');
           actualizarEditable();
           return;

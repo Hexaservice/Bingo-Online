@@ -595,6 +595,7 @@
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-auth-compat.js"></script>
   <script src="js/logoSwitcher.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/estadoPagoPremio.js"></script>
   <script src="js/notificationCenter.js"></script>
   <script src="js/timezone.js"></script>
   <script>
@@ -1831,6 +1832,14 @@
     }
 
 
+    function normalizarEstadoPremioTransaccion(valor){
+      if(window.EstadosPagoPremio && typeof window.EstadosPagoPremio.normalizarLectura==='function'){
+        return window.EstadosPagoPremio.normalizarLectura(valor, (valor||'').toString().trim().toUpperCase());
+      }
+      const texto=(valor||'').toString().trim().toUpperCase();
+      return texto==='APROBADO'?'REALIZADO':texto;
+    }
+
   function procesarSnapshotTransacciones(snap){
       transacciones.length=0;
       snap.forEach(doc=>{
@@ -1838,7 +1847,7 @@
         data.fechasolicitud=formatearFecha(data.fechasolicitud);
         data.fechagestion=formatearFecha(data.fechagestion);
         const tipoNormalizado = normalizarTipoTransaccion(data);
-        const estadoNormalizado = (data.estado||'').toString().trim().toUpperCase()==='APROBADO' ? 'REALIZADO' : (data.estado||'');
+        const estadoNormalizado = normalizarEstadoPremioTransaccion(data.estado || '');
         transacciones.push({id:doc.id,...data, estado: estadoNormalizado, tipotrans: tipoNormalizado});
       });
       transacciones.sort((a,b)=>{
@@ -1877,7 +1886,7 @@
         if(monto && parseFloat(t.Monto)!=parseFloat(monto)) return;
         const f=formatearFecha(t.estado==='PENDIENTE'?t.fechasolicitud:t.fechagestion);
         if(fecha && f!==fecha) return;
-        if(estado && t.estado!==estado) return;
+        if(estado && normalizarEstadoPremioTransaccion(t.estado)!==normalizarEstadoPremioTransaccion(estado)) return;
         const estadoColor=t.estado==='PENDIENTE'?'orange':t.estado==='ANULADO'?'red':t.estado==='REALIZADO'?'green':'black';
         const tr=document.createElement('tr');
         const montoFmt=parseFloat(t.Monto).toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');

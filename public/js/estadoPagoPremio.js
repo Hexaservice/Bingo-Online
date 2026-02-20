@@ -1,4 +1,11 @@
-(function initEstadoPagoPremio(global){
+(function initEstadoPagoPremio(root, factory){
+  if(typeof module === 'object' && module.exports){
+    module.exports = factory();
+    return;
+  }
+  const api = factory();
+  root.EstadosPagoPremio = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function crearEstadoPagoPremio(){
   const ESTADOS_CANONICOS = Object.freeze({
     PENDIENTE: 'PENDIENTE',
     REALIZADO: 'REALIZADO',
@@ -43,7 +50,7 @@
     return normalizarLectura(valor) === ESTADOS_CANONICOS.REALIZADO;
   }
 
-  const api = Object.freeze({
+  return Object.freeze({
     ESTADOS_CANONICOS,
     ALIAS_LECTURA,
     normalizarLectura,
@@ -51,6 +58,4 @@
     validarParaGuardar,
     estaFinalizado
   });
-
-  global.EstadosPagoPremio = api;
-})(window);
+});

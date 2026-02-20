@@ -65,6 +65,13 @@
     return (estado || '').toString().trim().toUpperCase();
   }
 
+  function estadoPremioNormalizado(estado){
+    if(window.EstadosPagoPremio && typeof window.EstadosPagoPremio.normalizarLectura === 'function'){
+      return window.EstadosPagoPremio.normalizarLectura(estado);
+    }
+    return estadoNormalizado(estado) === 'APROBADO' ? 'REALIZADO' : estadoNormalizado(estado);
+  }
+
   function historialVacio(){
     const base = {};
     Object.keys(HISTORIAL_FABRICAS).forEach(clave => {
@@ -737,11 +744,12 @@
             snapshot.docChanges().forEach(cambio => {
               const data = cambio.doc.data() || {};
               const tipo = normalizarTipoRecarga(data.tipotrans);
-              const estado = (data.estado || '').toUpperCase();
+              const estado = estadoNormalizado(data.estado);
+              const estadoPremio = estadoPremioNormalizado(data.estado);
               if(tipo === 'recarga' && (estado === 'APROBADO' || estado === 'ANULADO')){
                 this.notificarCambioRecarga(cambio.doc.id, { ...data, tipotrans: tipo }, estado);
               }
-              if(tipo === 'premio' && estado === 'APROBADO'){
+              if(tipo === 'premio' && estadoPremio === 'REALIZADO'){
                 this.notificarPremio(cambio.doc.id, data);
               }
             });
