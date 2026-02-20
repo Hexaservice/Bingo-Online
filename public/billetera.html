@@ -692,27 +692,37 @@
       if(!user?.email) return;
       const billeteraRef=db.collection('Billetera').doc(user.email);
       const proyeccionRef=db.collection('users').doc(user.email).collection('billeteraProyeccion').doc('resumen');
-      let recibioProyeccion=false;
+      let resumenProyeccionReciente=false;
 
       unsubscribeBilleteraProyeccion=proyeccionRef.onSnapshot(snap=>{
         if(snap.exists){
-          recibioProyeccion=true;
+          resumenProyeccionReciente=true;
           const data=snap.data()||{};
           actualizarResumenCreditos(data);
           if(Object.prototype.hasOwnProperty.call(data,'CartonesGratis')){
             document.getElementById('cartones-valor').textContent = data.CartonesGratis || 0;
           }
+          return;
         }
+        resumenProyeccionReciente=false;
       },error=>{
         console.error('Error escuchando la proyección de billetera del usuario',error);
       });
 
       unsubscribeBilletera=billeteraRef.onSnapshot(async snap=>{
-        if(recibioProyeccion){
-          return;
-        }
         if(snap.exists){
-          aplicarDatosBilleteraEnPantalla(snap.data()||{});
+          const datosBilletera=snap.data()||{};
+          if(!resumenProyeccionReciente){
+            aplicarDatosBilleteraEnPantalla(datosBilletera);
+            return;
+          }
+          const creditosProyeccion=toNumberSafe(creditosTotales,0);
+          const creditosBilletera=toNumberSafe(datosBilletera.creditos,0);
+          const transitoBilletera=Math.max(0,toNumberSafe(datosBilletera.creditostransito,0));
+          const disponiblesBilletera=Math.max(0,creditosBilletera-transitoBilletera);
+          if(disponiblesBilletera>creditosProyeccion){
+            aplicarDatosBilleteraEnPantalla(datosBilletera);
+          }
           return;
         }
         try{
