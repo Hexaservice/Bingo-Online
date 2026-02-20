@@ -70,6 +70,16 @@ service cloud.firestore {
       match /role/{docId} {
         allow read, write: if isSystemRequest();
       }
+
+      match /premios/{premioId} {
+        allow read: if isOwner(email) || isAdmin();
+        allow write: if isSystemRequest() || isPrivilegedOperator();
+      }
+
+      match /billeteraProyeccion/{docId} {
+        allow read: if isOwner(email) || isAdmin();
+        allow write: if isSystemRequest() || isPrivilegedOperator();
+      }
     }
 
     match /sorteos/{sorteoId} {
