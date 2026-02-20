@@ -1911,6 +1911,7 @@
   const premiosAutomaticosEnCurso = new Set();
   const premiosSegundoLugarProcesados = new Set();
   const premiosSegundoLugarEnCurso = new Set();
+  const advertenciasGanadorSinEmail = new Set();
 
   function manejarAceptarConfirmacionCanto(){
     cerrarConfirmacionCanto(true);
@@ -2595,6 +2596,12 @@
     return valor.trim().toLowerCase();
   }
 
+  function esEmailValido(valor){
+    const email = normalizarEmail(valor);
+    if(!email) return false;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
   function obtenerCandidatosBilleteraId(...valores){
     const vistos = new Set();
     const candidatos = [];
@@ -2645,7 +2652,11 @@
   };
 
   function normalizarInfoUsuario(id, data = {}){
-    const email = (data.email || id || '').toString();
+    const emailData = normalizarEmail(data.email || '');
+    const emailDocId = normalizarEmail(id || '');
+    const email = esEmailValido(emailData)
+      ? emailData
+      : (esEmailValido(emailDocId) ? emailDocId : '');
     let nombre = (data.nombre || data.name || '').toString().trim();
     const apellido = (data.apellido || data.lastName || '').toString().trim();
     if(!nombre && (data.name || data.apellido)){
@@ -2654,7 +2665,7 @@
       nombre = `${nombre} ${apellido}`.trim();
     }
     return {
-      email: normalizarEmail(email),
+      email,
       alias: (data.alias || '').toString(),
       nombre,
       uid: (data.uid || data.userId || data.usuarioId || '').toString()
@@ -2742,7 +2753,9 @@
 
   async function resolverIdentidadPersona(datos = {}){
     const aliasBase = (datos.alias || datos.aliasJugador || datos.aliascarton || '').toString().trim();
-    const emailBase = normalizarEmail(datos.email || datos.gmail || datos.IDbilletera || '');
+    const emailBase = [datos.email, datos.gmail, datos.IDbilletera]
+      .map(valor => normalizarEmail(valor || ''))
+      .find(valor => esEmailValido(valor)) || '';
     const userIdBase = (datos.userId || datos.usuarioId || '').toString().trim();
     if(emailBase && usuariosCache.porEmail.has(emailBase)){
       const cacheado = usuariosCache.porEmail.get(emailBase);
@@ -2767,7 +2780,7 @@
       info = await obtenerUsuarioPorAlias(aliasBase);
     }
     const resultado = {
-      email: normalizarEmail(info?.email || emailBase),
+      email: esEmailValido(info?.email) ? normalizarEmail(info.email) : emailBase,
       alias: aliasBase || (info?.alias || ''),
       nombre: info?.nombre || info?.name || '',
       userId: info?.uid || userIdBase || ''
@@ -2786,6 +2799,23 @@
       });
     }
     return resultado;
+  }
+
+  function registrarWarningGanadorSinEmail({ carton = {}, contexto = '' } = {}){
+    const cartonId = (carton?.id || carton?.cartonId || carton?.carton || carton?.userId || carton?.usuarioId || 'sin-carton').toString();
+    const clave = `${contexto}:${cartonId}`;
+    if(advertenciasGanadorSinEmail.has(clave)) return;
+    advertenciasGanadorSinEmail.add(clave);
+    const mensaje = `⚠️ Ganador sin email resoluble (${contexto}) - cartón: ${cartonId}. Se enviará solo userId para resolver en backend.`;
+    console.warn(mensaje, {
+      cartonId,
+      contexto,
+      email: carton?.email || '',
+      gmail: carton?.gmail || '',
+      IDbilletera: carton?.IDbilletera || '',
+      userId: carton?.userId || carton?.usuarioId || ''
+    });
+    mostrarAvisoSimple(mensaje, 'Advertencia de acreditación');
   }
 
   function esModoManual(){
@@ -4442,8 +4472,11 @@
       }
       const identidad = await resolverIdentidadPersona(carton);
       const billeteraIds = obtenerCandidatosBilleteraId(identidad.email, carton?.email, carton?.gmail, carton?.IDbilletera);
-      const email = normalizarEmail(identidad.email || billeteraIds[0] || '');
+      const email = [identidad.email, ...billeteraIds].find(valor => esEmailValido(valor)) || '';
       const userId = identidad.userId || carton?.userId || carton?.usuarioId || '';
+      if(!email){
+        registrarWarningGanadorSinEmail({ carton, contexto: 'premio_automatico' });
+      }
       if(!email && !userId){
         return;
       }
@@ -4458,22 +4491,23 @@
         return;
       }
       const token = await user.getIdToken();
+      const payload = {
+        sorteoId: currentSorteoId,
+        formaIdx: Number(forma?.idx) || 0,
+        cartonId: carton.id || carton.cartonId || '',
+        monto: Number(creditos) || 0,
+        cartonesGratis: Number(cartonesGratis) || 0,
+        eventoGanadorId
+      };
+      if(userId) payload.userId = userId;
+      if(email) payload.email = normalizarEmail(email);
       const response = await fetch(`${apiBase}/acreditarPremioEvento`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({
-          sorteoId: currentSorteoId,
-          formaIdx: Number(forma?.idx) || 0,
-          cartonId: carton.id || carton.cartonId || '',
-          userId,
-          email,
-          monto: Number(creditos) || 0,
-          cartonesGratis: Number(cartonesGratis) || 0,
-          eventoGanadorId
-        })
+        body: JSON.stringify(payload)
       });
       if(!response.ok){
         const data = await response.json().catch(()=>({}));
@@ -4504,8 +4538,11 @@
       }
       const identidad = await resolverIdentidadPersona(carton);
       const billeteraIds = obtenerCandidatosBilleteraId(identidad.email, carton?.email, carton?.gmail, carton?.IDbilletera);
-      const email = normalizarEmail(identidad.email || billeteraIds[0] || '');
+      const email = [identidad.email, ...billeteraIds].find(valor => esEmailValido(valor)) || '';
       const userId = identidad.userId || carton?.userId || carton?.usuarioId || '';
+      if(!email){
+        registrarWarningGanadorSinEmail({ carton, contexto: 'premio_segundo_lugar' });
+      }
       if(!email && !userId){
         return;
       }
@@ -4516,28 +4553,29 @@
         return;
       }
       const token = await user.getIdToken();
+      const payload = {
+        sorteoId: currentSorteoId,
+        formaIdx: Number(forma?.idx) || 0,
+        cartonId: carton.id || carton.cartonId || '',
+        alias: identidad.alias || carton.alias || '',
+        monto: 0,
+        cartonesGratis: Number(cartonesGratis) || 0,
+        eventoGanadorId,
+        prefijoTransaccion: 'premio2',
+        origen: 'premios_segundo_lugar',
+        referencia: 'PREMIO_SEGUNDO_LUGAR',
+        tipoRegistro: 'SEGUNDO_LUGAR_SORTEO',
+        segundoLugar: true
+      };
+      if(userId) payload.userId = userId;
+      if(email) payload.email = normalizarEmail(email);
       const response = await fetch(`${apiBase}/acreditarPremioEvento`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({
-          sorteoId: currentSorteoId,
-          formaIdx: Number(forma?.idx) || 0,
-          cartonId: carton.id || carton.cartonId || '',
-          userId,
-          email,
-          alias: identidad.alias || carton.alias || '',
-          monto: 0,
-          cartonesGratis: Number(cartonesGratis) || 0,
-          eventoGanadorId,
-          prefijoTransaccion: 'premio2',
-          origen: 'premios_segundo_lugar',
-          referencia: 'PREMIO_SEGUNDO_LUGAR',
-          tipoRegistro: 'SEGUNDO_LUGAR_SORTEO',
-          segundoLugar: true
-        })
+        body: JSON.stringify(payload)
       });
       if(!response.ok){
         const data = await response.json().catch(()=>({}));
