@@ -645,6 +645,7 @@
   <script src="js/auth.js"></script>
   <script src="js/notificationCenter.js"></script>
   <script src="js/timezone.js"></script>
+  <script src="js/estadoPagoPremio.js"></script>
   <script>
     ensureAuth('Administrador');
     initServerTime();
@@ -1495,8 +1496,11 @@
           const snap = await tx.get(ref);
           if(snap.exists){
             const data = snap.data() || {};
-            const estadoActual = (data.estado || '').toString().trim().toUpperCase();
+            const estadoActual = normalizarEstado(data.estado);
             if(estadoActual === 'REALIZADO'){ return; }
+          }
+          if(payload && Object.prototype.hasOwnProperty.call(payload, 'estado')){
+            payload.estado = validarEstadoGuardado(payload.estado, `CentroPagos:${ref.path}`);
           }
           tx.set(ref, payload, { merge: true });
         });
@@ -1531,7 +1535,7 @@
           cartonesGratis: Number(ganador.cartonesGratis) || 0,
           cartonesGanados: Number(ganador.cartonesGanadores) || 0,
           formasGanadoras: ganador.formas || [],
-          estado: 'PENDIENTE',
+            estado: validarEstadoGuardado('PENDIENTE', `PremiosSorteos:${docId}`),
           fechaGanado: timestamp,
           fechaRegistro: timestamp,
           creadoEn: timestamp,
@@ -1558,7 +1562,7 @@
           nombre: administrativo.nombre || administrativo.alias || '',
           alias: administrativo.alias || '',
           creditos: Number(administrativo.creditos) || 0,
-          estado: 'PENDIENTE',
+            estado: validarEstadoGuardado('PENDIENTE', `PagosAdministracion:${docId}`),
           fechaAsignacion: timestamp,
           fecha: timestamp,
           creadoEn: timestamp,
@@ -1697,10 +1701,15 @@
     }
 
     function normalizarEstado(valor){
-      const texto = (valor || '').toString().trim().toUpperCase();
-      if(texto === 'APROBADO') return 'REALIZADO';
-      if(texto === 'REALIZADO' || texto === 'PENDIENTE' || texto === 'ARCHIVADO') return texto;
-      return 'PENDIENTE';
+      return window.EstadosPagoPremio.normalizarLectura(valor);
+    }
+
+    function validarEstadoGuardado(estado, contexto){
+      return window.EstadosPagoPremio.validarParaGuardar(estado, contexto);
+    }
+
+    function esEstadoPendiente(valor){
+      return normalizarEstado(valor) === 'PENDIENTE';
     }
 
     async function actualizarIndicadorPagosSorteo(sorteoId){
@@ -1712,8 +1721,8 @@
           db.collection('PremiosSorteos').where('sorteoId', '==', sorteoId).get(),
           db.collection('PagosAdministracion').where('sorteoId', '==', sorteoId).get()
         ]);
-        const hayPremiosPendientes = premiosSnap.docs.some(doc=>normalizarEstado(doc.data()?.estado) !== 'REALIZADO');
-        const hayPagosPendientes = pagosSnap.docs.some(doc=>normalizarEstado(doc.data()?.estado) !== 'REALIZADO');
+        const hayPremiosPendientes = premiosSnap.docs.some(doc=>esEstadoPendiente(doc.data()?.estado));
+        const hayPagosPendientes = pagosSnap.docs.some(doc=>esEstadoPendiente(doc.data()?.estado));
         const indicadorCompletado = !hayPremiosPendientes && !hayPagosPendientes;
         const payload = {
           pagosCentroAprobados: indicadorCompletado,
@@ -2076,13 +2085,13 @@
         premiosActivos.forEach(registro => {
           if(!registro.sorteoId) return;
           const info = estadoPorSorteo.get(registro.sorteoId) || { pendientesPremios: 0, pendientesPagos: 0 };
-          if(registro.estado !== 'REALIZADO'){ info.pendientesPremios = (info.pendientesPremios || 0) + 1; }
+          if(esEstadoPendiente(registro.estado)){ info.pendientesPremios = (info.pendientesPremios || 0) + 1; }
           estadoPorSorteo.set(registro.sorteoId, info);
         });
         pagosAdminActivos.forEach(registro => {
           if(!registro.sorteoId) return;
           const info = estadoPorSorteo.get(registro.sorteoId) || { pendientesPremios: 0, pendientesPagos: 0 };
-          if(registro.estado !== 'REALIZADO'){ info.pendientesPagos = (info.pendientesPagos || 0) + 1; }
+          if(esEstadoPendiente(registro.estado)){ info.pendientesPagos = (info.pendientesPagos || 0) + 1; }
           estadoPorSorteo.set(registro.sorteoId, info);
         });
         premiosArchivados.forEach(registro => {
@@ -2150,7 +2159,7 @@
           tipotrans: tipoTransaccion,
           origen,
           Monto: monto,
-          estado: 'REALIZADO',
+          estado: validarEstadoGuardado('REALIZADO', 'TransaccionPremio'),
           IDbilletera: enRegistro.billetera,
           fechasolicitud: '',
           horasolicitud: '',
@@ -2225,7 +2234,7 @@
             const estadoActual = normalizarEstado(data.estado);
             if(estadoActual === 'REALIZADO') return;
             tx.update(ref, {
-              estado: 'REALIZADO',
+              estado: validarEstadoGuardado('REALIZADO', `PremiosSorteos:${id}`),
               fechaGestion: fechaServidor(),
               horaGestion: horaServidor(),
               gestionadoPor: authInstance().currentUser?.email || '',
@@ -2269,7 +2278,7 @@
             const estadoActual = normalizarEstado(data.estado);
             if(estadoActual === 'REALIZADO') return;
             tx.update(ref, {
-              estado: 'REALIZADO',
+              estado: validarEstadoGuardado('REALIZADO', `PagosAdministracion:${id}`),
               fechaGestion: fechaServidor(),
               horaGestion: horaServidor(),
               gestionadoPor: authInstance().currentUser?.email || '',
@@ -2394,7 +2403,7 @@
             const data = snap.data();
             const datosArchivo = {
               ...data,
-              estado: normalizarEstado(data.estado),
+              estado: validarEstadoGuardado('ARCHIVADO', `${tipo}:${id}`),
               archivadoEn: fechaServidor(),
               horaArchivado: horaServidor(),
               archivadoPor: authInstance().currentUser?.email || ''

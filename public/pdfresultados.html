@@ -1398,6 +1398,7 @@
   <script src="js/logoSwitcher.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/notificationCenter.js"></script>
+  <script src="js/estadoPagoPremio.js"></script>
   <script>
   ensureAuth('Administrador');
 
@@ -1428,6 +1429,18 @@
   const orientacionModal = document.getElementById('orientacion-modal');
   const orientacionAceptarBtn = document.getElementById('orientacion-modal-aceptar');
   let generarPdfTrasOrientacion = false;
+
+  function normalizarEstadoPagoPremio(valor){
+    return window.EstadosPagoPremio.normalizarLectura(valor);
+  }
+
+  function validarEstadoPagoPremio(estado, contexto){
+    return window.EstadosPagoPremio.validarParaGuardar(estado, contexto);
+  }
+
+  function estadoPagoPremioFinalizado(valor){
+    return window.EstadosPagoPremio.estaFinalizado(valor);
+  }
 
   let sorteoData = null;
   let formasData = [];
@@ -1929,9 +1942,8 @@
   async function existeEventoGanadorFinalizado(eventoGanadorId){
     const eventoSeguro = sanitizarId(eventoGanadorId || '');
     if(!eventoSeguro) return false;
-    const estadosFinales = new Set(['REALIZADO', 'APROBADO']);
     const snapshot = await db.collection('PremiosSorteos').where('eventoGanadorId', '==', eventoSeguro).get();
-    return snapshot.docs.some(doc=>estadosFinales.has((doc.data()?.estado || '').toString().trim().toUpperCase()));
+    return snapshot.docs.some(doc=>estadoPagoPremioFinalizado(doc.data()?.estado));
   }
 
   async function actualizarDocumentoCentroPagos(ref, payload){
@@ -1940,10 +1952,13 @@
         const snap = await tx.get(ref);
         if(snap.exists){
           const data = snap.data() || {};
-          const estadoActual = (data.estado || '').toString().trim().toUpperCase();
-          if(estadoActual === 'APROBADO'){
+          const estadoActual = normalizarEstadoPagoPremio(data.estado);
+          if(estadoActual === 'REALIZADO'){
             return;
           }
+        }
+        if(payload && Object.prototype.hasOwnProperty.call(payload, 'estado')){
+          payload.estado = validarEstadoPagoPremio(payload.estado, `CentroPagos:${ref.path}`);
         }
         tx.set(ref, payload, { merge: true });
       });
@@ -1972,7 +1987,7 @@
     await db.runTransaction(async tx => {
       const premioSnap = await tx.get(premioRef);
       const premioPrevio = premioSnap.exists ? (premioSnap.data() || {}) : {};
-      if((premioPrevio.estado || '').toString().trim().toUpperCase() === 'APROBADO' && premioPrevio.acreditadoAutomaticamente){
+      if(estadoPagoPremioFinalizado(premioPrevio.estado) && premioPrevio.acreditadoAutomaticamente){
         return;
       }
 
@@ -2008,7 +2023,7 @@
         cartonesGratis,
         cartonesGanados: Number(ganador.cartonesGanadores) || 0,
         formasGanadoras: ganador.formas || [],
-        estado: 'APROBADO',
+        estado: validarEstadoPagoPremio('REALIZADO', `PremiosSorteos:${docId}`),
         fechaGanado: timestamp,
         fechaRegistro: timestamp,
         creadoEn: premioPrevio.creadoEn || timestamp,
@@ -2036,7 +2051,7 @@
           origen: 'premios_jugadores',
           Monto: creditos > 0 ? creditos : cartonesGratis,
           cartonesGratis,
-          estado: 'APROBADO',
+          estado: validarEstadoPagoPremio('REALIZADO', `transacciones:premio_${docId}`),
           IDbilletera: idBilleteraFinal,
           fechasolicitud: '',
           horasolicitud: '',
@@ -2127,7 +2142,7 @@
         nombre: administrativo.nombre || administrativo.alias || '',
         alias: administrativo.alias || '',
         creditos: Number(administrativo.creditos) || 0,
-        estado: 'PENDIENTE',
+        estado: validarEstadoPagoPremio('PENDIENTE', `PagosAdministracion:${docId}`),
         fechaAsignacion: timestamp,
         fecha: timestamp,
         creadoEn: timestamp,
@@ -2151,7 +2166,7 @@
         nombre: colaborador.nombre || colaborador.alias || '',
         alias: colaborador.alias || '',
         creditos: Number(colaborador.creditos) || 0,
-        estado: 'PENDIENTE',
+        estado: validarEstadoPagoPremio('PENDIENTE', `PagosAdministracion:${docId}`),
         fechaAsignacion: timestamp,
         fecha: timestamp,
         creadoEn: timestamp,

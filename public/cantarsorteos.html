@@ -1753,12 +1753,25 @@
   <script src="js/auth.js"></script>
   <script src="js/notificationCenter.js"></script>
   <script src="js/timezone.js"></script>
+  <script src="js/estadoPagoPremio.js"></script>
   <script>
   ensureAuth('Administrador');
   initServerTime().then(()=>{
     inicializarFechaHoraFooter();
     iniciarActualizacionesActuales();
   });
+
+  function normalizarEstadoPagoPremio(valor){
+    return window.EstadosPagoPremio.normalizarLectura(valor);
+  }
+
+  function validarEstadoPagoPremio(estado, contexto){
+    return window.EstadosPagoPremio.validarParaGuardar(estado, contexto);
+  }
+
+  function estadoPagoPremioFinalizado(valor){
+    return window.EstadosPagoPremio.estaFinalizado(valor);
+  }
 
   let sorteos = [];
   let currentSorteoId = null;
@@ -4372,9 +4385,8 @@
   async function existeEventoGanadorFinalizado(eventoGanadorId){
     const eventoSeguro = sanitizarId(eventoGanadorId || '');
     if(!eventoSeguro) return false;
-    const estadosFinales = new Set(['REALIZADO', 'APROBADO']);
     const snapshot = await db.collection('PremiosSorteos').where('eventoGanadorId', '==', eventoSeguro).get();
-    return snapshot.docs.some(doc=>estadosFinales.has((doc.data()?.estado || '').toString().trim().toUpperCase()));
+    return snapshot.docs.some(doc=>estadoPagoPremioFinalizado(doc.data()?.estado));
   }
 
   function construirIdPremioSegundoLugar(sorteoId, formaIdx, cartonId){
@@ -4502,8 +4514,8 @@
       await db.runTransaction(async tx => {
         const premioSnap = await tx.get(premioRef);
         if(premioSnap.exists){
-          const estadoActual = (premioSnap.data()?.estado || '').toString().trim().toUpperCase();
-          if(estadoActual === 'REALIZADO' || estadoActual === 'APROBADO'){
+          const estadoActual = normalizarEstadoPagoPremio(premioSnap.data()?.estado);
+          if(estadoActual === 'REALIZADO'){
             return;
           }
         }
@@ -4541,7 +4553,7 @@
             nombre: forma?.nombre || '',
             cartonesGratis: Number(cartonesGratis) || 0
           }],
-          estado: 'REALIZADO',
+          estado: validarEstadoPagoPremio('REALIZADO', `PremiosSorteos:${premioId}`),
           fechaGanado: timestamp,
           fechaRegistro: timestamp,
           creadoEn: timestamp,
@@ -4572,7 +4584,7 @@
             origen: 'premios_segundo_lugar',
             Monto: cartonesNumero,
             cartonesGratis: cartonesNumero,
-            estado: 'REALIZADO',
+            estado: validarEstadoPagoPremio('REALIZADO', `PremiosSorteos:${premioId}`),
             IDbilletera: idBilleteraFinal,
             fechasolicitud: '',
             horasolicitud: '',
