@@ -509,7 +509,7 @@
 </head>
 <body>
   <button id="volver-btn" class="menu-btn back-btn" data-compact-back="true"><span class="icon">&#9664;</span><span class="label">Volver</span></button>
-  <h2 class="titulo-principal">GESTIÓN DE PAGOS</h2>
+  <h2 class="titulo-principal">RESUMEN DE PAGOS</h2>
   <section class="section" id="premios-section">
     <div class="section-header">
       <h3>PREMIOS JUGADORES</h3>
@@ -520,7 +520,6 @@
     </div>
     <div id="premios-content">
       <div class="acciones">
-        <button class="icon-btn" id="premios-aprobar"><span class="icon check">&#10004;</span><span>Aprobar</span></button>
         <button class="icon-btn" id="premios-archivar"><span class="icon">&#128452;</span><span>Archivar</span></button>
         <button class="icon-btn" id="premios-archivo"><span class="icon">&#128193;</span><span>Archivo</span></button>
       </div>
@@ -535,13 +534,20 @@
           <col style="width:6%">
         </colgroup>
         <thead>
-          <tr>
+          <tr class="filtros">
             <th>N°</th>
-            <th>Jugador</th>
+            <th><input type="text" id="filtro-premios-jugador" placeholder="Jugador"></th>
             <th>Créditos</th>
             <th>Cart.</th>
-            <th>Fecha</th>
-            <th>Estado</th>
+            <th><input type="text" id="filtro-premios-fecha" placeholder="Fecha"></th>
+            <th>
+              <select id="filtro-premios-estado">
+                <option value="">Estado</option>
+                <option value="PENDIENTE">PENDIENTE</option>
+                <option value="REALIZADO">REALIZADO</option>
+                <option value="ARCHIVADO">ARCHIVADO</option>
+              </select>
+            </th>
             <th><span id="premios-marcar" class="check-header">✔</span></th>
           </tr>
         </thead>
@@ -560,7 +566,6 @@
     </div>
     <div id="pagos-content">
       <div class="acciones">
-        <button class="icon-btn" id="pagos-aprobar"><span class="icon check">&#10004;</span><span>Aprobar</span></button>
         <button class="icon-btn" id="pagos-archivar"><span class="icon">&#128452;</span><span>Archivar</span></button>
         <button class="icon-btn" id="pagos-archivo"><span class="icon">&#128193;</span><span>Archivo</span></button>
       </div>
@@ -574,12 +579,19 @@
           <col style="width:6%">
         </colgroup>
         <thead>
-          <tr>
+          <tr class="filtros">
             <th>N°</th>
-            <th>Jugador</th>
+            <th><input type="text" id="filtro-pagos-jugador" placeholder="Jugador"></th>
             <th>Créditos</th>
-            <th>Fecha</th>
-            <th>Estado</th>
+            <th><input type="text" id="filtro-pagos-fecha" placeholder="Fecha"></th>
+            <th>
+              <select id="filtro-pagos-estado">
+                <option value="">Estado</option>
+                <option value="PENDIENTE">PENDIENTE</option>
+                <option value="REALIZADO">REALIZADO</option>
+                <option value="ARCHIVADO">ARCHIVADO</option>
+              </select>
+            </th>
             <th><span id="pagos-marcar" class="check-header">✔</span></th>
           </tr>
         </thead>
@@ -654,6 +666,8 @@
     const authInstance = ()=>firebase.auth();
 
     const filtrosColaboradores = { gmail:'', creditos:'', tipo:'' };
+    const filtrosPremios = { jugador:'', fecha:'', estado:'' };
+    const filtrosPagos = { jugador:'', fecha:'', estado:'' };
 
     let mostrarPremiosArchivo = false;
     let mostrarPagosArchivo = false;
@@ -2001,11 +2015,23 @@
     }
 
     function aplicarFiltrosPremios(origen){
-      return origen.slice().sort((a,b)=>b.fechaOrden - a.fechaOrden || b.creditos - a.creditos);
+      return origen.filter(item=>{
+        const jugador = `${item.gmail || ''} ${item.alias || ''} ${item.nombre || ''}`.toLowerCase();
+        if(filtrosPremios.jugador && !jugador.includes(filtrosPremios.jugador)) return false;
+        if(filtrosPremios.fecha && !(item.fechaMostrar || '').toLowerCase().includes(filtrosPremios.fecha)) return false;
+        if(filtrosPremios.estado && (item.estado || '').toUpperCase() !== filtrosPremios.estado) return false;
+        return true;
+      }).sort((a,b)=>b.fechaOrden - a.fechaOrden || b.creditos - a.creditos);
     }
 
     function aplicarFiltrosPagos(origen){
-      return origen.slice().sort((a,b)=>b.fechaOrden - a.fechaOrden || b.creditos - a.creditos);
+      return origen.filter(item=>{
+        const jugador = `${item.gmail || ''} ${item.alias || ''} ${item.nombre || ''}`.toLowerCase();
+        if(filtrosPagos.jugador && !jugador.includes(filtrosPagos.jugador)) return false;
+        if(filtrosPagos.fecha && !(item.fechaMostrar || '').toLowerCase().includes(filtrosPagos.fecha)) return false;
+        if(filtrosPagos.estado && (item.estado || '').toUpperCase() !== filtrosPagos.estado) return false;
+        return true;
+      }).sort((a,b)=>b.fechaOrden - a.fechaOrden || b.creditos - a.creditos);
     }
 
     function aplicarFiltrosColaboradores(origen){
@@ -2423,6 +2449,12 @@
     }
 
     function configurarFiltros(){
+      document.getElementById('filtro-premios-jugador').addEventListener('input', e=>{ filtrosPremios.jugador = e.target.value.toLowerCase().trim(); renderPremios(); });
+      document.getElementById('filtro-premios-fecha').addEventListener('input', e=>{ filtrosPremios.fecha = e.target.value.toLowerCase().trim(); renderPremios(); });
+      document.getElementById('filtro-premios-estado').addEventListener('change', e=>{ filtrosPremios.estado = (e.target.value || '').toUpperCase(); renderPremios(); });
+      document.getElementById('filtro-pagos-jugador').addEventListener('input', e=>{ filtrosPagos.jugador = e.target.value.toLowerCase().trim(); renderPagos(); });
+      document.getElementById('filtro-pagos-fecha').addEventListener('input', e=>{ filtrosPagos.fecha = e.target.value.toLowerCase().trim(); renderPagos(); });
+      document.getElementById('filtro-pagos-estado').addEventListener('change', e=>{ filtrosPagos.estado = (e.target.value || '').toUpperCase(); renderPagos(); });
       document.getElementById('filtro-colab-gmail').addEventListener('input', e=>{ filtrosColaboradores.gmail = e.target.value.toLowerCase().trim(); renderColaboradores(); });
       document.getElementById('filtro-colab-creditos').addEventListener('input', e=>{ filtrosColaboradores.creditos = e.target.value.replace(/[^0-9.]/g,''); renderColaboradores(); });
       document.getElementById('colaboradores-filtro-tipo').addEventListener('change', e=>{
@@ -2435,16 +2467,6 @@
       document.getElementById('premios-marcar').addEventListener('click', ()=>seleccionarTodos('tabla-premios'));
       document.getElementById('pagos-marcar').addEventListener('click', ()=>seleccionarTodos('tabla-pagos'));
 
-      document.getElementById('premios-aprobar').addEventListener('click', async()=>{
-        const seleccion = obtenerSeleccion('tabla-premios');
-        if(!seleccion.length){ alert('Selecciona al menos un registro.'); return; }
-        await aprobarPremios(seleccion);
-      });
-      document.getElementById('pagos-aprobar').addEventListener('click', async()=>{
-        const seleccion = obtenerSeleccion('tabla-pagos');
-        if(!seleccion.length){ alert('Selecciona al menos un registro.'); return; }
-        await aprobarPagos(seleccion);
-      });
       document.getElementById('premios-archivar').addEventListener('click', async()=>{
         const seleccion = obtenerSeleccion('tabla-premios');
         if(!seleccion.length){ alert('Selecciona al menos un registro.'); return; }
