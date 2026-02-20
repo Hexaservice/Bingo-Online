@@ -1877,6 +1877,7 @@
       creditos: item.creditos,
       cartonesGratis: item.cartonesGratis,
       formas: item.formas,
+      cartonesIds: Array.from(item.cartonesIds),
       cartonesGanadores: item.cartonesIds.size,
       userIds: Array.from(item.userIds)
     }));
@@ -1887,10 +1888,38 @@
     return { lista, totalCreditos, totalCartonesGratis };
   }
 
+  function buildPremioId({ sorteoId, formaIdx, cartonId, prefijo = '' } = {}){
+    const sorteoSeguro = sanitizarId(sorteoId || 'sorteo');
+    const formaSeguro = sanitizarId(`f${formaIdx ?? ''}` || 'forma');
+    const cartonSeguro = sanitizarId(cartonId || 'carton');
+    const baseId = `${sorteoSeguro}__${formaSeguro}__${cartonSeguro}`;
+    const prefijoSeguro = sanitizarId(prefijo || '');
+    return prefijoSeguro ? `${prefijoSeguro}__${baseId}` : baseId;
+  }
+
   function construirIdSolicitud(base, identificador){
     const baseSeguro = sanitizarId(base || 'sorteo');
     const idSeguro = sanitizarId(identificador || 'registro');
     return `${baseSeguro}__${idSeguro}`;
+  }
+
+  function construirIdGanador(ganador){
+    const formaIdx = Number(ganador?.formas?.[0]?.idx);
+    const cartonId = (ganador?.cartonesIds?.[0] || ganador?.cartonId || '').toString();
+    if(Number.isFinite(formaIdx) && cartonId){
+      return buildPremioId({ sorteoId, formaIdx, cartonId });
+    }
+    const email = normalizarEmail(ganador?.gmail || ganador?.email || '');
+    const alias = (ganador?.alias || '').toString();
+    return construirIdSolicitud(sorteoId, email || alias || 'ganador');
+  }
+
+  async function existeEventoGanadorFinalizado(eventoGanadorId){
+    const eventoSeguro = sanitizarId(eventoGanadorId || '');
+    if(!eventoSeguro) return false;
+    const estadosFinales = new Set(['REALIZADO', 'APROBADO']);
+    const snapshot = await db.collection('PremiosSorteos').where('eventoGanadorId', '==', eventoSeguro).get();
+    return snapshot.docs.some(doc=>estadosFinales.has((doc.data()?.estado || '').toString().trim().toUpperCase()));
   }
 
   async function actualizarDocumentoCentroPagos(ref, payload){
@@ -1912,7 +1941,7 @@
     }
   }
 
-  async function acreditarPremioAutomaticoCentroPagos({ docId, ganador, sorteoNombre, timestamp }){
+  async function acreditarPremioAutomaticoCentroPagos({ docId, ganador, sorteoNombre, timestamp, eventoGanadorId }){
     const billeteraIds = obtenerCandidatosBilleteraId(ganador.gmail, ganador.email, ganador.IDbilletera);
     const email = normalizarEmail(ganador.gmail || ganador.email || billeteraIds[0] || '');
     const alias = ganador.alias || '';
@@ -1923,6 +1952,10 @@
     const transaccionRef = db.collection('transacciones').doc(`premio_${docId}`);
     const creditos = Number(ganador.creditos) || 0;
     const cartonesGratis = Number(ganador.cartonesGratis) || 0;
+
+    if(await existeEventoGanadorFinalizado(eventoGanadorId)){
+      return;
+    }
 
     await db.runTransaction(async tx => {
       const premioSnap = await tx.get(premioRef);
@@ -1973,6 +2006,8 @@
         gestionadoPor: auth?.currentUser?.email || 'sistema',
         rolGestor: window.currentRole || 'Sistema',
         tipoRegistro: 'GANADOR_SORTEO',
+        eventoGanadorId,
+        winnerKey: eventoGanadorId,
         userIds: ganador.userIds || [],
         generadoDesde: 'pdfresultados',
         idBilletera: idBilleteraFinal,
@@ -2019,8 +2054,9 @@
     ganadores.forEach(ganador => {
       const email = normalizarEmail(ganador.gmail);
       const alias = ganador.alias || '';
-      const docId = construirIdSolicitud(sorteoId, email || alias || 'ganador');
-      operaciones.push(acreditarPremioAutomaticoCentroPagos({ docId, ganador, sorteoNombre, timestamp }));
+      const docId = construirIdGanador(ganador);
+      const eventoGanadorId = sanitizarId(docId);
+      operaciones.push(acreditarPremioAutomaticoCentroPagos({ docId, ganador, sorteoNombre, timestamp, eventoGanadorId }));
     });
 
     colaboradores.forEach(colaborador => {
