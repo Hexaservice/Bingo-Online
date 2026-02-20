@@ -372,6 +372,10 @@ function getBilleteraCandidates({ userEmail, cartonData, payloadUserId }) {
   return Array.from(new Set(values));
 }
 
+function looksLikeEmail(value) {
+  return typeof value === 'string' && /@/.test(value.trim());
+}
+
 app.post('/toggleUser', verificarToken, async (req, res) => {
   const { email, disabled } = req.body || {};
   if (!email || typeof disabled !== 'boolean') {
@@ -771,13 +775,51 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
         payloadUserId: normalizedUserId,
         cartonData
       });
-      if (!billeteraCandidates.length) {
+      const cartonUserId = normalizeString(cartonData?.userId || cartonData?.usuarioId, 160);
+      const emailCandidates = [
+        normalizedEmail,
+        normalizeString(cartonData?.email, 160).toLowerCase(),
+        normalizeString(cartonData?.gmail, 160).toLowerCase(),
+        looksLikeEmail(cartonData?.IDbilletera) ? normalizeString(cartonData?.IDbilletera, 160).toLowerCase() : ''
+      ].filter(Boolean);
+
+      for (const userIdentity of [normalizedUserId, cartonUserId].filter(Boolean)) {
+        if (looksLikeEmail(userIdentity)) {
+          emailCandidates.push(normalizeString(userIdentity, 160).toLowerCase());
+          continue;
+        }
+
+        const directUserSnap = await tx.get(db.collection('users').doc(userIdentity));
+        if (directUserSnap.exists) {
+          const data = directUserSnap.data() || {};
+          const emailByData = normalizeString(data.email || data.gmail, 160).toLowerCase();
+          if (emailByData) emailCandidates.push(emailByData);
+          if (looksLikeEmail(directUserSnap.id)) emailCandidates.push(directUserSnap.id.toLowerCase());
+        }
+
+        const byUidSnap = await tx.get(db.collection('users').where('uid', '==', userIdentity).limit(1));
+        if (!byUidSnap.empty) {
+          const doc = byUidSnap.docs[0];
+          const data = doc.data() || {};
+          const emailByData = normalizeString(data.email || data.gmail, 160).toLowerCase();
+          if (emailByData) emailCandidates.push(emailByData);
+          if (looksLikeEmail(doc.id)) emailCandidates.push(doc.id.toLowerCase());
+        }
+      }
+
+      const billeteraVisibleId = Array.from(new Set(emailCandidates))[0] || '';
+      const billeteraSearchCandidates = Array.from(new Set([
+        billeteraVisibleId,
+        ...billeteraCandidates
+      ].filter(Boolean)));
+
+      if (!billeteraSearchCandidates.length) {
         throw new Error('BILLETERA_NO_IDENTIFICABLE');
       }
 
-      let billeteraRef = db.collection('Billetera').doc(billeteraCandidates[0]);
+      let billeteraRef = db.collection('Billetera').doc(billeteraSearchCandidates[0]);
       let billeteraSnap = null;
-      for (const billeteraId of billeteraCandidates) {
+      for (const billeteraId of billeteraSearchCandidates) {
         const candidateRef = db.collection('Billetera').doc(billeteraId);
         const candidateSnap = await tx.get(candidateRef);
         if (candidateSnap.exists) {
@@ -799,12 +841,12 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
       const horaGestion = fecha.toTimeString().slice(0, 5);
       const premioProyeccionRef = db
         .collection('users')
-        .doc(billeteraRef.id)
+        .doc(billeteraVisibleId || billeteraRef.id)
         .collection('premios')
         .doc(normalizedEventoGanadorId);
       const resumenProyeccionRef = db
         .collection('users')
-        .doc(billeteraRef.id)
+        .doc(billeteraVisibleId || billeteraRef.id)
         .collection('billeteraProyeccion')
         .doc('resumen');
       const ganadorTiempoRealRef = db.collection('GanadoresSorteosTiempoReal').doc(normalizedEventoGanadorId);
@@ -814,8 +856,8 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
         {
           sorteoId: normalizedSorteoId,
           sorteoNombre,
-          email: normalizedEmail || billeteraRef.id,
-          gmail: normalizedEmail || billeteraRef.id,
+          email: billeteraVisibleId || billeteraRef.id,
+          gmail: billeteraVisibleId || billeteraRef.id,
           alias: normalizedAlias || cartonData.alias || '',
           aliasJugador: normalizedAlias || cartonData.alias || '',
           aliasGanador: normalizedAlias || cartonData.alias || '',
@@ -859,8 +901,8 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           formaIdx: normalizedFormaIdx,
           cartonId: normalizedCartonId,
           idBilletera: billeteraRef.id,
-          email: normalizedEmail || billeteraRef.id,
-          gmail: normalizedEmail || billeteraRef.id,
+          email: billeteraVisibleId || billeteraRef.id,
+          gmail: billeteraVisibleId || billeteraRef.id,
           alias: normalizedAlias || cartonData.alias || '',
           userId: normalizedUserId || cartonData.userId || null,
           creditos: normalizedMonto,
@@ -892,6 +934,18 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
         { merge: true }
       );
 
+      if (billeteraVisibleId && billeteraVisibleId !== billeteraRef.id) {
+        tx.set(
+          db.collection('Billetera').doc(billeteraVisibleId),
+          {
+            creditos: nuevosCreditos,
+            CartonesGratis: nuevosCartones,
+            actualizadoEn: timestamp
+          },
+          { merge: true }
+        );
+      }
+
       tx.set(
         transaccionRef,
         {
@@ -900,7 +954,7 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           Monto: normalizedMonto > 0 ? normalizedMonto : normalizedCartonesGratis,
           cartonesGratis: normalizedCartonesGratis,
           estado: 'REALIZADO',
-          IDbilletera: billeteraRef.id,
+          IDbilletera: billeteraVisibleId || billeteraRef.id,
           fechasolicitud: '',
           horasolicitud: '',
           fechagestion: fechaGestion,
@@ -914,6 +968,7 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           winnerKey: normalizedEventoGanadorId,
           tipoRegistro: normalizedTipoRegistro,
           segundoLugar: normalizedSegundoLugar,
+          idBilleteraInterna: billeteraRef.id,
           source: normalizedSource,
           requestId: normalizedRequestId,
           processedBy: req.user?.email || '',
@@ -929,7 +984,7 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
         {
           tipotrans: 'premio',
           estado: 'REALIZADO',
-          IDbilletera: billeteraRef.id,
+          IDbilletera: billeteraVisibleId || billeteraRef.id,
           Monto: normalizedMonto > 0 ? normalizedMonto : normalizedCartonesGratis,
           cartonesGratis: normalizedCartonesGratis,
           sorteoId: normalizedSorteoId,
@@ -938,6 +993,7 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           winnerKey: normalizedEventoGanadorId,
           tipoRegistro: normalizedTipoRegistro,
           segundoLugar: normalizedSegundoLugar,
+          idBilleteraInterna: billeteraRef.id,
           referencia: normalizedReferencia,
           origen: normalizedOrigen,
           source: normalizedSource,
@@ -983,7 +1039,8 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           source: normalizedSource,
           processedBy: req.user?.email || '',
           role: req.user?.role || '',
-          billeteraId: billeteraRef.id,
+          billeteraId: billeteraVisibleId || billeteraRef.id,
+          billeteraInternaId: billeteraRef.id,
           monto: normalizedMonto,
           cartonesGratis: normalizedCartonesGratis,
           processedAt: timestamp
@@ -995,7 +1052,8 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
         status: 'ok',
         idempotent: false,
         premioId: normalizedEventoGanadorId,
-        billeteraId: billeteraRef.id,
+        billeteraId: billeteraVisibleId || billeteraRef.id,
+        billeteraInternaId: billeteraRef.id,
         requestId: normalizedRequestId
       };
     });
