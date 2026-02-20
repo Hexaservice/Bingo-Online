@@ -368,6 +368,79 @@ function looksLikeEmail(value) {
   return typeof value === 'string' && /@/.test(value.trim());
 }
 
+async function resolveWinnerIdentity({
+  normalizedEmail,
+  normalizedUserId,
+  cartonData,
+  loadUserById,
+  loadUserByUid
+}) {
+  const cartonUserId = normalizeString(cartonData?.userId || cartonData?.usuarioId, 160);
+  const emailCandidates = [
+    normalizeString(normalizedEmail, 160).toLowerCase(),
+    normalizeString(cartonData?.email, 160).toLowerCase(),
+    normalizeString(cartonData?.gmail, 160).toLowerCase(),
+    looksLikeEmail(cartonData?.IDbilletera) ? normalizeString(cartonData?.IDbilletera, 160).toLowerCase() : ''
+  ].filter(Boolean);
+  const internalCandidates = [
+    normalizeString(normalizedUserId, 160),
+    cartonUserId,
+    looksLikeEmail(cartonData?.IDbilletera) ? '' : normalizeString(cartonData?.IDbilletera, 160)
+  ].filter(Boolean);
+
+  const identities = [normalizeString(normalizedUserId, 160), cartonUserId].filter(Boolean);
+  for (const identity of identities) {
+    if (looksLikeEmail(identity)) {
+      emailCandidates.push(normalizeString(identity, 160).toLowerCase());
+      continue;
+    }
+
+    const directUser = await loadUserById(identity);
+    if (directUser) {
+      const emailByData = normalizeString(directUser.data?.email || directUser.data?.gmail, 160).toLowerCase();
+      if (emailByData) emailCandidates.push(emailByData);
+      if (looksLikeEmail(directUser.id)) {
+        emailCandidates.push(directUser.id.toLowerCase());
+      } else if (directUser.id) {
+        internalCandidates.push(normalizeString(directUser.id, 160));
+      }
+      if (directUser.data?.uid) {
+        internalCandidates.push(normalizeString(directUser.data.uid, 160));
+      }
+    }
+
+    const uidUser = await loadUserByUid(identity);
+    if (uidUser) {
+      const emailByData = normalizeString(uidUser.data?.email || uidUser.data?.gmail, 160).toLowerCase();
+      if (emailByData) emailCandidates.push(emailByData);
+      if (looksLikeEmail(uidUser.id)) {
+        emailCandidates.push(uidUser.id.toLowerCase());
+      } else if (uidUser.id) {
+        internalCandidates.push(normalizeString(uidUser.id, 160));
+      }
+      if (uidUser.data?.uid) {
+        internalCandidates.push(normalizeString(uidUser.data.uid, 160));
+      }
+    }
+  }
+
+  const uniqueEmails = Array.from(new Set(emailCandidates.filter(Boolean)));
+  const uniqueInternals = Array.from(new Set(internalCandidates.filter(Boolean)));
+  const emailVisible = uniqueEmails[0] || '';
+  const billeteraCandidates = Array.from(new Set([
+    emailVisible,
+    ...getBilleteraCandidates({ userEmail: normalizedEmail, payloadUserId: normalizedUserId, cartonData }),
+    ...uniqueInternals
+  ].filter(Boolean)));
+
+  return {
+    emailVisible,
+    canonicalEmail: emailVisible,
+    billeteraCandidates,
+    internalCandidates: uniqueInternals
+  };
+}
+
 app.post('/toggleUser', verificarToken, async (req, res) => {
   const { email, disabled } = req.body || {};
   if (!email || typeof disabled !== 'boolean') {
@@ -769,48 +842,24 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
         return { status: 'ok', idempotent: true, premioId: normalizedEventoGanadorId, requestId: normalizedRequestId };
       }
 
-      const billeteraCandidates = getBilleteraCandidates({
-        userEmail: normalizedEmail,
-        payloadUserId: normalizedUserId,
-        cartonData
-      });
-      const cartonUserId = normalizeString(cartonData?.userId || cartonData?.usuarioId, 160);
-      const emailCandidates = [
+      const identityResolution = await resolveWinnerIdentity({
         normalizedEmail,
-        normalizeString(cartonData?.email, 160).toLowerCase(),
-        normalizeString(cartonData?.gmail, 160).toLowerCase(),
-        looksLikeEmail(cartonData?.IDbilletera) ? normalizeString(cartonData?.IDbilletera, 160).toLowerCase() : ''
-      ].filter(Boolean);
-
-      for (const userIdentity of [normalizedUserId, cartonUserId].filter(Boolean)) {
-        if (looksLikeEmail(userIdentity)) {
-          emailCandidates.push(normalizeString(userIdentity, 160).toLowerCase());
-          continue;
-        }
-
-        const directUserSnap = await tx.get(db.collection('users').doc(userIdentity));
-        if (directUserSnap.exists) {
-          const data = directUserSnap.data() || {};
-          const emailByData = normalizeString(data.email || data.gmail, 160).toLowerCase();
-          if (emailByData) emailCandidates.push(emailByData);
-          if (looksLikeEmail(directUserSnap.id)) emailCandidates.push(directUserSnap.id.toLowerCase());
-        }
-
-        const byUidSnap = await tx.get(db.collection('users').where('uid', '==', userIdentity).limit(1));
-        if (!byUidSnap.empty) {
+        normalizedUserId,
+        cartonData,
+        loadUserById: async (identity) => {
+          const directUserSnap = await tx.get(db.collection('users').doc(identity));
+          if (!directUserSnap.exists) return null;
+          return { id: directUserSnap.id, data: directUserSnap.data() || {} };
+        },
+        loadUserByUid: async (identity) => {
+          const byUidSnap = await tx.get(db.collection('users').where('uid', '==', identity).limit(1));
+          if (byUidSnap.empty) return null;
           const doc = byUidSnap.docs[0];
-          const data = doc.data() || {};
-          const emailByData = normalizeString(data.email || data.gmail, 160).toLowerCase();
-          if (emailByData) emailCandidates.push(emailByData);
-          if (looksLikeEmail(doc.id)) emailCandidates.push(doc.id.toLowerCase());
+          return { id: doc.id, data: doc.data() || {} };
         }
-      }
-
-      const billeteraVisibleId = Array.from(new Set(emailCandidates))[0] || '';
-      const billeteraSearchCandidates = Array.from(new Set([
-        billeteraVisibleId,
-        ...billeteraCandidates
-      ].filter(Boolean)));
+      });
+      const emailVisible = identityResolution.emailVisible;
+      const billeteraSearchCandidates = identityResolution.billeteraCandidates;
 
       if (!billeteraSearchCandidates.length) {
         throw new Error('BILLETERA_NO_IDENTIFICABLE');
@@ -838,16 +887,50 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
       const fecha = new Date();
       const fechaGestion = fecha.toISOString().slice(0, 10).split('-').reverse().join('/');
       const horaGestion = fecha.toTimeString().slice(0, 5);
-      const premioProyeccionRef = db
-        .collection('users')
-        .doc(billeteraVisibleId || billeteraRef.id)
-        .collection('premios')
-        .doc(normalizedEventoGanadorId);
-      const resumenProyeccionRef = db
-        .collection('users')
-        .doc(billeteraVisibleId || billeteraRef.id)
-        .collection('billeteraProyeccion')
-        .doc('resumen');
+      if (!emailVisible) {
+        const eventoTecnicoRef = db.collection('AcreditacionEventosTecnicos').doc(`${normalizedEventoGanadorId}__${normalizedRequestId}`);
+        const reconciliacionRef = db.collection('AcreditacionReconciliacionPendiente').doc(normalizedEventoGanadorId);
+        tx.set(eventoTecnicoRef, {
+          tipo: 'EMAIL_CANONICO_NO_RESUELTO',
+          severidad: 'warning',
+          sorteoId: normalizedSorteoId,
+          cartonId: normalizedCartonId,
+          formaIdx: normalizedFormaIdx,
+          eventoGanadorId: normalizedEventoGanadorId,
+          requestId: normalizedRequestId,
+          userId: normalizedUserId || cartonData.userId || null,
+          idBilleteraInterna: billeteraRef.id,
+          source: normalizedSource,
+          processedBy: req.user?.email || '',
+          processedAt: timestamp,
+          estado: 'PENDIENTE_RECONCILIACION'
+        }, { merge: true });
+        tx.set(reconciliacionRef, {
+          eventoGanadorId: normalizedEventoGanadorId,
+          sorteoId: normalizedSorteoId,
+          cartonId: normalizedCartonId,
+          formaIdx: normalizedFormaIdx,
+          requestId: normalizedRequestId,
+          source: normalizedSource,
+          motivo: 'EMAIL_CANONICO_NO_RESUELTO',
+          estado: 'PENDIENTE',
+          userId: normalizedUserId || cartonData.userId || null,
+          idBilleteraInterna: billeteraRef.id,
+          creadoEn: timestamp,
+          actualizadoEn: timestamp
+        }, { merge: true });
+
+        return {
+          status: 'pending_reconciliation',
+          idempotent: false,
+          premioId: normalizedEventoGanadorId,
+          billeteraInternaId: billeteraRef.id,
+          requestId: normalizedRequestId
+        };
+      }
+
+      const premioProyeccionRef = db.collection('users').doc(emailVisible).collection('premios').doc(normalizedEventoGanadorId);
+      const resumenProyeccionRef = db.collection('users').doc(emailVisible).collection('billeteraProyeccion').doc('resumen');
       const ganadorTiempoRealRef = db.collection('GanadoresSorteosTiempoReal').doc(normalizedEventoGanadorId);
 
       tx.set(
@@ -855,8 +938,9 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
         {
           sorteoId: normalizedSorteoId,
           sorteoNombre,
-          email: billeteraVisibleId || billeteraRef.id,
-          gmail: billeteraVisibleId || billeteraRef.id,
+          email: emailVisible,
+          gmail: emailVisible,
+          emailVisible,
           alias: normalizedAlias || cartonData.alias || '',
           aliasJugador: normalizedAlias || cartonData.alias || '',
           aliasGanador: normalizedAlias || cartonData.alias || '',
@@ -873,6 +957,7 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           tipoRegistro: normalizedTipoRegistro,
           segundoLugar: normalizedSegundoLugar,
           idBilletera: billeteraRef.id,
+          idBilleteraInterna: billeteraRef.id,
           estado: 'REALIZADO',
           actualizadoEn: timestamp,
           fechaRegistro: premioActual?.fechaRegistro || timestamp,
@@ -900,8 +985,9 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           formaIdx: normalizedFormaIdx,
           cartonId: normalizedCartonId,
           idBilletera: billeteraRef.id,
-          email: billeteraVisibleId || billeteraRef.id,
-          gmail: billeteraVisibleId || billeteraRef.id,
+          email: emailVisible,
+          gmail: emailVisible,
+          emailVisible,
           alias: normalizedAlias || cartonData.alias || '',
           userId: normalizedUserId || cartonData.userId || null,
           creditos: normalizedMonto,
@@ -933,9 +1019,9 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
         { merge: true }
       );
 
-      if (billeteraVisibleId && billeteraVisibleId !== billeteraRef.id) {
+      if (emailVisible && emailVisible !== billeteraRef.id) {
         tx.set(
-          db.collection('Billetera').doc(billeteraVisibleId),
+          db.collection('Billetera').doc(emailVisible),
           {
             creditos: nuevosCreditos,
             CartonesGratis: nuevosCartones,
@@ -953,7 +1039,8 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           Monto: normalizedMonto > 0 ? normalizedMonto : normalizedCartonesGratis,
           cartonesGratis: normalizedCartonesGratis,
           estado: 'REALIZADO',
-          IDbilletera: billeteraVisibleId || billeteraRef.id,
+          IDbilletera: emailVisible,
+          emailVisible,
           fechasolicitud: '',
           horasolicitud: '',
           fechagestion: fechaGestion,
@@ -983,7 +1070,8 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
         {
           tipotrans: 'premio',
           estado: 'REALIZADO',
-          IDbilletera: billeteraVisibleId || billeteraRef.id,
+          IDbilletera: emailVisible,
+          emailVisible,
           Monto: normalizedMonto > 0 ? normalizedMonto : normalizedCartonesGratis,
           cartonesGratis: normalizedCartonesGratis,
           sorteoId: normalizedSorteoId,
@@ -1038,7 +1126,8 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           source: normalizedSource,
           processedBy: req.user?.email || '',
           role: req.user?.role || '',
-          billeteraId: billeteraVisibleId || billeteraRef.id,
+          billeteraId: emailVisible,
+          emailVisible,
           billeteraInternaId: billeteraRef.id,
           monto: normalizedMonto,
           cartonesGratis: normalizedCartonesGratis,
@@ -1051,8 +1140,9 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
         status: 'ok',
         idempotent: false,
         premioId: normalizedEventoGanadorId,
-        billeteraId: billeteraVisibleId || billeteraRef.id,
+        billeteraId: emailVisible,
         billeteraInternaId: billeteraRef.id,
+        emailVisible,
         requestId: normalizedRequestId
       };
     });
@@ -1168,5 +1258,6 @@ module.exports = {
   getPurgeCounts,
   isSorteoEligibleForAutoPrize,
   buildPremioDocId,
-  extractEventoGanadorIdComponents
+  extractEventoGanadorIdComponents,
+  resolveWinnerIdentity
 };

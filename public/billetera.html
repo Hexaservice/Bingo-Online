@@ -1923,25 +1923,79 @@
       const user=auth.currentUser;
       if(!user?.email) return;
 
-      unsubscribePremiosProyeccion=db.collection('users').doc(user.email).collection('premios').onSnapshot(snapshot=>{
-        transaccionesPremioProyeccion.clear();
-        snapshot.forEach(doc=>{
-          const normalizado=normalizarTransaccionParaTabla(doc.id,doc.data()||{});
-          transaccionesPremioProyeccion.set(doc.id,normalizado);
-        });
-        sincronizarTransaccionesEnTabla();
-      },error=>{
-        console.error('Error escuchando la proyección de premios del usuario',error);
-      });
+      const identidadesLectura = Array.from(new Set([user.email, user.uid].filter(Boolean)));
+      const premiosPorIdentidad = new Map();
+      const transaccionesPorIdentidad = new Map();
 
-      unsubscribeTransacciones=db.collection('transacciones').where('IDbilletera','==',user.email).onSnapshot(snapshot=>{
-        transaccionesGlobales.clear();
-        snapshot.forEach(doc=>{
-          const normalizado=normalizarTransaccionParaTabla(doc.id,doc.data()||{});
-          transaccionesGlobales.set(doc.id,normalizado);
+      const resyncPremios = () => {
+        transaccionesPremioProyeccion.clear();
+        premiosPorIdentidad.forEach((mapaDocs)=>{
+          mapaDocs.forEach((valor,id)=>{
+            if(!transaccionesPremioProyeccion.has(id)){
+              transaccionesPremioProyeccion.set(id, valor);
+            }
+          });
         });
         sincronizarTransaccionesEnTabla();
-      },error=>{ console.error('Error escuchando transacciones de la billetera',error); });
+      };
+
+      const resyncTransacciones = () => {
+        transaccionesGlobales.clear();
+        transaccionesPorIdentidad.forEach((mapaDocs)=>{
+          mapaDocs.forEach((valor,id)=>{
+            if(!transaccionesGlobales.has(id)){
+              transaccionesGlobales.set(id, valor);
+            }
+          });
+        });
+        sincronizarTransaccionesEnTabla();
+      };
+
+      const unsubsPremios = identidadesLectura.map((identidad)=>db.collection('users').doc(identidad).collection('premios').onSnapshot(snapshot=>{
+        const docs = new Map();
+        snapshot.forEach(doc=>{
+          const normalizado=normalizarTransaccionParaTabla(doc.id,doc.data()||{});
+          docs.set(doc.id, normalizado);
+        });
+        premiosPorIdentidad.set(identidad, docs);
+        resyncPremios();
+      },error=>{
+        console.error('Error escuchando la proyección de premios del usuario',error, identidad);
+      }));
+
+      unsubscribePremiosProyeccion = () => {
+        unsubsPremios.forEach((fn)=>{ try{ fn(); }catch(_err){} });
+      };
+
+      const unsubsTransacciones = [
+        db.collection('transacciones').where('IDbilletera','==',user.email).onSnapshot(snapshot=>{
+          const docs = new Map();
+          snapshot.forEach(doc=>{
+            const normalizado=normalizarTransaccionParaTabla(doc.id,doc.data()||{});
+            docs.set(doc.id,normalizado);
+          });
+          transaccionesPorIdentidad.set('emailVisible', docs);
+          resyncTransacciones();
+        },error=>{ console.error('Error escuchando transacciones de la billetera',error); })
+      ];
+
+      if(identidadesLectura.length){
+        unsubsTransacciones.push(
+          db.collection('transacciones').where('idBilleteraInterna','in',identidadesLectura).onSnapshot(snapshot=>{
+            const docs = new Map();
+            snapshot.forEach(doc=>{
+              const normalizado=normalizarTransaccionParaTabla(doc.id,doc.data()||{});
+              docs.set(doc.id,normalizado);
+            });
+            transaccionesPorIdentidad.set('idBilleteraInterna', docs);
+            resyncTransacciones();
+          },error=>{ console.error('Error escuchando transacciones por idBilleteraInterna',error); })
+        );
+      }
+
+      unsubscribeTransacciones = () => {
+        unsubsTransacciones.forEach((fn)=>{ try{ fn(); }catch(_err){} });
+      };
     }
 
     function filtrarTransacciones(){

@@ -39,6 +39,38 @@ describe('uploadServer utilidades de acreditación', () => {
     expect(id).toBe('auto_premio__sorteo_1__f2__carton_abc');
   });
 
+
+  test('resolveWinnerIdentity resuelve email canónico cuando solo llega userId en cartón', async () => {
+    const { resolveWinnerIdentity } = require('../uploadServer.js');
+
+    const resolved = await resolveWinnerIdentity({
+      normalizedEmail: '',
+      normalizedUserId: 'uid-ganador-1',
+      cartonData: {
+        userId: 'uid-ganador-1',
+        email: '',
+        gmail: '',
+        IDbilletera: 'uid-ganador-1'
+      },
+      loadUserById: async () => null,
+      loadUserByUid: async (uid) => {
+        if (uid !== 'uid-ganador-1') return null;
+        return {
+          id: 'ganador@example.com',
+          data: {
+            uid: 'uid-ganador-1',
+            email: 'ganador@example.com'
+          }
+        };
+      }
+    });
+
+    expect(resolved.emailVisible).toBe('ganador@example.com');
+    expect(resolved.billeteraCandidates).toEqual(
+      expect.arrayContaining(['ganador@example.com', 'uid-ganador-1'])
+    );
+  });
+
   test('extractEventoGanadorIdComponents obtiene sorteo, forma y carton', () => {
     const { extractEventoGanadorIdComponents } = require('../uploadServer.js');
 
