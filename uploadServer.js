@@ -794,6 +794,16 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
       const fecha = new Date();
       const fechaGestion = fecha.toISOString().slice(0, 10).split('-').reverse().join('/');
       const horaGestion = fecha.toTimeString().slice(0, 5);
+      const premioProyeccionRef = db
+        .collection('users')
+        .doc(billeteraRef.id)
+        .collection('premios')
+        .doc(normalizedEventoGanadorId);
+      const resumenProyeccionRef = db
+        .collection('users')
+        .doc(billeteraRef.id)
+        .collection('billeteraProyeccion')
+        .doc('resumen');
 
       tx.set(
         premioRef,
@@ -872,6 +882,52 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           processedBy: req.user?.email || '',
           processedAt: timestamp,
           creadoEn: transaccionSnap.exists ? (transaccionSnap.data()?.creadoEn || timestamp) : timestamp,
+          actualizadoEn: timestamp
+        },
+        { merge: true }
+      );
+
+      tx.set(
+        premioProyeccionRef,
+        {
+          tipotrans: 'premio',
+          estado: 'REALIZADO',
+          IDbilletera: billeteraRef.id,
+          Monto: normalizedMonto > 0 ? normalizedMonto : normalizedCartonesGratis,
+          cartonesGratis: normalizedCartonesGratis,
+          sorteoId: normalizedSorteoId,
+          sorteoNombre,
+          eventoGanadorId: normalizedEventoGanadorId,
+          winnerKey: normalizedEventoGanadorId,
+          tipoRegistro: normalizedTipoRegistro,
+          segundoLugar: normalizedSegundoLugar,
+          referencia: normalizedReferencia,
+          origen: normalizedOrigen,
+          source: normalizedSource,
+          requestId: normalizedRequestId,
+          processedBy: req.user?.email || '',
+          processedAt: timestamp,
+          fechagestion: fechaGestion,
+          horagestion: horaGestion,
+          creadoEn: premioActual?.creadoEn || timestamp,
+          actualizadoEn: timestamp
+        },
+        { merge: true }
+      );
+
+      tx.set(
+        resumenProyeccionRef,
+        {
+          creditos: nuevosCreditos,
+          CartonesGratis: nuevosCartones,
+          creditostransito: normalizeNumber(billeteraActual.creditostransito),
+          ultimoPremio: {
+            eventoGanadorId: normalizedEventoGanadorId,
+            monto: normalizedMonto,
+            cartonesGratis: normalizedCartonesGratis,
+            fechaGestion,
+            horaGestion
+          },
           actualizadoEn: timestamp
         },
         { merge: true }

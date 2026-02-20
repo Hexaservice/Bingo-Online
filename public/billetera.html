@@ -607,7 +607,11 @@
     let numeroWhatsappDestino='';
     let numeroWhatsappCargado=false;
     let unsubscribeBilletera=null;
+    let unsubscribeBilleteraProyeccion=null;
     let unsubscribeTransacciones=null;
+    let unsubscribePremiosProyeccion=null;
+    const transaccionesPremioProyeccion=new Map();
+    const transaccionesGlobales=new Map();
 
     function toNumberSafe(valor, defecto=0){
       const numero=parseFloat(valor);
@@ -640,6 +644,12 @@
     async function refrescarResumenBilletera(){
       const user=auth.currentUser;
       if(!user) return;
+      const proyeccionRef=db.collection('users').doc(user.email).collection('billeteraProyeccion').doc('resumen');
+      const proyeccionSnap=await proyeccionRef.get();
+      if(proyeccionSnap.exists){
+        actualizarResumenCreditos(proyeccionSnap.data()||{});
+        return;
+      }
       const billeteraRef=db.collection('Billetera').doc(user.email);
       const snap=await billeteraRef.get();
       if(snap.exists){
@@ -670,6 +680,10 @@
     }
 
     function suscribirBilleteraUsuario(){
+      if(unsubscribeBilleteraProyeccion){
+        unsubscribeBilleteraProyeccion();
+        unsubscribeBilleteraProyeccion=null;
+      }
       if(unsubscribeBilletera){
         unsubscribeBilletera();
         unsubscribeBilletera=null;
@@ -677,7 +691,26 @@
       const user=auth.currentUser;
       if(!user?.email) return;
       const billeteraRef=db.collection('Billetera').doc(user.email);
+      const proyeccionRef=db.collection('users').doc(user.email).collection('billeteraProyeccion').doc('resumen');
+      let recibioProyeccion=false;
+
+      unsubscribeBilleteraProyeccion=proyeccionRef.onSnapshot(snap=>{
+        if(snap.exists){
+          recibioProyeccion=true;
+          const data=snap.data()||{};
+          actualizarResumenCreditos(data);
+          if(Object.prototype.hasOwnProperty.call(data,'CartonesGratis')){
+            document.getElementById('cartones-valor').textContent = data.CartonesGratis || 0;
+          }
+        }
+      },error=>{
+        console.error('Error escuchando la proyección de billetera del usuario',error);
+      });
+
       unsubscribeBilletera=billeteraRef.onSnapshot(async snap=>{
+        if(recibioProyeccion){
+          return;
+        }
         if(snap.exists){
           aplicarDatosBilleteraEnPantalla(snap.data()||{});
           return;
@@ -1840,16 +1873,33 @@
       return texto==='APROBADO'?'REALIZADO':texto;
     }
 
-  function procesarSnapshotTransacciones(snap){
+    function normalizarTransaccionParaTabla(id,data){
+      const payload={...(data||{})};
+      payload.fechasolicitud=formatearFecha(payload.fechasolicitud);
+      payload.fechagestion=formatearFecha(payload.fechagestion);
+      const tipoNormalizado = normalizarTipoTransaccion(payload);
+      const estadoNormalizado = normalizarEstadoPremioTransaccion(payload.estado || '');
+      return {id,...payload, estado: estadoNormalizado, tipotrans: tipoNormalizado};
+    }
+
+    function sincronizarTransaccionesEnTabla(){
       transacciones.length=0;
-      snap.forEach(doc=>{
-        const data=doc.data()||{};
-        data.fechasolicitud=formatearFecha(data.fechasolicitud);
-        data.fechagestion=formatearFecha(data.fechagestion);
-        const tipoNormalizado = normalizarTipoTransaccion(data);
-        const estadoNormalizado = normalizarEstadoPremioTransaccion(data.estado || '');
-        transacciones.push({id:doc.id,...data, estado: estadoNormalizado, tipotrans: tipoNormalizado});
+      const premiosEnProyeccion=new Set();
+      transaccionesPremioProyeccion.forEach((valor)=>{
+        transacciones.push(valor);
+        const llave=(valor.eventoGanadorId||valor.winnerKey||valor.id||'').toString();
+        if(llave){ premiosEnProyeccion.add(llave); }
       });
+
+      transaccionesGlobales.forEach((valor)=>{
+        const tipo=(valor.tipotrans||'').toLowerCase();
+        if(tipo==='premio'){
+          const llave=(valor.eventoGanadorId||valor.winnerKey||valor.id||'').toString();
+          if(llave && premiosEnProyeccion.has(llave)) return;
+        }
+        transacciones.push(valor);
+      });
+
       transacciones.sort((a,b)=>{
         const da=parseFechaHora(a.fechagestion||a.fechasolicitud,a.horagestion||a.horasolicitud);
         const db=parseFechaHora(b.fechagestion||b.fechasolicitud,b.horagestion||b.horasolicitud);
@@ -1859,16 +1909,39 @@
     }
 
     function suscribirTransaccionesUsuario(){
+      if(unsubscribePremiosProyeccion){
+        unsubscribePremiosProyeccion();
+        unsubscribePremiosProyeccion=null;
+      }
       if(unsubscribeTransacciones){
         unsubscribeTransacciones();
         unsubscribeTransacciones=null;
       }
+      transaccionesPremioProyeccion.clear();
+      transaccionesGlobales.clear();
+
       const user=auth.currentUser;
       if(!user?.email) return;
-      unsubscribeTransacciones=db.collection('transacciones').where('IDbilletera','==',user.email).onSnapshot(
-        procesarSnapshotTransacciones,
-        error=>{ console.error('Error escuchando transacciones de la billetera',error); }
-      );
+
+      unsubscribePremiosProyeccion=db.collection('users').doc(user.email).collection('premios').onSnapshot(snapshot=>{
+        transaccionesPremioProyeccion.clear();
+        snapshot.forEach(doc=>{
+          const normalizado=normalizarTransaccionParaTabla(doc.id,doc.data()||{});
+          transaccionesPremioProyeccion.set(doc.id,normalizado);
+        });
+        sincronizarTransaccionesEnTabla();
+      },error=>{
+        console.error('Error escuchando la proyección de premios del usuario',error);
+      });
+
+      unsubscribeTransacciones=db.collection('transacciones').where('IDbilletera','==',user.email).onSnapshot(snapshot=>{
+        transaccionesGlobales.clear();
+        snapshot.forEach(doc=>{
+          const normalizado=normalizarTransaccionParaTabla(doc.id,doc.data()||{});
+          transaccionesGlobales.set(doc.id,normalizado);
+        });
+        sincronizarTransaccionesEnTabla();
+      },error=>{ console.error('Error escuchando transacciones de la billetera',error); });
     }
 
     function filtrarTransacciones(){

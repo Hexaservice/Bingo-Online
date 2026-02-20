@@ -735,7 +735,7 @@
         const correo = this.usuario.email;
         const unsubTrans = db.collection('transacciones')
           .where('IDbilletera','==', correo)
-          .where('tipotrans','in',['recarga','premio','deposito'])
+          .where('tipotrans','in',['recarga','deposito'])
           .onSnapshot(snapshot => {
             if(!this.inicializaciones.transJugador){
               this.inicializaciones.transJugador = true;
@@ -745,18 +745,34 @@
               const data = cambio.doc.data() || {};
               const tipo = normalizarTipoRecarga(data.tipotrans);
               const estado = estadoNormalizado(data.estado);
-              const estadoPremio = estadoPremioNormalizado(data.estado);
               if(tipo === 'recarga' && (estado === 'APROBADO' || estado === 'ANULADO')){
                 this.notificarCambioRecarga(cambio.doc.id, { ...data, tipotrans: tipo }, estado);
-              }
-              if(tipo === 'premio' && estadoPremio === 'REALIZADO'){
-                this.notificarPremio(cambio.doc.id, data);
               }
             });
           }, err => console.error('Error escuchando transacciones del jugador', err));
         this.desuscriptores.push(unsubTrans);
       }catch(err){
         console.error('No se pudo observar las transacciones del jugador', err);
+      }
+
+      try{
+        const correo = this.usuario.email;
+        const unsubPremios = db.collection('users')
+          .doc(correo)
+          .collection('premios')
+          .onSnapshot(snapshot => {
+            snapshot.docChanges().forEach(cambio => {
+              if(cambio.type === 'removed') return;
+              const data = cambio.doc.data() || {};
+              const estadoPremio = estadoPremioNormalizado(data.estado);
+              if(estadoPremio === 'REALIZADO'){
+                this.notificarPremio(cambio.doc.id, data);
+              }
+            });
+          }, err => console.error('Error escuchando proyección de premios del jugador', err));
+        this.desuscriptores.push(unsubPremios);
+      }catch(err){
+        console.error('No se pudo observar la proyección de premios del jugador', err);
       }
     }
 
