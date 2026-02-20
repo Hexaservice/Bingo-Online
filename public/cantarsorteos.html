@@ -4684,7 +4684,7 @@
   async function acreditarPremioAutomatico({ carton, forma, totalGanadores }){
     if(!carton || !forma || !currentSorteoId) return;
     if(!sorteoElegibleParaPremioAutomatico(currentSorteoData)) return;
-    const cartonReferencia = carton.id || carton.cartonId || carton.carton || carton.userId || carton.usuarioId || '';
+    const cartonReferencia = (carton.id || carton.cartonId || carton.carton || carton.userId || carton.usuarioId || '').toString();
     const eventoGanadorId = buildPremioId({ sorteoId: currentSorteoId, formaIdx: forma?.idx, cartonId: cartonReferencia });
     const premioId = eventoGanadorId;
     if(premiosAutomaticosProcesados.has(premioId) || premiosAutomaticosEnCurso.has(premioId)) return;
@@ -4712,7 +4712,7 @@
       const payload = {
         sorteoId: currentSorteoId,
         formaIdx: Number(forma?.idx) || 0,
-        cartonId: carton.id || carton.cartonId || '',
+        cartonId: cartonReferencia,
         monto: Number(creditos) || 0,
         cartonesGratis: Number(cartonesGratis) || 0,
         eventoGanadorId
@@ -4735,13 +4735,13 @@
         await registrarAcreditacionPendiente({
           eventoGanadorId,
           sorteoId: currentSorteoId,
-          cartonId: carton.id || carton.cartonId || '',
+          cartonId: cartonReferencia,
           error: err?.message || String(err),
           intentos: 1,
           payload: {
             sorteoId: currentSorteoId,
             formaIdx: Number(forma?.idx) || 0,
-            cartonId: carton.id || carton.cartonId || '',
+            cartonId: cartonReferencia,
             monto: Math.floor((Number(obtenerCreditosForma(forma)) || 0) / Math.max(1, Number(totalGanadores) || 1)),
             cartonesGratis: Number(obtenerCartonesGratisPorGanador(forma, Math.max(1, Number(totalGanadores) || 1))) || 0,
             eventoGanadorId
@@ -4759,7 +4759,7 @@
   async function acreditarPremioSegundoLugar({ carton, forma }){
     if(!carton || !forma || !currentSorteoId) return;
     if(!sorteoElegibleParaPremioAutomatico(currentSorteoData)) return;
-    const cartonReferencia = carton.id || carton.cartonId || carton.carton || carton.userId || carton.usuarioId || '';
+    const cartonReferencia = (carton.id || carton.cartonId || carton.carton || carton.userId || carton.usuarioId || '').toString();
     const eventoGanadorId = buildPremioId({ sorteoId: currentSorteoId, formaIdx: forma?.idx, cartonId: cartonReferencia, prefijo: 'segundo' });
     const premioId = eventoGanadorId;
     if(premiosSegundoLugarProcesados.has(premioId) || premiosSegundoLugarEnCurso.has(premioId)) return;
@@ -4785,7 +4785,7 @@
       const payload = {
         sorteoId: currentSorteoId,
         formaIdx: Number(forma?.idx) || 0,
-        cartonId: carton.id || carton.cartonId || '',
+        cartonId: cartonReferencia,
         alias: identidad.alias || carton.alias || '',
         monto: 0,
         cartonesGratis: Number(cartonesGratis) || 0,
@@ -4814,13 +4814,13 @@
         await registrarAcreditacionPendiente({
           eventoGanadorId,
           sorteoId: currentSorteoId,
-          cartonId: carton.id || carton.cartonId || '',
+          cartonId: cartonReferencia,
           error: err?.message || String(err),
           intentos: 1,
           payload: {
             sorteoId: currentSorteoId,
             formaIdx: Number(forma?.idx) || 0,
-            cartonId: carton.id || carton.cartonId || '',
+            cartonId: cartonReferencia,
             alias: carton?.alias || '',
             monto: 0,
             cartonesGratis: Number(cartonesGratis) || 0,
