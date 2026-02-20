@@ -776,16 +776,17 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
         cartonData
       });
       const cartonUserId = normalizeString(cartonData?.userId || cartonData?.usuarioId, 160);
-      const emailCandidates = [
+      const rawEmailCandidates = [
         normalizedEmail,
         normalizeString(cartonData?.email, 160).toLowerCase(),
         normalizeString(cartonData?.gmail, 160).toLowerCase(),
         looksLikeEmail(cartonData?.IDbilletera) ? normalizeString(cartonData?.IDbilletera, 160).toLowerCase() : ''
       ].filter(Boolean);
+      const verifiedEmailCandidates = [];
 
       for (const userIdentity of [normalizedUserId, cartonUserId].filter(Boolean)) {
         if (looksLikeEmail(userIdentity)) {
-          emailCandidates.push(normalizeString(userIdentity, 160).toLowerCase());
+          verifiedEmailCandidates.push(normalizeString(userIdentity, 160).toLowerCase());
           continue;
         }
 
@@ -793,8 +794,8 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
         if (directUserSnap.exists) {
           const data = directUserSnap.data() || {};
           const emailByData = normalizeString(data.email || data.gmail, 160).toLowerCase();
-          if (emailByData) emailCandidates.push(emailByData);
-          if (looksLikeEmail(directUserSnap.id)) emailCandidates.push(directUserSnap.id.toLowerCase());
+          if (emailByData) verifiedEmailCandidates.push(emailByData);
+          if (looksLikeEmail(directUserSnap.id)) verifiedEmailCandidates.push(directUserSnap.id.toLowerCase());
         }
 
         const byUidSnap = await tx.get(db.collection('users').where('uid', '==', userIdentity).limit(1));
@@ -802,14 +803,17 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           const doc = byUidSnap.docs[0];
           const data = doc.data() || {};
           const emailByData = normalizeString(data.email || data.gmail, 160).toLowerCase();
-          if (emailByData) emailCandidates.push(emailByData);
-          if (looksLikeEmail(doc.id)) emailCandidates.push(doc.id.toLowerCase());
+          if (emailByData) verifiedEmailCandidates.push(emailByData);
+          if (looksLikeEmail(doc.id)) verifiedEmailCandidates.push(doc.id.toLowerCase());
         }
       }
 
-      const billeteraVisibleId = Array.from(new Set(emailCandidates))[0] || '';
+      const orderedEmailCandidates = Array.from(new Set([
+        ...verifiedEmailCandidates,
+        ...rawEmailCandidates
+      ].filter(Boolean)));
       const billeteraSearchCandidates = Array.from(new Set([
-        billeteraVisibleId,
+        ...orderedEmailCandidates,
         ...billeteraCandidates
       ].filter(Boolean)));
 
@@ -831,6 +835,11 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
       if (!billeteraSnap) {
         billeteraSnap = await tx.get(billeteraRef);
       }
+
+      const billeteraVisibleId = (() => {
+        if (looksLikeEmail(billeteraRef.id)) return billeteraRef.id.toLowerCase();
+        return orderedEmailCandidates[0] || '';
+      })();
 
       const billeteraActual = billeteraSnap.exists ? billeteraSnap.data() || {} : {};
       const nuevosCreditos = normalizeNumber(billeteraActual.creditos) + normalizedMonto;
