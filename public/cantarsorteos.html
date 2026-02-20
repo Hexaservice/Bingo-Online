@@ -4360,18 +4360,25 @@
     mostrarModalNuevosGanadores(nuevos);
   }
 
-  function construirIdPremioAutomatico(sorteoId, formaIdx, cartonId){
+  function buildPremioId({ sorteoId, formaIdx, cartonId, prefijo = '' } = {}){
     const sorteoSeguro = sanitizarId(sorteoId || 'sorteo');
     const formaSeguro = sanitizarId(`f${formaIdx ?? ''}` || 'forma');
     const cartonSeguro = sanitizarId(cartonId || 'carton');
-    return `${sorteoSeguro}__${formaSeguro}__${cartonSeguro}`;
+    const baseId = `${sorteoSeguro}__${formaSeguro}__${cartonSeguro}`;
+    const prefijoSeguro = sanitizarId(prefijo || '');
+    return prefijoSeguro ? `${prefijoSeguro}__${baseId}` : baseId;
+  }
+
+  async function existeEventoGanadorFinalizado(eventoGanadorId){
+    const eventoSeguro = sanitizarId(eventoGanadorId || '');
+    if(!eventoSeguro) return false;
+    const estadosFinales = new Set(['REALIZADO', 'APROBADO']);
+    const snapshot = await db.collection('PremiosSorteos').where('eventoGanadorId', '==', eventoSeguro).get();
+    return snapshot.docs.some(doc=>estadosFinales.has((doc.data()?.estado || '').toString().trim().toUpperCase()));
   }
 
   function construirIdPremioSegundoLugar(sorteoId, formaIdx, cartonId){
-    const sorteoSeguro = sanitizarId(sorteoId || 'sorteo');
-    const formaSeguro = sanitizarId(`f${formaIdx ?? ''}` || 'forma');
-    const cartonSeguro = sanitizarId(cartonId || 'carton');
-    return `segundo__${sorteoSeguro}__${formaSeguro}__${cartonSeguro}`;
+    return buildPremioId({ sorteoId, formaIdx, cartonId, prefijo: 'segundo' });
   }
 
   function obtenerCartonesSegundoLugar(forma, pasoGanador){
@@ -4407,11 +4414,16 @@
   async function acreditarPremioAutomatico({ carton, forma, totalGanadores }){
     if(!carton || !forma || !currentSorteoId) return;
     const cartonReferencia = carton.id || carton.cartonId || carton.carton || carton.userId || carton.usuarioId || '';
-    const premioId = construirIdPremioAutomatico(currentSorteoId, forma?.idx, cartonReferencia);
+    const eventoGanadorId = buildPremioId({ sorteoId: currentSorteoId, formaIdx: forma?.idx, cartonId: cartonReferencia });
+    const premioId = eventoGanadorId;
     if(premiosAutomaticosProcesados.has(premioId) || premiosAutomaticosEnCurso.has(premioId)) return;
     premiosAutomaticosEnCurso.add(premioId);
     try {
       await asegurarDbListo();
+      if(await existeEventoGanadorFinalizado(eventoGanadorId)){
+        premiosAutomaticosProcesados.add(premioId);
+        return;
+      }
       const identidad = await resolverIdentidadPersona(carton);
       const billeteraIds = obtenerCandidatosBilleteraId(identidad.email, carton?.email, carton?.gmail, carton?.IDbilletera);
       const email = normalizarEmail(identidad.email || billeteraIds[0] || '');
@@ -4483,6 +4495,8 @@
           gestionadoPor: auth?.currentUser?.email || '',
           rolGestor: window.currentRole || '',
           tipoRegistro: 'GANADOR_SORTEO',
+          eventoGanadorId,
+          winnerKey: eventoGanadorId,
           userIds: identidad.userId ? [identidad.userId] : [],
           cartonId: carton.id || carton.cartonId || '',
           formaIdx: Number(forma?.idx) || null,
@@ -4530,13 +4544,18 @@
   async function acreditarPremioSegundoLugar({ carton, forma }){
     if(!carton || !forma || !currentSorteoId) return;
     const cartonReferencia = carton.id || carton.cartonId || carton.carton || carton.userId || carton.usuarioId || '';
-    const premioId = construirIdPremioSegundoLugar(currentSorteoId, forma?.idx, cartonReferencia);
+    const eventoGanadorId = buildPremioId({ sorteoId: currentSorteoId, formaIdx: forma?.idx, cartonId: cartonReferencia, prefijo: 'segundo' });
+    const premioId = eventoGanadorId;
     if(premiosSegundoLugarProcesados.has(premioId) || premiosSegundoLugarEnCurso.has(premioId)) return;
     const cartonesGratis = obtenerCartonesGratisSegundo(forma);
     if(!Number(cartonesGratis) || cartonesGratis <= 0) return;
     premiosSegundoLugarEnCurso.add(premioId);
     try {
       await asegurarDbListo();
+      if(await existeEventoGanadorFinalizado(eventoGanadorId)){
+        premiosSegundoLugarProcesados.add(premioId);
+        return;
+      }
       const identidad = await resolverIdentidadPersona(carton);
       const billeteraIds = obtenerCandidatosBilleteraId(identidad.email, carton?.email, carton?.gmail, carton?.IDbilletera);
       const email = normalizarEmail(identidad.email || billeteraIds[0] || '');
@@ -4602,6 +4621,8 @@
           gestionadoPor: auth?.currentUser?.email || '',
           rolGestor: window.currentRole || '',
           tipoRegistro: 'SEGUNDO_LUGAR_SORTEO',
+          eventoGanadorId,
+          winnerKey: eventoGanadorId,
           segundoLugar: true,
           userIds: identidad.userId ? [identidad.userId] : [],
           cartonId: carton.id || carton.cartonId || '',

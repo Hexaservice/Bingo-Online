@@ -1452,6 +1452,7 @@
         creditos: item.creditos,
         cartonesGratis: item.cartonesGratis,
         formas: item.formas,
+        cartonesIds: Array.from(item.cartonesIds),
         cartonesGanadores: item.cartonesIds.size,
         userIds: Array.from(item.userIds)
       }));
@@ -1462,10 +1463,30 @@
       return { lista, totalCreditos, totalCartonesGratis };
     }
 
+    function buildPremioId({ sorteoId, formaIdx, cartonId, prefijo = '' } = {}){
+      const sorteoSeguro = cpSanitizarId(sorteoId || 'sorteo');
+      const formaSeguro = cpSanitizarId(`f${formaIdx ?? ''}` || 'forma');
+      const cartonSeguro = cpSanitizarId(cartonId || 'carton');
+      const baseId = `${sorteoSeguro}__${formaSeguro}__${cartonSeguro}`;
+      const prefijoSeguro = cpSanitizarId(prefijo || '');
+      return prefijoSeguro ? `${prefijoSeguro}__${baseId}` : baseId;
+    }
+
     function cpConstruirIdSolicitud(base, identificador){
       const baseSeguro = cpSanitizarId(base || 'sorteo');
       const idSeguro = cpSanitizarId(identificador || 'registro');
       return `${baseSeguro}__${idSeguro}`;
+    }
+
+    function cpConstruirIdGanador(ctx, ganador){
+      const formaIdx = Number(ganador?.formas?.[0]?.idx);
+      const cartonId = (ganador?.cartonesIds?.[0] || ganador?.cartonId || '').toString();
+      if(Number.isFinite(formaIdx) && cartonId){
+        return buildPremioId({ sorteoId: ctx.sorteoId, formaIdx, cartonId });
+      }
+      const email = cpNormalizarEmail(ganador?.gmail || ganador?.email || '');
+      const alias = (ganador?.alias || '').toString();
+      return cpConstruirIdSolicitud(ctx.sorteoId, email || alias || 'ganador');
     }
 
     async function cpActualizarDocumentoCentroPagos(ctx, ref, payload){
@@ -1495,7 +1516,8 @@
         ganadores.forEach(ganador=>{
           const email = cpNormalizarEmail(ganador.gmail);
           const alias = ganador.alias || '';
-          const docId = cpConstruirIdSolicitud(ctx.sorteoId, email || alias || 'ganador');
+          const docId = cpConstruirIdGanador(ctx, ganador);
+          const eventoGanadorId = cpSanitizarId(docId);
           const payload = {
           sorteoId: ctx.sorteoId,
           sorteoNombre,
@@ -1515,6 +1537,8 @@
           creadoEn: timestamp,
           actualizadoEn: timestamp,
           tipoRegistro: 'GANADOR_SORTEO',
+          eventoGanadorId,
+          winnerKey: eventoGanadorId,
           userIds: ganador.userIds || [],
           generadoDesde: 'centropagos'
         };
@@ -1708,7 +1732,9 @@
     }
 
     function prepararPremio(id, data = {}){
-      const gmail = (data.gmail || data.email || id || '').toString();
+      const winnerKey = (data.winnerKey || data.eventoGanadorId || id || '').toString();
+      const gmail = (data.gmail || data.email || '').toString();
+      const gmailRender = gmail || (winnerKey.includes('@') ? winnerKey : '');
       const alias = (data.alias || data.aliasJugador || data.aliasGanador || '').toString();
       const creditos = Number(data.creditosGanados ?? data.creditos ?? data.monto ?? 0) || 0;
       const cartones = Number(data.cartonesGratis ?? data.cartonesGanados ?? data.cartones ?? 0) || 0;
@@ -1717,7 +1743,7 @@
       const billetera = (data.idBilletera || gmail).toString();
       return {
         id,
-        gmail,
+        gmail: gmailRender,
         alias,
         creditos,
         cartones,
@@ -1726,6 +1752,8 @@
         fechaOrden: fechaInfo.orden,
         estado,
         billetera,
+        eventoGanadorId: (data.eventoGanadorId || '').toString(),
+        winnerKey,
         sorteoId: (data.sorteoId || '').toString(),
         sorteoNombre: (data.sorteoNombre || '').toString()
       };
@@ -1742,7 +1770,7 @@
       const sorteoNombre = (data.sorteoNombre || '').toString();
       return {
         id,
-        gmail,
+        gmail: gmailRender,
         nombre,
         creditos,
         fechaMostrar: fechaInfo.mostrar,
