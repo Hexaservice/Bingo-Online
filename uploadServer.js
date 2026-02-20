@@ -376,6 +376,61 @@ function looksLikeEmail(value) {
   return typeof value === 'string' && /@/.test(value.trim());
 }
 
+function getCanonicalEmailCandidate(value) {
+  const normalized = normalizeString(value, 160).toLowerCase();
+  return looksLikeEmail(normalized) ? normalized : '';
+}
+
+async function resolveCanonicalWalletEmail({ db, auth, normalizedEmail, normalizedUserId, cartonData }) {
+  const directCandidate = getCanonicalEmailCandidate(normalizedEmail);
+  if (directCandidate) {
+    return directCandidate;
+  }
+
+  const cartonUserId = normalizeString(cartonData?.userId || cartonData?.usuarioId, 160);
+  const uidCandidates = Array.from(
+    new Set(
+      [normalizedUserId, cartonUserId]
+        .map((value) => normalizeString(value, 160))
+        .filter(Boolean)
+        .filter((value) => !looksLikeEmail(value))
+    )
+  );
+
+  for (const uid of uidCandidates) {
+    const directUserSnap = await db.collection('users').doc(uid).get();
+    if (directUserSnap.exists) {
+      const data = directUserSnap.data() || {};
+      const byData = getCanonicalEmailCandidate(data.email || data.gmail);
+      if (byData) return byData;
+      const byDocId = getCanonicalEmailCandidate(directUserSnap.id);
+      if (byDocId) return byDocId;
+    }
+
+    const byUidSnap = await db.collection('users').where('uid', '==', uid).limit(1).get();
+    if (!byUidSnap.empty) {
+      const doc = byUidSnap.docs[0];
+      const data = doc.data() || {};
+      const byData = getCanonicalEmailCandidate(data.email || data.gmail);
+      if (byData) return byData;
+      const byDocId = getCanonicalEmailCandidate(doc.id);
+      if (byDocId) return byDocId;
+    }
+
+    if (auth?.getUser) {
+      try {
+        const userRecord = await auth.getUser(uid);
+        const byAuth = getCanonicalEmailCandidate(userRecord?.email);
+        if (byAuth) return byAuth;
+      } catch (error) {
+        // Ignorar y continuar con los siguientes candidatos.
+      }
+    }
+  }
+
+  return '';
+}
+
 app.post('/toggleUser', verificarToken, async (req, res) => {
   const { email, disabled } = req.body || {};
   if (!email || typeof disabled !== 'boolean') {
@@ -726,9 +781,27 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
   }
 
   const db = admin.firestore();
+  const auth = admin.auth();
   const timestamp = admin.firestore.FieldValue.serverTimestamp();
 
   try {
+    const cartonSnapForIdentity = await db.collection('CartonJugado').doc(normalizedCartonId).get();
+    const cartonDataForIdentity = cartonSnapForIdentity.exists ? cartonSnapForIdentity.data() || {} : {};
+    const walletPublicEmail = await resolveCanonicalWalletEmail({
+      db,
+      auth,
+      normalizedEmail,
+      normalizedUserId,
+      cartonData: cartonDataForIdentity
+    });
+
+    if (!walletPublicEmail) {
+      return res.status(409).json({
+        error: 'No se pudo resolver la billetera destino del premio.',
+        code: 'BILLETERA_NO_IDENTIFICABLE'
+      });
+    }
+
     const result = await db.runTransaction(async (tx) => {
       const sorteoRef = db.collection('sorteos').doc(normalizedSorteoId);
       const cartonRef = db.collection('CartonJugado').doc(normalizedCartonId);
@@ -776,40 +849,10 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
         cartonData
       });
       const cartonUserId = normalizeString(cartonData?.userId || cartonData?.usuarioId, 160);
-      const emailCandidates = [
-        normalizedEmail,
-        normalizeString(cartonData?.email, 160).toLowerCase(),
-        normalizeString(cartonData?.gmail, 160).toLowerCase(),
-        looksLikeEmail(cartonData?.IDbilletera) ? normalizeString(cartonData?.IDbilletera, 160).toLowerCase() : ''
-      ].filter(Boolean);
-
-      for (const userIdentity of [normalizedUserId, cartonUserId].filter(Boolean)) {
-        if (looksLikeEmail(userIdentity)) {
-          emailCandidates.push(normalizeString(userIdentity, 160).toLowerCase());
-          continue;
-        }
-
-        const directUserSnap = await tx.get(db.collection('users').doc(userIdentity));
-        if (directUserSnap.exists) {
-          const data = directUserSnap.data() || {};
-          const emailByData = normalizeString(data.email || data.gmail, 160).toLowerCase();
-          if (emailByData) emailCandidates.push(emailByData);
-          if (looksLikeEmail(directUserSnap.id)) emailCandidates.push(directUserSnap.id.toLowerCase());
-        }
-
-        const byUidSnap = await tx.get(db.collection('users').where('uid', '==', userIdentity).limit(1));
-        if (!byUidSnap.empty) {
-          const doc = byUidSnap.docs[0];
-          const data = doc.data() || {};
-          const emailByData = normalizeString(data.email || data.gmail, 160).toLowerCase();
-          if (emailByData) emailCandidates.push(emailByData);
-          if (looksLikeEmail(doc.id)) emailCandidates.push(doc.id.toLowerCase());
-        }
-      }
-
-      const billeteraVisibleId = Array.from(new Set(emailCandidates))[0] || '';
+      const walletInternalId = normalizedUserId || cartonUserId || walletPublicEmail;
       const billeteraSearchCandidates = Array.from(new Set([
-        billeteraVisibleId,
+        walletInternalId,
+        walletPublicEmail,
         ...billeteraCandidates
       ].filter(Boolean)));
 
@@ -841,12 +884,12 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
       const horaGestion = fecha.toTimeString().slice(0, 5);
       const premioProyeccionRef = db
         .collection('users')
-        .doc(billeteraVisibleId || billeteraRef.id)
+        .doc(walletPublicEmail)
         .collection('premios')
         .doc(normalizedEventoGanadorId);
       const resumenProyeccionRef = db
         .collection('users')
-        .doc(billeteraVisibleId || billeteraRef.id)
+        .doc(walletPublicEmail)
         .collection('billeteraProyeccion')
         .doc('resumen');
       const ganadorTiempoRealRef = db.collection('GanadoresSorteosTiempoReal').doc(normalizedEventoGanadorId);
@@ -856,8 +899,8 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
         {
           sorteoId: normalizedSorteoId,
           sorteoNombre,
-          email: billeteraVisibleId || billeteraRef.id,
-          gmail: billeteraVisibleId || billeteraRef.id,
+          email: walletPublicEmail,
+          gmail: walletPublicEmail,
           alias: normalizedAlias || cartonData.alias || '',
           aliasJugador: normalizedAlias || cartonData.alias || '',
           aliasGanador: normalizedAlias || cartonData.alias || '',
@@ -874,6 +917,8 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           tipoRegistro: normalizedTipoRegistro,
           segundoLugar: normalizedSegundoLugar,
           idBilletera: billeteraRef.id,
+          walletPublicEmail,
+          walletInternalId,
           estado: 'REALIZADO',
           actualizadoEn: timestamp,
           fechaRegistro: premioActual?.fechaRegistro || timestamp,
@@ -901,8 +946,8 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           formaIdx: normalizedFormaIdx,
           cartonId: normalizedCartonId,
           idBilletera: billeteraRef.id,
-          email: billeteraVisibleId || billeteraRef.id,
-          gmail: billeteraVisibleId || billeteraRef.id,
+          email: walletPublicEmail,
+          gmail: walletPublicEmail,
           alias: normalizedAlias || cartonData.alias || '',
           userId: normalizedUserId || cartonData.userId || null,
           creditos: normalizedMonto,
@@ -934,9 +979,9 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
         { merge: true }
       );
 
-      if (billeteraVisibleId && billeteraVisibleId !== billeteraRef.id) {
+      if (walletPublicEmail && walletPublicEmail !== billeteraRef.id) {
         tx.set(
-          db.collection('Billetera').doc(billeteraVisibleId),
+          db.collection('Billetera').doc(walletPublicEmail),
           {
             creditos: nuevosCreditos,
             CartonesGratis: nuevosCartones,
@@ -954,7 +999,7 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           Monto: normalizedMonto > 0 ? normalizedMonto : normalizedCartonesGratis,
           cartonesGratis: normalizedCartonesGratis,
           estado: 'REALIZADO',
-          IDbilletera: billeteraVisibleId || billeteraRef.id,
+          IDbilletera: walletPublicEmail,
           fechasolicitud: '',
           horasolicitud: '',
           fechagestion: fechaGestion,
@@ -968,7 +1013,7 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           winnerKey: normalizedEventoGanadorId,
           tipoRegistro: normalizedTipoRegistro,
           segundoLugar: normalizedSegundoLugar,
-          idBilleteraInterna: billeteraRef.id,
+          idBilleteraInterna: walletInternalId,
           source: normalizedSource,
           requestId: normalizedRequestId,
           processedBy: req.user?.email || '',
@@ -984,7 +1029,7 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
         {
           tipotrans: 'premio',
           estado: 'REALIZADO',
-          IDbilletera: billeteraVisibleId || billeteraRef.id,
+          IDbilletera: walletPublicEmail,
           Monto: normalizedMonto > 0 ? normalizedMonto : normalizedCartonesGratis,
           cartonesGratis: normalizedCartonesGratis,
           sorteoId: normalizedSorteoId,
@@ -993,7 +1038,7 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           winnerKey: normalizedEventoGanadorId,
           tipoRegistro: normalizedTipoRegistro,
           segundoLugar: normalizedSegundoLugar,
-          idBilleteraInterna: billeteraRef.id,
+          idBilleteraInterna: walletInternalId,
           referencia: normalizedReferencia,
           origen: normalizedOrigen,
           source: normalizedSource,
@@ -1039,8 +1084,8 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           source: normalizedSource,
           processedBy: req.user?.email || '',
           role: req.user?.role || '',
-          billeteraId: billeteraVisibleId || billeteraRef.id,
-          billeteraInternaId: billeteraRef.id,
+          billeteraId: walletPublicEmail,
+          billeteraInternaId: walletInternalId,
           monto: normalizedMonto,
           cartonesGratis: normalizedCartonesGratis,
           processedAt: timestamp
@@ -1052,8 +1097,8 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
         status: 'ok',
         idempotent: false,
         premioId: normalizedEventoGanadorId,
-        billeteraId: billeteraVisibleId || billeteraRef.id,
-        billeteraInternaId: billeteraRef.id,
+        billeteraId: walletPublicEmail,
+        billeteraInternaId: walletInternalId,
         requestId: normalizedRequestId
       };
     });
@@ -1073,7 +1118,7 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
       return res.status(409).json({ error: 'El cartón no es elegible para el sorteo indicado.' });
     }
     if (error.message === 'BILLETERA_NO_IDENTIFICABLE') {
-      return res.status(409).json({ error: 'No se pudo resolver la billetera destino del premio.' });
+      return res.status(409).json({ error: 'No se pudo resolver la billetera destino del premio.', code: 'BILLETERA_NO_IDENTIFICABLE' });
     }
 
     console.error('Error acreditando premio por evento', error);
@@ -1169,5 +1214,6 @@ module.exports = {
   getPurgeCounts,
   canAccreditForSorteoState,
   buildPremioDocId,
-  extractEventoGanadorIdComponents
+  extractEventoGanadorIdComponents,
+  resolveCanonicalWalletEmail
 };
