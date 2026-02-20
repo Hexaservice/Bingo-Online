@@ -219,6 +219,9 @@ async function getPurgeCounts({ db, sorteoId, dryRun }) {
     formas: dryRun
       ? await countCollectionBySorteoId({ db, collectionName: 'formas', sorteoId })
       : await deleteCollectionBySorteoId({ db, collectionName: 'formas', sorteoId }),
+    GanadoresSorteosTiempoReal: dryRun
+      ? await countCollectionBySorteoId({ db, collectionName: 'GanadoresSorteosTiempoReal', sorteoId })
+      : await deleteCollectionBySorteoId({ db, collectionName: 'GanadoresSorteosTiempoReal', sorteoId }),
     sorteos: dryRun
       ? await countDocumentById({ db, collectionName: 'sorteos', docId: sorteoId })
       : await deleteDocumentById({ db, collectionName: 'sorteos', docId: sorteoId })
@@ -804,6 +807,7 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
         .doc(billeteraRef.id)
         .collection('billeteraProyeccion')
         .doc('resumen');
+      const ganadorTiempoRealRef = db.collection('GanadoresSorteosTiempoReal').doc(normalizedEventoGanadorId);
 
       tx.set(
         premioRef,
@@ -841,6 +845,39 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           rolGestor: req.user?.role || '',
           fechaGestion,
           horaGestion
+        },
+        { merge: true }
+      );
+
+      tx.set(
+        ganadorTiempoRealRef,
+        {
+          sorteoId: normalizedSorteoId,
+          sorteoNombre,
+          eventoGanadorId: normalizedEventoGanadorId,
+          winnerKey: normalizedEventoGanadorId,
+          formaIdx: normalizedFormaIdx,
+          cartonId: normalizedCartonId,
+          idBilletera: billeteraRef.id,
+          email: normalizedEmail || billeteraRef.id,
+          gmail: normalizedEmail || billeteraRef.id,
+          alias: normalizedAlias || cartonData.alias || '',
+          userId: normalizedUserId || cartonData.userId || null,
+          creditos: normalizedMonto,
+          cartonesGratis: normalizedCartonesGratis,
+          segundoLugar: normalizedSegundoLugar,
+          tipoRegistro: normalizedTipoRegistro,
+          estado: 'REALIZADO',
+          referencia: normalizedReferencia,
+          origen: normalizedOrigen,
+          source: normalizedSource,
+          requestId: normalizedRequestId,
+          procesadoPor: req.user?.email || '',
+          procesadoEn: timestamp,
+          fechaGestion,
+          horaGestion,
+          creadoEn: premioActual?.creadoEn || timestamp,
+          actualizadoEn: timestamp
         },
         { merge: true }
       );

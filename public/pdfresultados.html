@@ -1803,9 +1803,14 @@
 
   async function obtenerGanadoresAgrupados(){
     await ensureFirebaseReady();
-    const snap = await db.collection('PremiosSorteos')
+    let snap = await db.collection('GanadoresSorteosTiempoReal')
       .where('sorteoId', '==', sorteoId)
       .get();
+    if(snap.empty){
+      snap = await db.collection('PremiosSorteos')
+        .where('sorteoId', '==', sorteoId)
+        .get();
+    }
 
     const agregados = new Map();
     snap.forEach(doc=>{
@@ -1928,6 +1933,77 @@
     await lote.commit();
   }
 
+  async function ejecutarPagosAdministrativosAutomaticos(ids = []){
+    if(!Array.isArray(ids) || !ids.length) return 0;
+    await ensureFirebaseReady();
+    await initServerTime();
+    const gestorEmail = auth?.currentUser?.email || '';
+    let procesados = 0;
+    for(const id of ids){
+      const ref = db.collection('PagosAdministracion').doc(id);
+      try {
+        const payload = await db.runTransaction(async tx => {
+          const snap = await tx.get(ref);
+          if(!snap.exists) return null;
+          const data = snap.data() || {};
+          if(normalizarEstadoPagoPremio(data.estado) === 'REALIZADO') return null;
+          const billeteraId = normalizarEmail(data.idBilletera || data.gmail || data.email || '');
+          if(!billeteraId){ return null; }
+          const monto = Number(data.creditos) || 0;
+          if(monto <= 0){
+            tx.update(ref, {
+              estado: validarEstadoPagoPremio('REALIZADO', `PagosAdministracion:${id}`),
+              fechaGestion: fechaServidor(),
+              horaGestion: horaServidor(),
+              gestionadoPor: gestorEmail,
+              rolGestor: window.currentRole || '',
+              actualizadoEn: firebase.firestore.FieldValue.serverTimestamp(),
+              pagoAutomatico: true
+            });
+            return null;
+          }
+          const billeteraRef = db.collection('Billetera').doc(billeteraId);
+          const billeteraSnap = await tx.get(billeteraRef);
+          const saldoActual = Number(billeteraSnap.exists ? billeteraSnap.data()?.creditos : 0) || 0;
+          tx.set(billeteraRef, { creditos: saldoActual + monto, actualizadoEn: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+          tx.update(ref, {
+            estado: validarEstadoPagoPremio('REALIZADO', `PagosAdministracion:${id}`),
+            fechaGestion: fechaServidor(),
+            horaGestion: horaServidor(),
+            gestionadoPor: gestorEmail,
+            rolGestor: window.currentRole || '',
+            actualizadoEn: firebase.firestore.FieldValue.serverTimestamp(),
+            pagoAutomatico: true
+          });
+          return { id, data, billeteraId, monto };
+        });
+        if(!payload) continue;
+        await db.collection('transacciones').add({
+          tipotrans: 'pagado',
+          origen: 'pagos_administracion',
+          Monto: payload.monto,
+          estado: validarEstadoPagoPremio('REALIZADO', 'TransaccionPagoAdministracionAuto'),
+          IDbilletera: payload.billeteraId,
+          fechasolicitud: '',
+          horasolicitud: '',
+          fechagestion: fechaServidor(),
+          horagestion: horaServidor(),
+          usuariogestor: gestorEmail,
+          rolusuario: window.currentRole || '',
+          referencia: 'PAGO_ADMINISTRACION_AUTO',
+          sorteoId,
+          sorteoNombre: (payload.data?.sorteoNombre || sorteoData?.nombre || '').toString(),
+          pagoAdministracionId: id,
+          creadoEn: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        procesados += 1;
+      } catch (err) {
+        console.error('No se pudo ejecutar pago administrativo automático', id, err);
+      }
+    }
+    return procesados;
+  }
+
   async function generarSolicitudesCentroPagos(){
     mostrarLoading('Generando solicitudes para Centro de Pagos, por favor espera');
     const timestamp = firebase.firestore.FieldValue.serverTimestamp();
@@ -1940,6 +2016,7 @@
     const administrativos = participantes.filter(item=>esRolAdministrativo(item.role));
     const colaboradores = participantes.filter(item=>!esRolAdministrativo(item.role));
     const operaciones = [];
+    const idsAdministrativos = [];
 
     administrativos.forEach(administrativo => {
       const email = normalizarEmail(administrativo.gmail);
@@ -1962,6 +2039,7 @@
         userIds: administrativo.userIds || [],
         generadoDesde: 'pdfresultados'
       };
+      idsAdministrativos.push(docId);
       operaciones.push(actualizarDocumentoCentroPagos(db.collection('PagosAdministracion').doc(docId), payload));
     });
 
@@ -2022,11 +2100,13 @@
     operaciones.push(resumenRef.set(resumenPayload, { merge: true }));
     await Promise.all(operaciones);
 
+    const pagosAdministrativosAutomaticos = await ejecutarPagosAdministrativosAutomaticos(idsAdministrativos);
     await actualizarFlagsOrquestacionCentroPagos({ timestamp, solicitudesPagosGeneradas: true });
     return {
       ganadores: ganadores.length,
       administrativos: administrativos.length,
-      colaboradores: colaboradores.length
+      colaboradores: colaboradores.length,
+      pagosAdministrativosAutomaticos
     };
   }
 
@@ -2038,6 +2118,7 @@
         ganadores: 0,
         administrativos: 0,
         colaboradores: 0,
+        pagosAdministrativosAutomaticos: 0,
         corteYaEjecutado: true
       };
     }
@@ -3453,7 +3534,8 @@
         `El sorteo se marcó como PDF listo y se ejecutó la orquestación de pagos.\n`+
         `${mensajeCorte}\n`+
         `Solicitudes administrativas creadas: ${resultadoOrquestacion.administrativos}.\n`+
-        `Solicitudes de colaboradores creadas: ${resultadoOrquestacion.colaboradores}.`
+        `Solicitudes de colaboradores creadas: ${resultadoOrquestacion.colaboradores}.\n`+
+        `Pagos administrativos automáticos aplicados: ${resultadoOrquestacion.pagosAdministrativosAutomaticos || 0}.`
       );
       window.location.href = 'cantarsorteos.html';
     } catch (err) {

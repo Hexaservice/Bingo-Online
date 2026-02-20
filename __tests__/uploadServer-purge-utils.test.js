@@ -56,6 +56,7 @@ describe('uploadServer utilidades de depuración de sorteos', () => {
       'cantos',
       'cantarsorteos',
       'formas',
+      'GanadoresSorteosTiempoReal',
       'sorteos'
     ]);
     expect(deleteFn).not.toHaveBeenCalled();
