@@ -7,6 +7,7 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const crypto = require('crypto');
 const admin = require('firebase-admin');
+const EstadosPagoPremio = require('./public/js/estadoPagoPremio.js');
 
 const requiredEnv = ['GOOGLE_APPLICATION_CREDENTIALS', 'FIREBASE_STORAGE_BUCKET'];
 
@@ -328,6 +329,10 @@ function buildPremioDocId({ sorteoId, formaIdx, cartonId, prefijo = '' }) {
 
 function normalizeSorteoState(value) {
   return normalizeString(String(value || ''), 40).toUpperCase();
+}
+
+function normalizePremioTransactionState(value) {
+  return EstadosPagoPremio.normalizarLectura(value);
 }
 
 function canAccreditForSorteoState(value) {
@@ -718,8 +723,8 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
       }
 
       const premioActual = premioSnap.exists ? premioSnap.data() || {} : null;
-      const estadoPremio = normalizeSorteoState(premioActual?.estado);
-      if (estadoPremio === 'REALIZADO' || estadoPremio === 'APROBADO') {
+      const estadoPremio = normalizePremioTransactionState(premioActual?.estado);
+      if (estadoPremio === EstadosPagoPremio.ESTADOS_CANONICOS.REALIZADO) {
         return { status: 'ok', idempotent: true, premioId: normalizedEventoGanadorId };
       }
 
