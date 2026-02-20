@@ -520,8 +520,8 @@
     </div>
     <div id="premios-content">
       <div class="acciones">
-        <button class="icon-btn" id="premios-archivar"><span class="icon">&#128452;</span><span>Archivar</span></button>
         <button class="icon-btn" id="premios-archivo"><span class="icon">&#128193;</span><span>Archivo</span></button>
+        <span class="switch-label" id="premios-auditoria-label">Vista de auditoría: Procesados / Con error / Reintentos</span>
       </div>
       <table id="tabla-premios">
         <colgroup>
@@ -543,12 +543,12 @@
             <th>
               <select id="filtro-premios-estado">
                 <option value="">Estado</option>
-                <option value="PENDIENTE">PENDIENTE</option>
-                <option value="REALIZADO">REALIZADO</option>
-                <option value="ARCHIVADO">ARCHIVADO</option>
+                <option value="PENDIENTE">REINTENTOS</option>
+                <option value="REALIZADO">PROCESADOS</option>
+                <option value="ARCHIVADO">ARCHIVADOS</option>
               </select>
             </th>
-            <th><span id="premios-marcar" class="check-header">✔</span></th>
+            <th><span id="premios-marcar" class="check-header oculto">✔</span></th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -566,6 +566,7 @@
     </div>
     <div id="pagos-content">
       <div class="acciones">
+        <button class="icon-btn" id="pagos-aprobar"><span class="icon check">&#10004;</span><span>Procesar</span></button>
         <button class="icon-btn" id="pagos-archivar"><span class="icon">&#128452;</span><span>Archivar</span></button>
         <button class="icon-btn" id="pagos-archivo"><span class="icon">&#128193;</span><span>Archivo</span></button>
       </div>
@@ -671,6 +672,7 @@
 
     let mostrarPremiosArchivo = false;
     let mostrarPagosArchivo = false;
+    const MODO_PREMIOS_INSTANTANEOS = true;
 
     const colaboradoresBase = [];
     const premiosActivos = [];
@@ -697,6 +699,21 @@
     const formatNumber = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2, minimumFractionDigits: 0 });
     const formatNumberEntero = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 0, minimumFractionDigits: 0 });
     let firebaseReadyPromiseCentro = null;
+
+    function normalizarConteoTecnico(valor){
+      const numero = Number(valor);
+      return Number.isFinite(numero) && numero > 0 ? numero : 0;
+    }
+
+    function obtenerConteoTecnicoPremio(registro = {}){
+      const pendientes = normalizarConteoTecnico(registro.acreditacionesPendientes);
+      const errores = normalizarConteoTecnico(
+        registro.acreditacionesConError
+        ?? registro.acreditacionesErrores
+        ?? registro.erroresTecnicos
+      );
+      return pendientes + errores;
+    }
 
     function ensureFirebaseListo(){
       if(firebaseReadyPromiseCentro) return firebaseReadyPromiseCentro;
@@ -1747,9 +1764,14 @@
           db.collection('PremiosSorteos').where('sorteoId', '==', sorteoId).get(),
           db.collection('PagosAdministracion').where('sorteoId', '==', sorteoId).get()
         ]);
-        const hayPremiosPendientes = premiosSnap.docs.some(doc=>esEstadoPendiente(doc.data()?.estado));
+        const pendientesTecnicosPremios = premiosSnap.docs.reduce((acum, doc)=>{
+          const data = doc.data() || {};
+          const pendientes = normalizarConteoTecnico(data.AcreditacionesPendientes ?? data.acreditacionesPendientes);
+          const errores = normalizarConteoTecnico(data.AcreditacionesConError ?? data.acreditacionesConError ?? data.acreditacionesErrores ?? data.erroresTecnicos);
+          return acum + pendientes + errores;
+        }, 0);
         const hayPagosPendientes = pagosSnap.docs.some(doc=>esEstadoPendiente(doc.data()?.estado));
-        const indicadorCompletado = !hayPremiosPendientes && !hayPagosPendientes;
+        const indicadorCompletado = pendientesTecnicosPremios === 0 && !hayPagosPendientes;
         const payload = {
           pagosCentroAprobados: indicadorCompletado,
           pagosCentroActualizadosEn: firebase.firestore.FieldValue.serverTimestamp()
@@ -1794,7 +1816,9 @@
         eventoGanadorId: (data.eventoGanadorId || '').toString(),
         winnerKey,
         sorteoId: (data.sorteoId || '').toString(),
-        sorteoNombre: (data.sorteoNombre || '').toString()
+        sorteoNombre: (data.sorteoNombre || '').toString(),
+        acreditacionesPendientes: normalizarConteoTecnico(data.AcreditacionesPendientes ?? data.acreditacionesPendientes),
+        acreditacionesConError: normalizarConteoTecnico(data.AcreditacionesConError ?? data.acreditacionesConError ?? data.acreditacionesErrores ?? data.erroresTecnicos)
       };
     }
 
@@ -1841,6 +1865,15 @@
       if(base.includes('admin')) return 'Administrador';
       if(base.includes('colab')) return 'Colaborador';
       return texto.charAt(0).toUpperCase() + texto.slice(1);
+    }
+
+
+    function obtenerEtiquetaEstado(valorEstado){
+      const estado = normalizarEstado(valorEstado);
+      if(estado === 'REALIZADO') return 'PROCESADO';
+      if(estado === 'PENDIENTE') return 'REINTENTO';
+      if(estado === 'ARCHIVADO') return 'ARCHIVADO';
+      return estado;
     }
 
     function construirRolBadgeHtml(tipo){
@@ -1968,7 +2001,7 @@
       const rolNormalizado = normalizarTipoUsuario(item.tipo || item.estado || '');
       const estadoHtml = tipo === 'colaboradores'
         ? construirRolBadgeHtml(rolNormalizado)
-        : `<span class="${estadoClase}">${escapeHtml(item.estado)}</span>`;
+        : `<span class="${estadoClase}">${escapeHtml(obtenerEtiquetaEstado(item.estado))}</span>`;
         const gmailAttr = escapeHtml(item.gmail || '');
         const aliasAttr = escapeHtml(item.alias || '');
         const nombreAttr = escapeHtml(item.nombre || '');
@@ -1981,7 +2014,7 @@
             <td class="cart">${formatNumber.format(item.cartones)}</td>
             <td>${escapeHtml(item.fechaMostrar)}</td>
             <td class="estado">${estadoHtml}</td>
-            <td><input type="checkbox" data-id="${item.id}" ${disabled}></td>
+            <td>${MODO_PREMIOS_INSTANTANEOS ? '' : `<input type="checkbox" data-id="${item.id}" ${disabled}>`}</td>
           </tr>`;
         }
         if(tipo === 'colaboradores'){
@@ -2058,7 +2091,8 @@
     function renderPremios(){
       const lista = mostrarPremiosArchivo ? aplicarFiltrosPremios(premiosArchivados) : aplicarFiltrosPremios(premiosActivos);
       renderTabla(lista, 'tabla-premios', { mostrarArchivo: mostrarPremiosArchivo, tipo: 'premios' });
-      actualizarBadge('premios', premiosActivos.filter(item=>item.estado === 'PENDIENTE').length);
+      const cargaTecnica = premiosActivos.reduce((acum, item)=>acum + obtenerConteoTecnicoPremio(item), 0);
+      actualizarBadge('premios', cargaTecnica);
       actualizarEstadoBotones();
       reconciliarIndicadorPagos().catch(err=>console.warn('No se pudo actualizar el indicador tras renderizar premios', err));
     }
@@ -2100,6 +2134,7 @@
     function seleccionarTodos(idTabla){
       const tabla = document.getElementById(idTabla);
       if(!tabla) return;
+      if(MODO_PREMIOS_INSTANTANEOS && idTabla === 'tabla-premios') return;
       const checks = tabla.querySelectorAll('tbody input[type="checkbox"]:not(:disabled)');
       if(!checks.length) return;
       const marcarTodo = Array.from(checks).some(chk=>!chk.checked);
@@ -2127,7 +2162,7 @@
         premiosActivos.forEach(registro => {
           if(!registro.sorteoId) return;
           const info = estadoPorSorteo.get(registro.sorteoId) || { pendientesPremios: 0, pendientesPagos: 0 };
-          if(esEstadoPendiente(registro.estado)){ info.pendientesPremios = (info.pendientesPremios || 0) + 1; }
+          info.pendientesPremios = (info.pendientesPremios || 0) + obtenerConteoTecnicoPremio(registro);
           estadoPorSorteo.set(registro.sorteoId, info);
         });
         pagosAdminActivos.forEach(registro => {
@@ -2166,7 +2201,8 @@
       }
     }
 
-    async function acreditarPremioBackend(enRegistro){
+    // Flujo legacy de acreditación manual de premios (deshabilitado en modo instantáneo).
+    async function acreditarPremioBackendLegacy(enRegistro){
       const eventoGanadorId = cpSanitizarId(enRegistro.eventoGanadorId || enRegistro.winnerKey || enRegistro.id || '');
       if(!eventoGanadorId){ throw new Error('Falta eventoGanadorId para acreditar premio.'); }
       const componentes = cpExtraerComponentesEventoGanador(eventoGanadorId);
@@ -2260,7 +2296,7 @@
       return nuevoSaldo;
     }
 
-    async function aprobarPremios(ids){
+    async function aprobarPremiosLegacy(ids){
       if(!ids.length) return;
       const db = dbRef();
       await initServerTime();
@@ -2270,7 +2306,7 @@
         if(!registro){ console.warn('Premio no encontrado', id); continue; }
         if(registro.estado === 'REALIZADO'){ continue; }
         try {
-          await acreditarPremioBackend(registro);
+          await acreditarPremioBackendLegacy(registro);
           if(registro.sorteoId){
             sorteosActualizados.add(registro.sorteoId);
           }
@@ -2464,13 +2500,26 @@
     }
 
     function configurarBotones(){
-      document.getElementById('premios-marcar').addEventListener('click', ()=>seleccionarTodos('tabla-premios'));
+      if(!MODO_PREMIOS_INSTANTANEOS){
+        document.getElementById('premios-marcar').addEventListener('click', ()=>seleccionarTodos('tabla-premios'));
+      }
       document.getElementById('pagos-marcar').addEventListener('click', ()=>seleccionarTodos('tabla-pagos'));
 
-      document.getElementById('premios-archivar').addEventListener('click', async()=>{
-        const seleccion = obtenerSeleccion('tabla-premios');
+      const premiosArchivarBtn = document.getElementById('premios-archivar');
+      if(premiosArchivarBtn){
+        premiosArchivarBtn.style.display = MODO_PREMIOS_INSTANTANEOS ? 'none' : '';
+        if(!MODO_PREMIOS_INSTANTANEOS){
+          premiosArchivarBtn.addEventListener('click', async()=>{
+            const seleccion = obtenerSeleccion('tabla-premios');
+            if(!seleccion.length){ alert('Selecciona al menos un registro.'); return; }
+            await archivarRegistros(seleccion, 'premios');
+          });
+        }
+      }
+      document.getElementById('pagos-aprobar').addEventListener('click', async()=>{
+        const seleccion = obtenerSeleccion('tabla-pagos');
         if(!seleccion.length){ alert('Selecciona al menos un registro.'); return; }
-        await archivarRegistros(seleccion, 'premios');
+        await aprobarPagos(seleccion);
       });
       document.getElementById('pagos-archivar').addEventListener('click', async()=>{
         const seleccion = obtenerSeleccion('tabla-pagos');
@@ -2520,6 +2569,9 @@
       if(modalAceptar){ modalAceptar.addEventListener('click', ()=>ocultarModalInfo()); }
       const modalCapa = document.getElementById('modal-informacion');
       if(modalCapa){ modalCapa.addEventListener('click', e=>{ if(e.target === modalCapa) ocultarModalInfo(); }); }
+
+      const premiosMarcar = document.getElementById('premios-marcar');
+      if(premiosMarcar){ premiosMarcar.classList.toggle('oculto', MODO_PREMIOS_INSTANTANEOS); }
 
       const togglePremios = document.getElementById('toggle-premios');
       const contenidoPremios = document.getElementById('premios-content');
