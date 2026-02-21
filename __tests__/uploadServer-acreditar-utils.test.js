@@ -71,6 +71,56 @@ describe('uploadServer utilidades de acreditación', () => {
     );
   });
 
+
+  test('getAcreditacionExecutionMode diferencia modo automático y manual privilegiado', () => {
+    const { getAcreditacionExecutionMode } = require('../uploadServer.js');
+
+    expect(
+      getAcreditacionExecutionMode({
+        source: 'backend/acreditarPremioEvento',
+        origen: 'premios_jugadores',
+        manualApproval: false,
+        userRole: 'Colaborador'
+      })
+    ).toEqual(
+      expect.objectContaining({
+        mode: 'automatico',
+        manualRequested: false,
+        manualAllowed: false
+      })
+    );
+
+    expect(
+      getAcreditacionExecutionMode({
+        source: 'centropagos/manual',
+        origen: 'premios_jugadores',
+        manualApproval: false,
+        userRole: 'Administrador'
+      })
+    ).toEqual(
+      expect.objectContaining({
+        mode: 'manual',
+        manualRequested: true,
+        manualAllowed: true
+      })
+    );
+
+    expect(
+      getAcreditacionExecutionMode({
+        source: 'centropagos/manual',
+        origen: 'premios_jugadores',
+        manualApproval: true,
+        userRole: 'Colaborador'
+      })
+    ).toEqual(
+      expect.objectContaining({
+        mode: 'automatico',
+        manualRequested: true,
+        manualAllowed: false
+      })
+    );
+  });
+
   test('extractEventoGanadorIdComponents obtiene sorteo, forma y carton', () => {
     const { extractEventoGanadorIdComponents } = require('../uploadServer.js');
 

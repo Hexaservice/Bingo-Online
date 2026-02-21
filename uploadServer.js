@@ -349,6 +349,24 @@ function extractEventoGanadorIdComponents(eventoGanadorId) {
   };
 }
 
+
+function getAcreditacionExecutionMode({ source, origen, manualApproval, userRole }) {
+  const normalizedSource = normalizeString(source, 120).toLowerCase();
+  const normalizedOrigen = normalizeString(origen, 80).toLowerCase();
+  const explicitManualApproval = manualApproval === true;
+  const sourceRequestsManual = normalizedSource === 'centropagos/manual' || normalizedOrigen === 'centropagos/manual';
+  const manualRequested = explicitManualApproval || sourceRequestsManual;
+  const hasPrivilegedRole = ['Superadmin', 'Administrador'].includes(normalizeString(userRole, 40));
+  const manualAllowed = manualRequested && hasPrivilegedRole;
+
+  return {
+    mode: manualAllowed ? 'manual' : 'automatico',
+    manualRequested,
+    manualAllowed,
+    hasPrivilegedRole
+  };
+}
+
 function normalizePremioTransactionState(value) {
   return EstadosPagoPremio.normalizarLectura(value);
 }
@@ -723,7 +741,7 @@ app.post('/admin/purge-sorteo', verificarToken, async (req, res) => {
   }
 });
 
-app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, res) => {
+async function acreditarPremioEventoHandler(req, res) {
   const {
     sorteoId,
     formaIdx,
@@ -740,7 +758,8 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
     segundoLugar,
     alias,
     requestId,
-    source
+    source,
+    manualApproval
   } = req.body || {};
 
   const normalizedSorteoId = normalizeString(sorteoId, 120);
@@ -762,6 +781,12 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
     120
   ) || `acred-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const normalizedSource = normalizeString(source, 120) || 'backend/acreditarPremioEvento';
+  const executionMode = getAcreditacionExecutionMode({
+    source: normalizedSource,
+    origen: normalizedOrigen,
+    manualApproval,
+    userRole: req.user?.role
+  });
 
   if (!normalizedSorteoId || !normalizedCartonId || normalizedFormaIdx === null || !normalizedEventoGanadorId) {
     return res.status(400).json({
@@ -816,11 +841,12 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
       // (Sellado/Jugando/Finalizando/Finalizado) siempre que el corte de premios siga abierto.
       // Se rechaza solamente cuando el estado es incompatible con premiación (p.ej. Activo/Inactivo/Archivado)
       // o cuando el corte ya fue cerrado explícitamente.
+      const premiosCorteCerrado = Boolean(sorteoData?.premiosCorteCerrado);
       if (!isSorteoEligibleForAutoPrize({
         estado: sorteoData.estado,
-        premiosCorteCerrado: sorteoData?.premiosCorteCerrado
+        premiosCorteCerrado: executionMode.manualAllowed ? false : premiosCorteCerrado
       })) {
-        if (Boolean(sorteoData?.premiosCorteCerrado)) {
+        if (premiosCorteCerrado && !executionMode.manualAllowed) {
           throw new Error('SORTEO_CORTE_CERRADO');
         }
         throw new Error('SORTEO_ESTADO_INVALIDO');
@@ -902,6 +928,7 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           idBilleteraInterna: billeteraRef.id,
           source: normalizedSource,
           processedBy: req.user?.email || '',
+          executionMode: executionMode.mode,
           processedAt: timestamp,
           estado: 'PENDIENTE_RECONCILIACION'
         }, { merge: true });
@@ -912,6 +939,8 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           formaIdx: normalizedFormaIdx,
           requestId: normalizedRequestId,
           source: normalizedSource,
+          processedBy: req.user?.email || '',
+          executionMode: executionMode.mode,
           motivo: 'EMAIL_CANONICO_NO_RESUELTO',
           estado: 'PENDIENTE',
           userId: normalizedUserId || cartonData.userId || null,
@@ -1058,6 +1087,7 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           source: normalizedSource,
           requestId: normalizedRequestId,
           processedBy: req.user?.email || '',
+          executionMode: executionMode.mode,
           processedAt: timestamp,
           creadoEn: transaccionSnap.exists ? (transaccionSnap.data()?.creadoEn || timestamp) : timestamp,
           actualizadoEn: timestamp
@@ -1086,6 +1116,7 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           source: normalizedSource,
           requestId: normalizedRequestId,
           processedBy: req.user?.email || '',
+          executionMode: executionMode.mode,
           processedAt: timestamp,
           fechagestion: fechaGestion,
           horagestion: horaGestion,
@@ -1125,6 +1156,7 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
           requestId: normalizedRequestId,
           source: normalizedSource,
           processedBy: req.user?.email || '',
+          executionMode: executionMode.mode,
           role: req.user?.role || '',
           billeteraId: emailVisible,
           emailVisible,
@@ -1143,7 +1175,8 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
         billeteraId: emailVisible,
         billeteraInternaId: billeteraRef.id,
         emailVisible,
-        requestId: normalizedRequestId
+        requestId: normalizedRequestId,
+        executionMode: executionMode.mode
       };
     });
 
@@ -1168,7 +1201,9 @@ app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, async (req, re
     console.error('Error acreditando premio por evento', error);
     return res.status(500).json({ error: 'Error acreditando premio', message: error.message });
   }
-});
+}
+
+app.post('/acreditarPremioEvento', verificarOperadorPrivilegiado, acreditarPremioEventoHandler);
 
 app.post('/upload', verificarToken, upload.single('file'), async (req, res) => {
   if (!req.file) {
@@ -1259,5 +1294,7 @@ module.exports = {
   isSorteoEligibleForAutoPrize,
   buildPremioDocId,
   extractEventoGanadorIdComponents,
-  resolveWinnerIdentity
+  resolveWinnerIdentity,
+  getAcreditacionExecutionMode,
+  acreditarPremioEventoHandler
 };
