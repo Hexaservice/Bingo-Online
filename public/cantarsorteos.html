@@ -1972,6 +1972,7 @@
   }
 
   function programarReintentoPendientes(ms = REINTENTO_BASE_MS){
+    if(!esModoAutomaticoActivo()) return;
     const espera = Math.max(1000, Number(ms) || REINTENTO_BASE_MS);
     if(reintentoPendientesTimeout){
       clearTimeout(reintentoPendientesTimeout);
@@ -1985,6 +1986,7 @@
   }
 
   async function registrarAcreditacionPendiente({ eventoGanadorId, sorteoId, cartonId, error, intentos = 1, payload = {}, tipo = 'automatico' } = {}){
+    if(!esModoAutomaticoActivo()) return;
     const eventoSeguro = sanitizarId(eventoGanadorId || '');
     if(!eventoSeguro) return;
     await asegurarDbListo();
@@ -2020,6 +2022,14 @@
   }
 
   async function escucharAcreditacionesPendientes(){
+    if(!esModoAutomaticoActivo()){
+      if(acreditacionesPendientesUnsub){
+        acreditacionesPendientesUnsub();
+        acreditacionesPendientesUnsub = null;
+      }
+      actualizarIndicadorAcreditacionesPendientes(0);
+      return;
+    }
     await asegurarDbListo();
     if(acreditacionesPendientesUnsub){
       acreditacionesPendientesUnsub();
@@ -2044,6 +2054,7 @@
   }
 
   async function ejecutarReintentoPendienteDoc(doc){
+    if(!esModoAutomaticoActivo()) return;
     const data = doc?.data ? (doc.data() || {}) : {};
     const estado = (data.estado || '').toString().toUpperCase();
     if(estado === 'REALIZADO') return;
@@ -2089,6 +2100,7 @@
   }
 
   async function reintentarAcreditacionesPendientes(){
+    if(!esModoAutomaticoActivo()) return;
     if(reintentoPendientesEnCurso) return;
     reintentoPendientesEnCurso = true;
     try {
@@ -2109,6 +2121,9 @@
   }
 
   async function ejecutarAcreditacionBackend({ payload, premioId, eventoGanadorId, sorteoId, cartonId, tipo = 'automatico', marcarProcesado = false, destinoProcesados = null } = {}){
+    if(!esModoAutomaticoActivo()){
+      throw new Error('Modo legacy activo: acreditación automática deshabilitada.');
+    }
     const user = auth?.currentUser;
     const apiBase = (typeof getAdminApiBase === 'function' ? getAdminApiBase() : '').replace(/\/$/, '');
     if(!user || !apiBase){
@@ -2645,6 +2660,9 @@
     modoManualSwitch.addEventListener('change', ()=>{
       modoManual = modoManualSwitch.checked;
       actualizarEstadoModo();
+      escucharAcreditacionesPendientes().catch(err=>{
+        console.warn('No se pudo actualizar el flujo de acreditaciones pendientes al cambiar de modo', err);
+      });
     });
     actualizarEstadoModo();
   }
@@ -3044,6 +3062,10 @@
 
   function esModoManual(){
     return modoManual === true;
+  }
+
+  function esModoAutomaticoActivo(){
+    return !esModoManual();
   }
 
   function actualizarEstadoModo(){
@@ -3574,9 +3596,11 @@
     cartonesDatosListos = true;
     actualizarNumerosNoJugados();
     calcularGanadores();
-    procesarPremiosAutomaticos().catch(err=>{
-      console.warn('No se pudieron procesar premios automáticos al cargar cartones', err);
-    });
+    if(esModoAutomaticoActivo()){
+      procesarPremiosAutomaticos().catch(err=>{
+        console.warn('No se pudieron procesar premios automáticos al cargar cartones', err);
+      });
+    }
   }
 
   function detenerCartones(){
@@ -4615,12 +4639,17 @@
         formasNuevas.add(idxNumero);
       }
     });
-    if(formasNuevas.size){
+    if(formasNuevas.size && esModoAutomaticoActivo()){
       procesarPremiosAutomaticos({ formas: formasNuevas }).catch(err=>{
         console.warn('No se pudieron procesar premios automáticos', err);
       });
       procesarPremiosSegundoLugar({ formas: formasNuevas }).catch(err=>{
         console.warn('No se pudieron procesar premios de segundo lugar', err);
+      });
+    }else if(formasNuevas.size){
+      console.info('Modo legacy activo: se registran/visualizan ganadores sin acreditación automática.', {
+        sorteoId: currentSorteoId,
+        formas: Array.from(formasNuevas)
       });
     }
     if(esPrimerProcesamiento || !nuevos.length) return;
