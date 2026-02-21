@@ -347,8 +347,20 @@
       max-width: 1280px;
       margin: 0 auto 4px;
       display: flex;
-      justify-content: flex-end;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
       gap: 6px;
+    }
+    .acciones-top select,
+    .acciones-top input {
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 0.8rem;
+      padding: 4px 6px;
+      border-radius: 4px;
+      border: 1px solid #bbb;
+      min-width: min(320px, 82vw);
+      max-width: 420px;
     }
     .btn-pagos-pendientes {
       font-size: 0.65rem;
@@ -510,6 +522,13 @@
 <body>
   <button id="volver-btn" class="menu-btn back-btn" data-compact-back="true"><span class="icon">&#9664;</span><span class="label">Volver</span></button>
   <h2 class="titulo-principal">RESUMEN DE PAGOS</h2>
+  <div class="acciones-top">
+    <select id="cp-sorteo-selector" aria-label="Seleccionar sorteo para generar solicitudes">
+      <option value="">Selecciona un sorteo</option>
+    </select>
+    <input id="cp-sorteo-id" type="text" placeholder="Sorteo ID (query param o selección)">
+    <button id="cp-generar-solicitudes" class="btn-pagos-pendientes" type="button">Generar premios/pagos del sorteo</button>
+  </div>
   <section class="section" id="premios-section">
     <div class="section-header">
       <h3>PREMIOS JUGADORES</h3>
@@ -694,6 +713,8 @@
     const filtrosColaboradores = { gmail:'', creditos:'', tipo:'' };
     const filtrosPremios = { jugador:'', fecha:'', estado:'' };
     const filtrosPagos = { jugador:'', fecha:'', estado:'' };
+    const paramsCentroPagos = new URLSearchParams(window.location.search);
+    const sorteoIdDesdeQuery = (paramsCentroPagos.get('sorteoId') || paramsCentroPagos.get('s') || '').trim();
 
     let mostrarPremiosArchivo = false;
     let mostrarPagosArchivo = false;
@@ -723,6 +744,7 @@
     let unsubscribeColaboradores = null;
     let unsubscribeUsuariosCentro = null;
     let unsubscribeAcreditacionesTope = null;
+    let generacionSolicitudesEnCurso = false;
 
     const formatNumber = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2, minimumFractionDigits: 0 });
     const formatNumberEntero = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 0, minimumFractionDigits: 0 });
@@ -754,6 +776,91 @@
         throw err;
       });
       return firebaseReadyPromiseCentro;
+    }
+
+    function cpObtenerSorteoIdObjetivo(){
+      const input = document.getElementById('cp-sorteo-id');
+      const selector = document.getElementById('cp-sorteo-selector');
+      const idManual = (input?.value || '').trim();
+      const idSelector = (selector?.value || '').trim();
+      return idManual || idSelector || sorteoIdDesdeQuery;
+    }
+
+    async function cpResolverDataSorteo(sorteoId){
+      const id = (sorteoId || '').trim();
+      if(!id) return null;
+      await ensureFirebaseListo();
+      const db = dbRef();
+      const docSorteo = await db.collection('sorteos').doc(id).get();
+      if(docSorteo.exists){ return docSorteo.data() || {}; }
+      const docCantar = await db.collection('cantarsorteos').doc(id).get();
+      if(docCantar.exists){ return docCantar.data() || {}; }
+      return null;
+    }
+
+    async function cpCargarSelectorSorteos(){
+      const selector = document.getElementById('cp-sorteo-selector');
+      if(!selector) return;
+      try {
+        await ensureFirebaseListo();
+        const snap = await dbRef().collection('sorteos').limit(150).get();
+        const lista = [];
+        snap.forEach(doc=>{
+          const data = doc.data() || {};
+          const nombre = (data.nombre || data.nombreSorteo || '').toString().trim();
+          const fecha = (data.fecha || data.fechasorteo || '').toString().trim();
+          const etiqueta = [doc.id, nombre, fecha].filter(Boolean).join(' | ');
+          lista.push({ id: doc.id, etiqueta: etiqueta || doc.id });
+        });
+        lista.sort((a,b)=>a.etiqueta.localeCompare(b.etiqueta, 'es', { sensitivity: 'base' }));
+        selector.innerHTML = '<option value="">Selecciona un sorteo</option>' +
+          lista.map(item=>`<option value="${escapeHtml(item.id)}">${escapeHtml(item.etiqueta)}</option>`).join('');
+        if(sorteoIdDesdeQuery){
+          selector.value = sorteoIdDesdeQuery;
+        }
+      } catch (err) {
+        console.warn('No se pudo cargar el selector de sorteos', err);
+      }
+    }
+
+    async function cpGenerarSolicitudesManual(){
+      if(generacionSolicitudesEnCurso) return;
+      const sorteoId = cpObtenerSorteoIdObjetivo();
+      if(!sorteoId){
+        alert('Debes indicar un sorteoId para generar solicitudes.');
+        return;
+      }
+      const btn = document.getElementById('cp-generar-solicitudes');
+      const textoOriginal = btn?.textContent || 'Generar premios/pagos del sorteo';
+      try {
+        generacionSolicitudesEnCurso = true;
+        if(btn){
+          btn.disabled = true;
+          btn.textContent = 'Generando...';
+        }
+        const sorteoData = await cpResolverDataSorteo(sorteoId);
+        if(!sorteoData){
+          alert(`No existe el sorteo ${sorteoId} en sorteos/cantarsorteos.`);
+          return;
+        }
+        const ctx = cpCrearContextoSorteo(sorteoId, sorteoData);
+        const resultado = await cpGenerarSolicitudesParaSorteo(ctx);
+        alert(
+          `Solicitudes generadas para el sorteo ${sorteoId}.\n`+
+          `Premios: ${resultado.ganadores}.\n`+
+          `Administración: ${resultado.administrativos}.\n`+
+          `Colaboradores: ${resultado.colaboradores}.`
+        );
+      } catch (err) {
+        console.error('Error generando solicitudes manuales del sorteo', sorteoId, err);
+        alert('No se pudieron generar las solicitudes. Revisa la consola para más detalle.');
+      } finally {
+        generacionSolicitudesEnCurso = false;
+        if(btn){
+          btn.disabled = false;
+          btn.textContent = textoOriginal;
+        }
+      }
     }
 
     function cpNormalizarNumero(valor){
@@ -2654,6 +2761,23 @@
     }
 
     function configurarBotones(){
+      const inputSorteo = document.getElementById('cp-sorteo-id');
+      const selectorSorteo = document.getElementById('cp-sorteo-selector');
+      const botonGenerarSolicitudes = document.getElementById('cp-generar-solicitudes');
+      if(inputSorteo && sorteoIdDesdeQuery){
+        inputSorteo.value = sorteoIdDesdeQuery;
+      }
+      if(selectorSorteo){
+        selectorSorteo.addEventListener('change', ()=>{
+          if(inputSorteo && selectorSorteo.value){ inputSorteo.value = selectorSorteo.value; }
+        });
+      }
+      if(botonGenerarSolicitudes){
+        botonGenerarSolicitudes.addEventListener('click', async()=>{
+          await cpGenerarSolicitudesManual();
+        });
+      }
+
       if(!MODO_PREMIOS_INSTANTANEOS){
         document.getElementById('premios-marcar').addEventListener('click', ()=>seleccionarTodos('tabla-premios'));
       }
@@ -3034,6 +3158,7 @@
         alert('No fue posible inicializar la conexión con la base de datos. Intenta recargar la página.');
         return;
       }
+      await cpCargarSelectorSorteos();
       suscribirColecciones();
     }
 
