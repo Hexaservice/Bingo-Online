@@ -125,6 +125,8 @@ describe('uploadServer utilidades de acreditación', () => {
     const { extractEventoGanadorIdComponents } = require('../uploadServer.js');
 
     expect(extractEventoGanadorIdComponents('segundo__sorteo_a__f3__carton_77')).toEqual({
+      prefijo: 'segundo',
+      segundoLugar: true,
       sorteoId: 'sorteo_a',
       formaIdx: 3,
       cartonId: 'carton_77'

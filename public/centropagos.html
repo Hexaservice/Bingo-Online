@@ -1658,11 +1658,17 @@
     function cpExtraerComponentesEventoGanador(eventoGanadorId){
       const limpio = (eventoGanadorId || '').toString().trim();
       if(!limpio) return null;
-      const match = limpio.match(/^(?:[^_]+__)?(.+?)__f([^_]+?)__(.+)$/);
+      const match = limpio.match(/^(?:([^_]+?)__)?(.+?)__f([^_]+?)__(.+)$/);
       if(!match) return null;
-      const formaIdx = Number(match[2]);
+      const formaIdx = Number(match[3]);
       if(!Number.isFinite(formaIdx)) return null;
-      return { sorteoId: match[1], formaIdx, cartonId: match[3] };
+      const prefijo = (match[1] || '').toString().toLowerCase();
+      return {
+        sorteoId: match[2],
+        formaIdx,
+        cartonId: match[4],
+        segundoLugar: prefijo === 'segundo'
+      };
     }
 
     async function cpActualizarDocumentoCentroPagos(ctx, ref, payload){
@@ -2407,7 +2413,9 @@
           origen: 'premios_jugadores',
           referencia: 'PREMIO',
           tipoRegistro: 'GANADOR_SORTEO',
-          source: 'centropagos/aprobarPremios',
+          source: 'centropagos/manual',
+          manualApproval: true,
+          segundoLugar: Boolean(componentes.segundoLugar),
           requestId
         })
       });

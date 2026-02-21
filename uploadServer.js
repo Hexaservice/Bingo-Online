@@ -335,7 +335,7 @@ function extractEventoGanadorIdComponents(eventoGanadorId) {
   const normalized = normalizeString(eventoGanadorId, 220);
   if (!normalized) return null;
 
-  const [, maybeSorteoId = '', maybeForma = '', maybeCartonId = ''] = normalized.match(/^(?:[^_]+__)?(.+?)__f([^_]+?)__(.+)$/) || [];
+  const [, maybePrefijo = '', maybeSorteoId = '', maybeForma = '', maybeCartonId = ''] = normalized.match(/^(?:([^_]+?)__)?(.+?)__f([^_]+?)__(.+)$/) || [];
   const parsedFormaIdx = Number(maybeForma);
 
   if (!maybeSorteoId || !maybeCartonId || !Number.isFinite(parsedFormaIdx)) {
@@ -343,6 +343,8 @@ function extractEventoGanadorIdComponents(eventoGanadorId) {
   }
 
   return {
+    prefijo: maybePrefijo,
+    segundoLugar: maybePrefijo.toLowerCase() === 'segundo',
     sorteoId: maybeSorteoId,
     formaIdx: parsedFormaIdx,
     cartonId: maybeCartonId
@@ -794,11 +796,13 @@ async function acreditarPremioEventoHandler(req, res) {
     });
   }
 
+  const parsedEventoGanadorId = extractEventoGanadorIdComponents(normalizedEventoGanadorId);
+  const segundoLugarEfectivo = normalizedSegundoLugar || Boolean(parsedEventoGanadorId?.segundoLugar);
   const expectedEventoGanadorId = buildPremioDocId({
     sorteoId: normalizedSorteoId,
     formaIdx: normalizedFormaIdx,
     cartonId: normalizedCartonId,
-    prefijo: normalizedSegundoLugar ? 'segundo' : ''
+    prefijo: segundoLugarEfectivo ? 'segundo' : ''
   });
 
   if (normalizedEventoGanadorId !== expectedEventoGanadorId) {
@@ -984,7 +988,7 @@ async function acreditarPremioEventoHandler(req, res) {
           version: normalizeNumber(premioActual?.version) + 1,
           processedAt: timestamp,
           tipoRegistro: normalizedTipoRegistro,
-          segundoLugar: normalizedSegundoLugar,
+          segundoLugar: segundoLugarEfectivo,
           idBilletera: billeteraRef.id,
           idBilleteraInterna: billeteraRef.id,
           estado: 'REALIZADO',
@@ -1021,7 +1025,7 @@ async function acreditarPremioEventoHandler(req, res) {
           userId: normalizedUserId || cartonData.userId || null,
           creditos: normalizedMonto,
           cartonesGratis: normalizedCartonesGratis,
-          segundoLugar: normalizedSegundoLugar,
+          segundoLugar: segundoLugarEfectivo,
           tipoRegistro: normalizedTipoRegistro,
           estado: 'REALIZADO',
           referencia: normalizedReferencia,
@@ -1082,7 +1086,7 @@ async function acreditarPremioEventoHandler(req, res) {
           eventoGanadorId: normalizedEventoGanadorId,
           winnerKey: normalizedEventoGanadorId,
           tipoRegistro: normalizedTipoRegistro,
-          segundoLugar: normalizedSegundoLugar,
+          segundoLugar: segundoLugarEfectivo,
           idBilleteraInterna: billeteraRef.id,
           source: normalizedSource,
           requestId: normalizedRequestId,
@@ -1109,7 +1113,7 @@ async function acreditarPremioEventoHandler(req, res) {
           eventoGanadorId: normalizedEventoGanadorId,
           winnerKey: normalizedEventoGanadorId,
           tipoRegistro: normalizedTipoRegistro,
-          segundoLugar: normalizedSegundoLugar,
+          segundoLugar: segundoLugarEfectivo,
           idBilleteraInterna: billeteraRef.id,
           referencia: normalizedReferencia,
           origen: normalizedOrigen,
