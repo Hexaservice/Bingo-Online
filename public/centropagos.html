@@ -563,7 +563,7 @@
               <select id="filtro-premios-estado">
                 <option value="">Estado</option>
                 <option value="PENDIENTE">PENDIENTE</option>
-                <option value="APROBADO">APROBADO</option>
+                <option value="REALIZADO">REALIZADO</option>
                 <option value="ARCHIVADO">ARCHIVADO</option>
               </select>
             </th>
@@ -608,7 +608,7 @@
               <select id="filtro-pagos-estado">
                 <option value="">Estado</option>
                 <option value="PENDIENTE">PENDIENTE</option>
-                <option value="APROBADO">APROBADO</option>
+                <option value="REALIZADO">REALIZADO</option>
                 <option value="ARCHIVADO">ARCHIVADO</option>
               </select>
             </th>
@@ -1678,7 +1678,7 @@
           if(snap.exists){
             const data = snap.data() || {};
             const estadoActual = normalizarEstado(data.estado);
-            if(estadoActual === 'APROBADO'){ return; }
+            if(window.EstadosPagoPremio.estaFinalizado(estadoActual)){ return; }
           }
           if(payload && Object.prototype.hasOwnProperty.call(payload, 'estado')){
             payload.estado = validarEstadoGuardado(payload.estado, `CentroPagos:${ref.path}`);
@@ -2053,7 +2053,7 @@
 
     function obtenerEtiquetaEstado(valorEstado){
       const estado = normalizarEstado(valorEstado);
-      if(estado === 'APROBADO') return 'APROBADO';
+      if(estado === 'REALIZADO') return 'REALIZADO';
       if(estado === 'PENDIENTE') return 'PENDIENTE';
       if(estado === 'ARCHIVADO') return 'ARCHIVADO';
       return estado;
@@ -2180,7 +2180,7 @@
       }
       const filas = lista.map((item, indice)=>{
       const numero = indice + 1;
-      const estadoClase = item.estado === 'APROBADO' ? 'estado-aprobado' : (item.estado === 'PENDIENTE' ? 'estado-pendiente' : 'estado-archivado');
+      const estadoClase = item.estado === 'REALIZADO' ? 'estado-aprobado' : (item.estado === 'PENDIENTE' ? 'estado-pendiente' : 'estado-archivado');
       const rolNormalizado = normalizarTipoUsuario(item.tipo || item.estado || '');
       const estadoHtml = tipo === 'colaboradores'
         ? construirRolBadgeHtml(rolNormalizado)
@@ -2437,7 +2437,7 @@
           tipotrans: (enRegistro.tipotrans || 'pago').toString().toLowerCase(),
           origen: (enRegistro.origen || 'pagos_administracion').toString().toLowerCase(),
           Monto: monto,
-          estado: validarEstadoGuardado('APROBADO', 'TransaccionPagoAdministracion'),
+          estado: validarEstadoGuardado('REALIZADO', 'TransaccionPagoAdministracion'),
           IDbilletera: enRegistro.billetera,
           fechasolicitud: '',
           horasolicitud: '',
@@ -2487,7 +2487,7 @@
       for(const id of ids){
         const registro = premiosMapa.get(id);
         if(!registro){ console.warn('Premio no encontrado', id); continue; }
-        if(registro.estado === 'APROBADO'){ continue; }
+        if(window.EstadosPagoPremio.estaFinalizado(registro.estado)){ continue; }
         try {
           await acreditarPremioBackendLegacy(registro);
           if(registro.sorteoId){
@@ -2516,7 +2516,7 @@
       for(const id of ids){
         const registro = pagosAdminMapa.get(id);
         if(!registro){ console.warn('Pago no encontrado', id); continue; }
-        if(registro.estado === 'APROBADO'){ continue; }
+        if(window.EstadosPagoPremio.estaFinalizado(registro.estado)){ continue; }
         try {
           await db.runTransaction(async tx => {
             const ref = db.collection('PagosAdministracion').doc(id);
@@ -2524,9 +2524,9 @@
             if(!snap.exists) return;
             const data = snap.data();
             const estadoActual = normalizarEstado(data.estado);
-            if(estadoActual === 'APROBADO') return;
+            if(window.EstadosPagoPremio.estaFinalizado(estadoActual)) return;
             tx.update(ref, {
-              estado: validarEstadoGuardado('APROBADO', `PagosAdministracion:${id}`),
+              estado: validarEstadoGuardado('REALIZADO', `PagosAdministracion:${id}`),
               fechaGestion: fechaServidor(),
               horaGestion: horaServidor(),
               gestionadoPor: authInstance().currentUser?.email || '',
