@@ -526,13 +526,7 @@
     <select id="cp-sorteo-selector" aria-label="Seleccionar sorteo para generar solicitudes">
       <option value="">Selecciona un sorteo</option>
     </select>
-    <input id="cp-sorteo-id" type="text" placeholder="Sorteo ID (query param o selección)">
-    <button id="cp-generar-solicitudes" class="btn-pagos-pendientes" type="button">Generar premios/pagos del sorteo</button>
-    <label class="switch-label" for="cp-modo-legacy">Manual legacy</label>
-    <label class="switch" title="Activar flujo manual legacy">
-      <input type="checkbox" id="cp-modo-legacy">
-      <span class="slider"></span>
-    </label>
+    <button id="cp-generar-solicitudes" class="btn-pagos-pendientes" type="button">GENERAR PAGOS</button>
   </div>
   <section class="section" id="premios-section">
     <div class="section-header">
@@ -544,12 +538,9 @@
     </div>
     <div id="premios-content">
       <div class="acciones">
-        <button class="icon-btn oculto" id="premios-aprobar"><span class="icon check">&#10004;</span><span>Aprobar</span></button>
-        <button class="icon-btn oculto" id="premios-archivar"><span class="icon">&#128452;</span><span>Archivar</span></button>
+        <button class="icon-btn" id="premios-aprobar"><span class="icon check">&#10004;</span><span>Aprobar</span></button>
+        <button class="icon-btn" id="premios-archivar"><span class="icon">&#128452;</span><span>Archivar</span></button>
         <button class="icon-btn" id="premios-archivo"><span class="icon">&#128193;</span><span>Archivo</span></button>
-        <button class="icon-btn" id="acreditaciones-reencolar"><span class="icon">&#10227;</span><span>Reencolar TOPE</span></button>
-        <button class="icon-btn" id="premios-reconciliar"><span class="icon">&#128269;</span><span>Reconciliar</span></button>
-        <span class="switch-label" id="premios-auditoria-label">Vista de auditoría: Procesados / Con error / Reintentos</span>
       </div>
       <table id="tabla-premios">
         <colgroup>
@@ -571,39 +562,16 @@
             <th>
               <select id="filtro-premios-estado">
                 <option value="">Estado</option>
-                <option value="PENDIENTE">REINTENTOS</option>
-                <option value="REALIZADO">PROCESADOS</option>
-                <option value="ARCHIVADO">ARCHIVADOS</option>
+                <option value="PENDIENTE">PENDIENTE</option>
+                <option value="APROBADO">APROBADO</option>
+                <option value="ARCHIVADO">ARCHIVADO</option>
               </select>
             </th>
-            <th><span id="premios-marcar" class="check-header oculto">✔</span></th>
+            <th><span id="premios-marcar" class="check-header">✔</span></th>
           </tr>
         </thead>
         <tbody></tbody>
       </table>
-
-      <div id="acreditaciones-tope-panel" style="margin-top:8px;">
-        <div class="acciones">
-          <span class="switch-label" id="acreditaciones-tope-label">Acreditaciones técnicas en TOPE_REINTENTOS</span>
-        </div>
-        <table id="tabla-acreditaciones-tope">
-          <colgroup>
-            <col style="width:6%">
-            <col style="width:20%">
-            <col style="width:16%">
-            <col style="width:10%">
-            <col style="width:18%">
-            <col style="width:24%">
-            <col style="width:6%">
-          </colgroup>
-          <thead>
-            <tr class="filtros">
-              <th>N°</th><th>Evento</th><th>Sorteo</th><th>Intentos</th><th>Próx. reintento</th><th>Error</th><th><span id="acreditaciones-tope-marcar" class="check-header">✔</span></th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
     </div>
   </section>
 
@@ -640,7 +608,7 @@
               <select id="filtro-pagos-estado">
                 <option value="">Estado</option>
                 <option value="PENDIENTE">PENDIENTE</option>
-                <option value="REALIZADO">REALIZADO</option>
+                <option value="APROBADO">APROBADO</option>
                 <option value="ARCHIVADO">ARCHIVADO</option>
               </select>
             </th>
@@ -725,8 +693,7 @@
 
     let mostrarPremiosArchivo = false;
     let mostrarPagosArchivo = false;
-    let MODO_PREMIOS_INSTANTANEOS = true;
-
+    
     const colaboradoresBase = [];
     const premiosActivos = [];
     const premiosArchivados = [];
@@ -740,8 +707,6 @@
     const pagosAdminArchivoMapa = new Map();
     const pagosColaboradoresMapa = new Map();
     const pagosColaboradoresEdicion = new Map();
-    const acreditacionesTopeActivas = [];
-    const acreditacionesTopeMapa = new Map();
     const usuariosInfoCache = new Map();
 
     let unsubscribePremios = null;
@@ -750,7 +715,6 @@
     let unsubscribePagosArchivo = null;
     let unsubscribeColaboradores = null;
     let unsubscribeUsuariosCentro = null;
-    let unsubscribeAcreditacionesTope = null;
     let generacionSolicitudesEnCurso = false;
 
     const formatNumber = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2, minimumFractionDigits: 0 });
@@ -786,11 +750,9 @@
     }
 
     function cpObtenerSorteoIdObjetivo(){
-      const input = document.getElementById('cp-sorteo-id');
       const selector = document.getElementById('cp-sorteo-selector');
-      const idManual = (input?.value || '').trim();
       const idSelector = (selector?.value || '').trim();
-      return idManual || idSelector || sorteoIdDesdeQuery;
+      return idSelector || sorteoIdDesdeQuery;
     }
 
     async function cpResolverDataSorteo(sorteoId){
@@ -815,9 +777,9 @@
         snap.forEach(doc=>{
           const data = doc.data() || {};
           const nombre = (data.nombre || data.nombreSorteo || '').toString().trim();
-          const fecha = (data.fecha || data.fechasorteo || '').toString().trim();
-          const etiqueta = [doc.id, nombre, fecha].filter(Boolean).join(' | ');
-          lista.push({ id: doc.id, etiqueta: etiqueta || doc.id });
+          const fechaInfo = normalizarFecha(data.fecha || data.fechasorteo || data.fechaSorteo || data.createdAt);
+          const etiqueta = `${nombre || 'Sorteo'} - ${fechaInfo.mostrar !== '-' ? fechaInfo.mostrar : 'Sin fecha'}`;
+          lista.push({ id: doc.id, etiqueta });
         });
         lista.sort((a,b)=>a.etiqueta.localeCompare(b.etiqueta, 'es', { sensitivity: 'base' }));
         selector.innerHTML = '<option value="">Selecciona un sorteo</option>' +
@@ -834,11 +796,11 @@
       if(generacionSolicitudesEnCurso) return;
       const sorteoId = cpObtenerSorteoIdObjetivo();
       if(!sorteoId){
-        alert('Debes indicar un sorteoId para generar solicitudes.');
+        alert('Debes seleccionar un sorteo para generar pagos.');
         return;
       }
       const btn = document.getElementById('cp-generar-solicitudes');
-      const textoOriginal = btn?.textContent || 'Generar premios/pagos del sorteo';
+      const textoOriginal = btn?.textContent || 'GENERAR PAGOS';
       try {
         generacionSolicitudesEnCurso = true;
         if(btn){
@@ -1685,7 +1647,7 @@
           if(snap.exists){
             const data = snap.data() || {};
             const estadoActual = normalizarEstado(data.estado);
-            if(estadoActual === 'REALIZADO'){ return; }
+            if(estadoActual === 'APROBADO'){ return; }
           }
           if(payload && Object.prototype.hasOwnProperty.call(payload, 'estado')){
             payload.estado = validarEstadoGuardado(payload.estado, `CentroPagos:${ref.path}`);
@@ -2060,8 +2022,8 @@
 
     function obtenerEtiquetaEstado(valorEstado){
       const estado = normalizarEstado(valorEstado);
-      if(estado === 'REALIZADO') return 'PROCESADO';
-      if(estado === 'PENDIENTE') return 'REINTENTO';
+      if(estado === 'APROBADO') return 'APROBADO';
+      if(estado === 'PENDIENTE') return 'PENDIENTE';
       if(estado === 'ARCHIVADO') return 'ARCHIVADO';
       return estado;
     }
@@ -2176,132 +2138,6 @@
       capa.classList.remove('activo');
     }
 
-
-    function prepararAcreditacionTope(id, data = {}){
-      const estado = normalizarEstado(data.estado);
-      if(estado !== 'TOPE_REINTENTOS') return null;
-      const nextRetryDate = data.nextRetryAt?.toDate ? data.nextRetryAt.toDate() : null;
-      const eventoGanadorId = (data.eventoGanadorId || id || '').toString();
-      return {
-        id,
-        eventoGanadorId,
-        sorteoId: (data.sorteoId || '').toString(),
-        cartonId: (data.cartonId || '').toString(),
-        intentos: Math.max(0, Number(data.intentos) || 0),
-        estado,
-        nextRetryAt: nextRetryDate,
-        nextRetryAtTexto: nextRetryDate instanceof Date ? nextRetryDate.toLocaleString('es-ES') : '-',
-        error: (data.error || '').toString().slice(0, 160),
-        payload: (data.payload && typeof data.payload === 'object') ? data.payload : null
-      };
-    }
-
-    function renderAcreditacionesTope(){
-      const tbody = document.querySelector('#tabla-acreditaciones-tope tbody');
-      if(!tbody) return;
-      const lista = [...acreditacionesTopeActivas].sort((a,b)=>(b.intentos-a.intentos) || ((b.nextRetryAt?.getTime?.()||0)-(a.nextRetryAt?.getTime?.()||0)));
-      if(!lista.length){
-        tbody.innerHTML = '<tr><td colspan="7"><div class="mensaje-tabla">No hay registros en TOPE_REINTENTOS.</div></td></tr>';
-        return;
-      }
-      tbody.innerHTML = lista.map((item, idx)=>`<tr data-id="${item.id}"><td>${idx+1}</td><td>${escapeHtml(item.eventoGanadorId)}</td><td>${escapeHtml(item.sorteoId || '-')}</td><td>${item.intentos}</td><td>${escapeHtml(item.nextRetryAtTexto)}</td><td>${escapeHtml(item.error || '-')}</td><td><input type="checkbox" data-id="${item.id}"></td></tr>`).join('');
-    }
-
-    function obtenerSeleccionAcreditacionesTope(){
-      const checks = Array.from(document.querySelectorAll('#tabla-acreditaciones-tope tbody input[type="checkbox"]:checked'));
-      return checks.map(chk=>chk.dataset.id).filter(Boolean);
-    }
-
-    async function registrarAuditoriaReencolado({ ids = [], motivo = '' } = {}){
-      if(!ids.length) return;
-      const db = dbRef();
-      const user = authInstance().currentUser;
-      const email = (user?.email || 'desconocido').toString();
-      const rol = (window.currentRole || '').toString();
-      const razon = (motivo || '').toString().trim() || 'Sin motivo especificado';
-      await Promise.all(ids.map(async (id)=>{
-        const ref = db.collection('AcreditacionesPendientesAuditoria').doc();
-        await ref.set({
-          accion: 'REENCOLAR_TOPE_REINTENTOS',
-          registroId: id,
-          motivo: razon.slice(0, 400),
-          ejecutadoPor: email,
-          rolEjecutor: rol,
-          ejecutadoAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      }));
-    }
-
-    async function reencolarAcreditacionesTope(ids = []){
-      if(!ids.length){ alert('No hay registros seleccionados para reencolar.'); return; }
-      const motivo = await window.prompt('Indica el motivo del relanzamiento manual:');
-      if(motivo === null) return;
-      const motivoFinal = String(motivo || '').trim();
-      if(!motivoFinal){ alert('Debes ingresar un motivo para continuar.'); return; }
-      const db = dbRef();
-      const ahora = firebase.firestore.Timestamp.fromDate(new Date());
-      const user = authInstance().currentUser;
-      const batch = db.batch();
-      ids.forEach((id)=>{
-        const ref = db.collection('AcreditacionesPendientes').doc(id);
-        batch.set(ref, {
-          estado: 'PENDIENTE',
-          intentos: 0,
-          nextRetryAt: ahora,
-          relanzadoManual: {
-            por: user?.email || '',
-            rol: window.currentRole || '',
-            motivo: motivoFinal.slice(0, 400),
-            fecha: firebase.firestore.FieldValue.serverTimestamp()
-          },
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-      });
-      await batch.commit();
-      await registrarAuditoriaReencolado({ ids, motivo: motivoFinal });
-      alert(`Se reencolaron ${ids.length} registro(s) en TOPE_REINTENTOS.`);
-    }
-
-    async function ejecutarReconciliacionPremios(){
-      const db = dbRef();
-      const [premiosSnap, pendientesSnap] = await Promise.all([
-        db.collection('PremiosSorteos').get(),
-        db.collection('AcreditacionesPendientes').get()
-      ]);
-      const pendientesMap = new Map();
-      pendientesSnap.forEach(doc=>{
-        const data = doc.data() || {};
-        const evento = (data.eventoGanadorId || doc.id || '').toString();
-        if(evento){ pendientesMap.set(evento, { id: doc.id, estado: normalizarEstado(data.estado) }); }
-      });
-      const huerfanos = [];
-      premiosSnap.forEach(doc=>{
-        const data = doc.data() || {};
-        const estado = normalizarEstado(data.estado);
-        if(estado === 'REALIZADO' || estado === 'ARCHIVADO') return;
-        const eventoGanadorId = (data.eventoGanadorId || doc.id || '').toString();
-        const pendiente = pendientesMap.get(eventoGanadorId);
-        if(!pendiente || pendiente.estado === 'REALIZADO'){
-          huerfanos.push({ id: doc.id, eventoGanadorId, sorteoId: (data.sorteoId || '').toString(), estado });
-        }
-      });
-      await db.collection('AcreditacionesReconciliacion').add({
-        tipo: 'PREMIOS_VS_ACREDITACIONES',
-        totalPremios: premiosSnap.size,
-        totalPendientes: pendientesSnap.size,
-        totalHuerfanos: huerfanos.length,
-        huerfanos: huerfanos.slice(0, 200),
-        ejecutadoPor: authInstance().currentUser?.email || '',
-        ejecutadoAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      if(!huerfanos.length){
-        mostrarModalInfo('Reconciliación completada', 'No se detectaron premios huérfanos no realizados.');
-        return;
-      }
-      const preview = huerfanos.slice(0, 8).map(item=>`• ${item.eventoGanadorId || item.id} | sorteo ${item.sorteoId || '-'} | ${item.estado}`).join('\n');
-      mostrarModalInfo('Premios huérfanos detectados', `Se detectaron ${huerfanos.length} premio(s) huérfano(s).\n${preview}`);
-    }
-
     function renderTabla(lista, tbodyId, opciones = {}){
       const tbody = document.querySelector(`#${tbodyId} tbody`);
       if(!tbody) return;
@@ -2313,7 +2149,7 @@
       }
       const filas = lista.map((item, indice)=>{
       const numero = indice + 1;
-      const estadoClase = item.estado === 'REALIZADO' ? 'estado-aprobado' : (item.estado === 'PENDIENTE' ? 'estado-pendiente' : 'estado-archivado');
+      const estadoClase = item.estado === 'APROBADO' ? 'estado-aprobado' : (item.estado === 'PENDIENTE' ? 'estado-pendiente' : 'estado-archivado');
       const rolNormalizado = normalizarTipoUsuario(item.tipo || item.estado || '');
       const estadoHtml = tipo === 'colaboradores'
         ? construirRolBadgeHtml(rolNormalizado)
@@ -2330,7 +2166,7 @@
             <td class="cart">${formatNumber.format(item.cartones)}</td>
             <td>${escapeHtml(item.fechaMostrar)}</td>
             <td class="estado">${estadoHtml}</td>
-            <td>${MODO_PREMIOS_INSTANTANEOS ? '' : `<input type="checkbox" data-id="${item.id}" ${disabled}>`}</td>
+            <td><input type="checkbox" data-id="${item.id}" ${disabled}></td>
           </tr>`;
         }
         if(tipo === 'colaboradores'){
@@ -2407,8 +2243,7 @@
     function renderPremios(){
       const lista = mostrarPremiosArchivo ? aplicarFiltrosPremios(premiosArchivados) : aplicarFiltrosPremios(premiosActivos);
       renderTabla(lista, 'tabla-premios', { mostrarArchivo: mostrarPremiosArchivo, tipo: 'premios' });
-      const cargaTecnica = premiosActivos.reduce((acum, item)=>acum + obtenerConteoTecnicoPremio(item), 0);
-      actualizarBadge('premios', cargaTecnica);
+      actualizarBadge('premios', premiosActivos.filter(item=>item.estado === 'PENDIENTE').length);
       actualizarEstadoBotones();
       reconciliarIndicadorPagos().catch(err=>console.warn('No se pudo actualizar el indicador tras renderizar premios', err));
     }
@@ -2450,7 +2285,6 @@
     function seleccionarTodos(idTabla){
       const tabla = document.getElementById(idTabla);
       if(!tabla) return;
-      if(MODO_PREMIOS_INSTANTANEOS && idTabla === 'tabla-premios') return;
       const checks = tabla.querySelectorAll('tbody input[type="checkbox"]:not(:disabled)');
       if(!checks.length) return;
       const marcarTodo = Array.from(checks).some(chk=>!chk.checked);
@@ -2570,7 +2404,7 @@
           tipotrans: (enRegistro.tipotrans || 'pago').toString().toLowerCase(),
           origen: (enRegistro.origen || 'pagos_administracion').toString().toLowerCase(),
           Monto: monto,
-          estado: validarEstadoGuardado('REALIZADO', 'TransaccionPagoAdministracion'),
+          estado: validarEstadoGuardado('APROBADO', 'TransaccionPagoAdministracion'),
           IDbilletera: enRegistro.billetera,
           fechasolicitud: '',
           horasolicitud: '',
@@ -2620,7 +2454,7 @@
       for(const id of ids){
         const registro = premiosMapa.get(id);
         if(!registro){ console.warn('Premio no encontrado', id); continue; }
-        if(registro.estado === 'REALIZADO'){ continue; }
+        if(registro.estado === 'APROBADO'){ continue; }
         try {
           await acreditarPremioBackendLegacy(registro);
           if(registro.sorteoId){
@@ -2649,7 +2483,7 @@
       for(const id of ids){
         const registro = pagosAdminMapa.get(id);
         if(!registro){ console.warn('Pago no encontrado', id); continue; }
-        if(registro.estado === 'REALIZADO'){ continue; }
+        if(registro.estado === 'APROBADO'){ continue; }
         try {
           await db.runTransaction(async tx => {
             const ref = db.collection('PagosAdministracion').doc(id);
@@ -2657,9 +2491,9 @@
             if(!snap.exists) return;
             const data = snap.data();
             const estadoActual = normalizarEstado(data.estado);
-            if(estadoActual === 'REALIZADO') return;
+            if(estadoActual === 'APROBADO') return;
             tx.update(ref, {
-              estado: validarEstadoGuardado('REALIZADO', `PagosAdministracion:${id}`),
+              estado: validarEstadoGuardado('APROBADO', `PagosAdministracion:${id}`),
               fechaGestion: fechaServidor(),
               horaGestion: horaServidor(),
               gestionadoPor: authInstance().currentUser?.email || '',
@@ -2814,44 +2648,15 @@
         renderColaboradores();
       });
     }
-
-
-    function aplicarModoPremiosLegacy(legacyActivo){
-      MODO_PREMIOS_INSTANTANEOS = !legacyActivo;
-      const premiosMarcar = document.getElementById('premios-marcar');
-      const premiosAprobar = document.getElementById('premios-aprobar');
-      const premiosArchivar = document.getElementById('premios-archivar');
-      if(premiosMarcar){ premiosMarcar.classList.toggle('oculto', MODO_PREMIOS_INSTANTANEOS); }
-      if(premiosAprobar){ premiosAprobar.classList.toggle('oculto', MODO_PREMIOS_INSTANTANEOS); }
-      if(premiosArchivar){ premiosArchivar.classList.toggle('oculto', MODO_PREMIOS_INSTANTANEOS); }
-      renderPremios();
-      actualizarEstadoBotones();
-    }
-
     function configurarBotones(){
-      const inputSorteo = document.getElementById('cp-sorteo-id');
       const selectorSorteo = document.getElementById('cp-sorteo-selector');
       const botonGenerarSolicitudes = document.getElementById('cp-generar-solicitudes');
-      if(inputSorteo && sorteoIdDesdeQuery){
-        inputSorteo.value = sorteoIdDesdeQuery;
-      }
-      if(selectorSorteo){
-        selectorSorteo.addEventListener('change', ()=>{
-          if(inputSorteo && selectorSorteo.value){ inputSorteo.value = selectorSorteo.value; }
-        });
-      }
       if(botonGenerarSolicitudes){
         botonGenerarSolicitudes.addEventListener('click', async()=>{
           await cpGenerarSolicitudesManual();
         });
       }
 
-      const toggleModoLegacy = document.getElementById('cp-modo-legacy');
-      if(toggleModoLegacy){
-        toggleModoLegacy.addEventListener('change', ()=>{
-          aplicarModoPremiosLegacy(Boolean(toggleModoLegacy.checked));
-        });
-      }
 
       document.getElementById('premios-marcar').addEventListener('click', ()=>seleccionarTodos('tabla-premios'));
       document.getElementById('pagos-marcar').addEventListener('click', ()=>seleccionarTodos('tabla-pagos'));
@@ -2872,7 +2677,6 @@
           await archivarRegistros(seleccion, 'premios');
         });
       }
-      aplicarModoPremiosLegacy(Boolean(toggleModoLegacy?.checked));
       document.getElementById('pagos-aprobar').addEventListener('click', async()=>{
         const seleccion = obtenerSeleccion('tabla-pagos');
         if(!seleccion.length){ alert('Selecciona al menos un registro.'); return; }
@@ -2892,25 +2696,6 @@
         renderPagos();
       });
 
-      const reencolarBtn = document.getElementById('acreditaciones-reencolar');
-      if(reencolarBtn){
-        reencolarBtn.addEventListener('click', async()=>{
-          const seleccion = obtenerSeleccionAcreditacionesTope();
-          const ids = seleccion.length ? seleccion : acreditacionesTopeActivas.map(item=>item.id);
-          if(!ids.length){ alert('No hay registros en TOPE_REINTENTOS para reencolar.'); return; }
-          await reencolarAcreditacionesTope(ids);
-        });
-      }
-      const reconciliarBtn = document.getElementById('premios-reconciliar');
-      if(reconciliarBtn){
-        reconciliarBtn.addEventListener('click', async()=>{
-          await ejecutarReconciliacionPremios();
-        });
-      }
-      const marcarTope = document.getElementById('acreditaciones-tope-marcar');
-      if(marcarTope){
-        marcarTope.addEventListener('click', ()=>seleccionarTodos('tabla-acreditaciones-tope'));
-      }
 
       document.getElementById('colaboradores-marcar').addEventListener('click', ()=>seleccionarTodos('tabla-colaboradores'));
       document.getElementById('colaboradores-aprobar').addEventListener('click', async()=>{
@@ -2947,8 +2732,6 @@
       const modalCapa = document.getElementById('modal-informacion');
       if(modalCapa){ modalCapa.addEventListener('click', e=>{ if(e.target === modalCapa) ocultarModalInfo(); }); }
 
-      const premiosMarcar = document.getElementById('premios-marcar');
-      if(premiosMarcar){ premiosMarcar.classList.toggle('oculto', MODO_PREMIOS_INSTANTANEOS); }
 
       const togglePremios = document.getElementById('toggle-premios');
       const contenidoPremios = document.getElementById('premios-content');
@@ -3132,23 +2915,6 @@
         if(mostrarPagosArchivo) renderPagos();
       });
 
-      unsubscribeAcreditacionesTope = db.collection('AcreditacionesPendientes')
-        .where('estado','==','TOPE_REINTENTOS')
-        .onSnapshot(snapshot => {
-          acreditacionesTopeActivas.length = 0;
-          acreditacionesTopeMapa.clear();
-          snapshot.forEach(doc=>{
-            const registro = prepararAcreditacionTope(doc.id, doc.data() || {});
-            if(!registro) return;
-            acreditacionesTopeActivas.push(registro);
-            acreditacionesTopeMapa.set(doc.id, registro);
-          });
-          const label = document.getElementById('acreditaciones-tope-label');
-          if(label){
-            label.textContent = `Acreditaciones técnicas en TOPE_REINTENTOS: ${acreditacionesTopeActivas.length}`;
-          }
-          renderAcreditacionesTope();
-        }, err => console.error('Error escuchando AcreditacionesPendientes en TOPE_REINTENTOS', err));
 
       unsubscribeUsuariosCentro = db.collection('users').onSnapshot(async snapshot => {
         colaboradoresBase.length = 0;
@@ -3219,8 +2985,7 @@
         unsubscribePremiosArchivo,
         unsubscribePagos,
         unsubscribePagosArchivo,
-        unsubscribeUsuariosCentro,
-        unsubscribeAcreditacionesTope
+        unsubscribeUsuariosCentro
       ].forEach(unsub=>{
         if(typeof unsub === 'function') unsub();
       });
