@@ -196,4 +196,42 @@ describe('endpoint /acreditarPremioEvento por modos', () => {
       })
     );
   });
+
+  test('acepta eventoGanadorId con prefijo segundo sin requerir segundoLugar explícito', async () => {
+    const { acreditarPremioEventoHandler, buildPremioDocId } = require('../uploadServer.js');
+
+    const { db, sets } = buildDbStub({
+      sorteoData: { estado: 'Jugando', premiosCorteCerrado: false, nombre: 'Sorteo demo' },
+      cartonData: { sorteoId: 'sorteo-1', userId: 'uid-1', email: 'ganador@example.com', alias: 'Alias', IDbilletera: 'ganador@example.com' },
+      billeteraData: { creditos: 25, CartonesGratis: 0 }
+    });
+    admin.firestore.mockReturnValue(db);
+
+    const eventoGanadorId = buildPremioDocId({ sorteoId: 'sorteo-1', formaIdx: 4, cartonId: 'carton-9', prefijo: 'segundo' });
+    const req = {
+      body: {
+        sorteoId: 'sorteo-1',
+        formaIdx: 4,
+        cartonId: 'carton-9',
+        eventoGanadorId,
+        monto: 50,
+        email: 'ganador@example.com',
+        source: 'centropagos/manual',
+        manualApproval: true,
+        requestId: 'req-segundo-1'
+      },
+      headers: {},
+      user: { email: 'admin@example.com', role: 'Administrador' }
+    };
+    const res = makeRes();
+
+    await acreditarPremioEventoHandler(req, res);
+
+    expect(res.statusCode).toBe(200);
+    const premioWrite = sets.find(
+      (entry) => entry.ref.collectionName === 'PremiosSorteos'
+    );
+    expect(premioWrite).toBeTruthy();
+    expect(premioWrite.data.segundoLugar).toBe(true);
+  });
 });
