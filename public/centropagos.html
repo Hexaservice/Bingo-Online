@@ -708,6 +708,7 @@
     const pagosColaboradoresMapa = new Map();
     const pagosColaboradoresEdicion = new Map();
     const usuariosInfoCache = new Map();
+    const sorteosNombreCache = new Map();
 
     let unsubscribePremios = null;
     let unsubscribePremiosArchivo = null;
@@ -761,10 +762,31 @@
       await ensureFirebaseListo();
       const db = dbRef();
       const docSorteo = await db.collection('sorteos').doc(id).get();
-      if(docSorteo.exists){ return docSorteo.data() || {}; }
+      if(docSorteo.exists){
+        const data = docSorteo.data() || {};
+        const nombre = (data.nombre || data.nombreSorteo || '').toString().trim();
+        if(nombre){ sorteosNombreCache.set(id, nombre); }
+        return data;
+      }
       const docCantar = await db.collection('cantarsorteos').doc(id).get();
-      if(docCantar.exists){ return docCantar.data() || {}; }
+      if(docCantar.exists){
+        const data = docCantar.data() || {};
+        const nombre = (data.nombre || data.nombreSorteo || '').toString().trim();
+        if(nombre){ sorteosNombreCache.set(id, nombre); }
+        return data;
+      }
       return null;
+    }
+
+    function cpResolverNombreSorteo({ sorteoId = '', sorteoNombre = '' } = {}){
+      const nombreDirecto = (sorteoNombre || '').toString().trim();
+      if(nombreDirecto){
+        if(sorteoId){ sorteosNombreCache.set(sorteoId, nombreDirecto); }
+        return nombreDirecto;
+      }
+      const id = (sorteoId || '').toString().trim();
+      if(!id) return '';
+      return (sorteosNombreCache.get(id) || '').toString().trim();
     }
 
     async function cpCargarSelectorSorteos(){
@@ -779,6 +801,7 @@
           const nombre = (data.nombre || data.nombreSorteo || '').toString().trim();
           const fechaInfo = normalizarFecha(data.fecha || data.fechasorteo || data.fechaSorteo || data.createdAt);
           const etiqueta = `${nombre || 'Sorteo'} - ${fechaInfo.mostrar !== '-' ? fechaInfo.mostrar : 'Sin fecha'}`;
+          if(nombre){ sorteosNombreCache.set(doc.id, nombre); }
           lista.push({ id: doc.id, etiqueta });
         });
         lista.sort((a,b)=>a.etiqueta.localeCompare(b.etiqueta, 'es', { sensitivity: 'base' }));
@@ -808,22 +831,24 @@
           btn.textContent = 'Generando...';
         }
         const sorteoData = await cpResolverDataSorteo(sorteoId);
+        const nombreSorteo = cpResolverNombreSorteo({ sorteoId, sorteoNombre: sorteoData?.nombre || sorteoData?.nombreSorteo || '' }) || sorteoId;
         if(!sorteoData){
-          alert(`No existe el sorteo ${sorteoId} en sorteos/cantarsorteos.`);
+          alert(`No existe el sorteo ${nombreSorteo} en sorteos/cantarsorteos.`);
           return;
         }
         const ctx = cpCrearContextoSorteo(sorteoId, sorteoData);
         const resultado = await cpGenerarSolicitudesParaSorteo(ctx);
         await cpRecargarTablasTrasGeneracion(sorteoId);
         alert(
-          `Solicitudes generadas para el sorteo ${sorteoId}.\n`+
+          `Solicitudes generadas para el sorteo ${nombreSorteo}.\n`+
           `Premios: ${resultado.ganadores}.\n`+
           `Administración: ${resultado.administrativos}.\n`+
           `Colaboradores: ${resultado.colaboradores}.`
         );
       } catch (err) {
         if(err && err.code === 'SOLICITUDES_YA_GENERADAS'){
-          alert(`El sorteo ${sorteoId} ya tiene solicitudes de pagos generadas.`);
+          const nombreSorteo = cpResolverNombreSorteo({ sorteoId }) || sorteoId;
+          alert(`El sorteo ${nombreSorteo} ya tiene solicitudes de pagos generadas.`);
           return;
         }
         console.error('Error generando solicitudes manuales del sorteo', sorteoId, err);
@@ -1631,7 +1656,7 @@
     }
 
     function cpExtraerComponentesEventoGanador(eventoGanadorId){
-      const limpio = cpSanitizarId(eventoGanadorId || '');
+      const limpio = (eventoGanadorId || '').toString().trim();
       if(!limpio) return null;
       const match = limpio.match(/^(?:[^_]+__)?(.+?)__f([^_]+?)__(.+)$/);
       if(!match) return null;
@@ -1671,7 +1696,7 @@
           const email = cpNormalizarEmail(ganador.gmail);
           const alias = ganador.alias || '';
           const docId = cpConstruirIdGanador(ctx, ganador);
-          const eventoGanadorId = cpSanitizarId(docId);
+          const eventoGanadorId = docId;
           const payload = {
           sorteoId: ctx.sorteoId,
           sorteoNombre,
@@ -1985,7 +2010,7 @@
       const sorteoNombre = (data.sorteoNombre || '').toString();
       return {
         id,
-        gmail: gmailRender,
+        gmail,
         nombre,
         creditos,
         fechaMostrar: fechaInfo.mostrar,
@@ -2353,7 +2378,7 @@
 
     // Flujo legacy de acreditación manual de premios (deshabilitado en modo instantáneo).
     async function acreditarPremioBackendLegacy(enRegistro){
-      const eventoGanadorId = cpSanitizarId(enRegistro.eventoGanadorId || enRegistro.winnerKey || enRegistro.id || '');
+      const eventoGanadorId = (enRegistro.eventoGanadorId || enRegistro.winnerKey || enRegistro.id || '').toString().trim();
       if(!eventoGanadorId){ throw new Error('Falta eventoGanadorId para acreditar premio.'); }
       const componentes = cpExtraerComponentesEventoGanador(eventoGanadorId);
       if(!componentes){ throw new Error('No se pudieron extraer los componentes de eventoGanadorId.'); }
@@ -2794,7 +2819,7 @@
           const registro = obtenerRegistroPorTipo('premios', id);
           if(!registro) return;
           if(e.target.closest('td.creditos')){
-            const sorteo = registro.sorteoNombre || 'Sin sorteo asociado.';
+            const sorteo = cpResolverNombreSorteo(registro) || registro.sorteoId || 'Sin sorteo asociado.';
             mostrarModalInfo('Sorteo asignado', sorteo || 'Sin sorteo asociado.');
             return;
           }
@@ -2825,7 +2850,7 @@
           const registro = obtenerRegistroPorTipo('pagos', id);
           if(!registro) return;
           if(e.target.closest('td.creditos')){
-            const sorteo = registro.sorteoNombre || 'Sin sorteo asociado.';
+            const sorteo = cpResolverNombreSorteo(registro) || registro.sorteoId || 'Sin sorteo asociado.';
             mostrarModalInfo('Sorteo asignado', sorteo || 'Sin sorteo asociado.');
             return;
           }
