@@ -217,6 +217,27 @@ service cloud.firestore {
         );
     }
 
+    // Colecciones técnicas de operación (CentroPagos/CantarSorteos y procesos internos)
+    match /AcreditacionesPendientes/{docId} {
+      allow read, write: if isSystemRequest() || isPrivilegedOperator();
+    }
+
+    match /AcreditacionesPendientesAuditoria/{docId} {
+      allow read, write: if isSystemRequest() || isPrivilegedOperator();
+    }
+
+    match /AcreditacionAuditoriaTecnica/{docId} {
+      allow read, write: if isSystemRequest();
+    }
+
+    match /AcreditacionReconciliacionPendiente/{docId} {
+      allow read, write: if isSystemRequest();
+    }
+
+    match /GanadoresSorteosTiempoReal/{docId} {
+      allow read, write: if isSystemRequest() || isPrivilegedOperator();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
