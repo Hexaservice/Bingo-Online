@@ -571,17 +571,20 @@
     .creditos-modal__nota{margin:10px 0 18px;font-size:0.72rem;color:#000;}
     .creditos-modal__cerrar{font-family:'Bangers',cursive;background:linear-gradient(#0a8800,#11a000);color:#fff;border:2px solid #ffd700;border-radius:6px;padding:8px 22px;cursor:pointer;text-transform:uppercase;letter-spacing:1px;box-shadow:0 4px 10px rgba(0,0,0,0.2);}
     .creditos-modal__cerrar:hover{filter:brightness(1.1);}
-    #jugando-detalle-modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;padding:15px;z-index:4000;}
+    #jugando-detalle-modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;padding:10px;z-index:4000;}
     #jugando-detalle-modal.visible{display:flex;}
-    .jugando-detalle-modal__box{background:#fff;padding:20px;border-radius:12px;max-width:440px;width:100%;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,0.2);font-family:'Poppins',sans-serif;display:flex;flex-direction:column;gap:10px;}
-    .jugando-detalle-modal__titulo{margin:0;font-size:1.2rem;color:#4B0082;font-weight:bold;}
-    .jugando-detalle-modal__resumen{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
-    .jugando-detalle-modal__item{background:#f3f6ff;border-radius:10px;padding:10px 8px;display:flex;flex-direction:column;gap:4px;}
-    .jugando-detalle-modal__label{font-size:0.8rem;color:#444;font-weight:600;}
-    .jugando-detalle-modal__valor{font-size:1.3rem;font-weight:700;color:#0b3d91;}
-    .jugando-detalle-modal__tabla-wrap{max-height:260px;overflow-y:auto;border:1px solid #d7deef;border-radius:10px;}
+    .jugando-detalle-modal__box{position:relative;background:#fff;padding:16px 12px 12px;border-radius:12px;max-width:440px;width:calc(100vw - 6px);text-align:center;box-shadow:0 10px 25px rgba(0,0,0,0.2);font-family:'Poppins',sans-serif;display:flex;flex-direction:column;gap:10px;max-height:min(88vh,620px);}
+    .jugando-detalle-modal__cerrar{position:absolute;top:8px;right:10px;border:none;background:transparent;color:#000;font-size:1.2rem;font-weight:700;cursor:pointer;line-height:1;padding:2px 6px;}
+    .jugando-detalle-modal__titulo{margin:6px 28px 0 0;font-size:1.2rem;color:#4B0082;font-weight:bold;}
+    .jugando-detalle-modal__resumen{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:14px;font-size:0.88rem;color:#333;text-align:left;}
+    .jugando-detalle-modal__label{font-weight:700;color:#444;}
+    .jugando-detalle-modal__valor{font-size:1rem;font-weight:700;color:#0b3d91;}
+    .jugando-detalle-modal__tabla-wrap{max-height:clamp(220px,46vh,390px);overflow-y:auto;border:1px solid #d7deef;border-radius:10px;}
     .jugando-detalle-modal__tabla{width:100%;border-collapse:collapse;font-size:0.8rem;text-align:left;}
     .jugando-detalle-modal__tabla thead th{position:sticky;top:0;background:#0b1b4d;color:#f5f7ff;padding:7px 8px;z-index:1;}
+    .jugando-detalle-modal__tabla th:nth-child(2){font-size:0.72rem;white-space:nowrap;width:72px;}
+    .jugando-detalle-modal__tabla td:nth-child(2){width:72px;}
+    .jugando-detalle-modal__tabla th:nth-child(3){width:auto;}
     .jugando-detalle-modal__tabla tbody td{padding:6px 8px;border-top:1px solid #e3e8f5;}
     .jugando-detalle-modal__tabla tbody tr:nth-child(odd){background:#f9fbff;}
     .jugando-detalle-modal__tabla tbody tr:nth-child(even){background:#eef3ff;}
@@ -592,8 +595,11 @@
     .jugando-detalle-col--tipo-gratis{color:#6a1b9a;}
     .jugando-detalle-col--tipo-pagado{color:#128a36;}
     .jugando-detalle-col--vacio{text-align:center;color:#5a647b;font-style:italic;}
-    .jugando-detalle-modal__cerrar{align-self:center;font-family:'Bangers',cursive;background:linear-gradient(#0a8800,#11a000);color:#fff;border:2px solid #ffd700;border-radius:6px;padding:8px 22px;cursor:pointer;text-transform:uppercase;letter-spacing:1px;box-shadow:0 4px 10px rgba(0,0,0,0.2);}
-    .jugando-detalle-modal__cerrar:hover{filter:brightness(1.1);}
+    .jugando-detalle-modal__cerrar:hover{opacity:0.8;}
+    @media (min-width:768px){
+      #jugando-detalle-modal{padding:18px;}
+      .jugando-detalle-modal__box{width:min(520px,92vw);padding:18px 16px 14px;}
+    }
     .credit-icon{color:white;font-weight:bold;text-shadow:0 0 5px lime;}
     .action-btn{
       font-family:'Bangers',cursive;
@@ -1131,16 +1137,11 @@
   </div>
   <div id="jugando-detalle-modal" aria-hidden="true">
     <div class="jugando-detalle-modal__box" role="dialog" aria-modal="true" aria-labelledby="jugando-detalle-modal-titulo">
+      <button type="button" id="jugando-detalle-cerrar" class="jugando-detalle-modal__cerrar" aria-label="Cerrar detalle">✕</button>
       <h2 id="jugando-detalle-modal-titulo" class="jugando-detalle-modal__titulo">Cartones jugando</h2>
       <div class="jugando-detalle-modal__resumen">
-        <div class="jugando-detalle-modal__item">
-          <span class="jugando-detalle-modal__label">Pagados jugando</span>
-          <span id="jugando-detalle-pagados" class="jugando-detalle-modal__valor">0</span>
-        </div>
-        <div class="jugando-detalle-modal__item">
-          <span class="jugando-detalle-modal__label">Gratis jugando</span>
-          <span id="jugando-detalle-gratis" class="jugando-detalle-modal__valor">0</span>
-        </div>
+        <span><span class="jugando-detalle-modal__label">Pagados jugando:</span> <span id="jugando-detalle-pagados" class="jugando-detalle-modal__valor">0</span></span>
+        <span><span class="jugando-detalle-modal__label">Gratis jugando:</span> <span id="jugando-detalle-gratis" class="jugando-detalle-modal__valor">0</span></span>
       </div>
       <div class="jugando-detalle-modal__tabla-wrap">
         <table class="jugando-detalle-modal__tabla" aria-label="Detalle de cartones jugando">
@@ -1159,7 +1160,6 @@
           </tbody>
         </table>
       </div>
-      <button type="button" id="jugando-detalle-cerrar" class="jugando-detalle-modal__cerrar">Aceptar</button>
     </div>
   </div>
 
