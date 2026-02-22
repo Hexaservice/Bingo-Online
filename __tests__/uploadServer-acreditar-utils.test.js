@@ -72,7 +72,7 @@ describe('uploadServer utilidades de acreditación', () => {
   });
 
 
-  test('getAcreditacionExecutionMode diferencia modo automático y manual privilegiado', () => {
+  test('getAcreditacionExecutionMode habilita aprobación manual para operadores autorizados en centropagos', () => {
     const { getAcreditacionExecutionMode } = require('../uploadServer.js');
 
     expect(
@@ -114,9 +114,24 @@ describe('uploadServer utilidades de acreditación', () => {
       })
     ).toEqual(
       expect.objectContaining({
-        mode: 'automatico',
+        mode: 'manual',
         manualRequested: true,
-        manualAllowed: false
+        manualAllowed: true
+      })
+    );
+
+    expect(
+      getAcreditacionExecutionMode({
+        source: 'centropagos/manual',
+        origen: 'premios_jugadores',
+        manualApproval: true,
+        userRole: 'colaborador'
+      })
+    ).toEqual(
+      expect.objectContaining({
+        mode: 'manual',
+        manualRequested: true,
+        manualAllowed: true
       })
     );
   });

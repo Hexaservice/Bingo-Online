@@ -355,10 +355,11 @@ function extractEventoGanadorIdComponents(eventoGanadorId) {
 function getAcreditacionExecutionMode({ source, origen, manualApproval, userRole }) {
   const normalizedSource = normalizeString(source, 120).toLowerCase();
   const normalizedOrigen = normalizeString(origen, 80).toLowerCase();
+  const normalizedUserRole = normalizeString(userRole, 40).toLowerCase();
   const explicitManualApproval = manualApproval === true;
   const sourceRequestsManual = normalizedSource === 'centropagos/manual' || normalizedOrigen === 'centropagos/manual';
   const manualRequested = explicitManualApproval || sourceRequestsManual;
-  const hasPrivilegedRole = ['Superadmin', 'Administrador'].includes(normalizeString(userRole, 40));
+  const hasPrivilegedRole = ['superadmin', 'administrador', 'colaborador'].includes(normalizedUserRole);
   const manualAllowed = manualRequested && hasPrivilegedRole;
 
   return {

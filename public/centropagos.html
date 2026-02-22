@@ -1671,6 +1671,23 @@
       };
     }
 
+    function cpResolverComponentesPremio(registro, eventoGanadorId){
+      const desdeEvento = cpExtraerComponentesEventoGanador(eventoGanadorId);
+      if(desdeEvento){ return desdeEvento; }
+      const sorteoId = (registro?.sorteoId || '').toString().trim();
+      const formaIdx = Number(registro?.formaIdx ?? registro?.forma);
+      const cartonId = (registro?.cartonId || registro?.carton || '').toString().trim();
+      if(sorteoId && Number.isFinite(formaIdx) && cartonId){
+        return {
+          sorteoId,
+          formaIdx,
+          cartonId,
+          segundoLugar: Boolean(registro?.segundoLugar)
+        };
+      }
+      return null;
+    }
+
     async function cpActualizarDocumentoCentroPagos(ctx, ref, payload){
       try {
         await ctx.db.runTransaction(async tx => {
@@ -2000,6 +2017,9 @@
         winnerKey,
         sorteoId: (data.sorteoId || '').toString(),
         sorteoNombre: (data.sorteoNombre || '').toString(),
+        formaIdx: Number(data.formaIdx ?? data.forma ?? NaN),
+        cartonId: (data.cartonId || data.carton || '').toString(),
+        segundoLugar: Boolean(data.segundoLugar),
         acreditacionesPendientes: normalizarConteoTecnico(data.AcreditacionesPendientes ?? data.acreditacionesPendientes),
         acreditacionesConError: normalizarConteoTecnico(data.AcreditacionesConError ?? data.acreditacionesConError ?? data.acreditacionesErrores ?? data.erroresTecnicos)
       };
@@ -2386,8 +2406,8 @@
     async function acreditarPremioBackendLegacy(enRegistro){
       const eventoGanadorId = (enRegistro.eventoGanadorId || enRegistro.winnerKey || enRegistro.id || '').toString().trim();
       if(!eventoGanadorId){ throw new Error('Falta eventoGanadorId para acreditar premio.'); }
-      const componentes = cpExtraerComponentesEventoGanador(eventoGanadorId);
-      if(!componentes){ throw new Error('No se pudieron extraer los componentes de eventoGanadorId.'); }
+      const componentes = cpResolverComponentesPremio(enRegistro, eventoGanadorId);
+      if(!componentes){ throw new Error('No se pudieron extraer los componentes del premio a acreditar.'); }
       const user = authInstance().currentUser;
       const apiBase = (typeof getAdminApiBase === 'function' ? getAdminApiBase() : '').replace(/\/$/, '');
       if(!user || !apiBase){ throw new Error('Falta sesión autenticada o API base para acreditar premio.'); }
