@@ -1220,6 +1220,7 @@
   let cartonesJugando=0;
   let cartonesGratisJugando=0;
   let cartonesGratisJugadorActual=0;
+  const cartonesJugandoDetalleCache=new Map();
   const formColors=['#90ee90','#fffacd','#add8e6','#d8b0ff','#ffcc99'];
   const formGlows=['#006400','#b8860b','#00008b','#4b0082','#8b4513'];
   const COLOR_CARTONES_GRATIS_DISPONIBLE='#0b3d91';
@@ -2539,6 +2540,7 @@
       jugandoDetalleTbody.innerHTML='<tr><td colspan="4" class="jugando-detalle-col--vacio">No hay cartones jugando para mostrar.</td></tr>';
       return;
     }
+    const fragment=document.createDocumentFragment();
     items.forEach((item,index)=>{
       const tr=document.createElement('tr');
       const tipoTexto=item.tipocarton==='gratis'?'Gratis':'Pagado';
@@ -2548,8 +2550,37 @@
         <td class="jugando-detalle-col--alias">${item.alias||'Sin alias'}</td>
         <td class="jugando-detalle-col--tipo ${item.tipocarton==='gratis'?'jugando-detalle-col--tipo-gratis':'jugando-detalle-col--tipo-pagado'}">${tipoTexto}</td>
       `;
-      jugandoDetalleTbody.appendChild(tr);
+      fragment.appendChild(tr);
     });
+    jugandoDetalleTbody.appendChild(fragment);
+  }
+
+  function invalidarCacheCartonesJugando(sorteoId){
+    if(sorteoId){
+      cartonesJugandoDetalleCache.delete(sorteoId);
+      return;
+    }
+    cartonesJugandoDetalleCache.clear();
+  }
+
+  async function cargarCartonesJugandoDetalle(sorteoId){
+    if(!sorteoId) return [];
+    const cacheActual=cartonesJugandoDetalleCache.get(sorteoId);
+    if(cacheActual){
+      return [...cacheActual];
+    }
+    const detalleCartones=[];
+    const snap=await db.collection('CartonJugado').where('sorteoId','==',sorteoId).get();
+    snap.forEach(doc=>{
+      detalleCartones.push(normalizarCartonJugado(doc.data()||{}));
+    });
+    detalleCartones.sort((a,b)=>{
+      if(a.cartonNum!==b.cartonNum) return a.cartonNum-b.cartonNum;
+      if(a.tipocarton!==b.tipocarton) return a.tipocarton==='gratis'?-1:1;
+      return a.alias.localeCompare(b.alias,'es',{sensitivity:'base'});
+    });
+    cartonesJugandoDetalleCache.set(sorteoId,detalleCartones);
+    return [...detalleCartones];
   }
 
   async function abrirModalJugandoDetalle(){
@@ -2563,19 +2594,11 @@
     let detalleCartones=[];
     if(currentSorteo){
       try{
-        const snap=await db.collection('CartonJugado').where('sorteoId','==',currentSorteo).get();
-        snap.forEach(doc=>{
-          detalleCartones.push(normalizarCartonJugado(doc.data()||{}));
-        });
+        detalleCartones=await cargarCartonesJugandoDetalle(currentSorteo);
       }catch(error){
         console.error('No se pudo cargar el detalle de cartones jugando',error);
       }
     }
-    detalleCartones.sort((a,b)=>{
-      if(a.cartonNum!==b.cartonNum) return a.cartonNum-b.cartonNum;
-      if(a.tipocarton!==b.tipocarton) return a.tipocarton==='gratis'?-1:1;
-      return a.alias.localeCompare(b.alias,'es',{sensitivity:'base'});
-    });
     renderizarDetalleCartonesJugando(detalleCartones);
     jugandoDetalleModal.classList.add('visible');
     jugandoDetalleModal.setAttribute('aria-hidden','false');
@@ -3645,6 +3668,7 @@ function toggleForma(idx){
 
   async function seleccionarSorteo(s){
     resetForma();
+    const sorteoAnterior=currentSorteo;
     const estadoNormalizado=(s.estado||'').toString().toLowerCase();
     const btn=document.getElementById('sorteo-btn');
     if(estadoNormalizado==='finalizado'){
@@ -3663,6 +3687,10 @@ function toggleForma(idx){
       return;
     }
     currentSorteo=s.id;
+    if(sorteoAnterior!==currentSorteo){
+      invalidarCacheCartonesJugando(sorteoAnterior);
+      invalidarCacheCartonesJugando(currentSorteo);
+    }
     currentSorteoNombre=s.nombre;
     currentSorteoTipo=s.tipo;
     currentSorteoEstado=s.estado||'';
@@ -3983,6 +4011,7 @@ function toggleForma(idx){
       if(gratisLabel && Number.isFinite(resultado.gratisRestantes)){
         gratisLabel.textContent=resultado.gratisRestantes;
       }
+      invalidarCacheCartonesJugando(currentSorteo);
       await actualizarDatosSorteo();
       await actualizarCartonesJugador();
       limpiarcarton();
