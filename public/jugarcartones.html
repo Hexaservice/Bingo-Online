@@ -573,12 +573,25 @@
     .creditos-modal__cerrar:hover{filter:brightness(1.1);}
     #jugando-detalle-modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;padding:15px;z-index:4000;}
     #jugando-detalle-modal.visible{display:flex;}
-    .jugando-detalle-modal__box{background:#fff;padding:20px;border-radius:12px;max-width:340px;width:100%;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,0.2);font-family:'Poppins',sans-serif;display:flex;flex-direction:column;gap:10px;}
+    .jugando-detalle-modal__box{background:#fff;padding:20px;border-radius:12px;max-width:440px;width:100%;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,0.2);font-family:'Poppins',sans-serif;display:flex;flex-direction:column;gap:10px;}
     .jugando-detalle-modal__titulo{margin:0;font-size:1.2rem;color:#4B0082;font-weight:bold;}
     .jugando-detalle-modal__resumen{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
     .jugando-detalle-modal__item{background:#f3f6ff;border-radius:10px;padding:10px 8px;display:flex;flex-direction:column;gap:4px;}
     .jugando-detalle-modal__label{font-size:0.8rem;color:#444;font-weight:600;}
     .jugando-detalle-modal__valor{font-size:1.3rem;font-weight:700;color:#0b3d91;}
+    .jugando-detalle-modal__tabla-wrap{max-height:260px;overflow-y:auto;border:1px solid #d7deef;border-radius:10px;}
+    .jugando-detalle-modal__tabla{width:100%;border-collapse:collapse;font-size:0.8rem;text-align:left;}
+    .jugando-detalle-modal__tabla thead th{position:sticky;top:0;background:#0b1b4d;color:#f5f7ff;padding:7px 8px;z-index:1;}
+    .jugando-detalle-modal__tabla tbody td{padding:6px 8px;border-top:1px solid #e3e8f5;}
+    .jugando-detalle-modal__tabla tbody tr:nth-child(odd){background:#f9fbff;}
+    .jugando-detalle-modal__tabla tbody tr:nth-child(even){background:#eef3ff;}
+    .jugando-detalle-col--index{color:#111;font-weight:600;}
+    .jugando-detalle-col--numero{color:#0b3d91;font-weight:700;}
+    .jugando-detalle-col--alias{color:#d86c00;font-weight:600;}
+    .jugando-detalle-col--tipo{font-weight:700;}
+    .jugando-detalle-col--tipo-gratis{color:#6a1b9a;}
+    .jugando-detalle-col--tipo-pagado{color:#128a36;}
+    .jugando-detalle-col--vacio{text-align:center;color:#5a647b;font-style:italic;}
     .jugando-detalle-modal__cerrar{align-self:center;font-family:'Bangers',cursive;background:linear-gradient(#0a8800,#11a000);color:#fff;border:2px solid #ffd700;border-radius:6px;padding:8px 22px;cursor:pointer;text-transform:uppercase;letter-spacing:1px;box-shadow:0 4px 10px rgba(0,0,0,0.2);}
     .jugando-detalle-modal__cerrar:hover{filter:brightness(1.1);}
     .credit-icon{color:white;font-weight:bold;text-shadow:0 0 5px lime;}
@@ -1129,6 +1142,23 @@
           <span id="jugando-detalle-gratis" class="jugando-detalle-modal__valor">0</span>
         </div>
       </div>
+      <div class="jugando-detalle-modal__tabla-wrap">
+        <table class="jugando-detalle-modal__tabla" aria-label="Detalle de cartones jugando">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>N° Cartón</th>
+              <th>Alias</th>
+              <th>Tipo</th>
+            </tr>
+          </thead>
+          <tbody id="jugando-detalle-tbody">
+            <tr>
+              <td colspan="4" class="jugando-detalle-col--vacio">Sin datos disponibles.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
       <button type="button" id="jugando-detalle-cerrar" class="jugando-detalle-modal__cerrar">Aceptar</button>
     </div>
   </div>
@@ -1226,6 +1256,7 @@
   const jugandoDetalleModal=document.getElementById('jugando-detalle-modal');
   const jugandoDetallePagadosEl=document.getElementById('jugando-detalle-pagados');
   const jugandoDetalleGratisEl=document.getElementById('jugando-detalle-gratis');
+  const jugandoDetalleTbody=document.getElementById('jugando-detalle-tbody');
   const jugandoDetalleCerrarBtn=document.getElementById('jugando-detalle-cerrar');
   const sorteoHintHand=document.getElementById('sorteo-hint-hand');
   const tutorialToggle=document.getElementById('tutorial-toggle');
@@ -2501,7 +2532,27 @@
     }
   }
 
-  function abrirModalJugandoDetalle(){
+  function renderizarDetalleCartonesJugando(items=[]){
+    if(!jugandoDetalleTbody) return;
+    jugandoDetalleTbody.innerHTML='';
+    if(items.length===0){
+      jugandoDetalleTbody.innerHTML='<tr><td colspan="4" class="jugando-detalle-col--vacio">No hay cartones jugando para mostrar.</td></tr>';
+      return;
+    }
+    items.forEach((item,index)=>{
+      const tr=document.createElement('tr');
+      const tipoTexto=item.tipocarton==='gratis'?'Gratis':'Pagado';
+      tr.innerHTML=`
+        <td class="jugando-detalle-col--index">${index+1}</td>
+        <td class="jugando-detalle-col--numero">${item.cartonTexto||'----'}</td>
+        <td class="jugando-detalle-col--alias">${item.alias||'Sin alias'}</td>
+        <td class="jugando-detalle-col--tipo ${item.tipocarton==='gratis'?'jugando-detalle-col--tipo-gratis':'jugando-detalle-col--tipo-pagado'}">${tipoTexto}</td>
+      `;
+      jugandoDetalleTbody.appendChild(tr);
+    });
+  }
+
+  async function abrirModalJugandoDetalle(){
     if(!jugandoDetalleModal) return;
     if(jugandoDetallePagadosEl){
       jugandoDetallePagadosEl.textContent=(document.getElementById('cartones-jugando-valor')?.textContent||'0').trim()||'0';
@@ -2509,6 +2560,23 @@
     if(jugandoDetalleGratisEl){
       jugandoDetalleGratisEl.textContent=(document.getElementById('cartones-gratis-jugando')?.textContent||'0').trim()||'0';
     }
+    let detalleCartones=[];
+    if(currentSorteo){
+      try{
+        const snap=await db.collection('CartonJugado').where('sorteoId','==',currentSorteo).get();
+        snap.forEach(doc=>{
+          detalleCartones.push(normalizarCartonJugado(doc.data()||{}));
+        });
+      }catch(error){
+        console.error('No se pudo cargar el detalle de cartones jugando',error);
+      }
+    }
+    detalleCartones.sort((a,b)=>{
+      if(a.cartonNum!==b.cartonNum) return a.cartonNum-b.cartonNum;
+      if(a.tipocarton!==b.tipocarton) return a.tipocarton==='gratis'?-1:1;
+      return a.alias.localeCompare(b.alias,'es',{sensitivity:'base'});
+    });
+    renderizarDetalleCartonesJugando(detalleCartones);
     jugandoDetalleModal.classList.add('visible');
     jugandoDetalleModal.setAttribute('aria-hidden','false');
     if(jugandoDetalleCerrarBtn){
