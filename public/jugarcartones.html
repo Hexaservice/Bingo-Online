@@ -571,6 +571,16 @@
     .creditos-modal__nota{margin:10px 0 18px;font-size:0.72rem;color:#000;}
     .creditos-modal__cerrar{font-family:'Bangers',cursive;background:linear-gradient(#0a8800,#11a000);color:#fff;border:2px solid #ffd700;border-radius:6px;padding:8px 22px;cursor:pointer;text-transform:uppercase;letter-spacing:1px;box-shadow:0 4px 10px rgba(0,0,0,0.2);}
     .creditos-modal__cerrar:hover{filter:brightness(1.1);}
+    #jugando-detalle-modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;padding:15px;z-index:4000;}
+    #jugando-detalle-modal.visible{display:flex;}
+    .jugando-detalle-modal__box{background:#fff;padding:20px;border-radius:12px;max-width:340px;width:100%;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,0.2);font-family:'Poppins',sans-serif;display:flex;flex-direction:column;gap:10px;}
+    .jugando-detalle-modal__titulo{margin:0;font-size:1.2rem;color:#4B0082;font-weight:bold;}
+    .jugando-detalle-modal__resumen{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+    .jugando-detalle-modal__item{background:#f3f6ff;border-radius:10px;padding:10px 8px;display:flex;flex-direction:column;gap:4px;}
+    .jugando-detalle-modal__label{font-size:0.8rem;color:#444;font-weight:600;}
+    .jugando-detalle-modal__valor{font-size:1.3rem;font-weight:700;color:#0b3d91;}
+    .jugando-detalle-modal__cerrar{align-self:center;font-family:'Bangers',cursive;background:linear-gradient(#0a8800,#11a000);color:#fff;border:2px solid #ffd700;border-radius:6px;padding:8px 22px;cursor:pointer;text-transform:uppercase;letter-spacing:1px;box-shadow:0 4px 10px rgba(0,0,0,0.2);}
+    .jugando-detalle-modal__cerrar:hover{filter:brightness(1.1);}
     .credit-icon{color:white;font-weight:bold;text-shadow:0 0 5px lime;}
     .action-btn{
       font-family:'Bangers',cursive;
@@ -1106,6 +1116,22 @@
       <button type="button" id="creditos-modal-cerrar" class="creditos-modal__cerrar">Aceptar</button>
     </div>
   </div>
+  <div id="jugando-detalle-modal" aria-hidden="true">
+    <div class="jugando-detalle-modal__box" role="dialog" aria-modal="true" aria-labelledby="jugando-detalle-modal-titulo">
+      <h2 id="jugando-detalle-modal-titulo" class="jugando-detalle-modal__titulo">Cartones jugando</h2>
+      <div class="jugando-detalle-modal__resumen">
+        <div class="jugando-detalle-modal__item">
+          <span class="jugando-detalle-modal__label">Pagados jugando</span>
+          <span id="jugando-detalle-pagados" class="jugando-detalle-modal__valor">0</span>
+        </div>
+        <div class="jugando-detalle-modal__item">
+          <span class="jugando-detalle-modal__label">Gratis jugando</span>
+          <span id="jugando-detalle-gratis" class="jugando-detalle-modal__valor">0</span>
+        </div>
+      </div>
+      <button type="button" id="jugando-detalle-cerrar" class="jugando-detalle-modal__cerrar">Aceptar</button>
+    </div>
+  </div>
 
   <div id="carton-confirm-modal" class="carton-modal-overlay" aria-hidden="true" role="dialog" aria-modal="true">
       <div class="carton-modal-card" id="carton-modal-card" role="document">
@@ -1196,6 +1222,11 @@
   const creditosModalRetenidos=document.getElementById('creditos-modal-retenidos');
   const creditosModalCerrar=document.getElementById('creditos-modal-cerrar');
   const creditosLabelEl=document.getElementById('creditos-label');
+  const cartonesJugandoEl=document.getElementById('cartones-jugando');
+  const jugandoDetalleModal=document.getElementById('jugando-detalle-modal');
+  const jugandoDetallePagadosEl=document.getElementById('jugando-detalle-pagados');
+  const jugandoDetalleGratisEl=document.getElementById('jugando-detalle-gratis');
+  const jugandoDetalleCerrarBtn=document.getElementById('jugando-detalle-cerrar');
   const sorteoHintHand=document.getElementById('sorteo-hint-hand');
   const tutorialToggle=document.getElementById('tutorial-toggle');
   const tutorialNav=document.getElementById('tutorial-nav');
@@ -1251,6 +1282,7 @@
     '#perfil-pendiente-modal',
     '#datos-bancarios-modal',
     '#creditos-modal',
+    '#jugando-detalle-modal',
     '#carton-confirm-modal'
   ];
   let tutorialDimTimeout=null;
@@ -2469,6 +2501,30 @@
     }
   }
 
+  function abrirModalJugandoDetalle(){
+    if(!jugandoDetalleModal) return;
+    if(jugandoDetallePagadosEl){
+      jugandoDetallePagadosEl.textContent=(document.getElementById('cartones-jugando-valor')?.textContent||'0').trim()||'0';
+    }
+    if(jugandoDetalleGratisEl){
+      jugandoDetalleGratisEl.textContent=(document.getElementById('cartones-gratis-jugando')?.textContent||'0').trim()||'0';
+    }
+    jugandoDetalleModal.classList.add('visible');
+    jugandoDetalleModal.setAttribute('aria-hidden','false');
+    if(jugandoDetalleCerrarBtn){
+      jugandoDetalleCerrarBtn.focus();
+    }
+  }
+
+  function cerrarModalJugandoDetalle(){
+    if(!jugandoDetalleModal) return;
+    jugandoDetalleModal.classList.remove('visible');
+    jugandoDetalleModal.setAttribute('aria-hidden','true');
+    if(cartonesJugandoEl){
+      cartonesJugandoEl.focus();
+    }
+  }
+
   function crearIconoCarton(tipo){
     const span=document.createElement('span');
     span.className=`modal-icon modal-icon--${tipo}`;
@@ -2621,6 +2677,19 @@
       if(event.key==='Enter' || event.key===' '){
         event.preventDefault();
         abrirModalCreditos();
+      }
+    });
+  }
+  if(cartonesJugandoEl){
+    cartonesJugandoEl.addEventListener('click',abrirModalJugandoDetalle);
+  }
+  if(jugandoDetalleCerrarBtn){
+    jugandoDetalleCerrarBtn.addEventListener('click',cerrarModalJugandoDetalle);
+  }
+  if(jugandoDetalleModal){
+    jugandoDetalleModal.addEventListener('click',event=>{
+      if(event.target===jugandoDetalleModal){
+        cerrarModalJugandoDetalle();
       }
     });
   }
