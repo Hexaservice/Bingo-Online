@@ -2449,6 +2449,73 @@
       return response.json().catch(()=>({ status: 'ok' }));
     }
 
+    function esErrorRecuperableAcreditacion(err){
+      const mensaje = (err?.message || '').toString().toLowerCase();
+      return (
+        mensaje.includes('http 404')
+        || mensaje.includes('failed to fetch')
+        || mensaje.includes('networkerror')
+        || mensaje.includes('falta sesión autenticada o api base')
+      );
+    }
+
+    async function acreditarPremioEnFirestore(enRegistro){
+      const db = dbRef();
+      const premioRef = db.collection('PremiosSorteos').doc(enRegistro.id);
+      const creditos = Math.max(0, Number(enRegistro.creditos) || 0);
+      const cartones = Math.max(0, Number(enRegistro.cartones ?? enRegistro.cartonesGratis) || 0);
+      const billeteraId = (enRegistro.billetera || enRegistro.gmail || '').toString().trim().toLowerCase();
+      if(!billeteraId){
+        throw new Error('No se encontró una billetera destino para el premio.');
+      }
+      if(!creditos && !cartones){
+        throw new Error('El premio no tiene créditos ni cartones para acreditar.');
+      }
+
+      await db.runTransaction(async tx => {
+        const premioSnap = await tx.get(premioRef);
+        if(!premioSnap.exists){
+          throw new Error('El premio ya no existe en PremiosSorteos.');
+        }
+        const premioActual = premioSnap.data() || {};
+        const estadoActual = normalizarEstado(premioActual.estado);
+        if(window.EstadosPagoPremio.estaFinalizado(estadoActual)) return;
+
+        const billeteraRef = db.collection('Billetera').doc(billeteraId);
+        const billeteraSnap = await tx.get(billeteraRef);
+        const billeteraData = billeteraSnap.exists ? billeteraSnap.data() || {} : {};
+        const saldoCreditos = Number(billeteraData.creditos) || 0;
+        const saldoCartones = Number(billeteraData.CartonesGratis ?? billeteraData.cartonesGratis) || 0;
+
+        tx.set(billeteraRef, {
+          creditos: saldoCreditos + creditos,
+          CartonesGratis: saldoCartones + cartones,
+          actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        tx.set(premioRef, {
+          estado: validarEstadoGuardado('REALIZADO', `PremiosSorteos:${enRegistro.id}`),
+          idBilletera: billeteraId,
+          fechaGestion: fechaServidor(),
+          horaGestion: horaServidor(),
+          gestionadoPor: authInstance().currentUser?.email || '',
+          rolGestor: window.currentRole || '',
+          actualizadoEn: firebase.firestore.FieldValue.serverTimestamp(),
+          source: 'centropagos/firestore-fallback'
+        }, { merge: true });
+      });
+
+      await registrarTransaccionPremio({
+        ...enRegistro,
+        billetera: billeteraId,
+        creditos,
+        cartones,
+        tipotrans: 'premio',
+        origen: 'premios_jugadores',
+        referencia: 'PREMIO'
+      });
+    }
+
     async function registrarTransaccionPremio(enRegistro){
       const monto = Number(enRegistro.creditos) || 0;
       if(!enRegistro.billetera || monto <= 0) return;
@@ -2509,6 +2576,7 @@
       const errores = [];
       let procesados = 0;
       let omitidos = 0;
+      let procesadosPorFallback = 0;
       for(const id of ids){
         const registro = premiosMapa.get(id);
         if(!registro){
@@ -2527,7 +2595,20 @@
             sorteosActualizados.add(registro.sorteoId);
           }
         } catch (err) {
-          console.error('Error aprobando premio', err);
+          console.error('Error aprobando premio por endpoint', err);
+          if(esErrorRecuperableAcreditacion(err)){
+            try {
+              await acreditarPremioEnFirestore(registro);
+              procesados += 1;
+              procesadosPorFallback += 1;
+              if(registro.sorteoId){
+                sorteosActualizados.add(registro.sorteoId);
+              }
+              continue;
+            } catch (fallbackErr) {
+              console.error('Error aprobando premio por fallback Firestore', fallbackErr);
+            }
+          }
           errores.push(id);
         }
       }
@@ -2539,11 +2620,17 @@
         }
       }
       if(errores.length){
-        alert(`Se procesaron ${procesados} premio(s). ${errores.length} registro(s) no se pudieron procesar.`);
+        const detalleFallback = procesadosPorFallback > 0
+          ? ` (${procesadosPorFallback} procesado(s) por respaldo Firestore)`
+          : '';
+        alert(`Se procesaron ${procesados} premio(s)${detalleFallback}. ${errores.length} registro(s) no se pudieron procesar.`);
         return;
       }
       if(procesados > 0 || omitidos > 0){
-        alert(`Proceso finalizado. Premios procesados: ${procesados}. Registros omitidos: ${omitidos}.`);
+        const detalleFallback = procesadosPorFallback > 0
+          ? ` (${procesadosPorFallback} por respaldo Firestore)`
+          : '';
+        alert(`Proceso finalizado. Premios procesados: ${procesados}${detalleFallback}. Registros omitidos: ${omitidos}.`);
       }
     }
 
