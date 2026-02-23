@@ -2428,7 +2428,10 @@
           email: enRegistro.billetera || enRegistro.gmail || '',
           alias: enRegistro.alias || '',
           monto: Number(enRegistro.creditos) || 0,
-          cartonesGratis: Number(enRegistro.cartones) || 0,
+          // El endpoint espera explícitamente `cartonesGratis`.
+          // Algunos registros en Centro de Pagos usan `cartones` al renderizar,
+          // por eso contemplamos ambos para evitar que se envíe 0 por error.
+          cartonesGratis: Number(enRegistro.cartonesGratis ?? enRegistro.cartones) || 0,
           eventoGanadorId,
           origen: 'premios_jugadores',
           referencia: 'PREMIO',
