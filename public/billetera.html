@@ -827,47 +827,75 @@
       return numeroWhatsappDestino;
     }
 
-    const ICONOS_WHATSAPP={
-      // Se usan emojis ampliamente soportados para que se muestren correctamente en WhatsApp
-      solicitudRecarga:'💵',
-      solicitudRetiro:'💰'
+    const MENSAJES_WHATSAPP_SOLICITUD_DEFAULT={
+      mensajeSolicitudRecarga:'💵 *SOLICITUD DE RECARGA*\nCorreo: <correo>\nUsuario: <usuario>\nBanco receptor: <bancoReceptor>\nMonto: <monto>\nReferencia: <referencia>',
+      mensajeSolicitudRetiro:'💰 *SOLICITUD DE RETIRO*\nCorreo: <correo>\nUsuario: <usuario>\nBanco receptor: <bancoReceptor>\nPago móvil: <pagoMovil>\nCuenta: <cuenta>\nMonto solicitado: <montoSolicitado>\nMonto a recibir: <montoRecibir>'
     };
+    let mensajesWhatsappSolicitudes={...MENSAJES_WHATSAPP_SOLICITUD_DEFAULT};
+    let mensajesWhatsappSolicitudesCargados=false;
 
-    function construirMensajeWhatsapp(tipo,info){
+    async function cargarPlantillasWhatsappSolicitudes(){
+      if(mensajesWhatsappSolicitudesCargados) return mensajesWhatsappSolicitudes;
+      try{
+        const snap=await db.collection('Variablesglobales').doc('Parametros').get();
+        if(snap.exists){
+          const data=snap.data()||{};
+          const grupo=data.mensajesWhatsapp||{};
+          mensajesWhatsappSolicitudes={
+            ...MENSAJES_WHATSAPP_SOLICITUD_DEFAULT,
+            mensajeSolicitudRecarga:grupo.mensajeSolicitudRecarga||data.mensajeSolicitudRecarga||MENSAJES_WHATSAPP_SOLICITUD_DEFAULT.mensajeSolicitudRecarga,
+            mensajeSolicitudRetiro:grupo.mensajeSolicitudRetiro||data.mensajeSolicitudRetiro||MENSAJES_WHATSAPP_SOLICITUD_DEFAULT.mensajeSolicitudRetiro
+          };
+        }
+      }catch(error){
+        console.error('No se pudo cargar la configuración de mensajes de solicitud WhatsApp',error);
+      }
+      mensajesWhatsappSolicitudesCargados=true;
+      return mensajesWhatsappSolicitudes;
+    }
+
+    function aplicarPlantillaMensaje(plantilla,valores){
+      return (plantilla||'').replace(/<([a-zA-Z0-9_]+)>/g,(_,clave)=>{
+        const valor=valores[clave];
+        return valor===undefined || valor===null ? '' : String(valor);
+      }).trim();
+    }
+
+    async function construirMensajeWhatsapp(tipo,info){
       const correo=auth.currentUser?.email||'';
       const nombre=obtenerNombreUsuario();
-      const lineas=[];
       const formatearEnteroSeguro=valor=>Math.trunc(toNumberSafe(valor,0)).toString();
-
       const tipoNormalizado = tipo==='deposito'?'recarga':tipo;
+      const plantillas=await cargarPlantillasWhatsappSolicitudes();
 
       if(tipoNormalizado==='recarga'){
-        lineas.push(`${ICONOS_WHATSAPP.solicitudRecarga} *SOLICITUD DE RECARGA*`);
-        if(correo) lineas.push(`Correo: ${correo}`);
-        if(nombre) lineas.push(`Usuario: ${nombre}`);
-        lineas.push(`Banco receptor: ${info?.banco||'N/D'}`);
-        lineas.push(`Monto: *${formatearEnteroSeguro(info?.monto)}*`);
-        lineas.push(`Referencia: *${info?.referencia||'N/D'}*`);
-        if(info?.comentario){ lineas.push(`Comentario: ${info.comentario}`); }
-      }else if(tipoNormalizado==='retiro'){
-        lineas.push(`${ICONOS_WHATSAPP.solicitudRetiro} *SOLICITUD DE RETIRO*`);
-        if(correo) lineas.push(`Correo: ${correo}`);
-        if(nombre) lineas.push(`Usuario: ${nombre}`);
-        lineas.push(`Banco receptor: ${info?.banco||'N/D'}`);
-        if(info?.pagomovil){ lineas.push(`Pago móvil: ${info.pagomovil}`); }
-        if(info?.cuenta){ lineas.push(`Cuenta: ${info.cuenta}`); }
-        lineas.push(`Monto solicitado: *${formatearEnteroSeguro(info?.montoSolicitado)}*`);
-        lineas.push(`Monto a recibir: *${formatearEnteroSeguro(info?.montoNeto)}*`);
-        if(info?.comentario){ lineas.push(`Comentario: ${info.comentario}`); }
+        return aplicarPlantillaMensaje(plantillas.mensajeSolicitudRecarga,{
+          correo,
+          usuario:nombre,
+          bancoReceptor:info?.banco||'N/D',
+          monto:formatearEnteroSeguro(info?.monto),
+          referencia:info?.referencia||'N/D'
+        });
       }
-      return lineas.filter(Boolean).join('\n');
+      if(tipoNormalizado==='retiro'){
+        return aplicarPlantillaMensaje(plantillas.mensajeSolicitudRetiro,{
+          correo,
+          usuario:nombre,
+          bancoReceptor:info?.banco||'N/D',
+          pagoMovil:info?.pagomovil||'N/D',
+          cuenta:info?.cuenta||'N/D',
+          montoSolicitado:formatearEnteroSeguro(info?.montoSolicitado),
+          montoRecibir:formatearEnteroSeguro(info?.montoNeto)
+        });
+      }
+      return '';
     }
 
     async function notificarSolicitudWhatsapp(tipo,info){
       try{
         const numero=await obtenerNumeroWhatsappConfigurado();
         if(!numero) return;
-        const mensaje=construirMensajeWhatsapp(tipo,info);
+        const mensaje=await construirMensajeWhatsapp(tipo,info);
         const enlace=construirEnlaceWhatsapp(numero,mensaje);
         if(!enlace) return;
         window.open(enlace,'_blank','noopener');
