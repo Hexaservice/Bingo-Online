@@ -608,6 +608,29 @@
     };
     let mensajesWhatsappResultados={...MENSAJES_WHATSAPP_RESULTADOS_DEFAULT};
     let mensajesWhatsappResultadosCargados=false;
+    let suscripcionMensajesWhatsappResultados=null;
+
+    function actualizarMensajesWhatsappResultadosDesdeData(data={}){
+      const grupo=data.mensajesWhatsapp||{};
+      mensajesWhatsappResultados={
+        ...MENSAJES_WHATSAPP_RESULTADOS_DEFAULT,
+        mensajeRecargaAprobada:grupo.mensajeRecargaAprobada||data.mensajeRecargaAprobada||MENSAJES_WHATSAPP_RESULTADOS_DEFAULT.mensajeRecargaAprobada,
+        mensajeRecargaAnulada:grupo.mensajeRecargaAnulada||data.mensajeRecargaAnulada||MENSAJES_WHATSAPP_RESULTADOS_DEFAULT.mensajeRecargaAnulada,
+        mensajeRetiroAprobado:grupo.mensajeRetiroAprobado||data.mensajeRetiroAprobado||MENSAJES_WHATSAPP_RESULTADOS_DEFAULT.mensajeRetiroAprobado,
+        mensajeRetiroAnulado:grupo.mensajeRetiroAnulado||data.mensajeRetiroAnulado||MENSAJES_WHATSAPP_RESULTADOS_DEFAULT.mensajeRetiroAnulado
+      };
+      mensajesWhatsappResultadosCargados=true;
+    }
+
+    function iniciarSuscripcionMensajesWhatsappResultados(){
+      if(suscripcionMensajesWhatsappResultados) return;
+      suscripcionMensajesWhatsappResultados=db.collection('Variablesglobales').doc('Parametros').onSnapshot(snap=>{
+        const data=snap.exists?(snap.data()||{}):{};
+        actualizarMensajesWhatsappResultadosDesdeData(data);
+      },err=>{
+        console.error('No se pudo sincronizar la configuración de mensajes de resultado WhatsApp en tiempo real',err);
+      });
+    }
     function normalizarNumeroWhatsapp(valor){
       const texto=(valor||'').toString();
       let limpio=texto.replace(/[^0-9+]/g,'');
@@ -651,24 +674,15 @@
       return normalizado;
     }
     async function cargarPlantillasWhatsappResultados(){
+      iniciarSuscripcionMensajesWhatsappResultados();
       if(mensajesWhatsappResultadosCargados) return mensajesWhatsappResultados;
       try{
         const snap=await db.collection('Variablesglobales').doc('Parametros').get();
-        if(snap.exists){
-          const data=snap.data()||{};
-          const grupo=data.mensajesWhatsapp||{};
-          mensajesWhatsappResultados={
-            ...MENSAJES_WHATSAPP_RESULTADOS_DEFAULT,
-            mensajeRecargaAprobada:grupo.mensajeRecargaAprobada||data.mensajeRecargaAprobada||MENSAJES_WHATSAPP_RESULTADOS_DEFAULT.mensajeRecargaAprobada,
-            mensajeRecargaAnulada:grupo.mensajeRecargaAnulada||data.mensajeRecargaAnulada||MENSAJES_WHATSAPP_RESULTADOS_DEFAULT.mensajeRecargaAnulada,
-            mensajeRetiroAprobado:grupo.mensajeRetiroAprobado||data.mensajeRetiroAprobado||MENSAJES_WHATSAPP_RESULTADOS_DEFAULT.mensajeRetiroAprobado,
-            mensajeRetiroAnulado:grupo.mensajeRetiroAnulado||data.mensajeRetiroAnulado||MENSAJES_WHATSAPP_RESULTADOS_DEFAULT.mensajeRetiroAnulado
-          };
-        }
+        const data=snap.exists?(snap.data()||{}):{};
+        actualizarMensajesWhatsappResultadosDesdeData(data);
       }catch(err){
         console.error('No se pudo cargar la configuración de mensajes de resultado WhatsApp',err);
       }
-      mensajesWhatsappResultadosCargados=true;
       return mensajesWhatsappResultados;
     }
     function aplicarPlantillaMensaje(plantilla,valores){

@@ -1496,6 +1496,15 @@
       mensajeReferidoRecordatorio:'Comparte tu código <codigoReferido> en <app> y al llegar a <metaReferidos> referidos obtendrás <premioReferidos>.'
     };
     const mensajesEditables={};
+    const llaveGrupoPorMensaje={
+      ...Object.fromEntries(configuracionMensajesWhatsapp.map(item=>[item.key,'mensajesWhatsapp'])),
+      ...Object.fromEntries(configuracionMensajesReferidos.map(item=>[item.key,'mensajesReferidos']))
+    };
+    function obtenerMensajePersistido(data,key){
+      const grupoEsperado=llaveGrupoPorMensaje[key];
+      const grupo=grupoEsperado && data && typeof data[grupoEsperado]==='object' ? data[grupoEsperado] : {};
+      return grupo?.[key] || data?.[key] || '';
+    }
     function insertarVariableEnCampo(textarea,codigo){
       if(!textarea) return;
       const inicio=textarea.selectionStart ?? textarea.value.length;
@@ -1543,10 +1552,13 @@
             return;
           }
           try{
-            const claveAnidada=`${grupoClave}.${item.key}`;
             await db.collection('Variablesglobales').doc('Parametros').set({
-              [claveAnidada]:valor,
-              [item.key]:valor
+              [grupoClave]:{
+                [item.key]:valor
+              },
+              [item.key]:valor,
+              mensajesVersion:2,
+              mensajesActualizadoEn:firebase.firestore.FieldValue.serverTimestamp()
             },{merge:true});
             mensajesEditables[item.key]=valor;
             alert('Mensaje guardado correctamente.');
@@ -1571,10 +1583,8 @@
       try{
         const doc=await db.collection('Variablesglobales').doc('Parametros').get();
         const data=doc.exists?(doc.data()||{}):{};
-        const grupoWhatsapp=data.mensajesWhatsapp||{};
-        const grupoReferidos=data.mensajesReferidos||{};
         [...configuracionMensajesWhatsapp,...configuracionMensajesReferidos].forEach(item=>{
-          mensajesEditables[item.key]=grupoWhatsapp[item.key]||grupoReferidos[item.key]||data[item.key]||'';
+          mensajesEditables[item.key]=obtenerMensajePersistido(data,item.key);
         });
       }catch(err){
         console.error('No se pudo cargar la configuración de mensajes de WhatsApp',err);
