@@ -833,24 +833,38 @@
     };
     let mensajesWhatsappSolicitudes={...MENSAJES_WHATSAPP_SOLICITUD_DEFAULT};
     let mensajesWhatsappSolicitudesCargados=false;
+    let suscripcionParametrosWhatsapp=null;
+
+    function actualizarMensajesWhatsappSolicitudesDesdeData(data={}){
+      const grupo=data.mensajesWhatsapp||{};
+      mensajesWhatsappSolicitudes={
+        ...MENSAJES_WHATSAPP_SOLICITUD_DEFAULT,
+        mensajeSolicitudRecarga:grupo.mensajeSolicitudRecarga||data.mensajeSolicitudRecarga||MENSAJES_WHATSAPP_SOLICITUD_DEFAULT.mensajeSolicitudRecarga,
+        mensajeSolicitudRetiro:grupo.mensajeSolicitudRetiro||data.mensajeSolicitudRetiro||MENSAJES_WHATSAPP_SOLICITUD_DEFAULT.mensajeSolicitudRetiro
+      };
+      mensajesWhatsappSolicitudesCargados=true;
+    }
+
+    function iniciarSuscripcionMensajesWhatsappSolicitudes(){
+      if(suscripcionParametrosWhatsapp) return;
+      suscripcionParametrosWhatsapp=db.collection('Variablesglobales').doc('Parametros').onSnapshot(snap=>{
+        const data=snap.exists?(snap.data()||{}):{};
+        actualizarMensajesWhatsappSolicitudesDesdeData(data);
+      },error=>{
+        console.error('No se pudo sincronizar la configuración de mensajes WhatsApp en tiempo real',error);
+      });
+    }
 
     async function cargarPlantillasWhatsappSolicitudes(){
+      iniciarSuscripcionMensajesWhatsappSolicitudes();
       if(mensajesWhatsappSolicitudesCargados) return mensajesWhatsappSolicitudes;
       try{
         const snap=await db.collection('Variablesglobales').doc('Parametros').get();
-        if(snap.exists){
-          const data=snap.data()||{};
-          const grupo=data.mensajesWhatsapp||{};
-          mensajesWhatsappSolicitudes={
-            ...MENSAJES_WHATSAPP_SOLICITUD_DEFAULT,
-            mensajeSolicitudRecarga:grupo.mensajeSolicitudRecarga||data.mensajeSolicitudRecarga||MENSAJES_WHATSAPP_SOLICITUD_DEFAULT.mensajeSolicitudRecarga,
-            mensajeSolicitudRetiro:grupo.mensajeSolicitudRetiro||data.mensajeSolicitudRetiro||MENSAJES_WHATSAPP_SOLICITUD_DEFAULT.mensajeSolicitudRetiro
-          };
-        }
+        const data=snap.exists?(snap.data()||{}):{};
+        actualizarMensajesWhatsappSolicitudesDesdeData(data);
       }catch(error){
         console.error('No se pudo cargar la configuración de mensajes de solicitud WhatsApp',error);
       }
-      mensajesWhatsappSolicitudesCargados=true;
       return mensajesWhatsappSolicitudes;
     }
 
