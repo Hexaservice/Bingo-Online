@@ -52,19 +52,59 @@
 
     async verificarPendientes(){
       if(!this.user || this.mostrando) return;
-      const identidades=[this.user.email,this.user.uid].filter(Boolean);
+      const identidades=this.obtenerIdentidadesUsuario();
       let pendiente=null;
       for(const identidad of identidades){
-        const snap=await db.collection('transacciones')
-          .where('IDbilletera','==',identidad)
-          .where('notificacionInterna.pendienteMostrar','==',true)
-          .limit(1)
-          .get();
+        const snap=await this.buscarPendientePorIdentidad(identidad);
         if(!snap.empty){ pendiente=snap.docs[0]; break; }
       }
       if(!pendiente) return;
       this.actual=this.normalizarDoc(pendiente);
       this.mostrar(this.actual);
+    }
+
+    obtenerIdentidadesUsuario(){
+      const identidades=[this.user && this.user.email,this.user && this.user.uid]
+        .map(v=>(v||'').toString().trim())
+        .filter(Boolean);
+      const normalizadas=[];
+      for(const valor of identidades){
+        normalizadas.push(valor);
+        const minuscula=valor.toLowerCase();
+        if(minuscula!==valor) normalizadas.push(minuscula);
+      }
+      return Array.from(new Set(normalizadas));
+    }
+
+    async buscarPendientePorIdentidad(identidad){
+      const ref=db.collection('transacciones');
+      try{
+        return await ref
+          .where('IDbilletera','==',identidad)
+          .where('notificacionInterna.pendienteMostrar','==',true)
+          .limit(1)
+          .get();
+      }catch(err){
+        const codigo=(err && err.code ? err.code.toString() : '').toLowerCase();
+        const mensaje=(err && err.message ? err.message.toString() : '').toLowerCase();
+        const requiereIndice=codigo.includes('failed-precondition') || mensaje.includes('index');
+        if(!requiereIndice){
+          console.warn('No se pudo consultar notificación interna pendiente',err);
+          return {empty:true,docs:[]};
+        }
+        console.warn('Consulta de notificación interna requiere índice compuesto. Usando búsqueda alternativa por identidad.');
+        try{
+          const respaldo=await ref.where('IDbilletera','==',identidad).limit(25).get();
+          const pendiente=respaldo.docs.find(doc=>{
+            const data=doc.data()||{};
+            return Boolean(data.notificacionInterna && data.notificacionInterna.pendienteMostrar===true);
+          });
+          return pendiente ? {empty:false,docs:[pendiente]} : {empty:true,docs:[]};
+        }catch(fallbackErr){
+          console.warn('No se pudo ejecutar la búsqueda alternativa de notificaciones internas',fallbackErr);
+          return {empty:true,docs:[]};
+        }
+      }
     }
 
     normalizarDoc(doc){
