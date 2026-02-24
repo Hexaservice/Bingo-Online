@@ -2562,7 +2562,6 @@
           restauracionPendiente = true;
           try {
             await verificarSorteoPersistidoAlEntrar({ mostrarFallback: false });
-            await escucharAcreditacionesPendientes();
           } catch (err) {
             console.error('No se pudo restaurar el sorteo tras la autenticación.', err);
           }
@@ -2656,9 +2655,6 @@
     modoManualSwitch.addEventListener('change', ()=>{
       modoManual = modoManualSwitch.checked;
       actualizarEstadoModo();
-      escucharAcreditacionesPendientes().catch(err=>{
-        console.warn('No se pudo actualizar el flujo de acreditaciones pendientes al cambiar de modo', err);
-      });
     });
     actualizarEstadoModo();
   }
@@ -3592,11 +3588,7 @@
     cartonesDatosListos = true;
     actualizarNumerosNoJugados();
     calcularGanadores();
-    if(esModoAutomaticoActivo()){
-      procesarPremiosAutomaticos().catch(err=>{
-        console.warn('No se pudieron procesar premios automáticos al cargar cartones', err);
-      });
-    }
+    // Flujo instantáneo deshabilitado: la acreditación se gestiona desde Centro de Pagos.
   }
 
   function detenerCartones(){
@@ -4635,15 +4627,8 @@
         formasNuevas.add(idxNumero);
       }
     });
-    if(formasNuevas.size && esModoAutomaticoActivo()){
-      procesarPremiosAutomaticos({ formas: formasNuevas }).catch(err=>{
-        console.warn('No se pudieron procesar premios automáticos', err);
-      });
-      procesarPremiosSegundoLugar({ formas: formasNuevas }).catch(err=>{
-        console.warn('No se pudieron procesar premios de segundo lugar', err);
-      });
-    }else if(formasNuevas.size){
-      console.info('Modo legacy activo: se registran/visualizan ganadores sin acreditación automática.', {
+    if(formasNuevas.size){
+      console.info('Se registran/visualizan ganadores sin acreditación instantánea.', {
         sorteoId: currentSorteoId,
         formas: Array.from(formasNuevas)
       });
