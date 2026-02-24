@@ -458,6 +458,97 @@
       font-family: Calibri, Arial, sans-serif;
       text-align: left;
     }
+    .whatsapp-mensajes-section .asignacion-header,
+    .referidos-mensajes-section .asignacion-header {
+      color: #15803d;
+    }
+    .mensajes-editor-contenido {
+      margin-top: 12px;
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .mensaje-editor-item {
+      background: rgba(255,255,255,0.82);
+      border-radius: 10px;
+      padding: 10px;
+      box-shadow: inset 0 0 0 1px rgba(21,128,61,0.15);
+    }
+    .mensaje-editor-item.retiro {
+      box-shadow: inset 0 0 0 1px rgba(185,28,28,0.18);
+    }
+    .mensaje-editor-label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+    .mensaje-editor-label.recarga,
+    .mensaje-editor-label.referidos {
+      color: #15803d;
+    }
+    .mensaje-editor-label.retiro {
+      color: #b91c1c;
+    }
+    .mensaje-editor-texto {
+      width: 100%;
+      min-height: 72px;
+      border-radius: 8px;
+      border: 1px solid #15803d;
+      padding: 8px 10px;
+      box-sizing: border-box;
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 0.84rem;
+      resize: vertical;
+    }
+    .mensaje-editor-texto.retiro {
+      border-color: #b91c1c;
+    }
+    .mensaje-editor-texto.referidos {
+      border-color: #15803d;
+    }
+    .mensaje-variables {
+      margin-top: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      align-items: center;
+    }
+    .mensaje-variable-btn {
+      font-size: 0.62rem;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid #15803d;
+      color: #166534;
+      background: #f0fdf4;
+      cursor: pointer;
+      line-height: 1.25;
+    }
+    .mensaje-variable-btn.retiro {
+      border-color: #b91c1c;
+      color: #991b1b;
+      background: #fef2f2;
+    }
+    .mensaje-acciones {
+      margin-top: 8px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .mensaje-guardar-btn {
+      font-size: 0.78rem;
+      font-weight: 700;
+      border-radius: 8px;
+      padding: 5px 12px;
+      border: 1px solid #15803d;
+      color: #166534;
+      background: #dcfce7;
+      cursor: pointer;
+    }
+    .mensaje-guardar-btn.retiro {
+      border-color: #b91c1c;
+      color: #991b1b;
+      background: #fee2e2;
+    }
     .whatsapp-number {
       margin-bottom: 12px;
     }
@@ -1064,6 +1155,26 @@
       </table>
     </div>
   </section>
+  <section class="asignacion-section whatsapp-mensajes-section" id="mensajes-whatsapp-section">
+    <div class="asignacion-header">
+      <h3>MENSAJES WHATSAPP</h3>
+      <label class="switch">
+        <input type="checkbox" id="toggle-mensajes-whatsapp">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div id="mensajes-whatsapp-content" class="mensajes-editor-contenido"></div>
+  </section>
+  <section class="asignacion-section referidos-mensajes-section" id="mensajes-referidos-section">
+    <div class="asignacion-header">
+      <h3>MENSAJES SISTEMA REFERIDOS</h3>
+      <label class="switch">
+        <input type="checkbox" id="toggle-mensajes-referidos">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div id="mensajes-referidos-content" class="mensajes-editor-contenido"></div>
+  </section>
   <section class="whatsapp-section">
     <div class="whatsapp-number">
       <label id="numero-whatsapp-label" for="numero-whatsapp">Número WhatsApp para la aplicación</label>
@@ -1339,10 +1450,126 @@
     const botonAgregarNumero=document.getElementById('whatsapp-agregar');
     const botonGuardarNumeros=document.getElementById('whatsapp-guardar');
     const botonCerrarModal=document.getElementById('cerrar-whatsapp-modal');
+    const toggleMensajesWhatsapp=document.getElementById('toggle-mensajes-whatsapp');
+    const mensajesWhatsappContent=document.getElementById('mensajes-whatsapp-content');
+    const toggleMensajesReferidos=document.getElementById('toggle-mensajes-referidos');
+    const mensajesReferidosContent=document.getElementById('mensajes-referidos-content');
     let numerosWhatsappList=[];
     let numerosWhatsappBase=[];
     let numeroSeleccionado=null;
     let numerosModificados=false;
+    const configuracionMensajesWhatsapp=[
+      {key:'mensajeSolicitudRecarga',nombre:'SOLICITUD DE RECARGA',tipo:'recarga',variables:['monto','app','usuario','fecha']},
+      {key:'mensajeRecargaAprobada',nombre:'RECARGA APROBADA',tipo:'recarga',variables:['monto','app','usuario','fecha']},
+      {key:'mensajeRecargaAnulada',nombre:'RECARGA ANULADA',tipo:'recarga',variables:['monto','app','motivo','usuario']},
+      {key:'mensajeSolicitudRetiro',nombre:'SOLICITUD DE RETIRO',tipo:'retiro',variables:['monto','app','usuario','fecha']},
+      {key:'mensajeRetiroAprobado',nombre:'RETIRO APROBADO',tipo:'retiro',variables:['monto','app','referencia','totalTransferido','comisionBancaria','comisionGestion','usuario']},
+      {key:'mensajeRetiroAnulado',nombre:'RETIRO ANULADO',tipo:'retiro',variables:['monto','app','motivo','usuario']}
+    ];
+    const configuracionMensajesReferidos=[
+      {key:'mensajeReferidoGeneral',nombre:'INVITACIÓN REFERIDOS (SIN CAMPAÑA)',tipo:'referidos',variables:['app','linkRegistro']},
+      {key:'mensajeReferidoCampana',nombre:'INVITACIÓN REFERIDOS (CON CAMPAÑA)',tipo:'referidos',variables:['app','linkRegistro','codigoReferido','cartonesGratis']},
+      {key:'mensajeReferidoRecordatorio',nombre:'MENSAJE RECORDATORIO REFERIDOS',tipo:'referidos',variables:['app','codigoReferido','metaReferidos','premioReferidos']}
+    ];
+    const mensajesWhatsappDefault={
+      mensajeSolicitudRecarga:'📝 *SOLICITUD DE RECARGA* Se registró una solicitud de recarga por <monto> Créditos en <app> para <usuario>. Fecha: <fecha>.',
+      mensajeRecargaAprobada:'✅ *RECARGA APROBADA* Tu recarga por <monto> Créditos en <app> ha sido aprobada.',
+      mensajeRecargaAnulada:'🚫 *RECARGA ANULADA* Tu recarga por <monto> Créditos en <app> fue anulada. Motivo: <motivo>.',
+      mensajeSolicitudRetiro:'📝 *SOLICITUD DE RETIRO* Se registró una solicitud de retiro por <monto> Créditos en <app> para <usuario>. Fecha: <fecha>.',
+      mensajeRetiroAprobado:'✅ *RETIRO APROBADO* Tu retiro por <monto> Créditos en <app> ha sido aprobado. Referencia: <referencia>. Comisión bancaria: <comisionBancaria>. Comisión por gestión: <comisionGestion>. Total transferidos: <totalTransferido> Créditos.',
+      mensajeRetiroAnulado:'🚫 *RETIRO ANULADO* Tu retiro por <monto> Créditos en <app> fue anulado. Motivo: <motivo>.'
+    };
+    const mensajesReferidosDefault={
+      mensajeReferidoGeneral:'Epale! estoy jugando a <app>, y es un vasilón! 🤩 si entras en este link: <linkRegistro> 👈 te registras, y al jugar ¡Puedes ganar muchos PREMIOS!',
+      mensajeReferidoCampana:'Epale! estoy jugando a <app>, y es un vasilón! 🤩 si entras en este link: <linkRegistro> 👈 y te registras usando mi código <codigoReferido> te regalarán <cartonesGratis> cartones para que juegues GRATIS!',
+      mensajeReferidoRecordatorio:'Comparte tu código <codigoReferido> en <app> y al llegar a <metaReferidos> referidos obtendrás <premioReferidos>.'
+    };
+    const mensajesEditables={};
+    function insertarVariableEnCampo(textarea,codigo){
+      if(!textarea) return;
+      const inicio=textarea.selectionStart ?? textarea.value.length;
+      const fin=textarea.selectionEnd ?? textarea.value.length;
+      const valorActual=textarea.value;
+      textarea.value=`${valorActual.slice(0,inicio)}${codigo}${valorActual.slice(fin)}`;
+      const cursor=inicio+codigo.length;
+      textarea.focus();
+      textarea.setSelectionRange(cursor,cursor);
+    }
+    function crearEditorMensajes({contenedor,definicion,defaults,grupoClave}){
+      if(!contenedor) return;
+      contenedor.innerHTML='';
+      definicion.forEach(item=>{
+        const bloque=document.createElement('article');
+        bloque.className=`mensaje-editor-item ${item.tipo}`;
+        const etiqueta=document.createElement('label');
+        etiqueta.className=`mensaje-editor-label ${item.tipo}`;
+        etiqueta.setAttribute('for',`input-${item.key}`);
+        etiqueta.textContent=`Mensaje ${item.nombre}:`;
+        const textarea=document.createElement('textarea');
+        textarea.className=`mensaje-editor-texto ${item.tipo}`;
+        textarea.id=`input-${item.key}`;
+        textarea.value=mensajesEditables[item.key]||defaults[item.key]||'';
+        const filaVariables=document.createElement('div');
+        filaVariables.className='mensaje-variables';
+        (item.variables||[]).forEach(nombreVariable=>{
+          const btnVariable=document.createElement('button');
+          btnVariable.type='button';
+          btnVariable.className=`mensaje-variable-btn ${item.tipo}`;
+          btnVariable.textContent=nombreVariable;
+          btnVariable.addEventListener('click',()=>insertarVariableEnCampo(textarea,`<${nombreVariable}>`));
+          filaVariables.appendChild(btnVariable);
+        });
+        const filaAcciones=document.createElement('div');
+        filaAcciones.className='mensaje-acciones';
+        const botonGuardarMensaje=document.createElement('button');
+        botonGuardarMensaje.type='button';
+        botonGuardarMensaje.className=`mensaje-guardar-btn ${item.tipo}`;
+        botonGuardarMensaje.textContent='Guardar';
+        botonGuardarMensaje.addEventListener('click',async ()=>{
+          const valor=textarea.value.trim();
+          if(!valor){
+            alert(`No puedes dejar el mensaje de ${item.nombre} vacío`);
+            return;
+          }
+          try{
+            await db.collection('Variablesglobales').doc('Parametros').set({
+              [grupoClave]:{[item.key]:valor},
+              [item.key]:valor
+            },{merge:true});
+            mensajesEditables[item.key]=valor;
+            alert('Mensaje guardado correctamente.');
+          }catch(err){
+            console.error(`No se pudo guardar ${item.key}`,err);
+            alert('Ocurrió un error al guardar el mensaje. Inténtalo nuevamente.');
+          }
+        });
+        filaAcciones.appendChild(botonGuardarMensaje);
+        bloque.appendChild(etiqueta);
+        bloque.appendChild(textarea);
+        bloque.appendChild(filaVariables);
+        bloque.appendChild(filaAcciones);
+        contenedor.appendChild(bloque);
+      });
+    }
+    function actualizarVisualizacionMensajes(toggle,contenedor){
+      if(!toggle || !contenedor) return;
+      contenedor.style.display=toggle.checked?'flex':'none';
+    }
+    async function cargarMensajesEditables(){
+      try{
+        const doc=await db.collection('Variablesglobales').doc('Parametros').get();
+        const data=doc.exists?(doc.data()||{}):{};
+        const grupoWhatsapp=data.mensajesWhatsapp||{};
+        const grupoReferidos=data.mensajesReferidos||{};
+        [...configuracionMensajesWhatsapp,...configuracionMensajesReferidos].forEach(item=>{
+          mensajesEditables[item.key]=grupoWhatsapp[item.key]||grupoReferidos[item.key]||data[item.key]||'';
+        });
+      }catch(err){
+        console.error('No se pudo cargar la configuración de mensajes de WhatsApp',err);
+      }
+      crearEditorMensajes({contenedor:mensajesWhatsappContent,definicion:configuracionMensajesWhatsapp,defaults:mensajesWhatsappDefault,grupoClave:'mensajesWhatsapp'});
+      crearEditorMensajes({contenedor:mensajesReferidosContent,definicion:configuracionMensajesReferidos,defaults:mensajesReferidosDefault,grupoClave:'mensajesReferidos'});
+    }
     function poblarSelectCodigos(select,valorDefecto='+58'){
       if(!select) return;
       select.innerHTML='';
@@ -1701,6 +1928,12 @@
     if(botonGuardarLinksPublicidad){
       botonGuardarLinksPublicidad.addEventListener('click',guardarLinksPublicidadSorteos);
     }
+    if(toggleMensajesWhatsapp){
+      toggleMensajesWhatsapp.addEventListener('change',()=>actualizarVisualizacionMensajes(toggleMensajesWhatsapp,mensajesWhatsappContent));
+    }
+    if(toggleMensajesReferidos){
+      toggleMensajesReferidos.addEventListener('change',()=>actualizarVisualizacionMensajes(toggleMensajesReferidos,mensajesReferidosContent));
+    }
     botonGuardarLinkLive.addEventListener('click',async ()=>{
       const valor=campoLinkLiveTiktok.value.trim();
       const confirmar=await confirm(valor ? '¿Deseas guardar este enlace para la transmisión en vivo?' : '¿Deseas eliminar el link guardado para transmisiones en vivo?');
@@ -1713,6 +1946,7 @@
         alert('Ocurrió un error al guardar el link de transmisión. Inténtalo nuevamente.');
       }
     });
+    cargarMensajesEditables();
     cargarParametrosWhatsapp();
     // ---- Sección de asignación de usuarios ----
     const asignacionFiltros={texto:'',rol:''};
