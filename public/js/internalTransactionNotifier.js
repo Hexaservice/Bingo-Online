@@ -70,7 +70,7 @@
     normalizarDoc(doc){
       const data=doc.data()||{};
       const interna=data.notificacionInterna||{};
-      return {id:doc.id,mensaje:interna.mensaje||'Tienes una actualización en tu transacción.'};
+      return {id:doc.id,mensaje:interna.mensaje||'Tienes una actualización en tu transacción.',estadoObjetivo:(interna.estadoObjetivo||'').toString().toUpperCase()};
     }
 
     mostrar(notificacion){
@@ -88,15 +88,27 @@
     async aceptarActual(){
       if(!this.actual || !this.user) return;
       const ref=db.collection('transacciones').doc(this.actual.id);
-      await ref.set({
-        mensajeLeido:true,
-        notificacionInterna:{
-          pendienteMostrar:false,
-          aceptada:true,
-          aceptadaEn:firebase.firestore.FieldValue.serverTimestamp(),
-          aceptadaPor:this.user.email||this.user.uid||''
+      await db.runTransaction(async tx=>{
+        const snap=await tx.get(ref);
+        if(!snap.exists) return;
+        const data=snap.data()||{};
+        const estadoActual=(data.estado||'').toString().toUpperCase();
+        const interna=data.notificacionInterna||{};
+        const payload={
+          mensajeLeido:true,
+          notificacionInterna:{
+            ...interna,
+            pendienteMostrar:false,
+            aceptada:true,
+            aceptadaEn:firebase.firestore.FieldValue.serverTimestamp(),
+            aceptadaPor:this.user.email||this.user.uid||''
+          }
+        };
+        if(estadoActual==='APROBADO'){
+          payload.estado='ACEPTADO';
         }
-      },{merge:true});
+        tx.set(ref,payload,{merge:true});
+      });
       this.mostrando=false;
       this.ocultar();
     }
