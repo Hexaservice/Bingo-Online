@@ -2402,63 +2402,48 @@
       }
     }
 
-    // Flujo legacy de acreditación manual de premios (deshabilitado en modo instantáneo).
-    async function acreditarPremioBackendLegacy(enRegistro){
-      const eventoGanadorId = (enRegistro.eventoGanadorId || enRegistro.winnerKey || enRegistro.id || '').toString().trim();
-      if(!eventoGanadorId){ throw new Error('Falta eventoGanadorId para acreditar premio.'); }
-      const componentes = cpResolverComponentesPremio(enRegistro, eventoGanadorId);
-      if(!componentes){ throw new Error('No se pudieron extraer los componentes del premio a acreditar.'); }
-      const user = authInstance().currentUser;
-      const apiBase = (typeof getAdminApiBase === 'function' ? getAdminApiBase() : '').replace(/\/$/, '');
-      if(!user || !apiBase){ throw new Error('Falta sesión autenticada o API base para acreditar premio.'); }
-      const token = await user.getIdToken();
-      const requestId = `cp-${eventoGanadorId}-${Date.now()}`;
-      const response = await fetch(`${apiBase}/acreditarPremioEvento`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-          'X-Request-Id': requestId
-        },
-        body: JSON.stringify({
-          sorteoId: componentes.sorteoId,
-          formaIdx: componentes.formaIdx,
-          cartonId: componentes.cartonId,
-          userId: enRegistro.userId || '',
-          email: enRegistro.billetera || enRegistro.gmail || '',
-          alias: enRegistro.alias || '',
-          monto: Number(enRegistro.creditos) || 0,
-          // El endpoint espera explícitamente `cartonesGratis`.
-          // Algunos registros en Centro de Pagos usan `cartones` al renderizar,
-          // por eso contemplamos ambos para evitar que se envíe 0 por error.
-          cartonesGratis: Number(enRegistro.cartonesGratis ?? enRegistro.cartones) || 0,
-          eventoGanadorId,
-          origen: 'premios_jugadores',
-          referencia: 'PREMIO',
-          tipoRegistro: 'GANADOR_SORTEO',
-          source: 'centropagos/manual',
-          manualApproval: true,
-          segundoLugar: Boolean(componentes.segundoLugar),
-          requestId
-        })
-      });
-      if(!response.ok){
-        const errorData = await response.json().catch(()=>({}));
-        throw new Error(errorData?.error || `HTTP ${response.status}`);
+    async function resolverBilleteraPremio(enRegistro = {}){
+      const candidataDirecta = cpNormalizarEmail(enRegistro.billetera || enRegistro.gmail || enRegistro.email || '');
+      if(candidataDirecta) return candidataDirecta;
+      await ensureFirebaseListo();
+      const db = dbRef();
+      const userIds = [];
+      if(enRegistro.userId){ userIds.push(String(enRegistro.userId).trim()); }
+      if(Array.isArray(enRegistro.userIds)){
+        enRegistro.userIds.forEach(uid=>{
+          const valor = (uid || '').toString().trim();
+          if(valor) userIds.push(valor);
+        });
       }
-      return response.json().catch(()=>({ status: 'ok' }));
-    }
 
-    function esErrorRecuperableAcreditacion(err){
-      const mensaje = (err?.message || '').toString().toLowerCase();
-      return (
-        mensaje.includes('http 404')
-        || mensaje.includes('http 410')
-        || mensaje.includes('acreditación instantánea')
-        || mensaje.includes('failed to fetch')
-        || mensaje.includes('networkerror')
-        || mensaje.includes('falta sesión autenticada o api base')
-      );
+      for(const uid of userIds){
+        try {
+          const porUid = await db.collection('users').where('uid','==',uid).limit(1).get();
+          if(!porUid.empty){
+            const info = porUid.docs[0].data() || {};
+            const email = cpNormalizarEmail(info.email || porUid.docs[0].id || '');
+            if(email) return email;
+          }
+        } catch (err) {
+          console.warn('No se pudo resolver billetera por uid', uid, err);
+        }
+      }
+
+      const alias = (enRegistro.alias || '').toString().trim();
+      if(alias){
+        try {
+          const porAlias = await db.collection('users').where('alias','==',alias).limit(1).get();
+          if(!porAlias.empty){
+            const info = porAlias.docs[0].data() || {};
+            const email = cpNormalizarEmail(info.email || porAlias.docs[0].id || '');
+            if(email) return email;
+          }
+        } catch (err) {
+          console.warn('No se pudo resolver billetera por alias', alias, err);
+        }
+      }
+
+      return '';
     }
 
     async function acreditarPremioEnFirestore(enRegistro){
@@ -2466,7 +2451,7 @@
       const premioRef = db.collection('PremiosSorteos').doc(enRegistro.id);
       const creditos = Math.max(0, Number(enRegistro.creditos) || 0);
       const cartones = Math.max(0, Number(enRegistro.cartones ?? enRegistro.cartonesGratis) || 0);
-      const billeteraId = (enRegistro.billetera || enRegistro.gmail || '').toString().trim().toLowerCase();
+      const billeteraId = await resolverBilleteraPremio(enRegistro);
       if(!billeteraId){
         throw new Error('No se encontró una billetera destino para el premio.');
       }
@@ -2503,7 +2488,7 @@
           gestionadoPor: authInstance().currentUser?.email || '',
           rolGestor: window.currentRole || '',
           actualizadoEn: firebase.firestore.FieldValue.serverTimestamp(),
-          source: 'centropagos/firestore-fallback'
+          source: 'centropagos/manual-aprobacion'
         }, { merge: true });
       });
 
@@ -2578,7 +2563,6 @@
       const errores = [];
       let procesados = 0;
       let omitidos = 0;
-      let procesadosPorFallback = 0;
       for(const id of ids){
         const registro = premiosMapa.get(id);
         if(!registro){
@@ -2591,26 +2575,13 @@
           continue;
         }
         try {
-          await acreditarPremioBackendLegacy(registro);
+          await acreditarPremioEnFirestore(registro);
           procesados += 1;
           if(registro.sorteoId){
             sorteosActualizados.add(registro.sorteoId);
           }
         } catch (err) {
-          console.error('Error aprobando premio por endpoint', err);
-          if(esErrorRecuperableAcreditacion(err)){
-            try {
-              await acreditarPremioEnFirestore(registro);
-              procesados += 1;
-              procesadosPorFallback += 1;
-              if(registro.sorteoId){
-                sorteosActualizados.add(registro.sorteoId);
-              }
-              continue;
-            } catch (fallbackErr) {
-              console.error('Error aprobando premio por fallback Firestore', fallbackErr);
-            }
-          }
+          console.error('Error aprobando premio', err);
           errores.push(id);
         }
       }
@@ -2622,17 +2593,11 @@
         }
       }
       if(errores.length){
-        const detalleFallback = procesadosPorFallback > 0
-          ? ` (${procesadosPorFallback} procesado(s) por respaldo Firestore)`
-          : '';
-        alert(`Se procesaron ${procesados} premio(s)${detalleFallback}. ${errores.length} registro(s) no se pudieron procesar.`);
+        alert(`Se procesaron ${procesados} premio(s). ${errores.length} registro(s) no se pudieron procesar.`);
         return;
       }
       if(procesados > 0 || omitidos > 0){
-        const detalleFallback = procesadosPorFallback > 0
-          ? ` (${procesadosPorFallback} por respaldo Firestore)`
-          : '';
-        alert(`Proceso finalizado. Premios procesados: ${procesados}${detalleFallback}. Registros omitidos: ${omitidos}.`);
+        alert(`Proceso finalizado. Premios procesados: ${procesados}. Registros omitidos: ${omitidos}.`);
       }
     }
 
