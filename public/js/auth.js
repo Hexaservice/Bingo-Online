@@ -106,7 +106,10 @@ async function initFirebase(){
 }
 
 initFirebase()
-  .then(() => initAppName())
+  .then(() => {
+    initAppName();
+    ensureInternalTransactionNotifierScript();
+  })
   .catch(e => {
     console.error('No se pudo inicializar Firebase al cargar auth.js', e);
   });
@@ -126,6 +129,18 @@ async function initAppName(){
   }catch(e){
     console.error('Error obteniendo nombre de la app', e);
   }
+}
+
+
+function ensureInternalTransactionNotifierScript(){
+  if(!hasWindow() || typeof document === 'undefined') return;
+  if(window.internalTransactionNotifier) return;
+  if(document.querySelector('script[data-internal-transaction-notifier]')) return;
+  const script = document.createElement('script');
+  script.src = 'js/internalTransactionNotifier.js';
+  script.async = false;
+  script.dataset.internalTransactionNotifier = 'true';
+  document.head.appendChild(script);
 }
 
 function overrideDialogs(){

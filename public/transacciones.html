@@ -21,8 +21,6 @@
     .icon-btn .icon.edit{color:blue;}
     .icon-only{padding:4px;width:24px;height:24px;justify-content:center;gap:0;}
     .archivo-activo{background:#654321;color:#fff;}
-    .estado-lectura{display:inline-flex;align-items:center;justify-content:center;min-width:16px;min-height:16px;color:#9ca3af;font-weight:bold;font-size:1rem;}
-    .estado-lectura.leido{color:#16a34a;text-shadow:0 0 3px rgba(22,163,74,.35);}
     #ver-arch-ret .archivo-text{display:none;}
     table{margin:5px auto;border-collapse:collapse;width:100%;font-size:0.8rem;font-family:Calibri, Arial, sans-serif;background:rgba(255,255,255,0.6);table-layout:fixed;}
     th,td{border:1px solid #ccc;padding:2px;white-space:nowrap;font-weight:bold;}
@@ -124,7 +122,7 @@
             <th><select id="filtro-rec-banco" style="width:100%;"><option value="">Banco</option></select></th>
             <th><input id="filtro-rec-ref" type="text" placeholder="Referencia" inputmode="numeric" maxlength="5" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,5);" style="width:100%;box-sizing:border-box;"></th>
             <th><input id="filtro-rec-fecha" type="date" style="width:100%;box-sizing:border-box;"></th>
-            <th><select id="filtro-rec-estado" style="width:100%;"><option value="">Estado</option><option value="PENDIENTE">Pendiente</option><option value="APROBADO">Aprobado</option><option value="ANULADO">Anulado</option></select></th>
+            <th><select id="filtro-rec-estado" style="width:100%;"><option value="">Estado</option><option value="PENDIENTE">Pendiente</option><option value="APROBADO">Aprobado</option><option value="ACEPTADO">Aceptado</option><option value="ANULADO">Anulado</option></select></th>
             <th style="text-align:center;"><span id="sel-rec" style="cursor:pointer;">&#10004;</span></th>
           </tr>
         </thead>
@@ -167,7 +165,7 @@
             <th><select id="filtro-ret-banco" style="width:100%;"><option value="">Banco</option></select></th>
             <th><input id="filtro-ret-ref" type="text" placeholder="Referencia" inputmode="numeric" maxlength="5" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,5);" style="width:100%;box-sizing:border-box;"></th>
             <th><input id="filtro-ret-fecha" type="date" style="width:100%;box-sizing:border-box;"></th>
-            <th><select id="filtro-ret-estado" style="width:100%;"><option value="">Estado</option><option value="PENDIENTE">Pendiente</option><option value="APROBADO">Aprobado</option><option value="ANULADO">Anulado</option></select></th>
+            <th><select id="filtro-ret-estado" style="width:100%;"><option value="">Estado</option><option value="PENDIENTE">Pendiente</option><option value="APROBADO">Aprobado</option><option value="ACEPTADO">Aceptado</option><option value="ANULADO">Anulado</option></select></th>
             <th style="text-align:center;"><span id="sel-ret" style="cursor:pointer;">&#10004;</span></th>
           </tr>
         </thead>
@@ -372,9 +370,10 @@
     }
     function estadoEsAprobado(valor){
       const estado=estadoNormalizadoComparable(valor);
-      return estado==='REALIZADO' || estado==='APROBADO';
+      return estado==='REALIZADO' || estado==='APROBADO' || estado==='ACEPTADO';
     }
     function estadoColor(e){
+      if((e||'').toString().toUpperCase()==='ACEPTADO') return '#fff';
       if(estadoEsAprobado(e)) return 'green';
       return e==='ANULADO'?'red':'orange';
     }
@@ -507,10 +506,13 @@
         const montoNum=parseFloat(t.Monto);
         const monto=formatearMonto(montoNum);
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td>${t.bancoreceptor||''}</td><td style='color:#4b0082;'>${t.referencia}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><span class='estado-lectura ${notificacionLeida(t)?'leido':''}' title='Confirmación del jugador'>✔</span> <input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
+        tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td>${t.bancoreceptor||''}</td><td style='color:#4b0082;'>${t.referencia}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
         const estadoTd=tr.children[6];
         if(t.estado==='ANULADO'){
           tr.classList.add('anulado');
+        }else if((t.estado||'').toUpperCase()==='ACEPTADO'){
+          estadoTd.style.color='#fff';
+          estadoTd.style.background='#16a34a';
         }else{
           estadoTd.style.color=estadoColor(t.estado);
         }
@@ -552,10 +554,13 @@
         const monto=formatearMonto(montoNum);
         const tr=document.createElement('tr');
         const refValue=refCookies[t.id]!==undefined?refCookies[t.id]:(t.referencia||'');
-        tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;' contenteditable='false' inputmode='numeric'>${refValue}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><span class='estado-lectura ${notificacionLeida(t)?'leido':''}' title='Confirmación del jugador'>✔</span> <input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
+        tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;' contenteditable='false' inputmode='numeric'>${refValue}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
         const estadoTd=tr.children[6];
         if(t.estado==='ANULADO'){
           tr.classList.add('anulado');
+        }else if((t.estado||'').toUpperCase()==='ACEPTADO'){
+          estadoTd.style.color='#fff';
+          estadoTd.style.background='#16a34a';
         }else{
           estadoTd.style.color=estadoColor(t.estado);
         }
@@ -764,27 +769,15 @@
         if(estado)upd.estado=estado;
         if(nota)upd.nota=nota;
         if(ref)upd.referencia=ref;
-        if(estado==='APROBADO' || estado==='ANULADO'){
-          const mensajeInterno=await construirMensajeResultado({...data, referencia:ref||data.referencia||''},estado,nota);
-          upd.notificacionInterna={
-            mensaje:mensajeInterno,
-            estadoObjetivo:estado,
-            pendienteMostrar:true,
-            aceptada:false,
-            creadaEn:firebase.firestore.FieldValue.serverTimestamp()
-          };
-          upd.mensajeLeido=false;
-        }
         if(condicion)upd.Condicion=condicion;
         else if(!data.Condicion)upd.Condicion='VISIBLE';
-        await transRef.doc(id).update(upd);
-        delete refCookies[id];
+
         const tipo=normalizarTipoOperacion(data);
         const billeteraId=((data && data.IDbilletera)||'').toString();
-        if(!billeteraId) continue;
         const esRetiro=tipo==='retiro';
         const esRecarga=tipo==='recarga';
-        if((estado==='APROBADO' && (esRecarga||esRetiro)) || (estado==='ANULADO' && esRetiro)){
+
+        if(billeteraId && ((estado==='APROBADO' && (esRecarga||esRetiro)) || (estado==='ANULADO' && esRetiro))){
           const billeteraRef=db.collection('Billetera').doc(billeteraId);
           await db.runTransaction(async t=>{
             const bdoc=await t.get(billeteraRef);
@@ -812,6 +805,22 @@
             }
           });
         }
+
+        if(estado==='APROBADO' || estado==='ANULADO'){
+          const mensajeInterno=await construirMensajeResultado({...data, referencia:ref||data.referencia||''},estado,nota);
+          upd.notificacionInterna={
+            mensaje:mensajeInterno,
+            estadoObjetivo:estado,
+            estadoPrevio:data.estado||'',
+            pendienteMostrar:true,
+            aceptada:false,
+            creadaEn:firebase.firestore.FieldValue.serverTimestamp()
+          };
+          upd.mensajeLeido=false;
+        }
+
+        await transRef.doc(id).update(upd);
+        delete refCookies[id];
       }
       saveRefCookies();
     }
@@ -871,16 +880,17 @@
         const checks=document.querySelectorAll('#tabla-recargas tbody input[type=checkbox]:checked');
         if(!checks.length)return;
         const ids=[];
-        let pendiente=false;
+        let invalido=false;
         checks.forEach(ch=>{
-          if(ch.dataset.estado==='PENDIENTE'){
-            pendiente=true;
-            ch.checked=false;
-          }else{
+          const estado=(ch.dataset.estado||'').toUpperCase();
+          if(estado==='APROBADO' || estado==='ACEPTADO'){
             ids.push(ch.dataset.id);
+            return;
           }
+          invalido=true;
+          ch.checked=false;
         });
-        if(pendiente)alert('Las transacciones PENDIENTES no pueden archivarse');
+        if(invalido)alert('Solo se pueden archivar transacciones en estado APROBADO o ACEPTADO');
         if(!ids.length)return;
         if(mostrarRecArch) actualizar(ids,null,null,null,'VISIBLE');
         else actualizar(ids,null,null,null,'ARCHIVADA');
@@ -979,16 +989,17 @@
         const checks=document.querySelectorAll('#tabla-retiros tbody input[type=checkbox]:checked');
         if(!checks.length)return;
         const ids=[];
-        let pendiente=false;
+        let invalido=false;
         checks.forEach(ch=>{
-          if(ch.dataset.estado==='PENDIENTE'){
-            pendiente=true;
-            ch.checked=false;
-          }else{
+          const estado=(ch.dataset.estado||'').toUpperCase();
+          if(estado==='APROBADO' || estado==='ACEPTADO'){
             ids.push(ch.dataset.id);
+            return;
           }
+          invalido=true;
+          ch.checked=false;
         });
-        if(pendiente)alert('Las transacciones PENDIENTES no pueden archivarse');
+        if(invalido)alert('Solo se pueden archivar transacciones en estado APROBADO o ACEPTADO');
         if(!ids.length)return;
         if(mostrarRetArch)actualizar(ids,null,null,null,'VISIBLE');
         else actualizar(ids,null,null,null,'ARCHIVADA');
