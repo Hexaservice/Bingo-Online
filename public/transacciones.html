@@ -692,32 +692,15 @@
         const esRetiro=tipo==='retiro';
         const esRecarga=tipo==='recarga';
 
-        if(billeteraId && ((estado==='APROBADO' && (esRecarga||esRetiro)) || (estado==='ANULADO' && esRetiro))){
+        if(billeteraId && estado==='ANULADO' && esRetiro){
           const billeteraRef=db.collection('Billetera').doc(billeteraId);
           await db.runTransaction(async t=>{
             const bdoc=await t.get(billeteraRef);
             const billeteraData=bdoc.exists?(bdoc.data()||{}):{};
-            let creditosActual=toNumberSafe(billeteraData.creditos,0);
-            let transitoActual=Math.max(0,toNumberSafe(billeteraData.creditostransito,0));
             const montoTransaccion=toNumberSafe((data.MontoSolicitado ?? data.Monto),0);
-            const payload={};
-            if(estado==='APROBADO'){
-              if(esRecarga){
-                creditosActual+=toNumberSafe(data.Monto,0);
-                payload.creditos=creditosActual;
-              }else if(esRetiro){
-                creditosActual=Math.max(0,creditosActual-montoTransaccion);
-                transitoActual=Math.max(0,transitoActual-montoTransaccion);
-                payload.creditos=creditosActual;
-                payload.creditostransito=transitoActual;
-              }
-            }else if(estado==='ANULADO' && esRetiro){
-              transitoActual=Math.max(0,transitoActual-montoTransaccion);
-              payload.creditostransito=transitoActual;
-            }
-            if(Object.keys(payload).length>0){
-              t.set(billeteraRef,payload,{merge:true});
-            }
+            const transitoActual=Math.max(0,toNumberSafe(billeteraData.creditostransito,0));
+            const payload={ creditostransito: Math.max(0,transitoActual-montoTransaccion) };
+            t.set(billeteraRef,payload,{merge:true});
           });
         }
 
