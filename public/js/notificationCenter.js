@@ -9,6 +9,7 @@
         { clave: 'sorteoNuevo', titulo: 'Notificación Sorteo Nuevo', descripcion: 'Se envía cuando se crea un sorteo.' },
         { clave: 'sorteoJugando', titulo: 'Notificación Sorteo Jugando', descripcion: 'Te avisa cuando un sorteo inicia la partida.' },
         { clave: 'estatusRecarga', titulo: 'Notificación Estatus Recarga', descripcion: 'Recibe cambios de estado de tus recargas.' },
+        { clave: 'estatusRetiro', titulo: 'Notificación Estatus Retiro', descripcion: 'Recibe cambios de estado de tus retiros.' },
         { clave: 'premio', titulo: 'Notificación Premio', descripcion: 'Recibe aviso cuando un premio se acredita en tu billetera.' }
       ]
     },
@@ -41,6 +42,7 @@
     sorteoNuevo: () => ({ ids: {} }),
     sorteoJugando: () => ({ ids: {} }),
     estatusRecarga: () => ({ ids: {} }),
+    estatusRetiro: () => ({ ids: {} }),
     premio: () => ({ ids: {} }),
     recargasPendientes: () => ({ ultimoEnvio: 0 }),
     retirosPendientes: () => ({ ultimoEnvio: 0 }),
@@ -736,19 +738,22 @@
             if(tipo === 'recarga' && (estado === 'APROBADO' || estado === 'ANULADO')){
               this.notificarCambioRecarga(cambio.doc.id, { ...data, tipotrans: tipo }, estado);
             }
+            if(tipo === 'retiro' && (estado === 'APROBADO' || estado === 'ANULADO')){
+              this.notificarCambioRetiro(cambio.doc.id, { ...data, tipotrans: tipo }, estado);
+            }
           });
         };
 
         const unsubTransEmail = db.collection('transacciones')
           .where('IDbilletera','==', correo)
-          .where('tipotrans','in',['recarga','deposito'])
+          .where('tipotrans','in',['recarga','deposito','retiro'])
           .onSnapshot(manejarSnapshot, err => console.error('Error escuchando transacciones del jugador', err));
         this.desuscriptores.push(unsubTransEmail);
 
         identidadesInternas.forEach((identidad) => {
           const unsubInterno = db.collection('transacciones')
             .where('idBilleteraInterna','==', identidad)
-            .where('tipotrans','in',['recarga','deposito'])
+            .where('tipotrans','in',['recarga','deposito','retiro'])
             .onSnapshot(manejarSnapshot, err => console.error('Error escuchando transacciones por idBilleteraInterna', err));
           this.desuscriptores.push(unsubInterno);
         });
@@ -1050,6 +1055,7 @@
 
     notificarCambioRecarga(id, data, estado){
       if(!this.puedeNotificar('estatusRecarga')) return;
+      if(data && data.notificacionInterna && data.notificacionInterna.pendienteMostrar === true) return;
       const clave = `${id}:${estado}`;
       if(this.yaNotificado('estatusRecarga', clave)) return;
       const monto = parseFloat(data.Monto || data.MontoSolicitado || 0) || 0;
@@ -1059,6 +1065,20 @@
       if(estado === 'ANULADO') mensaje = montoTxt ? `Tu recarga de ${montoTxt} fue anulada.` : 'Tu recarga fue anulada.';
       this.emitirNotificacion('estatusRecarga', mensaje, 'Actualización de recarga');
       this.registrarHistorial('estatusRecarga', clave);
+    }
+
+    notificarCambioRetiro(id, data, estado){
+      if(!this.puedeNotificar('estatusRetiro')) return;
+      if(data && data.notificacionInterna && data.notificacionInterna.pendienteMostrar === true) return;
+      const clave = `${id}:${estado}`;
+      if(this.yaNotificado('estatusRetiro', clave)) return;
+      const monto = parseFloat(data.MontoSolicitado ?? data.Monto || 0) || 0;
+      const montoTxt = monto ? monto.toFixed(2) : '';
+      let mensaje = 'Tu solicitud de retiro cambió de estado.';
+      if(estado === 'APROBADO') mensaje = montoTxt ? `Tu retiro de ${montoTxt} fue aprobado.` : 'Tu retiro fue aprobado.';
+      if(estado === 'ANULADO') mensaje = montoTxt ? `Tu retiro de ${montoTxt} fue anulado.` : 'Tu retiro fue anulado.';
+      this.emitirNotificacion('estatusRetiro', mensaje, 'Actualización de retiro');
+      this.registrarHistorial('estatusRetiro', clave);
     }
 
     notificarPremio(id, data){
