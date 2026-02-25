@@ -599,16 +599,39 @@
       return Number.isFinite(numero)?numero:defecto;
     }
 
-    const MENSAJES_RESULTADOS_INTERNOS = Object.freeze({
-      recarga: {
-        APROBADO: '✅ Tu recarga por <monto> Créditos en <app> ha sido aprobada.',
-        ANULADO: '🚫 Tu recarga por <monto> Créditos en <app> fue anulada. Motivo: <motivo>.'
-      },
-      retiro: {
-        APROBADO: '✅ Tu retiro por <monto> Créditos en <app> ha sido aprobado. Referencia: <referencia>. Total transferido: <totalTransferido>.',
-        ANULADO: '🚫 Tu retiro por <monto> Créditos en <app> fue anulado. Motivo: <motivo>.'
-      }
+    const MENSAJES_RESULTADOS_INTERNOS_DEFAULT = Object.freeze({
+      mensajeRecargaAprobada:'✅ *RECARGA APROBADA* Tu recarga por <monto> Créditos en <app> ha sido aprobada.',
+      mensajeRecargaAnulada:'🚫 *RECARGA ANULADA* Tu recarga por <monto> Créditos en <app> fue anulada. Motivo: <motivo>.',
+      mensajeRetiroAprobado:'✅ *RETIRO APROBADO* Tu retiro por <monto> Créditos en <app> ha sido aprobado. Referencia: <referencia>. Comisión bancaria: <comisionBancaria>. Comisión por gestión: <comisionGestion>. Total transferidos: <totalTransferido> Créditos.',
+      mensajeRetiroAnulado:'🚫 *RETIRO ANULADO* Tu retiro por <monto> Créditos en <app> fue anulado. Motivo: <motivo>.'
     });
+    let mensajesInternosCache={...MENSAJES_RESULTADOS_INTERNOS_DEFAULT};
+    let mensajesInternosCargados=false;
+
+    function obtenerMensajePersistido(data,key){
+      const grupo=data && typeof data.mensajesWhatsapp==='object' ? data.mensajesWhatsapp : {};
+      return grupo?.[key] || data?.[key] || '';
+    }
+
+    async function cargarPlantillasMensajesInternos(){
+      if(mensajesInternosCargados) return mensajesInternosCache;
+      try{
+        const snap=await db.collection('Variablesglobales').doc('Parametros').get();
+        const data=snap.exists?(snap.data()||{}):{};
+        mensajesInternosCache={
+          ...MENSAJES_RESULTADOS_INTERNOS_DEFAULT,
+          mensajeRecargaAprobada:obtenerMensajePersistido(data,'mensajeRecargaAprobada')||MENSAJES_RESULTADOS_INTERNOS_DEFAULT.mensajeRecargaAprobada,
+          mensajeRecargaAnulada:obtenerMensajePersistido(data,'mensajeRecargaAnulada')||MENSAJES_RESULTADOS_INTERNOS_DEFAULT.mensajeRecargaAnulada,
+          mensajeRetiroAprobado:obtenerMensajePersistido(data,'mensajeRetiroAprobado')||MENSAJES_RESULTADOS_INTERNOS_DEFAULT.mensajeRetiroAprobado,
+          mensajeRetiroAnulado:obtenerMensajePersistido(data,'mensajeRetiroAnulado')||MENSAJES_RESULTADOS_INTERNOS_DEFAULT.mensajeRetiroAnulado
+        };
+      }catch(err){
+        console.error('No se pudieron cargar las plantillas de notificación interna',err);
+        mensajesInternosCache={...MENSAJES_RESULTADOS_INTERNOS_DEFAULT};
+      }
+      mensajesInternosCargados=true;
+      return mensajesInternosCache;
+    }
 
     function aplicarPlantillaMensaje(plantilla,valores){
       return (plantilla||'').replace(/<([a-zA-Z0-9_]+)>/g,(_,clave)=>{
@@ -618,22 +641,31 @@
     }
 
     async function construirMensajeResultado(transaccion,estadoFinal,nota){
+      const plantillas=await cargarPlantillasMensajesInternos();
       const tipo=normalizarTipoOperacion(transaccion);
       const montoSolicitadoNum=toNumberSafe(transaccion.MontoSolicitado??transaccion.Monto,transaccion.Monto);
       const montoTransferidoNum=toNumberSafe(transaccion.Monto,transaccion.MontoSolicitado??transaccion.Monto);
+      const comisionTotal=Math.max(0,montoSolicitadoNum-montoTransferidoNum);
       const formatearEnteroSeguro=valor=>Math.trunc(toNumberSafe(valor,0)).toString();
       const montoSolicitado=formatearEnteroSeguro(montoSolicitadoNum);
-      const montoTransferido=`${formatearEnteroSeguro(montoTransferidoNum)} Créditos`;
+      const montoTransferido=formatearEnteroSeguro(montoTransferidoNum);
       const referenciaTexto=(transaccion.referencia||'').toString().trim();
+      const nombreUsuario=((transaccion.Usuario||transaccion.Nombre||transaccion.usuario||transaccion.IDbilletera)||'').toString().trim()||'Jugador';
       const valoresBase={
         monto:montoSolicitado,
         app:'BingOnline',
+        usuario:nombreUsuario,
+        fecha:fecha(),
         motivo:(nota||'No especificado').toString().trim(),
         referencia:referenciaTexto||'pendiente',
-        totalTransferido:montoTransferido
+        totalTransferido:montoTransferido,
+        comisionBancaria:formatearEnteroSeguro(transaccion.comisionBancaria ?? transaccion.ComisionBancaria ?? comisionTotal),
+        comisionGestion:formatearEnteroSeguro(transaccion.comisionGestion ?? transaccion.ComisionGestion ?? 0)
       };
-      const plantillasTipo=MENSAJES_RESULTADOS_INTERNOS[tipo]||MENSAJES_RESULTADOS_INTERNOS.recarga;
-      const plantilla=plantillasTipo[estadoFinal]||plantillasTipo.ANULADO;
+      const clavePlantilla=(tipo==='retiro')
+        ? (estadoFinal==='APROBADO'?'mensajeRetiroAprobado':'mensajeRetiroAnulado')
+        : (estadoFinal==='APROBADO'?'mensajeRecargaAprobada':'mensajeRecargaAnulada');
+      const plantilla=plantillas[clavePlantilla]||MENSAJES_RESULTADOS_INTERNOS_DEFAULT[clavePlantilla]||'';
       return aplicarPlantillaMensaje(plantilla,valoresBase);
     }
 
@@ -766,14 +798,14 @@
         let invalido=false;
         checks.forEach(ch=>{
           const estado=(ch.dataset.estado||'').toUpperCase();
-          if(estado==='APROBADO' || estado==='ACEPTADO'){
+          if(estado==='ACEPTADO'){
             ids.push(ch.dataset.id);
             return;
           }
           invalido=true;
           ch.checked=false;
         });
-        if(invalido)alert('Solo se pueden archivar transacciones en estado APROBADO o ACEPTADO');
+        if(invalido)alert('Solo se pueden archivar transacciones en estado ACEPTADO');
         if(!ids.length)return;
         if(mostrarRecArch) actualizar(ids,null,null,null,'VISIBLE');
         else actualizar(ids,null,null,null,'ARCHIVADA');
@@ -875,14 +907,14 @@
         let invalido=false;
         checks.forEach(ch=>{
           const estado=(ch.dataset.estado||'').toUpperCase();
-          if(estado==='APROBADO' || estado==='ACEPTADO'){
+          if(estado==='ACEPTADO'){
             ids.push(ch.dataset.id);
             return;
           }
           invalido=true;
           ch.checked=false;
         });
-        if(invalido)alert('Solo se pueden archivar transacciones en estado APROBADO o ACEPTADO');
+        if(invalido)alert('Solo se pueden archivar transacciones en estado ACEPTADO');
         if(!ids.length)return;
         if(mostrarRetArch)actualizar(ids,null,null,null,'VISIBLE');
         else actualizar(ids,null,null,null,'ARCHIVADA');
