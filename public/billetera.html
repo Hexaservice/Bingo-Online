@@ -540,7 +540,8 @@
               <select id="filtro-estado">
                 <option value="">ESTADO</option>
                 <option value="PENDIENTE">Pendiente</option>
-                <option value="REALIZADO">Realizado</option>
+                <option value="APROBADO">Aprobado</option>
+                <option value="ACEPTADO">Aceptado</option>
                 <option value="ANULADO">Anulado</option>
               </select>
             </th>
@@ -1922,7 +1923,7 @@
         return window.EstadosPagoPremio.normalizarLectura(valor, (valor||'').toString().trim().toUpperCase());
       }
       const texto=(valor||'').toString().trim().toUpperCase();
-      return texto==='APROBADO'?'REALIZADO':texto;
+      return texto==='REALIZADO'?'APROBADO':texto;
     }
 
     function normalizarTransaccionParaTabla(id,data){
@@ -2066,7 +2067,8 @@
         const f=formatearFecha(t.estado==='PENDIENTE'?t.fechasolicitud:t.fechagestion);
         if(fecha && f!==fecha) return;
         if(estado && normalizarEstadoPremioTransaccion(t.estado)!==normalizarEstadoPremioTransaccion(estado)) return;
-        const estadoColor=t.estado==='PENDIENTE'?'orange':t.estado==='ANULADO'?'red':t.estado==='REALIZADO'?'green':'black';
+        const estadoNormalizado=normalizarEstadoPremioTransaccion(t.estado);
+        const estadoColor=estadoNormalizado==='PENDIENTE'?'orange':estadoNormalizado==='ANULADO'?'red':(estadoNormalizado==='APROBADO' || estadoNormalizado==='ACEPTADO')?'green':'black';
         const tr=document.createElement('tr');
         const montoFmt=parseFloat(t.Monto).toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
         const tipoTrans=(t.tipotrans||'').toLowerCase();

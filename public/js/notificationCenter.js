@@ -16,11 +16,7 @@
       etiqueta: 'Colaborador',
       items: [
         { clave: 'recargasPendientes', titulo: 'Notificación Recargas Pendientes', descripcion: 'Se repite cada 10 minutos si hay recargas por gestionar.' },
-        { clave: 'retirosPendientes', titulo: 'Notificación Retiros Pendientes', descripcion: 'Se repite cada 10 minutos si hay retiros por gestionar.' },
-        { clave: 'mensajeRecargaAprobada', titulo: 'Redacción de mensajes RECARGA APROBADA', descripcion: '✅ Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Recarga', color: '#0b6b27' },
-        { clave: 'mensajeRetiroAprobado', titulo: 'Redacción de mensajes RETIRO APROBADO', descripcion: '✅ Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Retiro', color: '#8b0000' },
-        { clave: 'mensajeRecargaAnulada', titulo: 'Redacción de mensajes RECARGA ANULADA', descripcion: '🚫 Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Recarga Anulada', color: '#0a8800' },
-        { clave: 'mensajeRetiroAnulado', titulo: 'Redacción de mensajes RETIRO ANULADO', descripcion: '🚫 Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Retiro Anulado', color: '#d32f2f' }
+        { clave: 'retirosPendientes', titulo: 'Notificación Retiros Pendientes', descripcion: 'Se repite cada 10 minutos si hay retiros por gestionar.' }
       ]
     },
     Administrador: {
@@ -31,11 +27,7 @@
         { clave: 'selladoSorteo', titulo: 'Notificación Sellado Sorteo', descripcion: 'Cuando llega la hora de sellado de un sorteo.' },
         { clave: 'juegoEnVivoSorteo', titulo: 'Notificación Juego en vivo Sorteo', descripcion: 'Cuando llega la hora de inicio de un sorteo.' },
         { clave: 'gestionPagos', titulo: 'Notificación Gestión Pagos', descripcion: 'Aviso único si hay gestiones de pagos pendientes.' },
-        { clave: 'topeReintentosAcreditacion', titulo: 'Notificación TOPE_REINTENTOS', descripcion: 'Te avisa cuando existan acreditaciones técnicas bloqueadas por tope de reintentos.' },
-        { clave: 'mensajeRecargaAprobada', titulo: 'Redacción de mensajes RECARGA APROBADA', descripcion: '✅ Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Recarga', color: '#0b6b27' },
-        { clave: 'mensajeRetiroAprobado', titulo: 'Redacción de mensajes RETIRO APROBADO', descripcion: '✅ Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Retiro', color: '#8b0000' },
-        { clave: 'mensajeRecargaAnulada', titulo: 'Redacción de mensajes RECARGA ANULADA', descripcion: '🚫 Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Recarga Anulada', color: '#0a8800' },
-        { clave: 'mensajeRetiroAnulado', titulo: 'Redacción de mensajes RETIRO ANULADO', descripcion: '🚫 Permite activar la redacción automatica de mensajes WhatsApp para enviar al jugador una notificacion de Retiro Anulado', color: '#d32f2f' }
+        { clave: 'topeReintentosAcreditacion', titulo: 'Notificación TOPE_REINTENTOS', descripcion: 'Te avisa cuando existan acreditaciones técnicas bloqueadas por tope de reintentos.' }
       ]
     }
   };
@@ -72,7 +64,7 @@
     if(window.EstadosPagoPremio && typeof window.EstadosPagoPremio.normalizarLectura === 'function'){
       return window.EstadosPagoPremio.normalizarLectura(estado);
     }
-    return estadoNormalizado(estado) === 'APROBADO' ? 'REALIZADO' : estadoNormalizado(estado);
+    return estadoNormalizado(estado) === 'REALIZADO' ? 'APROBADO' : estadoNormalizado(estado);
   }
 
   function historialVacio(){
@@ -175,8 +167,6 @@
   const CLAVES_RENOMBRADAS = {
     estatusDeposito: 'estatusRecarga',
     depositosPendientes: 'recargasPendientes',
-    mensajeDepositoAprobado: 'mensajeRecargaAprobada',
-    mensajeDepositoAnulado: 'mensajeRecargaAnulada'
   };
 
   const TIPOS_RECARGA = new Set(['recarga','deposito','depósito']);
