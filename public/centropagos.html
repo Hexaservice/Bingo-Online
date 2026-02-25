@@ -563,7 +563,8 @@
               <select id="filtro-premios-estado">
                 <option value="">Estado</option>
                 <option value="PENDIENTE">PENDIENTE</option>
-                <option value="REALIZADO">REALIZADO</option>
+                <option value="APROBADO">APROBADO</option>
+                <option value="ACEPTADO">ACEPTADO</option>
                 <option value="ARCHIVADO">ARCHIVADO</option>
               </select>
             </th>
@@ -608,7 +609,8 @@
               <select id="filtro-pagos-estado">
                 <option value="">Estado</option>
                 <option value="PENDIENTE">PENDIENTE</option>
-                <option value="REALIZADO">REALIZADO</option>
+                <option value="APROBADO">APROBADO</option>
+                <option value="ACEPTADO">ACEPTADO</option>
                 <option value="ARCHIVADO">ARCHIVADO</option>
               </select>
             </th>
@@ -2073,8 +2075,9 @@
 
     function obtenerEtiquetaEstado(valorEstado){
       const estado = normalizarEstado(valorEstado);
-      if(estado === 'REALIZADO') return 'REALIZADO';
       if(estado === 'PENDIENTE') return 'PENDIENTE';
+      if(estado === 'APROBADO') return 'APROBADO';
+      if(estado === 'ACEPTADO') return 'ACEPTADO';
       if(estado === 'ARCHIVADO') return 'ARCHIVADO';
       return estado;
     }
@@ -2200,7 +2203,10 @@
       }
       const filas = lista.map((item, indice)=>{
       const numero = indice + 1;
-      const estadoClase = item.estado === 'REALIZADO' ? 'estado-aprobado' : (item.estado === 'PENDIENTE' ? 'estado-pendiente' : 'estado-archivado');
+      const estadoNormalizado = normalizarEstado(item.estado);
+      const estadoClase = (estadoNormalizado === 'APROBADO' || estadoNormalizado === 'ACEPTADO')
+        ? 'estado-aprobado'
+        : (estadoNormalizado === 'PENDIENTE' ? 'estado-pendiente' : 'estado-archivado');
       const rolNormalizado = normalizarTipoUsuario(item.tipo || item.estado || '');
       const estadoHtml = tipo === 'colaboradores'
         ? construirRolBadgeHtml(rolNormalizado)
@@ -2481,7 +2487,7 @@
         }, { merge: true });
 
         tx.set(premioRef, {
-          estado: validarEstadoGuardado('REALIZADO', `PremiosSorteos:${enRegistro.id}`),
+          estado: validarEstadoGuardado('APROBADO', `PremiosSorteos:${enRegistro.id}`),
           idBilletera: billeteraId,
           fechaGestion: fechaServidor(),
           horaGestion: horaServidor(),
@@ -2514,7 +2520,7 @@
           tipotrans: (enRegistro.tipotrans || 'pago').toString().toLowerCase(),
           origen: (enRegistro.origen || 'pagos_administracion').toString().toLowerCase(),
           Monto: monto,
-          estado: validarEstadoGuardado('REALIZADO', 'TransaccionPagoAdministracion'),
+          estado: validarEstadoGuardado('APROBADO', 'TransaccionPagoAdministracion'),
           IDbilletera: enRegistro.billetera,
           fechasolicitud: '',
           horasolicitud: '',
@@ -2619,7 +2625,7 @@
             const estadoActual = normalizarEstado(data.estado);
             if(window.EstadosPagoPremio.estaFinalizado(estadoActual)) return;
             tx.update(ref, {
-              estado: validarEstadoGuardado('REALIZADO', `PagosAdministracion:${id}`),
+              estado: validarEstadoGuardado('APROBADO', `PagosAdministracion:${id}`),
               fechaGestion: fechaServidor(),
               horaGestion: horaServidor(),
               gestionadoPor: authInstance().currentUser?.email || '',

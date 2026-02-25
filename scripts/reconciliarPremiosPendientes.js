@@ -28,7 +28,14 @@ function resolveCredentialsPath() {
 }
 
 function normalizarEstado(estado) {
-  return (estado || '').toString().trim().toUpperCase();
+  const texto = (estado || '').toString().trim().toUpperCase();
+  if (texto === 'REALIZADO') return 'APROBADO';
+  return texto;
+}
+
+function estadoFinalizado(estado) {
+  const normalizado = normalizarEstado(estado);
+  return normalizado === 'APROBADO' || normalizado === 'ACEPTADO';
 }
 
 async function main() {
@@ -66,10 +73,10 @@ async function main() {
   premiosSnap.forEach(doc => {
     const data = doc.data() || {};
     const estado = normalizarEstado(data.estado);
-    if (estado === 'REALIZADO' || estado === 'ARCHIVADO') return;
+    if (estadoFinalizado(estado) || estado === 'ARCHIVADO') return;
     const eventoGanadorId = (data.eventoGanadorId || doc.id || '').toString();
     const match = pendientesPorEvento.get(eventoGanadorId);
-    if (!match || match.estado === 'REALIZADO') {
+    if (!match || estadoFinalizado(match.estado)) {
       huerfanos.push({
         premioId: doc.id,
         eventoGanadorId,
