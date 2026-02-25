@@ -186,17 +186,6 @@
     const datosRec = [];
     const datosRet = [];
     let unsubscribeTransacciones = null;
-    const MAPEO_PREFERENCIAS_WHATSAPP={
-      recarga:{
-        APROBADO:'mensajeRecargaAprobada',
-        ANULADO:'mensajeRecargaAnulada'
-      },
-      retiro:{
-        APROBADO:'mensajeRetiroAprobado',
-        ANULADO:'mensajeRetiroAnulado'
-      }
-    };
-
     function volverConFallback(){
       const role=(window.currentRole||'').trim();
       if(role && typeof redirectByRole==='function'){
@@ -366,11 +355,11 @@
       if(window.EstadosPagoPremio && typeof window.EstadosPagoPremio.normalizarLectura==='function'){
         return window.EstadosPagoPremio.normalizarLectura(texto, texto || 'PENDIENTE');
       }
-      return texto==='APROBADO'?'REALIZADO':texto;
+      return texto==='REALIZADO'?'APROBADO':texto;
     }
     function estadoEsAprobado(valor){
       const estado=estadoNormalizadoComparable(valor);
-      return estado==='REALIZADO' || estado==='APROBADO' || estado==='ACEPTADO';
+      return estado==='APROBADO' || estado==='ACEPTADO';
     }
     function estadoColor(e){
       if((e||'').toString().toUpperCase()==='ACEPTADO') return '#fff';
@@ -610,98 +599,24 @@
       return Number.isFinite(numero)?numero:defecto;
     }
 
-    const cacheWhatsapp=new Map();
-    const MENSAJES_WHATSAPP_RESULTADOS_DEFAULT={
-      mensajeRecargaAprobada:'✅ *RECARGA APROBADA* Tu recarga por <monto> Créditos en <app> ha sido aprobada.',
-      mensajeRecargaAnulada:'🚫 *RECARGA ANULADA* Tu recarga por <monto> Créditos en <app> fue anulada. Motivo: <motivo>.',
-      mensajeRetiroAprobado:'✅ *RETIRO APROBADO* Tu retiro por <monto> Créditos en <app> ha sido aprobado. Referencia: <referencia>. Total transferidos: <totalTransferido>.',
-      mensajeRetiroAnulado:'🚫 *RETIRO ANULADO* Tu retiro por <monto> Créditos en <app> fue anulado. Motivo: <motivo>.'
-    };
-    let mensajesWhatsappResultados={...MENSAJES_WHATSAPP_RESULTADOS_DEFAULT};
-    let mensajesWhatsappResultadosCargados=false;
-    let suscripcionMensajesWhatsappResultados=null;
+    const MENSAJES_RESULTADOS_INTERNOS = Object.freeze({
+      recarga: {
+        APROBADO: '✅ Tu recarga por <monto> Créditos en <app> ha sido aprobada.',
+        ANULADO: '🚫 Tu recarga por <monto> Créditos en <app> fue anulada. Motivo: <motivo>.'
+      },
+      retiro: {
+        APROBADO: '✅ Tu retiro por <monto> Créditos en <app> ha sido aprobado. Referencia: <referencia>. Total transferido: <totalTransferido>.',
+        ANULADO: '🚫 Tu retiro por <monto> Créditos en <app> fue anulado. Motivo: <motivo>.'
+      }
+    });
 
-    function actualizarMensajesWhatsappResultadosDesdeData(data={}){
-      const grupo=data.mensajesWhatsapp||{};
-      mensajesWhatsappResultados={
-        ...MENSAJES_WHATSAPP_RESULTADOS_DEFAULT,
-        mensajeRecargaAprobada:grupo.mensajeRecargaAprobada||data.mensajeRecargaAprobada||MENSAJES_WHATSAPP_RESULTADOS_DEFAULT.mensajeRecargaAprobada,
-        mensajeRecargaAnulada:grupo.mensajeRecargaAnulada||data.mensajeRecargaAnulada||MENSAJES_WHATSAPP_RESULTADOS_DEFAULT.mensajeRecargaAnulada,
-        mensajeRetiroAprobado:grupo.mensajeRetiroAprobado||data.mensajeRetiroAprobado||MENSAJES_WHATSAPP_RESULTADOS_DEFAULT.mensajeRetiroAprobado,
-        mensajeRetiroAnulado:grupo.mensajeRetiroAnulado||data.mensajeRetiroAnulado||MENSAJES_WHATSAPP_RESULTADOS_DEFAULT.mensajeRetiroAnulado
-      };
-      mensajesWhatsappResultadosCargados=true;
-    }
-
-    function iniciarSuscripcionMensajesWhatsappResultados(){
-      if(suscripcionMensajesWhatsappResultados) return;
-      suscripcionMensajesWhatsappResultados=db.collection('Variablesglobales').doc('Parametros').onSnapshot(snap=>{
-        const data=snap.exists?(snap.data()||{}):{};
-        actualizarMensajesWhatsappResultadosDesdeData(data);
-      },err=>{
-        console.error('No se pudo sincronizar la configuración de mensajes de resultado WhatsApp en tiempo real',err);
-      });
-    }
-    function normalizarNumeroWhatsapp(valor){
-      const texto=(valor||'').toString();
-      let limpio=texto.replace(/[^0-9+]/g,'');
-      if(!limpio) return '';
-      if(limpio.startsWith('+')){
-        limpio='+'+limpio.slice(1).replace(/\+/g,'');
-      }else{
-        limpio=limpio.replace(/\+/g,'');
-      }
-      return limpio;
-    }
-    function construirEnlaceWhatsapp(numero,mensaje){
-      const normalizado=normalizarNumeroWhatsapp(numero);
-      if(!normalizado) return '';
-      const destino=normalizado.startsWith('+')?normalizado.slice(1):normalizado;
-      const texto=encodeURIComponent((mensaje||'').toString());
-      return `https://wa.me/${destino}${texto?`?text=${texto}`:''}`;
-    }
-    async function obtenerNumeroWhatsappDestino(idBilletera){
-      if(!idBilletera) return '';
-      if(cacheWhatsapp.has(idBilletera)) return cacheWhatsapp.get(idBilletera);
-      let numero='';
-      try{
-        const billeteraDoc=await db.collection('Billetera').doc(idBilletera).get();
-        if(billeteraDoc.exists){
-          const data=billeteraDoc.data()||{};
-          numero=data.numeroWhatsapp||data.numero_whatsapp||data.whatsapp||data.celular||data.numerocel||data.telefono||data.Telefono||'';
-        }
-        if(!numero){
-          const userDoc=await db.collection('users').doc(idBilletera).get();
-          if(userDoc.exists){
-            const data=userDoc.data()||{};
-            numero=data.telefono||data.Telefono||data.celular||data.whatsapp||data.phoneNumber||'';
-          }
-        }
-      }catch(err){
-        console.error('No se pudo obtener el número de WhatsApp',err);
-      }
-      const normalizado=normalizarNumeroWhatsapp(numero);
-      cacheWhatsapp.set(idBilletera,normalizado);
-      return normalizado;
-    }
-    async function cargarPlantillasWhatsappResultados(){
-      iniciarSuscripcionMensajesWhatsappResultados();
-      if(mensajesWhatsappResultadosCargados) return mensajesWhatsappResultados;
-      try{
-        const snap=await db.collection('Variablesglobales').doc('Parametros').get();
-        const data=snap.exists?(snap.data()||{}):{};
-        actualizarMensajesWhatsappResultadosDesdeData(data);
-      }catch(err){
-        console.error('No se pudo cargar la configuración de mensajes de resultado WhatsApp',err);
-      }
-      return mensajesWhatsappResultados;
-    }
     function aplicarPlantillaMensaje(plantilla,valores){
       return (plantilla||'').replace(/<([a-zA-Z0-9_]+)>/g,(_,clave)=>{
         const valor=valores[clave];
         return valor===undefined || valor===null ? '' : String(valor);
       }).trim();
     }
+
     async function construirMensajeResultado(transaccion,estadoFinal,nota){
       const tipo=normalizarTipoOperacion(transaccion);
       const montoSolicitadoNum=toNumberSafe(transaccion.MontoSolicitado??transaccion.Monto,transaccion.Monto);
@@ -710,48 +625,16 @@
       const montoSolicitado=formatearEnteroSeguro(montoSolicitadoNum);
       const montoTransferido=`${formatearEnteroSeguro(montoTransferidoNum)} Créditos`;
       const referenciaTexto=(transaccion.referencia||'').toString().trim();
-      const plantillas=await cargarPlantillasWhatsappResultados();
       const valoresBase={
         monto:montoSolicitado,
         app:'BingOnline',
         motivo:(nota||'No especificado').toString().trim(),
         referencia:referenciaTexto||'pendiente',
-        totalTransferido:montoTransferido,
-        comisionBancaria:'',
-        comisionGestion:'',
-        usuario:transaccion.IDbilletera||''
+        totalTransferido:montoTransferido
       };
-
-      if(estadoFinal==='APROBADO'){
-        if(tipo==='recarga'){
-          return aplicarPlantillaMensaje(plantillas.mensajeRecargaAprobada,valoresBase);
-        }
-        return aplicarPlantillaMensaje(plantillas.mensajeRetiroAprobado,valoresBase);
-      }
-      if(tipo==='recarga'){
-        return aplicarPlantillaMensaje(plantillas.mensajeRecargaAnulada,valoresBase);
-      }
-      return aplicarPlantillaMensaje(plantillas.mensajeRetiroAnulado,valoresBase);
-    }
-    async function notificarWhatsappTransacciones(){
-      return;
-    }
-
-    async function permitirRedaccionWhatsapp(transaccion,estadoFinal){
-      const claveEstado=(estadoFinal||'').toUpperCase();
-      const tipo=normalizarTipoOperacion(transaccion);
-      const clavePreferencia=(MAPEO_PREFERENCIAS_WHATSAPP[tipo]||{})[claveEstado];
-      if(!clavePreferencia) return false;
-      if(!window.notificationCenter || typeof window.notificationCenter.cuandoListo!=='function') return false;
-      try{
-        await window.notificationCenter.cuandoListo();
-      }catch(err){
-        console.warn('No se pudo sincronizar preferencias de notificaciones',err);
-        return false;
-      }
-      const config=window.notificationCenter.obtenerConfiguracion();
-      if(!config || !config.global || !config.preferencias) return false;
-      return Boolean(config.preferencias[clavePreferencia]);
+      const plantillasTipo=MENSAJES_RESULTADOS_INTERNOS[tipo]||MENSAJES_RESULTADOS_INTERNOS.recarga;
+      const plantilla=plantillasTipo[estadoFinal]||plantillasTipo.ANULADO;
+      return aplicarPlantillaMensaje(plantilla,valoresBase);
     }
 
     async function actualizar(ids,estado,nota,ref,condicion){

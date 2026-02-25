@@ -8,12 +8,13 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function crearEstadoPagoPremio(){
   const ESTADOS_CANONICOS = Object.freeze({
     PENDIENTE: 'PENDIENTE',
-    REALIZADO: 'REALIZADO',
+    APROBADO: 'APROBADO',
+    ACEPTADO: 'ACEPTADO',
     ARCHIVADO: 'ARCHIVADO'
   });
 
   const ALIAS_LECTURA = Object.freeze({
-    APROBADO: ESTADOS_CANONICOS.REALIZADO
+    REALIZADO: ESTADOS_CANONICOS.APROBADO
   });
 
   function normalizarTexto(valor){
@@ -47,7 +48,8 @@
   }
 
   function estaFinalizado(valor){
-    return normalizarLectura(valor) === ESTADOS_CANONICOS.REALIZADO;
+    const estado = normalizarLectura(valor);
+    return estado === ESTADOS_CANONICOS.APROBADO || estado === ESTADOS_CANONICOS.ACEPTADO;
   }
 
   return Object.freeze({
