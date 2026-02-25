@@ -55,8 +55,14 @@
       const identidades=this.obtenerIdentidadesUsuario();
       let pendiente=null;
       for(const identidad of identidades){
-        const snap=await this.buscarPendientePorIdentidad(identidad);
+        const snap=await this.buscarPendientePorIdentidad(identidad,'IDbilletera');
         if(!snap.empty){ pendiente=snap.docs[0]; break; }
+      }
+      if(!pendiente){
+        for(const identidad of identidades){
+          const snap=await this.buscarPendientePorIdentidad(identidad,'idBilleteraInterna');
+          if(!snap.empty){ pendiente=snap.docs[0]; break; }
+        }
       }
       if(!pendiente) return;
       this.actual=this.normalizarDoc(pendiente);
@@ -76,11 +82,11 @@
       return Array.from(new Set(normalizadas));
     }
 
-    async buscarPendientePorIdentidad(identidad){
+    async buscarPendientePorIdentidad(identidad,campoIdentidad){
       const ref=db.collection('transacciones');
       try{
         return await ref
-          .where('IDbilletera','==',identidad)
+          .where(campoIdentidad,'==',identidad)
           .where('notificacionInterna.pendienteMostrar','==',true)
           .limit(1)
           .get();
@@ -94,7 +100,7 @@
         }
         console.warn('Consulta de notificación interna requiere índice compuesto. Usando búsqueda alternativa por identidad.');
         try{
-          const respaldo=await ref.where('IDbilletera','==',identidad).limit(25).get();
+          const respaldo=await ref.where(campoIdentidad,'==',identidad).limit(25).get();
           const pendiente=respaldo.docs.find(doc=>{
             const data=doc.data()||{};
             return Boolean(data.notificacionInterna && data.notificacionInterna.pendienteMostrar===true);
@@ -110,7 +116,26 @@
     normalizarDoc(doc){
       const data=doc.data()||{};
       const interna=data.notificacionInterna||{};
-      return {id:doc.id,mensaje:interna.mensaje||'Tienes una actualización en tu transacción.',estadoObjetivo:(interna.estadoObjetivo||'').toString().toUpperCase()};
+      return {
+        id:doc.id,
+        mensaje:interna.mensaje||'Tienes una actualización en tu transacción.',
+        estadoObjetivo:(interna.estadoObjetivo||'').toString().toUpperCase(),
+        tipotrans:(data.tipotrans||'').toString().toLowerCase(),
+        billeteraId:((data.idBilleteraInterna||data.IDbilletera)||'').toString(),
+        monto:Number(data.Monto)||0,
+        montoSolicitado:Number(data.MontoSolicitado ?? data.Monto)||0
+      };
+    }
+
+    normalizarTipoOperacion(tipo){
+      const limpio=(tipo||'').toString().trim().toLowerCase();
+      if(limpio==='deposito' || limpio==='depósito') return 'recarga';
+      return limpio;
+    }
+
+    toNumberSafe(valor,defecto=0){
+      const numero=parseFloat(valor);
+      return Number.isFinite(numero)?numero:defecto;
     }
 
     mostrar(notificacion){
@@ -133,7 +158,31 @@
         if(!snap.exists) return;
         const data=snap.data()||{};
         const estadoActual=(data.estado||'').toString().toUpperCase();
+        if(estadoActual==='ACEPTADO') return;
         const interna=data.notificacionInterna||{};
+        const tipo=this.normalizarTipoOperacion(data.tipotrans||this.actual.tipotrans);
+        const billeteraId=((data.idBilleteraInterna||data.IDbilletera||this.actual.billeteraId)||'').toString();
+        const monto=this.toNumberSafe(data.Monto,0);
+        const montoSolicitado=this.toNumberSafe((data.MontoSolicitado ?? data.Monto),monto);
+
+        if(estadoActual==='APROBADO' && billeteraId){
+          const billeteraRef=db.collection('Billetera').doc(billeteraId);
+          const billeteraSnap=await tx.get(billeteraRef);
+          const billeteraData=billeteraSnap.exists?(billeteraSnap.data()||{}):{};
+          const creditosActual=this.toNumberSafe(billeteraData.creditos,0);
+          const transitoActual=Math.max(0,this.toNumberSafe(billeteraData.creditostransito,0));
+          const payload={};
+          if(tipo==='recarga'){
+            payload.creditos=creditosActual+monto;
+          }else if(tipo==='retiro'){
+            payload.creditos=Math.max(0,creditosActual-montoSolicitado);
+            payload.creditostransito=Math.max(0,transitoActual-montoSolicitado);
+          }
+          if(Object.keys(payload).length){
+            tx.set(billeteraRef,payload,{merge:true});
+          }
+        }
+
         const payload={
           mensajeLeido:true,
           notificacionInterna:{

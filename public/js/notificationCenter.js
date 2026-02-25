@@ -26,8 +26,7 @@
         { clave: 'retirosPendientes', titulo: 'Notificación Retiros Pendientes', descripcion: 'Se repite cada 10 minutos si hay retiros por gestionar.' },
         { clave: 'selladoSorteo', titulo: 'Notificación Sellado Sorteo', descripcion: 'Cuando llega la hora de sellado de un sorteo.' },
         { clave: 'juegoEnVivoSorteo', titulo: 'Notificación Juego en vivo Sorteo', descripcion: 'Cuando llega la hora de inicio de un sorteo.' },
-        { clave: 'gestionPagos', titulo: 'Notificación Gestión Pagos', descripcion: 'Aviso único si hay gestiones de pagos pendientes.' },
-        { clave: 'topeReintentosAcreditacion', titulo: 'Notificación TOPE_REINTENTOS', descripcion: 'Te avisa cuando existan acreditaciones técnicas bloqueadas por tope de reintentos.' }
+        { clave: 'gestionPagos', titulo: 'Notificación Gestión Pagos', descripcion: 'Aviso único si hay gestiones de pagos pendientes.' }
       ]
     }
   };
@@ -35,8 +34,7 @@
   const INTERVALOS_REPETICION = {
     recargasPendientes: 600000,
     retirosPendientes: 600000,
-    gestionPagos: 600000,
-    topeReintentosAcreditacion: 600000
+    gestionPagos: 600000
   };
 
   const HISTORIAL_FABRICAS = {
@@ -47,7 +45,6 @@
     recargasPendientes: () => ({ ultimoEnvio: 0 }),
     retirosPendientes: () => ({ ultimoEnvio: 0 }),
     gestionPagos: () => ({ ultimoEnvio: 0 }),
-    topeReintentosAcreditacion: () => ({ ultimoEnvio: 0 }),
     selladoSorteo: () => ({ ids: {} }),
     juegoEnVivoSorteo: () => ({ ids: {} })
   };
@@ -214,8 +211,7 @@
         pendientes: {
           recargasPendientes: new Set(),
           retirosPendientes: new Set(),
-          gestionPagos: 0,
-          topeReintentosAcreditacion: 0
+          gestionPagos: 0
         },
         resumenPagos: { premios: 0, pagos: 0 },
         verificadorSorteos: null
@@ -399,8 +395,7 @@
         pendientes: {
           recargasPendientes: new Set(),
           retirosPendientes: new Set(),
-          gestionPagos: 0,
-          topeReintentosAcreditacion: 0
+          gestionPagos: 0
         },
         resumenPagos: { premios: 0, pagos: 0 },
         verificadorSorteos: null
@@ -832,17 +827,6 @@
       }catch(err){
         console.error('No se pudieron observar las gestiones de pagos', err);
       }
-      try{
-        const unsubTope = db.collection('AcreditacionesPendientes')
-          .where('estado','==','TOPE_REINTENTOS')
-          .onSnapshot(snapshot => {
-            this.cache.pendientes.topeReintentosAcreditacion = snapshot.size;
-            this.gestionarTopeReintentos();
-          }, err => console.error('Error escuchando TOPE_REINTENTOS de acreditaciones', err));
-        this.desuscriptores.push(unsubTope);
-      }catch(err){
-        console.error('No se pudieron observar acreditaciones en TOPE_REINTENTOS', err);
-      }
       this.iniciarVerificacionSorteos();
     }
 
@@ -992,7 +976,6 @@
 
     obtenerConteoPendiente(clave){
       if(clave === 'gestionPagos') return this.cache.pendientes.gestionPagos || 0;
-      if(clave === 'topeReintentosAcreditacion') return this.cache.pendientes.topeReintentosAcreditacion || 0;
       const conjunto = this.cache.pendientes[clave];
       return conjunto ? conjunto.size : 0;
     }
@@ -1033,22 +1016,6 @@
           historial.ultimoEnvio = 0;
           this.programarGuardadoHistorial();
         }
-      }
-    }
-
-    gestionarTopeReintentos(){
-      const total = this.cache.pendientes.topeReintentosAcreditacion || 0;
-      const historial = this.config.historial.topeReintentosAcreditacion;
-      if(total > 0){
-        const mensaje = `Hay ${total} acreditación(es) en TOPE_REINTENTOS. Ingresa a Centro de Pagos para reencolar.`;
-        if(historial && historial.ultimoEnvio === 0 && this.puedeNotificar('topeReintentosAcreditacion')){
-          historial.ultimoEnvio = Date.now();
-          this.programarGuardadoHistorial();
-          this.emitirNotificacion('topeReintentosAcreditacion', mensaje, 'Acreditaciones bloqueadas');
-        }
-      }else if(historial){
-        historial.ultimoEnvio = 0;
-        this.programarGuardadoHistorial();
       }
     }
 
