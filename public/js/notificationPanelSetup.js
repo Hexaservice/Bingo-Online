@@ -377,14 +377,14 @@
         return;
       }
       if (!window.notificationCenter){
-        panel.style.display = 'none';
+        panel.style.display = 'block';
         return;
       }
       panel.style.display = 'block';
       gruposDisponibles = window.notificationCenter.obtenerGruposUI(rol || 'Jugador');
       gruposDisponibles = Array.isArray(gruposDisponibles) ? gruposDisponibles.slice() : [];
       if (!gruposDisponibles.length){
-        panel.style.display = 'none';
+        panel.style.display = 'block';
         return;
       }
       try{
@@ -406,11 +406,11 @@
     function actualizarPanel(config){
       if (!panel) return;
       if (!config){
-        panel.style.display = 'none';
+        panel.style.display = 'block';
         return;
       }
       if (!Array.isArray(gruposDisponibles) || !gruposDisponibles.length){
-        panel.style.display = 'none';
+        panel.style.display = 'block';
         return;
       }
       panel.style.display = 'block';
