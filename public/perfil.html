@@ -543,6 +543,8 @@
   const mensajeValidacionEl=document.getElementById('perfil-mensaje');
   let panelNotificacionesPerfil=null;
   let rolNotificacionesActual=null;
+  let desuscribirSesionPerfil=null;
+  let usuarioSesionActiva=null;
 
   function configurarPanelNotificacionesPerfil(rol){
     if(typeof setupNotificationPanel!=='function') return;
@@ -558,15 +560,53 @@
     rolNotificacionesActual=rolNormalizado;
   }
 
+  function limpiarPanelNotificacionesPerfil(contexto){
+    if(panelNotificacionesPerfil && typeof panelNotificacionesPerfil.cleanup==='function'){
+      try{ panelNotificacionesPerfil.cleanup(); }
+      catch(error){ console.error(`No se pudo limpiar el panel de notificaciones${contexto?` (${contexto})`:''}`,error); }
+    }
+    panelNotificacionesPerfil=null;
+    rolNotificacionesActual=null;
+  }
+
   if(typeof hasWindow==='function' && hasWindow() && typeof window.addEventListener==='function'){
     window.addEventListener('beforeunload',()=>{
-      if(panelNotificacionesPerfil && typeof panelNotificacionesPerfil.cleanup==='function'){
-        try{ panelNotificacionesPerfil.cleanup(); }
-        catch(error){ console.error('No se pudo limpiar el panel de notificaciones al salir',error); }
+      limpiarPanelNotificacionesPerfil('al salir');
+      if(typeof desuscribirSesionPerfil==='function'){
+        try{ desuscribirSesionPerfil(); }
+        catch(error){ console.error('No se pudo desuscribir el listener de sesión al salir',error); }
       }
-      panelNotificacionesPerfil=null;
-      rolNotificacionesActual=null;
+      desuscribirSesionPerfil=null;
+      usuarioSesionActiva=null;
     });
+  }
+
+  function configurarSesionVisible(user){
+    const nombreVisible=(user.displayName&&user.displayName.trim())?user.displayName:(user.email||'');
+    const nameEl=document.getElementById('user-name');
+    if(nameEl) nameEl.textContent=nombreVisible;
+    const emailEl=document.getElementById('user-email');
+    if(emailEl) emailEl.textContent=user.email||'';
+    const picEl=document.getElementById('user-pic');
+    if(picEl){
+      if(typeof asignarFotoUsuario==='function'){
+        asignarFotoUsuario(picEl,user.photoURL||'');
+      }else if(user.photoURL){
+        picEl.src=user.photoURL;
+      }
+    }
+    const infoEl=document.getElementById('session-info');
+    if(infoEl) infoEl.style.display='flex';
+    const logoutEl=document.getElementById('logout-link');
+    if(logoutEl && !logoutEl.dataset.listenerPerfil){
+      logoutEl.addEventListener('click',e=>{
+        e.preventDefault();
+        limpiarPanelNotificacionesPerfil('al cerrar sesión');
+        usuarioSesionActiva=null;
+        logout();
+      });
+      logoutEl.dataset.listenerPerfil='true';
+    }
   }
 
   function poblarSelectCodigos(select){
@@ -901,9 +941,14 @@
 
   initFirebase()
     .then(()=>{
-      ensureAuth();
-      auth.onAuthStateChanged(async user=>{
+      desuscribirSesionPerfil=auth.onAuthStateChanged(async user=>{
         if(user){
+          if(usuarioSesionActiva===user.uid){
+            return;
+          }
+          limpiarPanelNotificacionesPerfil('cambio de usuario');
+          usuarioSesionActiva=user.uid;
+          configurarSesionVisible(user);
           let datosPerfil=null;
           try{
             const doc=await db.collection('users').doc(user.email).get();
@@ -936,16 +981,13 @@
             mostrarMensajeValidacion('No se pudieron cargar los datos del perfil. Intenta nuevamente.');
           }
           const rolNotificaciones=(datosPerfil && (datosPerfil.role||datosPerfil.rol||datosPerfil.rolinterno))||window.currentRole||'Jugador';
+          window.currentRole=rolNotificaciones;
           configurarPanelNotificacionesPerfil(rolNotificaciones);
           actualizarEstadoCamposObligatorios();
           evaluarCambios();
         } else {
-          if(panelNotificacionesPerfil && typeof panelNotificacionesPerfil.cleanup==='function'){
-            try{ panelNotificacionesPerfil.cleanup(); }
-            catch(error){ console.error('No se pudo limpiar el panel de notificaciones',error); }
-          }
-          panelNotificacionesPerfil=null;
-          rolNotificacionesActual=null;
+          limpiarPanelNotificacionesPerfil('sin sesión');
+          usuarioSesionActiva=null;
           window.location.href='index.html';
         }
       });
