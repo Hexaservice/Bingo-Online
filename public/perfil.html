@@ -515,6 +515,7 @@
   <script src="js/logoSwitcher.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/notificationCenter.js"></script>
+  <script src="js/notificationPanelSetup.js"></script>
   <script src="js/internalTransactionNotifier.js"></script>
   <script src="js/timezone.js"></script>
   <script>
@@ -540,12 +541,33 @@
   const whatsappModalMensajeEl=document.getElementById('modal-whatsapp-mensaje');
   const whatsappModalAceptarBtn=document.getElementById('modal-whatsapp-aceptar');
   const mensajeValidacionEl=document.getElementById('perfil-mensaje');
-  const notificacionesPanel=document.getElementById('notificaciones-panel');
-  const notificacionesGlobalInput=document.getElementById('notificaciones-global');
-  const notificacionesPreferencias=document.getElementById('notificaciones-contenido');
-  const notificacionesTodoInput=document.getElementById('notificaciones-todo');
-  const notificacionesTitulo=document.getElementById('notificaciones-titulo');
-  const notificacionesEncabezado=document.querySelector('#notificaciones-panel .notificaciones-fila-titulo');
+  let panelNotificacionesPerfil=null;
+  let rolNotificacionesActual=null;
+
+  function configurarPanelNotificacionesPerfil(rol){
+    if(typeof setupNotificationPanel!=='function') return;
+    const rolNormalizado=(rol||'Jugador').toString();
+    if(rolNotificacionesActual===rolNormalizado && panelNotificacionesPerfil){
+      return;
+    }
+    if(panelNotificacionesPerfil && typeof panelNotificacionesPerfil.cleanup==='function'){
+      try{ panelNotificacionesPerfil.cleanup(); }
+      catch(error){ console.error('No se pudo limpiar el panel de notificaciones previo',error); }
+    }
+    panelNotificacionesPerfil=setupNotificationPanel({rol:rolNormalizado});
+    rolNotificacionesActual=rolNormalizado;
+  }
+
+  if(typeof hasWindow==='function' && hasWindow() && typeof window.addEventListener==='function'){
+    window.addEventListener('beforeunload',()=>{
+      if(panelNotificacionesPerfil && typeof panelNotificacionesPerfil.cleanup==='function'){
+        try{ panelNotificacionesPerfil.cleanup(); }
+        catch(error){ console.error('No se pudo limpiar el panel de notificaciones al salir',error); }
+      }
+      panelNotificacionesPerfil=null;
+      rolNotificacionesActual=null;
+    });
+  }
 
   function poblarSelectCodigos(select){
     if(!select) return;
@@ -561,52 +583,6 @@
   }
 
   poblarSelectCodigos(codigoPaisSelect);
-  if(notificacionesTitulo){
-    notificacionesTitulo.setAttribute('role','button');
-    notificacionesTitulo.setAttribute('tabindex','0');
-    if(notificacionesPreferencias){
-      notificacionesTitulo.setAttribute('aria-controls',notificacionesPreferencias.id);
-    }
-  }
-  function alternarNotificacionesGlobal(){
-    if(!notificacionesGlobalInput || notificacionesGlobalInput.disabled) return;
-    notificacionesGlobalInput.click();
-  }
-  function actualizarIndicadoresNotificaciones(){
-    if(!notificacionesGlobalInput) return;
-    const estado=notificacionesGlobalInput.checked?'true':'false';
-    if(notificacionesTitulo){
-      notificacionesTitulo.setAttribute('aria-pressed',estado);
-      notificacionesTitulo.setAttribute('aria-expanded',estado);
-    }
-  }
-  if(notificacionesGlobalInput){
-    actualizarIndicadoresNotificaciones();
-    notificacionesGlobalInput.addEventListener('change',actualizarIndicadoresNotificaciones);
-  }
-  if(notificacionesTitulo){
-    notificacionesTitulo.addEventListener('click',alternarNotificacionesGlobal);
-    notificacionesTitulo.addEventListener('keydown',evento=>{
-      if(evento.key==='Enter'||evento.key===' '){
-        evento.preventDefault();
-        alternarNotificacionesGlobal();
-      }
-    });
-  }
-  if(notificacionesEncabezado){
-    configurarContenedorNotificaciones(notificacionesEncabezado,notificacionesGlobalInput);
-    if(notificacionesPreferencias){
-      notificacionesEncabezado.setAttribute('aria-controls',notificacionesPreferencias.id);
-    }
-  }
-  if(notificacionesPreferencias){
-    const opcionBase=notificacionesPreferencias.querySelector('.notificaciones-opcion[data-base-opcion="true"]');
-    const inputBase=opcionBase ? buscarSwitchAsociado(opcionBase) : null;
-    configurarContenedorNotificaciones(opcionBase,inputBase);
-  }
-  let desuscribirNotificaciones=null;
-  let gruposNotificacionesDisponibles=[];
-  let notificacionesGlobalInicializado=false;
 
   nombreInput.placeholder='Nombre';
   apellidoInput.placeholder='Apellido';
@@ -619,344 +595,6 @@
   let tieneDatosGuardados=false;
 
   const camposObligatorios=[nombreInput,apellidoInput,aliasInput,celularInput,codigoPaisSelect].filter(Boolean);
-
-  if(notificacionesGlobalInput){
-    notificacionesGlobalInput.addEventListener('change',()=>{
-      notificacionesGlobalInput.dataset.manual='true';
-      actualizarEstadoPreferencias();
-    });
-  }
-
-  if(notificacionesTodoInput){
-    notificacionesTodoInput.addEventListener('change',async()=>{
-      if(!window.notificationCenter){
-        notificacionesTodoInput.checked=false;
-        return;
-      }
-      const activar=notificacionesTodoInput.checked;
-      notificacionesTodoInput.disabled=true;
-      try{
-        const configuracionActual=window.notificationCenter.obtenerConfiguracion();
-        const globalYaActivo=Boolean(configuracionActual && configuracionActual.global);
-        if(activar && !globalYaActivo){
-          const resultado=await window.notificationCenter.actualizarGlobal(true);
-          if(resultado!=='granted'){
-            notificacionesTodoInput.checked=false;
-            return;
-          }
-          if(notificacionesGlobalInput){
-            notificacionesGlobalInput.checked=true;
-            notificacionesGlobalInput.dataset.manual='false';
-          }
-        }
-        const configuracionPosterior=window.notificationCenter.obtenerConfiguracion();
-        await actualizarPreferenciasMasivas(activar,configuracionPosterior);
-      }catch(err){
-        console.error('No se pudo actualizar las preferencias de notificaciones',err);
-        notificacionesTodoInput.checked=!activar;
-      }finally{
-        const configuracionFinal=window.notificationCenter ? window.notificationCenter.obtenerConfiguracion() : null;
-        const clavesDisponibles=obtenerClavesPreferencias(configuracionFinal,gruposNotificacionesDisponibles);
-        const globalHabilitado=Boolean(configuracionFinal && configuracionFinal.global);
-        notificacionesTodoInput.disabled=!clavesDisponibles.length;
-        if(!globalHabilitado && notificacionesTodoInput.checked){
-          notificacionesTodoInput.checked=false;
-        }
-        actualizarEstadoPreferencias();
-      }
-    });
-  }
-
-  actualizarEstadoPreferencias();
-
-  if(typeof hasWindow==='function' && hasWindow() && typeof window.addEventListener==='function'){
-    window.addEventListener('beforeunload',()=>{
-      if(desuscribirNotificaciones){
-        try{ desuscribirNotificaciones(); }
-        catch(err){ console.error('No se pudo cancelar la suscripción de notificaciones al salir',err); }
-        desuscribirNotificaciones=null;
-      }
-    });
-  }
-
-  function obtenerClavesNotificacionesDisponibles(grupos){
-    const claves=new Set();
-    if(!Array.isArray(grupos)) return [];
-    grupos.forEach(grupo=>{
-      if(!grupo || !Array.isArray(grupo.items)) return;
-      grupo.items.forEach(item=>{
-        if(item && item.clave){
-          claves.add(item.clave);
-        }
-      });
-    });
-    return Array.from(claves);
-  }
-
-  function estanTodasLasPreferenciasActivas(config,grupos){
-    if(!config || !config.preferencias) return false;
-    if(!config.global) return false;
-    const claves=obtenerClavesNotificacionesDisponibles(grupos);
-    if(!claves.length) return false;
-    return claves.every(clave=>Boolean(config.preferencias[clave]));
-  }
-
-  function obtenerClavesPreferencias(config,grupos){
-    const clavesGrupos=obtenerClavesNotificacionesDisponibles(grupos);
-    if(clavesGrupos.length) return clavesGrupos;
-    if(config && config.preferencias){
-      const clavesConfiguracion=Object.keys(config.preferencias);
-      if(clavesConfiguracion.length) return clavesConfiguracion;
-    }
-    return [];
-  }
-
-  async function actualizarPreferenciasMasivas(valor,config){
-    if(!window.notificationCenter) return;
-    const claves=obtenerClavesPreferencias(config,gruposNotificacionesDisponibles);
-    if(!claves.length) return;
-    await Promise.all(claves.map(clave=>window.notificationCenter.actualizarPreferencia(clave,valor)));
-  }
-
-  function actualizarEstadoPreferencias(){
-    if(!notificacionesPreferencias) return;
-    const abierto=!notificacionesGlobalInput || notificacionesGlobalInput.checked;
-    notificacionesPreferencias.setAttribute('aria-hidden',abierto?'false':'true');
-    if(notificacionesTitulo){
-      notificacionesTitulo.setAttribute('aria-expanded',abierto?'true':'false');
-    }
-    if(notificacionesEncabezado){
-      notificacionesEncabezado.setAttribute('aria-expanded',abierto?'true':'false');
-    }
-  }
-
-  function generarIdSwitch(sufijo){
-    const base=String(sufijo||'opcion').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'opcion';
-    let id=`notificaciones-${base}`;
-    let contador=0;
-    while(document.getElementById(id)){
-      contador+=1;
-      id=`notificaciones-${base}-${contador}`;
-    }
-    return id;
-  }
-
-  function buscarSwitchAsociado(contenedor){
-    if(!contenedor) return null;
-    const identificador=contenedor.dataset ? contenedor.dataset.switch : null;
-    if(identificador){
-      const directo=document.getElementById(identificador);
-      if(directo && directo.type==='checkbox'){
-        return directo;
-      }
-    }
-    const interno=contenedor.querySelector ? contenedor.querySelector('input[type="checkbox"]') : null;
-    if(interno){
-      return interno;
-    }
-    const siguiente=contenedor.nextElementSibling;
-    if(siguiente && siguiente.matches('label.switch')){
-      const enLabel=siguiente.querySelector('input[type="checkbox"]');
-      if(enLabel){
-        return enLabel;
-      }
-    }
-    return null;
-  }
-
-  function configurarContenedorNotificaciones(contenedor,inputAsociado){
-    if(!contenedor) return;
-    const input= inputAsociado && inputAsociado.type==='checkbox' ? inputAsociado : buscarSwitchAsociado(contenedor);
-    if(!input) return;
-    if(input.id && (!contenedor.dataset || !contenedor.dataset.switch)){
-      contenedor.dataset.switch=input.id;
-    }
-    if(!contenedor.hasAttribute('tabindex')){
-      contenedor.tabIndex=0;
-    }
-    if(!contenedor.hasAttribute('role')){
-      contenedor.setAttribute('role','button');
-    }
-    if(input.id){
-      contenedor.setAttribute('aria-controls',input.id);
-    }
-    const actualizarAria=()=>{
-      contenedor.setAttribute('aria-pressed',input.checked?'true':'false');
-    };
-    actualizarAria();
-    input.addEventListener('change',actualizarAria);
-    contenedor.addEventListener('click',evento=>{
-      const objetivo=evento.target;
-      if(objetivo===input) return;
-      if(objetivo instanceof Element){
-        if(objetivo.closest('label.switch')) return;
-        if(objetivo.closest('input, button, a')) return;
-      }
-      if(input.disabled) return;
-      evento.preventDefault();
-      input.click();
-    });
-    contenedor.addEventListener('keydown',evento=>{
-      if(evento.key==='Enter'||evento.key===' '){
-        if(input.disabled) return;
-        evento.preventDefault();
-        input.click();
-      }
-    });
-  }
-
-  function limpiarOpcionesNotificaciones(){
-    if(!notificacionesPreferencias) return;
-    notificacionesPreferencias.querySelectorAll('.notificaciones-opcion[data-clave], .notificaciones-grupo-titulo').forEach(elemento=>{
-      elemento.remove();
-    });
-  }
-
-  function aplicarClaseRol(elemento,etiqueta){
-    if(!elemento || !etiqueta) return;
-    const normalizado=String(etiqueta).trim().toLowerCase();
-    elemento.classList.remove('colaborador','jugador','administrador');
-    if(normalizado==='colaborador'){
-      elemento.classList.add('colaborador');
-    }else if(normalizado==='jugador'){
-      elemento.classList.add('jugador');
-    }else if(normalizado==='administrador'){
-      elemento.classList.add('administrador');
-    }
-  }
-
-  function renderizarOpcionesNotificaciones(config,grupos){
-    if(!notificacionesPreferencias) return;
-    limpiarOpcionesNotificaciones();
-    if(!Array.isArray(grupos) || !grupos.length){
-      return;
-    }
-    const fragmento=document.createDocumentFragment();
-    const preferencias=config && config.preferencias ? config.preferencias : {};
-    grupos.forEach(grupo=>{
-      if(!grupo || !Array.isArray(grupo.items) || !grupo.items.length) return;
-      if(grupo.etiqueta){
-        const titulo=document.createElement('p');
-        titulo.className='notificaciones-grupo-titulo';
-        aplicarClaseRol(titulo,grupo.etiqueta);
-        titulo.textContent=grupo.etiqueta;
-        fragmento.appendChild(titulo);
-      }
-      grupo.items.forEach(item=>{
-        if(!item || !item.clave) return;
-        const fila=document.createElement('div');
-        fila.className='notificaciones-opcion notificaciones-fila';
-        fila.dataset.clave=item.clave;
-        const inputId=generarIdSwitch(item.clave);
-        fila.dataset.switch=inputId;
-        const titulo=document.createElement('span');
-        titulo.className='notificaciones-opcion-titulo';
-        titulo.textContent=item.titulo||item.clave;
-        if(item.color){
-          titulo.style.color=item.color;
-        }
-        if(item.descripcion){
-          const descripcion=document.createElement('small');
-          descripcion.textContent=item.descripcion;
-          titulo.appendChild(descripcion);
-        }
-        fila.appendChild(titulo);
-        const control=document.createElement('label');
-        control.className='switch';
-        control.setAttribute('aria-label',item.titulo||item.clave);
-        const input=document.createElement('input');
-        input.type='checkbox';
-        input.id=inputId;
-        input.checked=Boolean(preferencias[item.clave]);
-        input.addEventListener('change',async()=>{
-          if(!window.notificationCenter) return;
-          const valor=input.checked;
-          input.disabled=true;
-          try{
-            await window.notificationCenter.actualizarPreferencia(item.clave,valor);
-          }catch(err){
-            console.error('No se pudo actualizar la preferencia de notificación',err);
-            input.checked=!valor;
-          }finally{
-            if(document.body.contains(input)){
-              input.disabled=false;
-            }
-          }
-        });
-        const slider=document.createElement('span');
-        slider.className='slider';
-        control.appendChild(input);
-        control.appendChild(slider);
-        fila.appendChild(control);
-        configurarContenedorNotificaciones(fila,input);
-        fragmento.appendChild(fila);
-      });
-    });
-    notificacionesPreferencias.appendChild(fragmento);
-  }
-
-  function actualizarPanelNotificaciones(config,grupos){
-    if(!notificacionesPanel) return;
-    if(!config){
-      notificacionesPanel.style.display='block';
-      return;
-    }
-    if(!Array.isArray(grupos) || !grupos.length){
-      notificacionesPanel.style.display='block';
-      return;
-    }
-    notificacionesPanel.style.display='block';
-    const globalActivo=Boolean(config.global);
-    if(notificacionesGlobalInput){
-      const fueInicializado=notificacionesGlobalInicializado;
-      const esManual=notificacionesGlobalInput.dataset.manual==='true';
-      if(!fueInicializado || !esManual){
-        notificacionesGlobalInput.checked=globalActivo;
-        notificacionesGlobalInput.dataset.manual='false';
-        notificacionesGlobalInicializado=true;
-      }else if(!globalActivo && notificacionesGlobalInput.checked){
-        notificacionesGlobalInput.checked=false;
-        notificacionesGlobalInput.dataset.manual='false';
-      }
-    }
-    if(notificacionesTodoInput){
-      const clavesDisponibles=obtenerClavesNotificacionesDisponibles(grupos);
-      const todasActivas=estanTodasLasPreferenciasActivas(config,grupos);
-      notificacionesTodoInput.checked=todasActivas;
-      notificacionesTodoInput.disabled=!clavesDisponibles.length;
-    }
-    renderizarOpcionesNotificaciones(config,grupos);
-    actualizarEstadoPreferencias();
-  }
-
-  async function inicializarNotificacionesPerfil(role){
-    if(!notificacionesPanel) return;
-    if(!window.notificationCenter){
-      notificacionesPanel.style.display='block';
-      return;
-    }
-    notificacionesPanel.style.display='block';
-    const grupos=window.notificationCenter.obtenerGruposUI(role||'Jugador');
-    gruposNotificacionesDisponibles=Array.isArray(grupos)?grupos.slice():[];
-    if(!Array.isArray(grupos) || !grupos.length){
-      notificacionesPanel.style.display='block';
-      return;
-    }
-    try{
-      await window.notificationCenter.cuandoListo();
-    }catch(err){
-      console.error('No se pudo preparar la sección de notificaciones',err);
-    }
-    const configuracion=window.notificationCenter.obtenerConfiguracion();
-    actualizarPanelNotificaciones(configuracion,gruposNotificacionesDisponibles);
-    if(desuscribirNotificaciones){
-      try{ desuscribirNotificaciones(); }catch(e){ console.error('No se pudo cancelar la suscripción de notificaciones',e); }
-      desuscribirNotificaciones=null;
-    }
-    desuscribirNotificaciones=window.notificationCenter.onChange(cfg=>{
-      actualizarPanelNotificaciones(cfg,gruposNotificacionesDisponibles);
-    });
-  }
 
   function normalizarAlias(valor){
     return (valor||'').toString().trim().slice(0,20);
@@ -1298,15 +936,16 @@
             mostrarMensajeValidacion('No se pudieron cargar los datos del perfil. Intenta nuevamente.');
           }
           const rolNotificaciones=(datosPerfil && (datosPerfil.role||datosPerfil.rol||datosPerfil.rolinterno))||window.currentRole||'Jugador';
-          inicializarNotificacionesPerfil(rolNotificaciones);
+          configurarPanelNotificacionesPerfil(rolNotificaciones);
           actualizarEstadoCamposObligatorios();
           evaluarCambios();
         } else {
-          if(desuscribirNotificaciones){
-            try{ desuscribirNotificaciones(); }
-            catch(err){ console.error('No se pudo limpiar la suscripción de notificaciones',err); }
-            desuscribirNotificaciones=null;
+          if(panelNotificacionesPerfil && typeof panelNotificacionesPerfil.cleanup==='function'){
+            try{ panelNotificacionesPerfil.cleanup(); }
+            catch(error){ console.error('No se pudo limpiar el panel de notificaciones',error); }
           }
+          panelNotificacionesPerfil=null;
+          rolNotificacionesActual=null;
           window.location.href='index.html';
         }
       });
