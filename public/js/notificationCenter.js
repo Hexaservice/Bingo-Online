@@ -32,6 +32,25 @@
     }
   };
 
+  const ROLES_CANONICOS = {
+    jugador: 'Jugador',
+    usuario: 'Jugador',
+    player: 'Jugador',
+    colaborador: 'Colaborador',
+    collaborator: 'Colaborador',
+    administrador: 'Administrador',
+    admin: 'Administrador',
+    superadmin: 'Superadmin'
+  };
+
+  function normalizarRol(role){
+    if(!role) return 'Jugador';
+    const limpio = role.toString().trim();
+    if(!limpio) return 'Jugador';
+    const canonico = ROLES_CANONICOS[limpio.toLowerCase()];
+    return canonico || limpio;
+  }
+
   const INTERVALOS_REPETICION = {
     recargasPendientes: 600000,
     retirosPendientes: 600000,
@@ -75,17 +94,18 @@
   }
 
   function clavesPorRol(role){
+    const rol = normalizarRol(role);
     const claves = new Set();
-    if(role === 'Superadmin'){
+    if(rol === 'Superadmin'){
       Object.values(GRUPOS_NOTIFICACIONES).forEach(grupo => grupo.items.forEach(item => claves.add(item.clave)));
       return Array.from(claves);
     }
-    if(role === 'Colaborador'){
+    if(rol === 'Colaborador'){
       GRUPOS_NOTIFICACIONES.Colaborador.items.forEach(item => claves.add(item.clave));
       GRUPOS_NOTIFICACIONES.Jugador.items.forEach(item => claves.add(item.clave));
       return Array.from(claves);
     }
-    if(role === 'Administrador'){
+    if(rol === 'Administrador'){
       GRUPOS_NOTIFICACIONES.Administrador.items.forEach(item => claves.add(item.clave));
       GRUPOS_NOTIFICACIONES.Colaborador.items.forEach(item => claves.add(item.clave));
       GRUPOS_NOTIFICACIONES.Jugador.items.forEach(item => claves.add(item.clave));
@@ -354,12 +374,13 @@
         this.desvincularUsuario();
         return;
       }
-      const mismo = this.usuario && this.usuario.email === user.email && this.rol === role;
+      const rolNormalizado = normalizarRol(role);
+      const mismo = this.usuario && this.usuario.email === user.email && this.rol === rolNormalizado;
       if(mismo) return this.cuandoListo();
       this.desvincularUsuario();
       this.resetReady(true);
       this.usuario = user;
-      this.rol = role;
+      this.rol = rolNormalizado;
       try{
         if(typeof initFirebase === 'function'){
           await initFirebase();
@@ -636,13 +657,14 @@
     }
 
     obtenerGruposUI(role){
-      if(role === 'Superadmin'){
+      const rol = normalizarRol(role);
+      if(rol === 'Superadmin'){
         return [GRUPOS_NOTIFICACIONES.Colaborador, GRUPOS_NOTIFICACIONES.Jugador, GRUPOS_NOTIFICACIONES.Administrador].filter(Boolean);
       }
-      if(role === 'Colaborador'){
+      if(rol === 'Colaborador'){
         return [GRUPOS_NOTIFICACIONES.Colaborador, GRUPOS_NOTIFICACIONES.Jugador].filter(Boolean);
       }
-      if(role === 'Administrador'){
+      if(rol === 'Administrador'){
         return [GRUPOS_NOTIFICACIONES.Administrador, GRUPOS_NOTIFICACIONES.Colaborador, GRUPOS_NOTIFICACIONES.Jugador].filter(Boolean);
       }
       return [GRUPOS_NOTIFICACIONES.Jugador];
