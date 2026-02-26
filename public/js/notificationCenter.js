@@ -8,8 +8,10 @@
       items: [
         { clave: 'sorteoNuevo', titulo: 'Notificación Sorteo Nuevo', descripcion: 'Se envía cuando se crea un sorteo.' },
         { clave: 'sorteoJugando', titulo: 'Notificación Sorteo Jugando', descripcion: 'Te avisa cuando un sorteo inicia la partida.' },
-        { clave: 'estatusRecarga', titulo: 'Notificación Estatus Recarga', descripcion: 'Recibe cambios de estado de tus recargas.' },
-        { clave: 'estatusRetiro', titulo: 'Notificación Estatus Retiro', descripcion: 'Recibe cambios de estado de tus retiros.' },
+        { clave: 'mensajeRecargaAprobada', titulo: 'Notificación Recarga Aprobada', descripcion: 'Recibe aviso cuando aprueban tu recarga.' },
+        { clave: 'mensajeRecargaAnulada', titulo: 'Notificación Recarga Anulada', descripcion: 'Recibe aviso cuando anulan tu recarga.' },
+        { clave: 'mensajeRetiroAprobado', titulo: 'Notificación Retiro Aprobado', descripcion: 'Recibe aviso cuando aprueban tu retiro.' },
+        { clave: 'mensajeRetiroAnulado', titulo: 'Notificación Retiro Anulado', descripcion: 'Recibe aviso cuando anulan tu retiro.' },
         { clave: 'premio', titulo: 'Notificación Premio', descripcion: 'Recibe aviso cuando un premio se acredita en tu billetera.' }
       ]
     },
@@ -60,8 +62,10 @@
   const HISTORIAL_FABRICAS = {
     sorteoNuevo: () => ({ ids: {} }),
     sorteoJugando: () => ({ ids: {} }),
-    estatusRecarga: () => ({ ids: {} }),
-    estatusRetiro: () => ({ ids: {} }),
+    mensajeRecargaAprobada: () => ({ ids: {} }),
+    mensajeRecargaAnulada: () => ({ ids: {} }),
+    mensajeRetiroAprobado: () => ({ ids: {} }),
+    mensajeRetiroAnulado: () => ({ ids: {} }),
     premio: () => ({ ids: {} }),
     recargasPendientes: () => ({ ultimoEnvio: 0 }),
     retirosPendientes: () => ({ ultimoEnvio: 0 }),
@@ -188,6 +192,11 @@
     depositosPendientes: 'recargasPendientes',
   };
 
+  const CLAVES_TRANSACCION_LEGADAS = {
+    estatusRecarga: ['mensajeRecargaAprobada', 'mensajeRecargaAnulada'],
+    estatusRetiro: ['mensajeRetiroAprobado', 'mensajeRetiroAnulado']
+  };
+
   const TIPOS_RECARGA = new Set(['recarga','deposito','depósito']);
 
   function normalizarTipoRecarga(tipo){
@@ -203,6 +212,21 @@
         resultado[nueva] = resultado[vieja];
       }
       delete resultado[vieja];
+    });
+    return resultado;
+  }
+
+  function aplicarMigracionClavesLegadas(origen){
+    if(!origen || typeof origen !== 'object') return {};
+    const resultado = { ...origen };
+    Object.entries(CLAVES_TRANSACCION_LEGADAS).forEach(([claveVieja, clavesNuevas]) => {
+      if(typeof resultado[claveVieja] !== 'boolean') return;
+      clavesNuevas.forEach(claveNueva => {
+        if(typeof resultado[claveNueva] !== 'boolean'){
+          resultado[claveNueva] = resultado[claveVieja];
+        }
+      });
+      delete resultado[claveVieja];
     });
     return resultado;
   }
@@ -447,7 +471,7 @@
       const raw = rawUsuario && rawUsuario.notificationSettings ? rawUsuario.notificationSettings : {};
       const claves = clavesPorRol(this.rol);
       const preferencias = {};
-      const origenPreferencias = aplicarRenombradoClaves(raw.preferencias || {});
+      const origenPreferencias = aplicarMigracionClavesLegadas(aplicarRenombradoClaves(raw.preferencias || {}));
       let requiereGuardado = false;
       claves.forEach(clave => {
         if(typeof origenPreferencias[clave] === 'boolean'){
@@ -465,7 +489,7 @@
         fechaUltimoPrompt: raw.fechaUltimoPrompt || raw.lastPromptAt || null,
         consentimiento: 'NO'
       };
-      const origenHistorial = aplicarRenombradoClaves(raw.historial || raw.history || {});
+      const origenHistorial = aplicarMigracionClavesLegadas(aplicarRenombradoClaves(raw.historial || raw.history || {}));
       Object.keys(this.config.historial).forEach(clave => {
         if(origenHistorial[clave]){
           this.config.historial[clave] = { ...this.config.historial[clave], ...origenHistorial[clave] };
@@ -1076,31 +1100,33 @@
     }
 
     notificarCambioRecarga(id, data, estado){
-      if(!this.puedeNotificar('estatusRecarga')) return;
+      const clavePreferencia = estado === 'APROBADO' ? 'mensajeRecargaAprobada' : (estado === 'ANULADO' ? 'mensajeRecargaAnulada' : '');
+      if(!clavePreferencia || !this.puedeNotificar(clavePreferencia)) return;
       if(data && data.notificacionInterna && data.notificacionInterna.pendienteMostrar === true) return;
       const clave = `${id}:${estado}`;
-      if(this.yaNotificado('estatusRecarga', clave)) return;
+      if(this.yaNotificado(clavePreferencia, clave)) return;
       const monto = parseFloat(data.Monto || data.MontoSolicitado || 0) || 0;
       const montoTxt = monto ? monto.toFixed(2) : '';
       let mensaje = 'Tu solicitud de recarga cambió de estado.';
       if(estado === 'APROBADO') mensaje = montoTxt ? `Tu recarga de ${montoTxt} fue aprobada.` : 'Tu recarga fue aprobada.';
       if(estado === 'ANULADO') mensaje = montoTxt ? `Tu recarga de ${montoTxt} fue anulada.` : 'Tu recarga fue anulada.';
-      this.emitirNotificacion('estatusRecarga', mensaje, 'Actualización de recarga');
-      this.registrarHistorial('estatusRecarga', clave);
+      this.emitirNotificacion(clavePreferencia, mensaje, 'Actualización de recarga');
+      this.registrarHistorial(clavePreferencia, clave);
     }
 
     notificarCambioRetiro(id, data, estado){
-      if(!this.puedeNotificar('estatusRetiro')) return;
+      const clavePreferencia = estado === 'APROBADO' ? 'mensajeRetiroAprobado' : (estado === 'ANULADO' ? 'mensajeRetiroAnulado' : '');
+      if(!clavePreferencia || !this.puedeNotificar(clavePreferencia)) return;
       if(data && data.notificacionInterna && data.notificacionInterna.pendienteMostrar === true) return;
       const clave = `${id}:${estado}`;
-      if(this.yaNotificado('estatusRetiro', clave)) return;
-      const monto = parseFloat(data.MontoSolicitado ?? data.Monto || 0) || 0;
+      if(this.yaNotificado(clavePreferencia, clave)) return;
+      const monto = parseFloat((data.MontoSolicitado ?? data.Monto) || 0) || 0;
       const montoTxt = monto ? monto.toFixed(2) : '';
       let mensaje = 'Tu solicitud de retiro cambió de estado.';
       if(estado === 'APROBADO') mensaje = montoTxt ? `Tu retiro de ${montoTxt} fue aprobado.` : 'Tu retiro fue aprobado.';
       if(estado === 'ANULADO') mensaje = montoTxt ? `Tu retiro de ${montoTxt} fue anulado.` : 'Tu retiro fue anulado.';
-      this.emitirNotificacion('estatusRetiro', mensaje, 'Actualización de retiro');
-      this.registrarHistorial('estatusRetiro', clave);
+      this.emitirNotificacion(clavePreferencia, mensaje, 'Actualización de retiro');
+      this.registrarHistorial(clavePreferencia, clave);
     }
 
     notificarPremio(id, data){
