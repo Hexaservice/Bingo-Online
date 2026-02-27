@@ -838,74 +838,88 @@
       text-shadow: 0 0 8px rgba(255,255,255,0.85);
     }
     .modal-nuevos-ganadores .modal-contenido {
-      background: linear-gradient(160deg, rgba(24,24,24,0.94), rgba(96,24,24,0.94));
+      position: relative;
+      background: linear-gradient(160deg, #ffffff, #eef9ff);
       border-radius: 20px;
-      padding: 22px 26px;
+      padding: 22px 20px;
       max-width: min(480px, 92vw);
       width: min(480px, 92vw);
       box-shadow: 0 20px 45px rgba(0,0,0,0.45);
-      border: 3px solid rgba(255,160,0,0.55);
+      border: 2px solid rgba(63,81,181,0.28);
       display: flex;
       flex-direction: column;
       gap: 14px;
-      align-items: center;
-      text-align: center;
     }
     #nuevos-ganadores-titulo {
       font-family: 'Bangers', cursive;
       font-size: 1.9rem;
       letter-spacing: 1px;
       margin: 0;
-      color: #fff;
-      text-shadow: 0 0 14px rgba(255,120,0,0.95), 0 0 28px rgba(255,69,0,0.75);
+      color: #243b6a;
+      text-shadow: none;
     }
+    #nuevos-ganadores-resumen {
+      font-size: .98rem;
+      font-weight: 700;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    #nuevos-ganadores-resumen .cantaron { color: #1b8f3e; }
+    #nuevos-ganadores-resumen .nocantaron { color: #cf1e1e; }
     #nuevos-ganadores-lista {
       display: flex;
       flex-direction: column;
       gap: 10px;
       width: 100%;
+      max-height: min(44vh, 340px);
+      overflow-y: auto;
+      padding-right: 4px;
     }
     .nuevos-ganadores-linea {
-      font-size: 1.1rem;
+      font-size: 1rem;
       font-weight: 600;
-      color: #fefefe;
-      text-shadow: 0 0 10px rgba(0,0,0,0.7);
+      color: #223;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
     }
     .nuevos-ganadores-linea .nuevos-ganadores-forma {
-      color: var(--forma-color, #ffd54f);
-      text-shadow: 0 0 8px rgba(255,255,255,0.95);
+      color: #102a5f;
       font-weight: 700;
     }
-    .nuevos-ganadores-linea .nuevos-ganadores-cantidad {
+    .nuevos-ganadores-linea .nuevos-ganadores-estado {
+      font-weight: 800;
+    }
+    .nuevos-ganadores-linea .nuevos-ganadores-estado.sin-cantar { color: #d21f1f; }
+    .nuevos-ganadores-linea .nuevos-ganadores-estado.cantado { color: #189e42; }
+    #nuevos-ganadores-cerrar-canto {
       font-family: 'Bangers', cursive;
-      font-size: 1.5rem;
+      font-size: 1.1rem;
+      padding: 10px 24px;
+      border-radius: 999px;
+      border: none;
+      background: #273c75;
       color: #fff;
-      text-shadow: 0 0 14px rgba(255,140,0,0.9);
-      margin-left: 6px;
+      cursor: pointer;
+      align-self: center;
     }
     @keyframes premioZoom {
       0%, 100% { transform: scale(1); }
       50% { transform: scale(1.12); }
     }
-    #nuevos-ganadores-aceptar {
-      font-family: 'Bangers', cursive;
-      font-size: 1.25rem;
-      padding: 10px 34px;
+    #nuevos-ganadores-flotante {
+      position: fixed;
+      right: 16px;
+      bottom: 22px;
+      z-index: 1750;
+      border: none;
       border-radius: 999px;
-      border: 3px solid rgba(255,171,64,0.85);
-      background: linear-gradient(160deg, rgba(255,152,0,0.92), rgba(255,234,167,0.95));
-      color: #3b1b00;
+      background: #1d4ed8;
+      color: #fff;
+      padding: 10px 14px;
       cursor: pointer;
-      box-shadow: 0 14px 32px rgba(0,0,0,0.4);
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    #nuevos-ganadores-aceptar:hover {
-      transform: translateY(-1px) scale(1.03);
-      box-shadow: 0 18px 36px rgba(0,0,0,0.45);
-    }
-    #nuevos-ganadores-aceptar:active {
-      transform: translateY(1px) scale(0.97);
-      box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+      box-shadow: 0 10px 24px rgba(0,0,0,.25);
     }
     .info-overlay {
       position: fixed;
@@ -1600,11 +1614,11 @@
       <span class="estado-etiqueta">ESTADO:</span>
       <span id="estado-valor" class="estado-badge">-</span>
       <div id="modo-toggle-container">
-        <label class="modo-switch" title="Cambiar modo Manual/Validado">
+        <label class="modo-switch" title="Cambiar modo Automático/Manual">
           <input type="checkbox" id="modo-manual-switch" aria-label="Interruptor de modo manual">
           <span class="modo-slider"></span>
         </label>
-        <span id="modo-manual-estado">Validado</span>
+        <span id="modo-manual-estado">AUTOMÁTICO</span>
       </div>
     </div>
     <div id="resumen-sorteo">
@@ -1702,9 +1716,21 @@
   </div>
   <div id="nuevos-ganadores-modal" class="modal modal-nuevos-ganadores" role="dialog" aria-modal="true" aria-labelledby="nuevos-ganadores-titulo" aria-hidden="true">
     <div class="modal-contenido" role="document">
-      <h2 id="nuevos-ganadores-titulo">HAY GANADOR O GANADORES NUEVOS</h2>
+      <button id="nuevos-ganadores-cerrar" class="modal-cerrar" type="button" aria-label="Ocultar">✖</button>
+      <h2 id="nuevos-ganadores-titulo">SEGUIMIENTO DE CANTO MANUAL</h2>
+      <div id="nuevos-ganadores-resumen"></div>
       <div id="nuevos-ganadores-lista"></div>
-      <button id="nuevos-ganadores-aceptar" type="button">Aceptar</button>
+      <button id="nuevos-ganadores-cerrar-canto" type="button">Cerrar canto</button>
+    </div>
+  </div>
+  <button id="nuevos-ganadores-flotante" type="button" aria-label="Mostrar seguimiento de canto manual" hidden>🟢 Ver canto manual</button>
+  <div id="modo-recordatorio-modal" class="info-overlay" role="dialog" aria-modal="true" aria-labelledby="modo-recordatorio-titulo" aria-hidden="true">
+    <div class="info-overlay__box">
+      <h2 id="modo-recordatorio-titulo" class="info-overlay__titulo">Modo de juego</h2>
+      <p class="info-overlay__mensaje">Recuerda que puedes jugar el sorteo en modo AUTOMATICO o en modo MANUAL. ajusta tu opción antes del primer canto</p>
+      <div class="info-overlay__acciones">
+        <button type="button" id="modo-recordatorio-aceptar">Aceptar</button>
+      </div>
     </div>
   </div>
   <div id="mensaje-area">Selecciona un sorteo para administrar su estado.</div>
@@ -1842,7 +1868,12 @@
   const modalPremioFormaLabelEl = document.getElementById('modal-premio-forma-label');
   const nuevosGanadoresModalEl = document.getElementById('nuevos-ganadores-modal');
   const nuevosGanadoresListaEl = document.getElementById('nuevos-ganadores-lista');
-  const nuevosGanadoresAceptarBtn = document.getElementById('nuevos-ganadores-aceptar');
+  const nuevosGanadoresResumenEl = document.getElementById('nuevos-ganadores-resumen');
+  const nuevosGanadoresCerrarBtn = document.getElementById('nuevos-ganadores-cerrar');
+  const nuevosGanadoresCerrarCantoBtn = document.getElementById('nuevos-ganadores-cerrar-canto');
+  const nuevosGanadoresFlotanteBtn = document.getElementById('nuevos-ganadores-flotante');
+  const modoRecordatorioModalEl = document.getElementById('modo-recordatorio-modal');
+  const modoRecordatorioAceptarBtn = document.getElementById('modo-recordatorio-aceptar');
   const modalComplementariosEl = document.getElementById('complementarios-modal');
   const modalComplementariosMensajeEl = document.getElementById('complementarios-modal-mensaje');
   const modalComplementariosAceptarBtn = document.getElementById('complementarios-modal-aceptar');
@@ -1863,6 +1894,9 @@
   const INTERVALO_CACHE_SORTEOS_MS = 30000;
   const TAM_MAX_CONSULTA_IN = 10;
   let modoManual = false;
+  let modoRecordatorioMostrado = false;
+  let manualCantoUnsub = null;
+  let manualCantoActivo = null;
   let infoTiempoSorteo = {
     fecha: null,
     fechaCierre: null,
@@ -2368,13 +2402,29 @@
   if(modalGanadoresEl){
     modalGanadoresEl.addEventListener('click', manejarClickModalGanadores);
   }
-  if(nuevosGanadoresAceptarBtn){
-    nuevosGanadoresAceptarBtn.addEventListener('click', cerrarModalNuevosGanadores);
+  if(nuevosGanadoresCerrarBtn){
+    nuevosGanadoresCerrarBtn.addEventListener('click', minimizarModalNuevosGanadores);
+  }
+  if(nuevosGanadoresCerrarCantoBtn){
+    nuevosGanadoresCerrarCantoBtn.addEventListener('click', cerrarCantoManualActual);
+  }
+  if(nuevosGanadoresFlotanteBtn){
+    nuevosGanadoresFlotanteBtn.addEventListener('click', restaurarModalNuevosGanadores);
   }
   if(nuevosGanadoresModalEl){
     nuevosGanadoresModalEl.addEventListener('click', evento=>{
       if(evento.target === nuevosGanadoresModalEl){
-        cerrarModalNuevosGanadores();
+        minimizarModalNuevosGanadores();
+      }
+    });
+  }
+  if(modoRecordatorioAceptarBtn){
+    modoRecordatorioAceptarBtn.addEventListener('click', cerrarModalRecordatorioModo);
+  }
+  if(modoRecordatorioModalEl){
+    modoRecordatorioModalEl.addEventListener('click', evento=>{
+      if(evento.target === modoRecordatorioModalEl){
+        cerrarModalRecordatorioModo();
       }
     });
   }
@@ -2434,9 +2484,15 @@
     });
   }
   if(modoManualSwitch){
-    modoManualSwitch.addEventListener('change', ()=>{
+    modoManualSwitch.addEventListener('change', async ()=>{
       modoManual = modoManualSwitch.checked;
       actualizarEstadoModo();
+      if(!currentSorteoId) return;
+      try {
+        await db.collection('sorteos').doc(currentSorteoId).set({ modoJuego: modoManual ? 'manual' : 'automatico' }, { merge: true });
+      } catch (error) {
+        console.error('No se pudo guardar el modo de juego.', error);
+      }
     });
     actualizarEstadoModo();
   }
@@ -2842,10 +2898,37 @@
     return !esModoManual();
   }
 
+  function obtenerModoJuegoDesdeDatos(data = currentSorteoData){
+    const valor = (data?.modoJuego || '').toString().trim().toLowerCase();
+    return valor === 'manual' ? 'manual' : 'automatico';
+  }
+
+  function puedeCambiarModoJuego(){
+    const estado = obtenerEstadoActualNormalizado();
+    const totalCantos = obtenerTotalCantosRegistrados();
+    return estado === 'jugando' && totalCantos === 0;
+  }
+
   function actualizarEstadoModo(){
     if(modoManualEstadoEl){
-      modoManualEstadoEl.textContent = modoManual ? 'Manual' : 'Validado';
+      modoManualEstadoEl.textContent = modoManual ? 'MANUAL' : 'AUTOMÁTICO';
     }
+    if(modoManualSwitch){
+      modoManualSwitch.checked = modoManual;
+      modoManualSwitch.disabled = !puedeCambiarModoJuego();
+    }
+  }
+
+  function abrirModalRecordatorioModo(){
+    if(!modoRecordatorioModalEl) return;
+    modoRecordatorioModalEl.classList.add('activa');
+    modoRecordatorioModalEl.setAttribute('aria-hidden', 'false');
+  }
+
+  function cerrarModalRecordatorioModo(){
+    if(!modoRecordatorioModalEl) return;
+    modoRecordatorioModalEl.classList.remove('activa');
+    modoRecordatorioModalEl.setAttribute('aria-hidden', 'true');
   }
 
   function actualizarValoresActuales(){
@@ -4333,48 +4416,135 @@
     }
   }
 
-  function crearLineaNuevosGanadores(nombre, color, total){
+  function normalizarClaveManual(valor){
+    return (valor || '').toString().trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  }
+
+  function crearLineaNuevosGanadores(item, indice){
     const linea = document.createElement('div');
     linea.className = 'nuevos-ganadores-linea';
-    if(color){
-      linea.style.setProperty('--forma-color', color);
-    }
-    const textoInicio = document.createTextNode('Ganadores con ');
     const nombreSpan = document.createElement('span');
     nombreSpan.className = 'nuevos-ganadores-forma';
-    nombreSpan.textContent = nombre;
-    const textoMedio = document.createTextNode(': ');
-    const cantidadSpan = document.createElement('span');
-    cantidadSpan.className = 'nuevos-ganadores-cantidad';
-    cantidadSpan.textContent = String(total);
-    linea.append(textoInicio, nombreSpan, textoMedio, cantidadSpan);
+    const alias = item?.alias || 'Jugador';
+    nombreSpan.textContent = `${indice + 1}. ${alias}`;
+    const estadoSpan = document.createElement('span');
+    const cantado = item?.cantado === true;
+    estadoSpan.className = `nuevos-ganadores-estado ${cantado ? 'cantado' : 'sin-cantar'}`;
+    estadoSpan.textContent = cantado ? '¡BINGO!' : 'SIN CANTAR';
+    linea.append(nombreSpan, estadoSpan);
     return linea;
   }
 
-  function mostrarModalNuevosGanadores(detalles){
-    if(!nuevosGanadoresModalEl || !nuevosGanadoresListaEl) return;
+  function renderModalNuevosGanadores(payload = {}){
+    if(!nuevosGanadoresListaEl) return;
+    const candidatos = Array.isArray(payload?.candidatos) ? payload.candidatos : [];
+    const cantadosKeys = new Set(Array.isArray(payload?.cantados) ? payload.cantados : []);
+    const detalle = candidatos.map(item=>({
+      ...item,
+      cantado: cantadosKeys.has(item.key)
+    }));
+    const totalCantaron = detalle.filter(item=>item.cantado).length;
+    const totalNoCantaron = Math.max(0, detalle.length - totalCantaron);
+    if(nuevosGanadoresResumenEl){
+      nuevosGanadoresResumenEl.innerHTML = `<span class="cantaron">Cantaron: ${totalCantaron}</span><span class="nocantaron">No cantaron: ${totalNoCantaron}</span>`;
+    }
     nuevosGanadoresListaEl.innerHTML = '';
-    detalles.forEach(detalle=>{
-      const linea = crearLineaNuevosGanadores(detalle.nombre, detalle.color, detalle.total);
-      nuevosGanadoresListaEl.appendChild(linea);
-    });
+    detalle.forEach((item, indice)=>nuevosGanadoresListaEl.appendChild(crearLineaNuevosGanadores(item, indice)));
+  }
+
+  function mostrarModalNuevosGanadores(payload){
+    if(!nuevosGanadoresModalEl || !nuevosGanadoresListaEl) return;
+    manualCantoActivo = payload || null;
+    renderModalNuevosGanadores(payload || {});
     nuevosGanadoresModalEl.classList.add('activa');
     nuevosGanadoresModalEl.setAttribute('aria-hidden', 'false');
     nuevosGanadoresModalActivo = true;
-    if(nuevosGanadoresAceptarBtn){
-      nuevosGanadoresAceptarBtn.focus({ preventScroll: true });
+    if(nuevosGanadoresFlotanteBtn){
+      nuevosGanadoresFlotanteBtn.hidden = true;
     }
   }
 
-  function cerrarModalNuevosGanadores(){
+  function minimizarModalNuevosGanadores(){
     if(!nuevosGanadoresModalEl) return;
     nuevosGanadoresModalEl.classList.remove('activa');
     nuevosGanadoresModalEl.setAttribute('aria-hidden', 'true');
+    nuevosGanadoresModalActivo = false;
+    if(manualCantoActivo?.activo && nuevosGanadoresFlotanteBtn){
+      nuevosGanadoresFlotanteBtn.hidden = false;
+    }
+  }
+
+  function restaurarModalNuevosGanadores(){
+    if(!manualCantoActivo?.activo) return;
+    mostrarModalNuevosGanadores(manualCantoActivo);
+  }
+
+  function cerrarModalNuevosGanadores(){
+    minimizarModalNuevosGanadores();
     if(nuevosGanadoresListaEl){
       nuevosGanadoresListaEl.innerHTML = '';
     }
-    nuevosGanadoresModalActivo = false;
+    if(nuevosGanadoresResumenEl){
+      nuevosGanadoresResumenEl.textContent = '';
+    }
+    if(nuevosGanadoresFlotanteBtn){
+      nuevosGanadoresFlotanteBtn.hidden = true;
+    }
+    manualCantoActivo = null;
     gestionarComplementariosPendientes();
+  }
+
+  async function cerrarCantoManualActual(){
+    if(!currentSorteoId || !manualCantoActivo?.activo) return;
+    try {
+      await db.collection('manualBingoCantos').doc(currentSorteoId).set({
+        activo: false,
+        cerrarSolicitadoPor: adminActual?.email || '',
+        cerradoEn: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      cerrarModalNuevosGanadores();
+    } catch (error) {
+      console.error('No se pudo cerrar el canto manual.', error);
+    }
+  }
+
+  async function iniciarCantoManual(candidatos = []){
+    if(!currentSorteoId || !candidatos.length) return;
+    const cantoNumero = cantosOrdenados[cantosOrdenados.length - 1] || null;
+    const payload = {
+      sorteoId: currentSorteoId,
+      activo: true,
+      modo: 'manual',
+      cantoNumero,
+      candidatos,
+      cantados: [],
+      actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    try {
+      await db.collection('manualBingoCantos').doc(currentSorteoId).set(payload, { merge: true });
+    } catch (error) {
+      console.error('No se pudo iniciar el canto manual.', error);
+    }
+  }
+
+  function suscribirCantoManual(){
+    if(manualCantoUnsub){
+      manualCantoUnsub();
+      manualCantoUnsub = null;
+    }
+    if(!currentSorteoId) return;
+    manualCantoUnsub = db.collection('manualBingoCantos').doc(currentSorteoId).onSnapshot(doc=>{
+      if(!doc.exists){
+        cerrarModalNuevosGanadores();
+        return;
+      }
+      const data = doc.data() || {};
+      if(data.activo){
+        mostrarModalNuevosGanadores(data);
+      }else if(manualCantoActivo?.activo){
+        cerrarModalNuevosGanadores();
+      }
+    }, err=>console.error('Error escuchando canto manual', err));
   }
 
   function capturarResumenGanadores(map){
@@ -4395,6 +4565,7 @@
     if(actual <= anterior) return;
     const nuevos = [];
     const formasNuevas = new Set();
+    const candidatosManual = new Map();
     cartonesGanadoresPorForma.forEach((registro, indice)=>{
       const idxNumero = Number(indice);
       if(!Number.isFinite(idxNumero)) return;
@@ -4407,6 +4578,19 @@
         const colorForma = obtenerColorParaForma(forma?.idx || idxNumero || 1);
         nuevos.push({ nombre: nombreForma, color: colorForma, total: totalActual });
         formasNuevas.add(idxNumero);
+        const cartones = Array.isArray(registro?.cartones) ? registro.cartones : [];
+        cartones.forEach(carton=>{
+          const base = carton?.userId || carton?.usuarioId || carton?.email || carton?.gmail || carton?.alias || carton?.id;
+          const key = normalizarClaveManual(base);
+          if(!key || candidatosManual.has(key)) return;
+          candidatosManual.set(key, {
+            key,
+            alias: carton?.alias || carton?.nombre || 'Jugador',
+            userId: carton?.userId || carton?.usuarioId || '',
+            cartonId: carton?.id || '',
+            cartonNum: carton?.cartonNum ?? carton?.Ncarton ?? null
+          });
+        });
       }
     });
     if(formasNuevas.size){
@@ -4416,7 +4600,11 @@
       });
     }
     if(esPrimerProcesamiento || !nuevos.length) return;
-    mostrarModalNuevosGanadores(nuevos);
+    if(esModoManual()){
+      iniciarCantoManual(Array.from(candidatosManual.values()));
+      return;
+    }
+    mostrarModalNuevosGanadores({ candidatos: nuevos.map(item=>({ alias: `${item.nombre} (${item.total})`, key: `${item.nombre}-${item.total}` })), cantados: [] });
   }
 
   function buildPremioId({ sorteoId, formaIdx, cartonId, prefijo = '' } = {}){
@@ -4504,9 +4692,17 @@
     mostrarComplementariosPendiente = false;
     evaluandoCantoActual = false;
     nuevosGanadoresModalActivo = false;
+    if(manualCantoUnsub){
+      manualCantoUnsub();
+      manualCantoUnsub = null;
+    }
+    manualCantoActivo = null;
     if(nuevosGanadoresModalEl){
       nuevosGanadoresModalEl.classList.remove('activa');
       nuevosGanadoresModalEl.setAttribute('aria-hidden', 'true');
+    }
+    if(nuevosGanadoresFlotanteBtn){
+      nuevosGanadoresFlotanteBtn.hidden = true;
     }
     if(nuevosGanadoresListaEl){
       nuevosGanadoresListaEl.innerHTML = '';
@@ -4559,6 +4755,7 @@
       if(idx>=0){
         sorteos[idx].cantos = numeros;
       }
+      actualizarEstadoModo();
     }, err=>console.error('Error escuchando cantos', err));
   }
 
@@ -5214,6 +5411,9 @@
         centroPagosBtn.classList.remove('animacion-pagos');
       }
       forzarVisibilidadResultado(false);
+      modoManual = false;
+      modoRecordatorioMostrado = false;
+      actualizarEstadoModo();
       actualizarAnimaciones();
       aplicarDatosCantos([]);
       actualizarTablaEstado();
@@ -5231,6 +5431,7 @@
     }
     btnSorteo.classList.remove('diario','especial','jugando','finalizado');
     const estadoActual = data.estado || '';
+    modoManual = obtenerModoJuegoDesdeDatos(data) === 'manual';
     const tipoActual = (data.tipo || '').toLowerCase();
     const esDiario = tipoActual.includes('diario');
     const esEspecial = tipoActual.includes('especial') || tipoActual.includes('espacial');
@@ -5311,6 +5512,14 @@
     actualizarBotones();
     actualizarAnimaciones();
     actualizarTablaEstado();
+    actualizarEstadoModo();
+    if(obtenerEstadoActualNormalizado() !== 'jugando'){
+      modoRecordatorioMostrado = false;
+    }
+    if(obtenerEstadoActualNormalizado() === 'jugando' && !modoRecordatorioMostrado){
+      modoRecordatorioMostrado = true;
+      abrirModalRecordatorioModo();
+    }
   }
 
   async function asegurarDbListo(){
@@ -5678,6 +5887,7 @@
     escucharCantos(id);
     escucharFormas(id);
     escucharCartones(id);
+    suscribirCantoManual();
     mostrarDatos();
   }
 
@@ -5727,19 +5937,6 @@
 
   async function sellarSorteo(){
     if(!currentSorteoId || !currentSorteoData){ alert('Selecciona un sorteo primero.'); return; }
-    if(esModoManual()){
-      const nombre = obtenerNombreSorteoActual();
-      await confirmarYAplicarEstadoManual({
-        estado: 'Sellado',
-        mensajeConfirmacion: `¿Desea pasar el sorteo ${nombre} a SELLADO?`,
-        actualizacionesExtra: { pdf: 'no' },
-        mensajeExito: 'El sorteo cambió a estado Sellado.',
-        botonAtencion: sellarBtn,
-        mensajeError: 'No fue posible cambiar el estado a Sellado.'
-      });
-      return;
-    }
-
     const estadoActual = obtenerEstadoActualNormalizado();
     if(estadoActual === 'sellado'){ alert('El sorteo ya está sellado.'); return; }
     if(estadoActual === 'jugando' || estadoActual === 'finalizado'){
@@ -5867,13 +6064,8 @@
   }
 
   async function ejecutarSellado(opciones = {}){
-    const confirmadoManual = opciones.confirmadoManual === true;
     const confirmado = opciones.confirmado === true;
-    if(esModoManual() && !confirmadoManual){
-      const confirmar = await preguntarAccionEstado('¿Deseas sellar el sorteo seleccionado?');
-      if(!confirmar) return false;
-    }
-    if(!confirmado && !confirmadoManual){
+    if(!confirmado){
       const confirmarSellado = await preguntarAccionEstado('¿Estas seguro de Sellar el sorteo?');
       if(!confirmarSellado) return false;
     }
@@ -5945,11 +6137,7 @@
     }
 
     if(estadoActual !== 'sellado'){
-      if(esModoManual()){
-        alert('Para generar el archivo PDF de sellado el sorteo debe estar Sellado primero');
-      } else {
-        alert('Aún no has sellado el sorteo, no se puede generar el PDF');
-      }
+      alert('Aún no has sellado el sorteo, no se puede generar el PDF');
       return;
     }
 
@@ -6047,18 +6235,6 @@
       return;
     }
 
-    if(esModoManual()){
-      const nombre = obtenerNombreSorteoActual();
-      await confirmarYAplicarEstadoManual({
-        estado: 'Jugando',
-        mensajeConfirmacion: `¿Desea pasar el sorteo ${nombre} a JUGANDO?`,
-        mensajeExito: 'El sorteo cambió a estado Jugando.',
-        botonAtencion: jugarBtn,
-        mensajeError: 'No fue posible cambiar el estado a Jugando.'
-      });
-      return;
-    }
-
     const estadoActual = obtenerEstadoActualNormalizado();
     if(estadoActual === 'jugando'){ alert('El sorteo ya está en estado Jugando.'); return; }
     if(estadoActual === 'finalizado'){ alert('El sorteo ya finalizó.'); return; }
@@ -6101,13 +6277,8 @@
   }
 
   async function actualizarEstadoJugando(opciones = {}){
-    const confirmadoManual = opciones.confirmadoManual === true;
     const confirmado = opciones.confirmado === true;
-    if(esModoManual() && !confirmadoManual){
-      const confirmar = await preguntarAccionEstado('¿Deseas cambiar el estado del sorteo a "Jugando"?');
-      if(!confirmar) return false;
-    }
-    if(!confirmado && !confirmadoManual){
+    if(!confirmado){
       const confirmarGeneral = await preguntarAccionEstado('¿Deseas cambiar el estado del sorteo a "Jugando"?');
       if(!confirmarGeneral) return false;
     }
@@ -6133,22 +6304,6 @@
 
   async function finalizarSorteo(){
     if(!currentSorteoId || !currentSorteoData){ alert('Selecciona un sorteo primero.'); return; }
-    if(esModoManual()){
-      const nombreManual = obtenerNombreSorteoActual();
-      const finalizado = await confirmarYAplicarEstadoManual({
-        estado: 'Finalizado',
-        mensajeConfirmacion: `¿Desea pasar el sorteo ${nombreManual} a FINALIZADO?`,
-        mensajeExito: 'El sorteo fue finalizado correctamente.',
-        botonAtencion: finalizarBtn,
-        mensajeError: 'No fue posible cambiar el estado a Finalizado.'
-      });
-      if(finalizado){
-        forzarVisibilidadResultado(true);
-        abrirPdfResultados();
-      }
-      return;
-    }
-
     const estadoActual = obtenerEstadoActualNormalizado();
     if(estadoActual === 'finalizado'){
       forzarVisibilidadResultado(true);
