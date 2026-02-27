@@ -4647,6 +4647,104 @@
   let ventanaEnFoco = document.visibilityState === 'visible' && document.hasFocus();
   let cantosRecientesSinAnimacion = false;
   let resumenGanadoresPrevio = new Map();
+  let manualBingoUnsub = null;
+  let manualBingoEstado = null;
+  let manualBingoOverlayEl = null;
+  let manualBingoBtnEl = null;
+  let manualBingoPerdioEl = null;
+  let ultimoCantoPerdidoMostrado = null;
+
+  function normalizarClaveManual(valor){
+    return (valor || '').toString().trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  }
+
+  function esModoManualActivo(){
+    return (activeSorteo?.modoJuego || '').toString().trim().toLowerCase() === 'manual';
+  }
+
+  function asegurarUiManualBingo(){
+    if(manualBingoOverlayEl) return;
+    manualBingoOverlayEl = document.createElement('div');
+    manualBingoOverlayEl.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:2100;display:none;align-items:center;justify-content:center;';
+    manualBingoBtnEl = document.createElement('img');
+    manualBingoBtnEl.src = 'img/boton-bingo.png';
+    manualBingoBtnEl.alt = '¡BINGO!';
+    manualBingoBtnEl.style.cssText = 'width:min(300px,70vw);cursor:pointer;animation:pulseBingo .38s infinite alternate;';
+    manualBingoOverlayEl.appendChild(manualBingoBtnEl);
+    document.body.appendChild(manualBingoOverlayEl);
+    const style = document.createElement('style');
+    style.textContent = '@keyframes pulseBingo{from{transform:scale(.9)}to{transform:scale(1.08)}}';
+    document.head.appendChild(style);
+    manualBingoPerdioEl = document.createElement('div');
+    manualBingoPerdioEl.style.cssText = 'position:fixed;left:50%;top:18px;transform:translateX(-50%);background:#fff7e6;border:2px solid #f59e0b;border-radius:14px;padding:10px 14px;z-index:2101;display:none;font-weight:700;color:#92400e;';
+    document.body.appendChild(manualBingoPerdioEl);
+    manualBingoBtnEl.addEventListener('click', registrarCantoManualJugador);
+  }
+
+  async function registrarCantoManualJugador(){
+    if(!manualBingoEstado?.activo || !activeSorteoId || !usuarioActual) return;
+    try {
+      manualBingoBtnEl.src = 'img/boton-bingo-p.png';
+      const key = normalizarClaveManual(usuarioActual.uid || usuarioActual.email || '');
+      await db.collection('manualBingoCantos').doc(activeSorteoId).set({
+        cantados: firebase.firestore.FieldValue.arrayUnion(key),
+        actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      setTimeout(()=>{
+        ocultarBotonManualBingo();
+        manualBingoBtnEl.src = 'img/boton-bingo.png';
+      }, 1000);
+    } catch (error) {
+      console.error('No se pudo registrar el bingo manual', error);
+    }
+  }
+
+  function ocultarBotonManualBingo(){
+    if(manualBingoOverlayEl){
+      manualBingoOverlayEl.style.display = 'none';
+    }
+  }
+
+  function mostrarAvisoBingoPerdido(cantoNumero){
+    if(!manualBingoPerdioEl) return;
+    manualBingoPerdioEl.textContent = `😅 No cantaste BINGO en este canto ${cantoNumero || ''} y se te pasó el premio`;
+    manualBingoPerdioEl.style.display = 'block';
+    setTimeout(()=>{ if(manualBingoPerdioEl) manualBingoPerdioEl.style.display = 'none'; }, 5000);
+  }
+
+  function actualizarUiManualBingo(){
+    asegurarUiManualBingo();
+    if(!manualBingoEstado?.activo || !esModoManualActivo()){
+      ocultarBotonManualBingo();
+      return;
+    }
+    const key = normalizarClaveManual(usuarioActual?.uid || usuarioActual?.email || '');
+    const candidatos = Array.isArray(manualBingoEstado?.candidatos) ? manualBingoEstado.candidatos : [];
+    const esCandidato = candidatos.some(item=>item?.key === key);
+    if(esCandidato){
+      manualBingoOverlayEl.style.display = 'flex';
+    }else{
+      ocultarBotonManualBingo();
+    }
+  }
+
+  function suscribirManualBingo(){
+    if(manualBingoUnsub){ manualBingoUnsub(); manualBingoUnsub = null; }
+    if(!activeSorteoId) return;
+    manualBingoUnsub = db.collection('manualBingoCantos').doc(activeSorteoId).onSnapshot(doc=>{
+      const previo = manualBingoEstado;
+      manualBingoEstado = doc.exists ? (doc.data() || null) : null;
+      if(previo?.activo && !manualBingoEstado?.activo){
+        const key = normalizarClaveManual(usuarioActual?.uid || usuarioActual?.email || '');
+        const cantados = new Set(Array.isArray(previo?.cantados) ? previo.cantados : []);
+        if(!cantados.has(key) && ultimoCantoPerdidoMostrado !== previo?.cantoNumero){
+          ultimoCantoPerdidoMostrado = previo?.cantoNumero;
+          mostrarAvisoBingoPerdido(previo?.cantoNumero);
+        }
+      }
+      actualizarUiManualBingo();
+    }, err=>console.error('Error escuchando manualBingoCantos', err));
+  }
 
   function normalizarIdentificadorTexto(valor){
     return (valor ?? '').toString().trim().toLowerCase();
@@ -10535,6 +10633,12 @@
     cantosEtiquetas=etiquetas;
     actualizarMensajeAvisoComplementarios(cantosOrdenados.length);
     const nuevosCantos=normalizados.filter(num=>!cantosPrevios.has(num));
+    if(nuevosCantos.length && manualBingoEstado?.activo){
+      const ultimoCanto = nuevosCantos[nuevosCantos.length - 1];
+      if(Number(manualBingoEstado?.cantoNumero) !== Number(ultimoCanto)){
+        ocultarBotonManualBingo();
+      }
+    }
     if(!ventanaEnFoco && nuevosCantos.length){
       cantosRecientesSinAnimacion=true;
     }
@@ -10766,6 +10870,9 @@
     actualizarSinSorteoUI();
     if(!lista.length){
       suscribirSimulacionSorteo(null);
+      if(manualBingoUnsub){ manualBingoUnsub(); manualBingoUnsub = null; }
+      manualBingoEstado = null;
+      ocultarBotonManualBingo();
       if(sorteoManualSeleccionadoId && activeSorteoId===sorteoManualSeleccionadoId && activeSorteo){
         actualizarHeader();
         return;
@@ -10799,6 +10906,7 @@
     activeSorteoId=elegido.id;
     actualizarHeader();
     suscribirSimulacionSorteo(activeSorteoId);
+    suscribirManualBingo();
     if(cambio){
       reiniciarAlertaFormasSinGanadores();
       reiniciarNotificacionesPremios();
@@ -10969,6 +11077,7 @@
       activeSorteoId=info.id;
       actualizarHeader();
       suscribirSimulacionSorteo(activeSorteoId);
+      suscribirManualBingo();
       todasFormasConGanadores=false;
       indiceUltimoGanador=null;
       cantosComplementariosActivos=false;
