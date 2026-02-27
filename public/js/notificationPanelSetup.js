@@ -422,9 +422,6 @@
           globalInput.checked = globalActivo;
           globalInput.dataset.manual = 'false';
           globalInicializado = true;
-        }else if (!globalActivo && globalInput.checked){
-          globalInput.checked = false;
-          globalInput.dataset.manual = 'false';
         }
         actualizarIndicadoresGlobal();
       }
