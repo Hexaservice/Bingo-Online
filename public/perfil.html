@@ -545,6 +545,7 @@
   let rolNotificacionesActual=null;
   let desuscribirSesionPerfil=null;
   let usuarioSesionActiva=null;
+  let rolPersistentePerfil='Jugador';
 
   function configurarPanelNotificacionesPerfil(rol){
     if(typeof setupNotificationPanel!=='function') return;
@@ -903,7 +904,6 @@
     const baseDatos={
       email:user.email,
       photoURL:user.photoURL||'',
-      role:'Jugador',
       celular:valores.celular,
       numerocel:valores.celular
     };
@@ -955,6 +955,10 @@
             if(doc.exists){
               const d=doc.data()||{};
               datosPerfil=d;
+              const rolDocumento=(d.role||d.rol||d.rolinterno||'').toString().trim();
+              if(rolDocumento){
+                rolPersistentePerfil=rolDocumento;
+              }
               const celularNormalizado=normalizarCelular(d.celular||d.numerocel||d.telefono||d.Telefono||d.whatsapp||'');
               valoresOriginales={
                 name:(d.name||'').toString().trim(),
@@ -969,6 +973,7 @@
               actualizarCamposCelularDesdeNumero(valoresOriginales.celular);
               tieneDatosGuardados=camposObligatoriosCompletos(valoresOriginales);
             }else{
+              rolPersistentePerfil='Jugador';
               valoresOriginales={name:'',apellido:'',alias:'',celular:'',numerocel:''};
               nombreInput.value='';
               apellidoInput.value='';
@@ -981,6 +986,10 @@
             mostrarMensajeValidacion('No se pudieron cargar los datos del perfil. Intenta nuevamente.');
           }
           const rolNotificaciones=(datosPerfil && (datosPerfil.role||datosPerfil.rol||datosPerfil.rolinterno))||window.currentRole||'Jugador';
+          if(window.notificationCenter && typeof window.notificationCenter.vincularUsuario==='function'){
+            try{ await window.notificationCenter.vincularUsuario(user, rolNotificaciones||rolPersistentePerfil||'Jugador'); }
+            catch(error){ console.error('No se pudo vincular el centro de notificaciones en perfil',error); }
+          }
           window.currentRole=rolNotificaciones;
           configurarPanelNotificacionesPerfil(rolNotificaciones);
           actualizarEstadoCamposObligatorios();
