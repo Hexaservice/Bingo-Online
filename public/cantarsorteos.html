@@ -1897,6 +1897,7 @@
   let modoRecordatorioMostrado = false;
   let manualCantoUnsub = null;
   let manualCantoActivo = null;
+  const MODO_RECORDATORIO_STORAGE_PREFIX = 'cantarsorteos_modo_recordatorio_v1_';
   let infoTiempoSorteo = {
     fecha: null,
     fechaCierre: null,
@@ -2419,7 +2420,10 @@
     });
   }
   if(modoRecordatorioAceptarBtn){
-    modoRecordatorioAceptarBtn.addEventListener('click', cerrarModalRecordatorioModo);
+    modoRecordatorioAceptarBtn.addEventListener('click', ()=>{
+      marcarRecordatorioModoMostrado();
+      cerrarModalRecordatorioModo();
+    });
   }
   if(modoRecordatorioModalEl){
     modoRecordatorioModalEl.addEventListener('click', evento=>{
@@ -2923,6 +2927,27 @@
     if(!modoRecordatorioModalEl) return;
     modoRecordatorioModalEl.classList.add('activa');
     modoRecordatorioModalEl.setAttribute('aria-hidden', 'false');
+  }
+
+  function obtenerClaveRecordatorioModo(){
+    const id = sanitizarId(currentSorteoId || currentSorteoData?.id || 'general');
+    return `${MODO_RECORDATORIO_STORAGE_PREFIX}${id || 'general'}`;
+  }
+
+  function marcarRecordatorioModoMostrado(){
+    try {
+      localStorage.setItem(obtenerClaveRecordatorioModo(), '1');
+    } catch (error) {
+      console.warn('No se pudo persistir el recordatorio de modo.', error);
+    }
+  }
+
+  function yaSeMostroRecordatorioModo(){
+    try {
+      return localStorage.getItem(obtenerClaveRecordatorioModo()) === '1';
+    } catch (error) {
+      return false;
+    }
   }
 
   function cerrarModalRecordatorioModo(){
@@ -4497,10 +4522,54 @@
   async function cerrarCantoManualActual(){
     if(!currentSorteoId || !manualCantoActivo?.activo) return;
     try {
+      const candidatos = Array.isArray(manualCantoActivo?.candidatos) ? manualCantoActivo.candidatos : [];
+      const cantados = Array.isArray(manualCantoActivo?.cantados) ? manualCantoActivo.cantados : [];
+      const cantadosSet = new Set(cantados);
+      const confirmados = [];
+      const noConfirmados = [];
+      candidatos.forEach(item=>{
+        const key = normalizarClaveManual(item?.key || item?.userId || item?.email || item?.alias || item?.cartonId);
+        if(!key) return;
+        if(cantadosSet.has(key)){
+          confirmados.push(key);
+        }else{
+          noConfirmados.push(key);
+        }
+      });
+      const ganadoresPorForma = {};
+      const formasPorUsuario = {};
+      cartonesGanadoresPorForma.forEach((registro, indice)=>{
+        const idxNumero = Number(indice);
+        if(!Number.isFinite(idxNumero)) return;
+        const ganadores = Array.isArray(registro?.cartones) ? registro.cartones : [];
+        let totalConfirmadosForma = 0;
+        ganadores.forEach(carton=>{
+          const key = normalizarClaveManual(carton?.userId || carton?.usuarioId || carton?.email || carton?.gmail || carton?.alias || carton?.id);
+          if(!key || !cantadosSet.has(key)) return;
+          totalConfirmadosForma += 1;
+          if(!formasPorUsuario[key]) formasPorUsuario[key] = [];
+          formasPorUsuario[key].push({
+            idx: idxNumero,
+            nombre: (registro?.forma?.nombre || '').toString().trim(),
+            cartonId: carton?.id || '',
+            cartonNum: carton?.cartonNum ?? carton?.Ncarton ?? null
+          });
+        });
+        if(totalConfirmadosForma > 0){
+          ganadoresPorForma[String(idxNumero)] = totalConfirmadosForma;
+        }
+      });
       await db.collection('manualBingoCantos').doc(currentSorteoId).set({
         activo: false,
         cerrarSolicitadoPor: adminActual?.email || '',
-        cerradoEn: firebase.firestore.FieldValue.serverTimestamp()
+        cerradoEn: firebase.firestore.FieldValue.serverTimestamp(),
+        resultado: {
+          cantoNumero: manualCantoActivo?.cantoNumero ?? null,
+          confirmados,
+          noConfirmados,
+          ganadoresPorForma,
+          formasPorUsuario
+        }
       }, { merge: true });
       cerrarModalNuevosGanadores();
     } catch (error) {
@@ -4518,6 +4587,7 @@
       cantoNumero,
       candidatos,
       cantados: [],
+      resultado: null,
       actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
     };
     try {
@@ -5516,7 +5586,7 @@
     if(obtenerEstadoActualNormalizado() !== 'jugando'){
       modoRecordatorioMostrado = false;
     }
-    if(obtenerEstadoActualNormalizado() === 'jugando' && !modoRecordatorioMostrado){
+    if(obtenerEstadoActualNormalizado() === 'jugando' && !modoRecordatorioMostrado && !yaSeMostroRecordatorioModo()){
       modoRecordatorioMostrado = true;
       abrirModalRecordatorioModo();
     }

@@ -4653,6 +4653,7 @@
   let manualBingoBtnEl = null;
   let manualBingoPerdioEl = null;
   let ultimoCantoPerdidoMostrado = null;
+  let manualResultadosProcesados = new Set();
 
   function normalizarClaveManual(valor){
     return (valor || '').toString().trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
@@ -4660,6 +4661,19 @@
 
   function esModoManualActivo(){
     return (activeSorteo?.modoJuego || '').toString().trim().toLowerCase() === 'manual';
+  }
+
+  function obtenerResumenResultadoManual(){
+    const resultado = manualBingoEstado?.resultado;
+    if(!resultado || typeof resultado !== 'object') return null;
+    return resultado;
+  }
+
+  function usuarioConfirmoManual(resultado = obtenerResumenResultadoManual()) {
+    if(!resultado) return false;
+    const key = normalizarClaveManual(usuarioActual?.uid || usuarioActual?.email || '');
+    const confirmados = new Set(Array.isArray(resultado?.confirmados) ? resultado.confirmados : []);
+    return key ? confirmados.has(key) : false;
   }
 
   function asegurarUiManualBingo(){
@@ -4728,6 +4742,41 @@
     }
   }
 
+  function procesarResultadoCantoManualCerrado(previo, actual){
+    if(!previo?.activo || actual?.activo) return;
+    const resultado = obtenerResumenResultadoManual();
+    const cantoNumero = Number(resultado?.cantoNumero ?? previo?.cantoNumero);
+    if(Number.isFinite(cantoNumero) && manualResultadosProcesados.has(cantoNumero)) return;
+    const key = normalizarClaveManual(usuarioActual?.uid || usuarioActual?.email || '');
+    const candidatos = new Set((Array.isArray(previo?.candidatos) ? previo.candidatos : []).map(item=>normalizarClaveManual(item?.key || item?.userId || item?.email || item?.alias)).filter(Boolean));
+    if(!key || !candidatos.has(key)) return;
+    const confirmados = new Set(Array.isArray(resultado?.confirmados) ? resultado.confirmados : (Array.isArray(previo?.cantados) ? previo.cantados : []));
+    if(confirmados.has(key)){
+      const detallesConfirmados = Array.isArray(resultado?.formasPorUsuario?.[key]) ? resultado.formasPorUsuario[key] : [];
+      if(detallesConfirmados.length && modalCelebracionEl && !celebracionModalActiva){
+        const detalles = detallesConfirmados.map(item=>{
+          const idx = Number(item?.idx);
+          const forma = formasActivas.find(f=>Number(f.idx)===idx) || { idx, nombre: item?.nombre || '' };
+          const totalGanadores = obtenerTotalGanadoresForma(forma);
+          return {
+            idx,
+            nombre: forma?.nombre || item?.nombre || '',
+            creditos: obtenerCreditosPorGanador(forma, totalGanadores),
+            cartonesGratis: obtenerCartonesGratisPorGanador(forma, totalGanadores),
+            color: obtenerColorParaForma(idx),
+            cartonLabel: item?.cartonNum ? `Cartón #${item.cartonNum}` : ''
+          };
+        });
+        mostrarModalCelebracionGanador(detalles, false);
+      }
+    }else{
+      mostrarModalSinPremio();
+    }
+    if(Number.isFinite(cantoNumero)){
+      manualResultadosProcesados.add(cantoNumero);
+    }
+  }
+
   function suscribirManualBingo(){
     if(manualBingoUnsub){ manualBingoUnsub(); manualBingoUnsub = null; }
     if(!activeSorteoId) return;
@@ -4735,6 +4784,7 @@
       const previo = manualBingoEstado;
       manualBingoEstado = doc.exists ? (doc.data() || null) : null;
       if(previo?.activo && !manualBingoEstado?.activo){
+        procesarResultadoCantoManualCerrado(previo, manualBingoEstado);
         const key = normalizarClaveManual(usuarioActual?.uid || usuarioActual?.email || '');
         const cantados = new Set(Array.isArray(previo?.cantados) ? previo.cantados : []);
         if(!cantados.has(key) && ultimoCantoPerdidoMostrado !== previo?.cantoNumero){
@@ -8904,6 +8954,14 @@
     const directo=normalizarCantidadGanadores(totalGanadoresAlterno);
     if(directo) return directo;
     const idx=Number(forma?.idx);
+    if(Number.isInteger(idx) && esModoManualActivo()){
+      const resultadoManual = obtenerResumenResultadoManual();
+      const mapaManual = resultadoManual?.ganadoresPorForma;
+      if(mapaManual && Object.prototype.hasOwnProperty.call(mapaManual, String(idx))){
+        const confirmados = normalizarCantidadGanadores(mapaManual[String(idx)]);
+        if(confirmados) return confirmados;
+      }
+    }
     if(Number.isInteger(idx) && cartonesGanadoresPorForma instanceof Map){
       const registro=cartonesGanadoresPorForma.get(idx);
       if(registro){
@@ -9002,6 +9060,9 @@
   function obtenerCartonesGratisPorGanador(forma,totalGanadores){
     const totalCartones=obtenerCartonesGratisForma(forma);
     if(totalCartones<=0) return 0;
+    if(esModoManualActivo()){
+      return totalCartones;
+    }
     let ganadoresNumero=Number(totalGanadores);
     if(!Number.isFinite(ganadoresNumero)){
       ganadoresNumero=1;
@@ -9555,6 +9616,15 @@
   function gestionarCelebracionesNuevosGanadores(cartones, esSimulacion=false){
     if(!Array.isArray(cartones) || !cartones.length){
       return;
+    }
+    if(esModoManualActivo() && !esSimulacion){
+      const resultadoManual = obtenerResumenResultadoManual();
+      if(!resultadoManual || manualBingoEstado?.activo){
+        return;
+      }
+      if(!usuarioConfirmoManual(resultadoManual)){
+        return;
+      }
     }
     if(esSimulacion && !cartonesRealesCargados){
       return;
