@@ -4801,8 +4801,11 @@
     }
     const key = obtenerClaveManualUsuarioActual();
     const candidatos = Array.isArray(manualBingoEstado?.candidatos) ? manualBingoEstado.candidatos : [];
+    const cantados = new Set(Array.isArray(manualBingoEstado?.cantados) ? manualBingoEstado.cantados : []);
     const esCandidato = candidatos.some(item=>normalizarClaveManual(item?.key || item?.userId || item?.email || item?.alias || item?.cartonId) === key);
-    if(esCandidato){
+    const yaCantado = key ? cantados.has(key) : false;
+    const mostrarBoton = usuarioPendienteConfirmacionManual() && esCandidato && !yaCantado;
+    if(mostrarBoton){
       manualBingoOverlayEl.style.display = 'flex';
       cerrarModalSegundoLugar();
       cerrarModalSinPremio();
