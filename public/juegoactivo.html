@@ -4669,11 +4669,76 @@
     return resultado;
   }
 
+  function obtenerClaveManualUsuarioActual(){
+    return normalizarClaveManual(usuarioActual?.uid || usuarioActual?.email || '');
+  }
+
   function usuarioConfirmoManual(resultado = obtenerResumenResultadoManual()) {
     if(!resultado) return false;
-    const key = normalizarClaveManual(usuarioActual?.uid || usuarioActual?.email || '');
+    const key = obtenerClaveManualUsuarioActual();
     const confirmados = new Set(Array.isArray(resultado?.confirmados) ? resultado.confirmados : []);
     return key ? confirmados.has(key) : false;
+  }
+
+  function usuarioPendienteConfirmacionManual(){
+    if(!manualBingoEstado?.activo || !esModoManualActivo()) return false;
+    const key = obtenerClaveManualUsuarioActual();
+    if(!key) return false;
+    const candidatos = Array.isArray(manualBingoEstado?.candidatos) ? manualBingoEstado.candidatos : [];
+    const esCandidato = candidatos.some(item=>normalizarClaveManual(item?.key || item?.userId || item?.email || item?.alias || item?.cartonId) === key);
+    if(!esCandidato) return false;
+    const cantados = new Set(Array.isArray(manualBingoEstado?.cantados) ? manualBingoEstado.cantados : []);
+    return !cantados.has(key);
+  }
+
+  function obtenerHistorialManualJugador(){
+    if(!esModoManualActivo()) return [];
+    const key = obtenerClaveManualUsuarioActual();
+    if(!key) return [];
+    const historial = [];
+    const historialPorCanto = manualBingoEstado?.historialPorCanto;
+    if(historialPorCanto && typeof historialPorCanto === 'object'){
+      Object.values(historialPorCanto).forEach(item=>{ if(item && typeof item === 'object') historial.push(item); });
+    }
+    const resultadoActual = obtenerResumenResultadoManual();
+    if(resultadoActual && resultadoActual.cantoNumero !== undefined){
+      historial.push(resultadoActual);
+    }
+    const unicos = new Map();
+    historial.forEach(item=>{
+      const cantoNumero = Number(item?.cantoNumero);
+      if(!Number.isFinite(cantoNumero)) return;
+      unicos.set(cantoNumero, item);
+    });
+    const salida = [];
+    unicos.forEach((item, cantoNumero)=>{
+      const confirmados = new Set(Array.isArray(item?.confirmados) ? item.confirmados : []);
+      const candidatos = new Set(Array.isArray(item?.candidatos) ? item.candidatos : []);
+      const noConfirmados = new Set(Array.isArray(item?.noConfirmados) ? item.noConfirmados : []);
+      const participa = confirmados.has(key) || noConfirmados.has(key) || candidatos.has(key);
+      if(!participa) return;
+      salida.push({
+        cantoNumero,
+        confirmado: confirmados.has(key),
+        formas: Array.isArray(item?.formasPorUsuario?.[key]) ? item.formasPorUsuario[key] : []
+      });
+    });
+    salida.sort((a,b)=>a.cantoNumero-b.cantoNumero);
+    return salida;
+  }
+
+  function obtenerCantosManualConfirmados(){
+    const confirmados = new Set();
+    obtenerHistorialManualJugador().forEach(item=>{
+      if(item.confirmado){
+        confirmados.add(Number(item.cantoNumero));
+      }
+    });
+    return confirmados;
+  }
+
+  function debePausarMensajesPorManual(){
+    return usuarioPendienteConfirmacionManual();
   }
 
   function asegurarUiManualBingo(){
@@ -4698,8 +4763,9 @@
   async function registrarCantoManualJugador(){
     if(!manualBingoEstado?.activo || !activeSorteoId || !usuarioActual) return;
     try {
+      manualBingoBtnEl.style.animation = 'none';
       manualBingoBtnEl.src = 'img/boton-bingo-p.png';
-      const key = normalizarClaveManual(usuarioActual.uid || usuarioActual.email || '');
+      const key = obtenerClaveManualUsuarioActual();
       await db.collection('manualBingoCantos').doc(activeSorteoId).set({
         cantados: firebase.firestore.FieldValue.arrayUnion(key),
         actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
@@ -4707,7 +4773,8 @@
       setTimeout(()=>{
         ocultarBotonManualBingo();
         manualBingoBtnEl.src = 'img/boton-bingo.png';
-      }, 1000);
+        manualBingoBtnEl.style.animation = 'pulseBingo .38s infinite alternate';
+      }, 500);
     } catch (error) {
       console.error('No se pudo registrar el bingo manual', error);
     }
@@ -4732,11 +4799,15 @@
       ocultarBotonManualBingo();
       return;
     }
-    const key = normalizarClaveManual(usuarioActual?.uid || usuarioActual?.email || '');
+    const key = obtenerClaveManualUsuarioActual();
     const candidatos = Array.isArray(manualBingoEstado?.candidatos) ? manualBingoEstado.candidatos : [];
-    const esCandidato = candidatos.some(item=>item?.key === key);
+    const esCandidato = candidatos.some(item=>normalizarClaveManual(item?.key || item?.userId || item?.email || item?.alias || item?.cartonId) === key);
     if(esCandidato){
       manualBingoOverlayEl.style.display = 'flex';
+      cerrarModalSegundoLugar();
+      cerrarModalSinPremio();
+      cerrarAvisoComplementarios();
+      cerrarModalCelebracionGanador();
     }else{
       ocultarBotonManualBingo();
     }
@@ -6896,6 +6967,7 @@
   }
 
   function mostrarAvisoComplementarios(){
+    if(debePausarMensajesPorManual()) return;
     if(!haySorteoJugando){
       avisoComplementariosMostrado = false;
       transparenciaCompletaAnunciada = false;
@@ -9375,10 +9447,16 @@
     const creditosSpan=document.createElement('span');
     creditosSpan.className='celebracion-premio celebracion-premio-creditos';
     const creditosNumero=Number(detalle?.creditos)||0;
-    creditosSpan.textContent=`+${formatearCreditos(creditosNumero)} créditos`;
+    if(detalle?.perdido){
+      creditosSpan.textContent='Sete pasó este canto';
+      linea.style.filter='grayscale(1)';
+      linea.style.opacity='0.78';
+    }else{
+      creditosSpan.textContent=`+${formatearCreditos(creditosNumero)} créditos`;
+    }
     premios.appendChild(creditosSpan);
     const cartonesNumero=Number(detalle?.cartonesGratis)||0;
-    if(cartonesNumero>0){
+    if(!detalle?.perdido && cartonesNumero>0){
       const cartonesSpan=document.createElement('span');
       cartonesSpan.className='celebracion-premio celebracion-premio-cartones';
       const sufijo=cartonesNumero===1?'cartón gratis':'cartones gratis';
@@ -9479,6 +9557,7 @@
   }
 
   function mostrarModalSinPremio(){
+    if(debePausarMensajesPorManual()) return;
     if(!modalSinPremioEl || !modalSinPremioMensajeEl) return;
     modalSinPremioMensajeEl.textContent = '😅 Esta vez no ganaste ningún premio, te invitamos a seguir jugando al Bingo Online y podrás ser un feliz ganador 😊';
     modalSinPremioEl.classList.add('activa');
@@ -9497,6 +9576,7 @@
   }
 
   function mostrarModalSegundoLugar(mensaje){
+    if(debePausarMensajesPorManual()) return;
     if(!modalSegundoLugarEl || !modalSegundoLugarMensajeEl) return;
     modalSegundoLugarMensajeEl.textContent = mensaje;
     modalSegundoLugarEl.classList.add('activa');
@@ -9559,6 +9639,7 @@
   }
 
   function evaluarMensajesSegundoLugar(resumenPrevio, resumenActual){
+    if(debePausarMensajesPorManual()) return;
     if(!usuarioActual || !activeSorteoId) return;
     const cartonesJugador = obtenerCartonesJugadorActual();
     if(modoSimulacionCartones) return;
@@ -9586,6 +9667,7 @@
   }
 
   function evaluarMensajeSinPremio(estadoAnterior){
+    if(debePausarMensajesPorManual()) return;
     if(!activeSorteoId) return;
     if(estadoAnterior || !todasFormasConGanadores) return;
     if(!Number.isInteger(indiceUltimoGanador)) return;
@@ -9618,13 +9700,42 @@
       return;
     }
     if(esModoManualActivo() && !esSimulacion){
-      const resultadoManual = obtenerResumenResultadoManual();
-      if(!resultadoManual || manualBingoEstado?.activo){
+      if(manualBingoEstado?.activo || debePausarMensajesPorManual()){
         return;
       }
-      if(!usuarioConfirmoManual(resultadoManual)){
-        return;
+      const historial = obtenerHistorialManualJugador();
+      if(!historial.length) return;
+      const detallesManual = [];
+      historial.forEach(item=>{
+        if(item.confirmado){
+          item.formas.forEach(formaItem=>{
+            const idx = Number(formaItem?.idx);
+            const forma = formasActivas.find(f=>Number(f.idx)===idx) || { idx, nombre: formaItem?.nombre || '' };
+            const totalGanadores = obtenerTotalGanadoresForma(forma);
+            detallesManual.push({
+              idx,
+              nombre: forma?.nombre || formaItem?.nombre || '',
+              creditos: obtenerCreditosPorGanador(forma, totalGanadores),
+              cartonesGratis: obtenerCartonesGratisPorGanador(forma, totalGanadores),
+              color: obtenerColorParaForma(idx),
+              cartonLabel: formaItem?.cartonNum ? `Cartón #${formaItem.cartonNum}` : ''
+            });
+          });
+        }else{
+          detallesManual.push({
+            idx: 0,
+            nombre: `Canto ${item.cantoNumero}`,
+            creditos: 0,
+            cartonesGratis: 0,
+            cartonLabel: '',
+            perdido: true
+          });
+        }
+      });
+      if(detallesManual.length){
+        mostrarModalCelebracionGanador(detallesManual, false);
       }
+      return;
     }
     if(esSimulacion && !cartonesRealesCargados){
       return;
@@ -10356,6 +10467,29 @@
     return {formasPorCarton:formasMapa, cartonesGanadoresPorForma:ganadoresForma};
   }
 
+
+  function filtrarGananciasManualNoConfirmadas(){
+    if(!esModoManualActivo()) return;
+    const cantosConfirmados = obtenerCantosManualConfirmados();
+    if(!cantosConfirmados.size){
+      formasPorCarton=new Map();
+      return;
+    }
+    const mapaFiltrado = new Map();
+    formasPorCarton.forEach((lista, cartonId)=>{
+      const validas = (Array.isArray(lista) ? lista : []).filter(item=>{
+        const paso = Number(item?.paso);
+        if(!Number.isFinite(paso) || paso < 0 || paso >= cantosOrdenados.length) return false;
+        const cantoNumero = Number(cantosOrdenados[paso]);
+        return cantosConfirmados.has(cantoNumero);
+      });
+      if(validas.length){
+        mapaFiltrado.set(cartonId, validas);
+      }
+    });
+    formasPorCarton = mapaFiltrado;
+  }
+
   function calcularGanadores(){
     cartonesGanadoresPorForma=new Map();
     formasPorCarton=new Map();
@@ -10366,6 +10500,7 @@
     const resultadoReal=calcularGanadoresEnMapa(cartonesSorteo);
     cartonesGanadoresPorForma=resultadoReal.cartonesGanadoresPorForma;
     formasPorCarton=resultadoReal.formasPorCarton;
+    filtrarGananciasManualNoConfirmadas();
     let resultadoSimulado={cartonesGanadoresPorForma:new Map(), formasPorCarton:new Map()};
     if(simulacionSorteoActiva){
       const mapaCompetencia=new Map(cartonesSorteo);

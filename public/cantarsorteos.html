@@ -4559,18 +4559,25 @@
           ganadoresPorForma[String(idxNumero)] = totalConfirmadosForma;
         }
       });
-      await db.collection('manualBingoCantos').doc(currentSorteoId).set({
+      const cantoNumeroFinal = Number(manualCantoActivo?.cantoNumero);
+      const resultadoCanto = {
+        cantoNumero: Number.isFinite(cantoNumeroFinal) ? cantoNumeroFinal : (manualCantoActivo?.cantoNumero ?? null),
+        confirmados,
+        noConfirmados,
+        candidatos: candidatos.map(item=>normalizarClaveManual(item?.key || item?.userId || item?.email || item?.alias || item?.cartonId)).filter(Boolean),
+        ganadoresPorForma,
+        formasPorUsuario
+      };
+      const payloadCierre = {
         activo: false,
         cerrarSolicitadoPor: adminActual?.email || '',
         cerradoEn: firebase.firestore.FieldValue.serverTimestamp(),
-        resultado: {
-          cantoNumero: manualCantoActivo?.cantoNumero ?? null,
-          confirmados,
-          noConfirmados,
-          ganadoresPorForma,
-          formasPorUsuario
-        }
-      }, { merge: true });
+        resultado: resultadoCanto
+      };
+      if(Number.isFinite(cantoNumeroFinal)){
+        payloadCierre[`historialPorCanto.${cantoNumeroFinal}`] = resultadoCanto;
+      }
+      await db.collection('manualBingoCantos').doc(currentSorteoId).set(payloadCierre, { merge: true });
       cerrarModalNuevosGanadores();
     } catch (error) {
       console.error('No se pudo cerrar el canto manual.', error);
