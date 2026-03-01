@@ -4587,18 +4587,79 @@
   async function iniciarCantoManual(candidatos = []){
     if(!currentSorteoId || !candidatos.length) return;
     const cantoNumero = cantosOrdenados[cantosOrdenados.length - 1] || null;
-    const payload = {
-      sorteoId: currentSorteoId,
-      activo: true,
-      modo: 'manual',
-      cantoNumero,
-      candidatos,
-      cantados: [],
-      resultado: null,
-      actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
+    const docRef = db.collection('manualBingoCantos').doc(currentSorteoId);
+    const normalizadosEntrantes = new Map();
+    candidatos.forEach(item=>{
+      const key = normalizarClaveManual(item?.key || item?.userId || item?.email || item?.alias || item?.cartonId);
+      if(!key || normalizadosEntrantes.has(key)) return;
+      normalizadosEntrantes.set(key, {
+        ...item,
+        key
+      });
+    });
+    const mergearCandidatos = (existentes = [], entrantes = [])=>{
+      const combinados = new Map();
+      existentes.forEach(item=>{
+        const key = normalizarClaveManual(item?.key || item?.userId || item?.email || item?.alias || item?.cartonId);
+        if(!key || combinados.has(key)) return;
+        combinados.set(key, { ...item, key });
+      });
+      entrantes.forEach(item=>{
+        const key = normalizarClaveManual(item?.key || item?.userId || item?.email || item?.alias || item?.cartonId);
+        if(!key) return;
+        const previo = combinados.get(key) || {};
+        combinados.set(key, {
+          ...previo,
+          ...item,
+          key,
+          alias: item?.alias || previo?.alias || 'Jugador'
+        });
+      });
+      return Array.from(combinados.values());
     };
     try {
-      await db.collection('manualBingoCantos').doc(currentSorteoId).set(payload, { merge: true });
+      await db.runTransaction(async transaction=>{
+        const snapshot = await transaction.get(docRef);
+        const firestoreData = snapshot.exists ? (snapshot.data() || {}) : null;
+        const existeActivoFirestore = firestoreData?.activo === true;
+        const existeActivoLocal = manualCantoActivo?.activo === true;
+        const candidatosEntrantes = Array.from(normalizadosEntrantes.values());
+        if(existeActivoFirestore || existeActivoLocal){
+          const baseCandidatos = Array.isArray(firestoreData?.candidatos)
+            ? firestoreData.candidatos
+            : (Array.isArray(manualCantoActivo?.candidatos) ? manualCantoActivo.candidatos : []);
+          const candidatosFusionados = mergearCandidatos(baseCandidatos, candidatosEntrantes);
+          const cantoActivo = firestoreData?.cantoNumero ?? manualCantoActivo?.cantoNumero ?? null;
+          const mismoCanto = Number.isFinite(Number(cantoActivo)) && Number.isFinite(Number(cantoNumero))
+            ? Number(cantoActivo) === Number(cantoNumero)
+            : cantoActivo === cantoNumero;
+          console.info('Canto manual ya activo: se conserva estado y solo se fusionan candidatos faltantes.', {
+            sorteoId: currentSorteoId,
+            cantoNumeroSolicitado: cantoNumero,
+            cantoNumeroActivo: cantoActivo,
+            mismoCanto,
+            candidatosPrevios: baseCandidatos.length,
+            candidatosEntrantes: candidatosEntrantes.length,
+            candidatosFusionados: candidatosFusionados.length
+          });
+          transaction.set(docRef, {
+            sorteoId: currentSorteoId,
+            candidatos: candidatosFusionados,
+            actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+          return;
+        }
+        transaction.set(docRef, {
+          sorteoId: currentSorteoId,
+          activo: true,
+          modo: 'manual',
+          cantoNumero,
+          candidatos: candidatosEntrantes,
+          cantados: [],
+          resultado: null,
+          actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      });
     } catch (error) {
       console.error('No se pudo iniciar el canto manual.', error);
     }
