@@ -4826,6 +4826,32 @@
     manualBingoBtnEl.addEventListener('click', registrarCantoManualJugador);
   }
 
+  async function registrarEventoManualBingoJugador({
+    eventType,
+    cantoNumero,
+    duracionMs = null,
+    cantidadCandidatos = null,
+    cantidadConfirmados = null
+  } = {}){
+    if(!activeSorteoId || !eventType) return;
+    try {
+      const actor = normalizarClaveManual(usuarioActual?.uid || usuarioActual?.email || usuarioActual?.displayName || 'jugador');
+      const payload = {
+        eventType,
+        sorteoId: activeSorteoId,
+        cantoNumero: Number.isFinite(Number(cantoNumero)) ? Number(cantoNumero) : (cantoNumero ?? null),
+        actor,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        duracionMs: Number.isFinite(Number(duracionMs)) ? Number(duracionMs) : null,
+        cantidadCandidatos: Number.isFinite(Number(cantidadCandidatos)) ? Number(cantidadCandidatos) : 0,
+        cantidadConfirmados: Number.isFinite(Number(cantidadConfirmados)) ? Number(cantidadConfirmados) : 0
+      };
+      await db.collection('manualBingoCantos').doc(activeSorteoId).collection('manualBingoEventos').add(payload);
+    } catch (error) {
+      console.warn('No se pudo registrar manualBingoEventos desde jugador', { eventType, error });
+    }
+  }
+
   async function registrarCantoManualJugador(){
     if(!manualBingoEstado?.activo || !activeSorteoId || !usuarioActual) return;
     try {
@@ -4836,6 +4862,16 @@
         cantados: firebase.firestore.FieldValue.arrayUnion(key),
         actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
+      const candidatos = Array.isArray(manualBingoEstado?.candidatos) ? manualBingoEstado.candidatos : [];
+      const cantados = Array.isArray(manualBingoEstado?.cantados) ? manualBingoEstado.cantados : [];
+      const abiertosMs = manualBingoEstado?.abiertoEn?.toMillis ? manualBingoEstado.abiertoEn.toMillis() : null;
+      await registrarEventoManualBingoJugador({
+        eventType: 'player_confirmed',
+        cantoNumero: manualBingoEstado?.cantoNumero,
+        duracionMs: Number.isFinite(abiertosMs) ? Math.max(0, Date.now() - abiertosMs) : null,
+        cantidadCandidatos: candidatos.length,
+        cantidadConfirmados: cantados.length + 1
+      });
       setTimeout(()=>{
         ocultarBotonManualBingo();
         manualBingoBtnEl.src = 'img/boton-bingo.png';
