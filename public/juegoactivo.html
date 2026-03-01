@@ -4652,11 +4652,73 @@
   let manualBingoOverlayEl = null;
   let manualBingoBtnEl = null;
   let manualBingoPerdioEl = null;
+  let manualBingoContadorEl = null;
+  let manualBingoContadorIntervalo = null;
   let ultimoCantoPerdidoMostrado = null;
   let manualResultadosProcesados = new Set();
 
   function normalizarClaveManual(valor){
     return (valor || '').toString().trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  }
+
+
+  function resolverMillisDesdeFirestore(valor){
+    if(!valor) return null;
+    if(typeof valor?.toMillis === 'function'){
+      const ms = Number(valor.toMillis());
+      return Number.isFinite(ms) ? ms : null;
+    }
+    if(valor instanceof Date){
+      const ms = valor.getTime();
+      return Number.isFinite(ms) ? ms : null;
+    }
+    const ms = Number(valor);
+    return Number.isFinite(ms) ? ms : null;
+  }
+
+  function formatearCuentaRegresivaManual(segundos){
+    const total = Math.max(0, Math.floor(Number(segundos) || 0));
+    const minutos = Math.floor(total / 60);
+    const resto = total % 60;
+    return `${minutos}:${resto.toString().padStart(2,'0')}`;
+  }
+
+  function detenerContadorManualBingo(){
+    if(!manualBingoContadorIntervalo) return;
+    clearInterval(manualBingoContadorIntervalo);
+    manualBingoContadorIntervalo = null;
+  }
+
+  function actualizarContadorManualBingo(){
+    if(!manualBingoContadorEl) return;
+    if(!manualBingoEstado?.activo || !esModoManualActivo()){
+      manualBingoContadorEl.style.display = 'none';
+      manualBingoContadorEl.textContent = '';
+      return;
+    }
+    const abiertoMs = resolverMillisDesdeFirestore(manualBingoEstado?.abiertoEn);
+    const duracionSegundos = Math.max(1, Math.floor(Number(manualBingoEstado?.duracionSegundos) || 20));
+    const expiraMs = resolverMillisDesdeFirestore(manualBingoEstado?.expiraEn) || (Number.isFinite(abiertoMs) ? (abiertoMs + (duracionSegundos * 1000)) : null);
+    if(!expiraMs){
+      manualBingoContadorEl.textContent = `⏳ Canto manual activo · ${duracionSegundos}s`;
+      manualBingoContadorEl.style.display = 'block';
+      return;
+    }
+    const restanteMs = expiraMs - Date.now();
+    if(restanteMs <= 0){
+      manualBingoContadorEl.textContent = '⏳ Canto manual por cerrar…';
+      manualBingoContadorEl.style.display = 'block';
+      return;
+    }
+    manualBingoContadorEl.textContent = `⏳ Tiempo para cantar BINGO: ${formatearCuentaRegresivaManual(restanteMs / 1000)}`;
+    manualBingoContadorEl.style.display = 'block';
+  }
+
+  function iniciarContadorManualBingo(){
+    detenerContadorManualBingo();
+    manualBingoContadorIntervalo = setInterval(()=>{
+      actualizarContadorManualBingo();
+    }, 1000);
   }
 
   function esModoManualActivo(){
@@ -4757,6 +4819,10 @@
     manualBingoPerdioEl = document.createElement('div');
     manualBingoPerdioEl.style.cssText = 'position:fixed;left:50%;top:18px;transform:translateX(-50%);background:#fff7e6;border:2px solid #f59e0b;border-radius:14px;padding:10px 14px;z-index:2101;display:none;font-weight:700;color:#92400e;';
     document.body.appendChild(manualBingoPerdioEl);
+    manualBingoContadorEl = document.createElement('div');
+    manualBingoContadorEl.style.cssText = 'position:fixed;left:50%;top:18px;transform:translateX(-50%);background:#ecfdf5;border:2px solid #10b981;border-radius:999px;padding:8px 14px;z-index:2102;display:none;font-weight:800;color:#065f46;box-shadow:0 8px 18px rgba(0,0,0,.2);';
+    manualBingoContadorEl.setAttribute('aria-live','polite');
+    document.body.appendChild(manualBingoContadorEl);
     manualBingoBtnEl.addEventListener('click', registrarCantoManualJugador);
   }
 
@@ -4797,6 +4863,8 @@
     asegurarUiManualBingo();
     if(!manualBingoEstado?.activo || !esModoManualActivo()){
       ocultarBotonManualBingo();
+      actualizarContadorManualBingo();
+      detenerContadorManualBingo();
       return;
     }
     const key = obtenerClaveManualUsuarioActual();
@@ -4814,6 +4882,8 @@
     }else{
       ocultarBotonManualBingo();
     }
+    actualizarContadorManualBingo();
+    iniciarContadorManualBingo();
   }
 
   function procesarResultadoCantoManualCerrado(previo, actual){

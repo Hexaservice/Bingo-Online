@@ -867,6 +867,14 @@
     }
     #nuevos-ganadores-resumen .cantaron { color: #1b8f3e; }
     #nuevos-ganadores-resumen .nocantaron { color: #cf1e1e; }
+    #nuevos-ganadores-contador {
+      margin-top: -6px;
+      font-size: .95rem;
+      font-weight: 700;
+      color: #0f5c2a;
+      text-align: center;
+    }
+    #nuevos-ganadores-contador.expirado { color: #b91c1c; }
     #nuevos-ganadores-lista {
       display: flex;
       flex-direction: column;
@@ -1719,6 +1727,7 @@
       <button id="nuevos-ganadores-cerrar" class="modal-cerrar" type="button" aria-label="Ocultar">✖</button>
       <h2 id="nuevos-ganadores-titulo">SEGUIMIENTO DE CANTO MANUAL</h2>
       <div id="nuevos-ganadores-resumen"></div>
+      <div id="nuevos-ganadores-contador" aria-live="polite"></div>
       <div id="nuevos-ganadores-lista"></div>
       <button id="nuevos-ganadores-cerrar-canto" type="button">Cerrar canto</button>
     </div>
@@ -1869,6 +1878,7 @@
   const nuevosGanadoresModalEl = document.getElementById('nuevos-ganadores-modal');
   const nuevosGanadoresListaEl = document.getElementById('nuevos-ganadores-lista');
   const nuevosGanadoresResumenEl = document.getElementById('nuevos-ganadores-resumen');
+  const nuevosGanadoresContadorEl = document.getElementById('nuevos-ganadores-contador');
   const nuevosGanadoresCerrarBtn = document.getElementById('nuevos-ganadores-cerrar');
   const nuevosGanadoresCerrarCantoBtn = document.getElementById('nuevos-ganadores-cerrar-canto');
   const nuevosGanadoresFlotanteBtn = document.getElementById('nuevos-ganadores-flotante');
@@ -1899,6 +1909,10 @@
   let manualCantoActivo = null;
   let manualCantoEstadoRemoto = null;
   let cierreCantoManualEnProceso = false;
+  let cierreManualExpiracionEnProceso = false;
+  let manualCantoContadorIntervalo = null;
+  let duracionCantoManualSegundos = 20;
+  const DURACION_CANTO_MANUAL_SEGUNDOS_FALLBACK = 20;
   const MODO_RECORDATORIO_STORAGE_PREFIX = 'cantarsorteos_modo_recordatorio_v1_';
   let infoTiempoSorteo = {
     fecha: null,
@@ -4451,6 +4465,95 @@
     return (valor || '').toString().trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
   }
 
+
+  function formatearSegundosRestantes(segundosRestantes){
+    const total = Math.max(0, Math.floor(Number(segundosRestantes) || 0));
+    const minutos = Math.floor(total / 60);
+    const segundos = total % 60;
+    return `${minutos}:${segundos.toString().padStart(2,'0')}`;
+  }
+
+  function resolverMillisFechaFirestore(valor){
+    if(!valor) return null;
+    if(typeof valor?.toMillis === 'function'){
+      const ms = Number(valor.toMillis());
+      return Number.isFinite(ms) ? ms : null;
+    }
+    if(valor instanceof Date){
+      const ms = valor.getTime();
+      return Number.isFinite(ms) ? ms : null;
+    }
+    const ms = Number(valor);
+    return Number.isFinite(ms) ? ms : null;
+  }
+
+  async function cargarDuracionCantoManualDesdeParametros(){
+    try {
+      const doc = await db.collection('Variablesglobales').doc('Parametros').get();
+      if(doc.exists){
+        const data = doc.data() || {};
+        const candidatos = [
+          data.duracionCantoManualSegundos,
+          data.tiempoCantoManualSegundos,
+          data.manualBingoDuracionSegundos
+        ];
+        const detectado = candidatos.find(valor=>Number.isFinite(Number(valor)) && Number(valor) > 0);
+        duracionCantoManualSegundos = detectado ? Math.max(5, Math.floor(Number(detectado))) : DURACION_CANTO_MANUAL_SEGUNDOS_FALLBACK;
+        return;
+      }
+    } catch (error) {
+      console.warn('No se pudo cargar la duración de canto manual desde parámetros.', error);
+    }
+    duracionCantoManualSegundos = DURACION_CANTO_MANUAL_SEGUNDOS_FALLBACK;
+  }
+
+  function actualizarContadorManualCanto(payload = manualCantoActivo){
+    if(!nuevosGanadoresContadorEl) return;
+    const abiertoMs = resolverMillisFechaFirestore(payload?.abiertoEn);
+    const duracionMs = Math.max(1000, Math.floor(Number(payload?.duracionSegundos) || duracionCantoManualSegundos) * 1000);
+    const expiraMs = resolverMillisFechaFirestore(payload?.expiraEn) || (Number.isFinite(abiertoMs) ? (abiertoMs + duracionMs) : null);
+    if(!payload?.activo){
+      nuevosGanadoresContadorEl.textContent = '';
+      nuevosGanadoresContadorEl.classList.remove('expirado');
+      return;
+    }
+    if(!expiraMs){
+      nuevosGanadoresContadorEl.textContent = `Tiempo manual: ${duracionCantoManualSegundos}s`;
+      nuevosGanadoresContadorEl.classList.remove('expirado');
+      return;
+    }
+    const restanteMs = expiraMs - Date.now();
+    if(restanteMs <= 0){
+      nuevosGanadoresContadorEl.textContent = 'Canto expirado: cerrando automáticamente…';
+      nuevosGanadoresContadorEl.classList.add('expirado');
+      return;
+    }
+    nuevosGanadoresContadorEl.textContent = `Tiempo restante: ${formatearSegundosRestantes(restanteMs / 1000)}`;
+    nuevosGanadoresContadorEl.classList.remove('expirado');
+  }
+
+  function detenerContadorManualCanto(){
+    if(!manualCantoContadorIntervalo) return;
+    clearInterval(manualCantoContadorIntervalo);
+    manualCantoContadorIntervalo = null;
+  }
+
+  function iniciarContadorManualCanto(){
+    detenerContadorManualCanto();
+    manualCantoContadorIntervalo = setInterval(()=>{
+      actualizarContadorManualCanto();
+      verificarExpiracionCantoManual();
+    }, 1000);
+  }
+
+  function manualCantoEstaExpirado(payload = manualCantoActivo){
+    if(!payload?.activo) return false;
+    const abiertoMs = resolverMillisFechaFirestore(payload?.abiertoEn);
+    const duracionMs = Math.max(1000, Math.floor(Number(payload?.duracionSegundos) || duracionCantoManualSegundos) * 1000);
+    const expiraMs = resolverMillisFechaFirestore(payload?.expiraEn) || (Number.isFinite(abiertoMs) ? (abiertoMs + duracionMs) : null);
+    return Number.isFinite(expiraMs) && expiraMs <= Date.now();
+  }
+
   function crearLineaNuevosGanadores(item, indice){
     const linea = document.createElement('div');
     linea.className = 'nuevos-ganadores-linea';
@@ -4496,6 +4599,8 @@
     if(nuevosGanadoresFlotanteBtn){
       nuevosGanadoresFlotanteBtn.hidden = true;
     }
+    actualizarContadorManualCanto(payload || {});
+    iniciarContadorManualCanto();
   }
 
   function minimizarModalNuevosGanadores(){
@@ -4506,6 +4611,7 @@
     if(manualCantoActivo?.activo && nuevosGanadoresFlotanteBtn){
       nuevosGanadoresFlotanteBtn.hidden = false;
     }
+    actualizarContadorManualCanto();
   }
 
   function restaurarModalNuevosGanadores(){
@@ -4524,13 +4630,17 @@
     if(nuevosGanadoresFlotanteBtn){
       nuevosGanadoresFlotanteBtn.hidden = true;
     }
+    detenerContadorManualCanto();
+    actualizarContadorManualCanto({ activo: false });
     manualCantoActivo = null;
     actualizarTablaEstado();
     gestionarComplementariosPendientes();
   }
 
-  async function cerrarCantoManualActual(){
+  async function cerrarCantoManualActual({ origen = 'manual' } = {}){
     if(!currentSorteoId || !manualCantoActivo?.activo) return;
+    if(origen === 'expiracion' && cierreManualExpiracionEnProceso) return;
+    cierreManualExpiracionEnProceso = origen === 'expiracion';
     cierreCantoManualEnProceso = true;
     if(!manualCantoEstadoRemoto?.activo){
       manualCantoEstadoRemoto = { ...(manualCantoActivo || {}), activo: true };
@@ -4586,6 +4696,7 @@
       const payloadCierre = {
         activo: false,
         cerrarSolicitadoPor: adminActual?.email || '',
+        cierreMotivo: origen,
         cerradoEn: firebase.firestore.FieldValue.serverTimestamp(),
         resultado: resultadoCanto
       };
@@ -4598,8 +4709,15 @@
       console.error('No se pudo cerrar el canto manual.', error);
     } finally {
       cierreCantoManualEnProceso = false;
+      cierreManualExpiracionEnProceso = false;
       actualizarTablaEstado();
     }
+  }
+
+  async function verificarExpiracionCantoManual(payload = manualCantoActivo){
+    if(!payload?.activo || cierreCantoManualEnProceso) return;
+    if(!manualCantoEstaExpirado(payload)) return;
+    await cerrarCantoManualActual({ origen: 'expiracion' });
   }
 
   async function iniciarCantoManual(candidatos = []){
@@ -4675,6 +4793,9 @@
           candidatos: candidatosEntrantes,
           cantados: [],
           resultado: null,
+          abiertoEn: firebase.firestore.FieldValue.serverTimestamp(),
+          expiraEn: firebase.firestore.Timestamp.fromMillis(Date.now() + (duracionCantoManualSegundos * 1000)),
+          duracionSegundos: duracionCantoManualSegundos,
           actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
       });
@@ -4700,6 +4821,7 @@
       manualCantoEstadoRemoto = data;
       if(data.activo){
         mostrarModalNuevosGanadores(data);
+        verificarExpiracionCantoManual(data);
       }else if(manualCantoActivo?.activo){
         cerrarModalNuevosGanadores();
       }
@@ -6584,6 +6706,7 @@
     const esperaAuth = authListoPromesa.catch(()=>{});
     try {
       await initFirebase();
+      await cargarDuracionCantoManualDesdeParametros();
       await esperaAuth;
       await cargarSorteos();
     } catch (err) {
@@ -6594,6 +6717,7 @@
     if(primerIntentoFallido){
       try {
         await initFirebase();
+        await cargarDuracionCantoManualDesdeParametros();
         await esperaAuth;
         await cargarSorteos({ forzar: true });
         mensajePostCarga = 'Los sorteos se cargaron tras un reintento.';
