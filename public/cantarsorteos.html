@@ -1897,6 +1897,8 @@
   let modoRecordatorioMostrado = false;
   let manualCantoUnsub = null;
   let manualCantoActivo = null;
+  let manualCantoEstadoRemoto = null;
+  let cierreCantoManualEnProceso = false;
   const MODO_RECORDATORIO_STORAGE_PREFIX = 'cantarsorteos_modo_recordatorio_v1_';
   let infoTiempoSorteo = {
     fecha: null,
@@ -3088,6 +3090,10 @@
     if(!currentSorteoId || !currentSorteoData) return;
     if(tablaCantosContainer.classList.contains('disabled')) return;
     if(tablaCantosContainer.classList.contains('bloqueado')) return;
+    if(cierreCantoManualEnProceso || manualCantoActivo?.activo || manualCantoEstadoRemoto?.activo){
+      mostrarAvisoSimple('Debes cerrar el canto manual actual antes de continuar.');
+      return;
+    }
     const claveNormalizada = (clave ?? '').toString().toUpperCase();
     if(!claveNormalizada) return;
     if(cantosSeleccionados.has(claveNormalizada)) return;
@@ -4480,6 +4486,9 @@
   function mostrarModalNuevosGanadores(payload){
     if(!nuevosGanadoresModalEl || !nuevosGanadoresListaEl) return;
     manualCantoActivo = payload || null;
+    if(payload && typeof payload === 'object'){
+      manualCantoEstadoRemoto = payload;
+    }
     renderModalNuevosGanadores(payload || {});
     nuevosGanadoresModalEl.classList.add('activa');
     nuevosGanadoresModalEl.setAttribute('aria-hidden', 'false');
@@ -4516,11 +4525,17 @@
       nuevosGanadoresFlotanteBtn.hidden = true;
     }
     manualCantoActivo = null;
+    actualizarTablaEstado();
     gestionarComplementariosPendientes();
   }
 
   async function cerrarCantoManualActual(){
     if(!currentSorteoId || !manualCantoActivo?.activo) return;
+    cierreCantoManualEnProceso = true;
+    if(!manualCantoEstadoRemoto?.activo){
+      manualCantoEstadoRemoto = { ...(manualCantoActivo || {}), activo: true };
+    }
+    actualizarTablaEstado();
     try {
       const candidatos = Array.isArray(manualCantoActivo?.candidatos) ? manualCantoActivo.candidatos : [];
       const cantados = Array.isArray(manualCantoActivo?.cantados) ? manualCantoActivo.cantados : [];
@@ -4581,6 +4596,9 @@
       cerrarModalNuevosGanadores();
     } catch (error) {
       console.error('No se pudo cerrar el canto manual.', error);
+    } finally {
+      cierreCantoManualEnProceso = false;
+      actualizarTablaEstado();
     }
   }
 
@@ -4673,15 +4691,19 @@
     if(!currentSorteoId) return;
     manualCantoUnsub = db.collection('manualBingoCantos').doc(currentSorteoId).onSnapshot(doc=>{
       if(!doc.exists){
+        manualCantoEstadoRemoto = { activo: false };
         cerrarModalNuevosGanadores();
+        actualizarTablaEstado();
         return;
       }
       const data = doc.data() || {};
+      manualCantoEstadoRemoto = data;
       if(data.activo){
         mostrarModalNuevosGanadores(data);
       }else if(manualCantoActivo?.activo){
         cerrarModalNuevosGanadores();
       }
+      actualizarTablaEstado();
     }, err=>console.error('Error escuchando canto manual', err));
   }
 
@@ -4835,6 +4857,8 @@
       manualCantoUnsub = null;
     }
     manualCantoActivo = null;
+    manualCantoEstadoRemoto = null;
+    cierreCantoManualEnProceso = false;
     if(nuevosGanadoresModalEl){
       nuevosGanadoresModalEl.classList.remove('activa');
       nuevosGanadoresModalEl.setAttribute('aria-hidden', 'true');
@@ -4902,7 +4926,8 @@
     const estado = (currentSorteoData?.estado || '').toString().toLowerCase();
     const esFinalizado = estado === 'finalizado';
     const habilitado = estado === 'jugando';
-    tablaCantosContainer.classList.toggle('disabled', !habilitado && !esFinalizado);
+    const bloqueoManualActivo = cierreCantoManualEnProceso || manualCantoActivo?.activo === true || manualCantoEstadoRemoto?.activo === true;
+    tablaCantosContainer.classList.toggle('disabled', (!habilitado && !esFinalizado) || bloqueoManualActivo);
     tablaCantosContainer.classList.toggle('bloqueado', esFinalizado);
   }
 
