@@ -875,6 +875,16 @@
       text-align: center;
     }
     #nuevos-ganadores-contador.expirado { color: #b91c1c; }
+    #nuevos-ganadores-diagnostico {
+      font-size: 12px;
+      line-height: 1.4;
+      color: #334155;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 8px 10px;
+      white-space: pre-wrap;
+    }
     #nuevos-ganadores-lista {
       display: flex;
       flex-direction: column;
@@ -1728,6 +1738,7 @@
       <h2 id="nuevos-ganadores-titulo">SEGUIMIENTO DE CANTO MANUAL</h2>
       <div id="nuevos-ganadores-resumen"></div>
       <div id="nuevos-ganadores-contador" aria-live="polite"></div>
+      <div id="nuevos-ganadores-diagnostico" aria-live="polite"></div>
       <div id="nuevos-ganadores-lista"></div>
       <button id="nuevos-ganadores-cerrar-canto" type="button">Cerrar canto</button>
     </div>
@@ -1879,6 +1890,7 @@
   const nuevosGanadoresListaEl = document.getElementById('nuevos-ganadores-lista');
   const nuevosGanadoresResumenEl = document.getElementById('nuevos-ganadores-resumen');
   const nuevosGanadoresContadorEl = document.getElementById('nuevos-ganadores-contador');
+  const nuevosGanadoresDiagnosticoEl = document.getElementById('nuevos-ganadores-diagnostico');
   const nuevosGanadoresCerrarBtn = document.getElementById('nuevos-ganadores-cerrar');
   const nuevosGanadoresCerrarCantoBtn = document.getElementById('nuevos-ganadores-cerrar-canto');
   const nuevosGanadoresFlotanteBtn = document.getElementById('nuevos-ganadores-flotante');
@@ -4569,6 +4581,97 @@
     return linea;
   }
 
+
+  function obtenerResumenDiagnosticoManual(payload = {}){
+    const candidatos = Array.isArray(payload?.candidatos) ? payload.candidatos : [];
+    const cantidadCandidatos = Number.isFinite(Number(payload?.cantidadCandidatos))
+      ? Number(payload.cantidadCandidatos)
+      : candidatos.length;
+    const cantados = Array.isArray(payload?.cantados) ? payload.cantados : [];
+    const resultado = (payload?.resultado && typeof payload.resultado === 'object') ? payload.resultado : null;
+    const cantidadConfirmados = Number.isFinite(Number(payload?.cantidadConfirmados))
+      ? Number(payload.cantidadConfirmados)
+      : (Number.isFinite(Number(resultado?.confirmados?.length)) ? Number(resultado.confirmados.length) : cantados.length);
+    const cantoNumero = Number.isFinite(Number(payload?.cantoNumero)) ? Number(payload.cantoNumero) : payload?.cantoNumero;
+    const sorteoId = payload?.sorteoId || currentSorteoId || '-';
+    const abiertoMs = payload?.abiertoEn?.toMillis ? payload.abiertoEn.toMillis() : null;
+    const cerradoMs = payload?.cerradoEn?.toMillis ? payload.cerradoEn.toMillis() : null;
+    const duracionDesdeFechas = Number.isFinite(abiertoMs) && Number.isFinite(cerradoMs)
+      ? Math.max(0, Math.round(cerradoMs - abiertoMs))
+      : null;
+    const duracionMs = Number.isFinite(Number(payload?.duracionMs))
+      ? Number(payload.duracionMs)
+      : duracionDesdeFechas;
+    const estado = payload?.activo ? 'activo' : 'cerrado';
+    return {
+      sorteoId,
+      cantoNumero,
+      estado,
+      cantidadCandidatos,
+      cantidadConfirmados,
+      duracionMs
+    };
+  }
+
+  function renderResumenDiagnosticoManual(payload = {}){
+    if(!nuevosGanadoresDiagnosticoEl) return;
+    const resumen = obtenerResumenDiagnosticoManual(payload);
+    nuevosGanadoresDiagnosticoEl.textContent = [
+      `Sorteo: ${resumen.sorteoId}`,
+      `Canto: ${resumen.cantoNumero ?? '-'}`,
+      `Estado: ${resumen.estado}`,
+      `Candidatos: ${resumen.cantidadCandidatos}`,
+      `Confirmados: ${resumen.cantidadConfirmados}`,
+      `Duración(ms): ${Number.isFinite(resumen.duracionMs) ? resumen.duracionMs : '-'}`
+    ].join(' · ');
+  }
+
+  async function registrarEventoManualBingo({
+    eventType,
+    cantoNumero,
+    actor = '',
+    duracionMs = null,
+    cantidadCandidatos = null,
+    cantidadConfirmados = null,
+    extra = {}
+  } = {}){
+    if(!currentSorteoId || !eventType) return;
+    try {
+      const payload = {
+        eventType,
+        sorteoId: currentSorteoId,
+        cantoNumero: Number.isFinite(Number(cantoNumero)) ? Number(cantoNumero) : (cantoNumero ?? null),
+        actor,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        duracionMs: Number.isFinite(Number(duracionMs)) ? Number(duracionMs) : null,
+        cantidadCandidatos: Number.isFinite(Number(cantidadCandidatos)) ? Number(cantidadCandidatos) : 0,
+        cantidadConfirmados: Number.isFinite(Number(cantidadConfirmados)) ? Number(cantidadConfirmados) : 0,
+        ...extra
+      };
+      await db.collection('manualBingoCantos').doc(currentSorteoId).collection('manualBingoEventos').add(payload);
+    } catch (error) {
+      console.warn('No se pudo registrar evento manualBingoEventos', { eventType, error });
+    }
+  }
+
+  async function yaExisteEventoManualParaCanto(cantoNumero, tipos = []){
+    const canto = Number(cantoNumero);
+    if(!currentSorteoId || !Number.isFinite(canto) || !Array.isArray(tipos) || !tipos.length) return false;
+    try {
+      const snapshot = await db.collection('manualBingoCantos')
+        .doc(currentSorteoId)
+        .collection('manualBingoEventos')
+        .where('cantoNumero', '==', canto)
+        .where('eventType', 'in', tipos)
+        .limit(1)
+        .get();
+      return !snapshot.empty;
+    } catch (error) {
+      console.warn('No se pudo consultar manualBingoEventos para control de duplicados', { cantoNumero: canto, tipos, error });
+      return false;
+    }
+  }
+
   function renderModalNuevosGanadores(payload = {}){
     if(!nuevosGanadoresListaEl) return;
     const candidatos = Array.isArray(payload?.candidatos) ? payload.candidatos : [];
@@ -4582,6 +4685,7 @@
     if(nuevosGanadoresResumenEl){
       nuevosGanadoresResumenEl.innerHTML = `<span class="cantaron">Cantaron: ${totalCantaron}</span><span class="nocantaron">No cantaron: ${totalNoCantaron}</span>`;
     }
+    renderResumenDiagnosticoManual(payload || {});
     nuevosGanadoresListaEl.innerHTML = '';
     detalle.forEach((item, indice)=>nuevosGanadoresListaEl.appendChild(crearLineaNuevosGanadores(item, indice)));
   }
@@ -4626,6 +4730,9 @@
     }
     if(nuevosGanadoresResumenEl){
       nuevosGanadoresResumenEl.textContent = '';
+    }
+    if(nuevosGanadoresDiagnosticoEl){
+      nuevosGanadoresDiagnosticoEl.textContent = '';
     }
     if(nuevosGanadoresFlotanteBtn){
       nuevosGanadoresFlotanteBtn.hidden = true;
@@ -4685,6 +4792,8 @@
         }
       });
       const cantoNumeroFinal = Number(manualCantoActivo?.cantoNumero);
+      const abiertoMs = manualCantoActivo?.abiertoEn?.toMillis ? manualCantoActivo.abiertoEn.toMillis() : null;
+      const duracionMs = Number.isFinite(abiertoMs) ? Math.max(0, Date.now() - abiertoMs) : null;
       const resultadoCanto = {
         cantoNumero: Number.isFinite(cantoNumeroFinal) ? cantoNumeroFinal : (manualCantoActivo?.cantoNumero ?? null),
         confirmados,
@@ -4704,6 +4813,18 @@
         payloadCierre[`historialPorCanto.${cantoNumeroFinal}`] = resultadoCanto;
       }
       await db.collection('manualBingoCantos').doc(currentSorteoId).set(payloadCierre, { merge: true });
+      const cantidadConfirmados = confirmados.length;
+      const cantidadCandidatos = candidatos.length;
+      const tipoEvento = origen === 'expiracion' ? 'manual_timeout' : 'manual_closed';
+      await registrarEventoManualBingo({
+        eventType: tipoEvento,
+        cantoNumero: resultadoCanto.cantoNumero,
+        actor: adminActual?.email || 'sistema',
+        duracionMs,
+        cantidadCandidatos,
+        cantidadConfirmados,
+        extra: { origen }
+      });
       cerrarModalNuevosGanadores();
     } catch (error) {
       console.error('No se pudo cerrar el canto manual.', error);
@@ -4754,6 +4875,22 @@
       return Array.from(combinados.values());
     };
     try {
+      let aperturaRealizada = false;
+      if(Number.isFinite(Number(cantoNumero))){
+        const yaProcesado = await yaExisteEventoManualParaCanto(cantoNumero, ['manual_closed', 'manual_timeout', 'manual_skipped']);
+        if(yaProcesado){
+          console.info('Se omite apertura duplicada de canto manual ya procesado.', { sorteoId: currentSorteoId, cantoNumero });
+          await registrarEventoManualBingo({
+            eventType: 'manual_skipped',
+            cantoNumero,
+            actor: adminActual?.email || 'sistema',
+            cantidadCandidatos: candidatos.length,
+            cantidadConfirmados: 0,
+            extra: { motivo: 'canto_ya_procesado' }
+          });
+          return;
+        }
+      }
       await db.runTransaction(async transaction=>{
         const snapshot = await transaction.get(docRef);
         const firestoreData = snapshot.exists ? (snapshot.data() || {}) : null;
@@ -4785,6 +4922,7 @@
           }, { merge: true });
           return;
         }
+        aperturaRealizada = true;
         transaction.set(docRef, {
           sorteoId: currentSorteoId,
           activo: true,
@@ -4799,6 +4937,16 @@
           actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
       });
+      if(aperturaRealizada){
+        await registrarEventoManualBingo({
+          eventType: 'manual_opened',
+          cantoNumero,
+          actor: adminActual?.email || 'sistema',
+          duracionMs: 0,
+          cantidadCandidatos: normalizadosEntrantes.size,
+          cantidadConfirmados: 0
+        });
+      }
     } catch (error) {
       console.error('No se pudo iniciar el canto manual.', error);
     }
