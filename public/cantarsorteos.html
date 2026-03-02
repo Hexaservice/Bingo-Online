@@ -4529,12 +4529,17 @@
       if(doc.exists){
         const data = doc.data() || {};
         const candidatos = [
+          data.segundosCierreCantos,
+          data.segundosParaCierreCantos,
+          data.cierreCantosSegundos,
           data.duracionCantoManualSegundos,
           data.tiempoCantoManualSegundos,
           data.manualBingoDuracionSegundos
         ];
-        const detectado = candidatos.find(valor=>Number.isFinite(Number(valor)) && Number(valor) > 0);
-        duracionCantoManualSegundos = detectado ? Math.max(5, Math.floor(Number(detectado))) : DURACION_CANTO_MANUAL_SEGUNDOS_FALLBACK;
+        const detectado = candidatos.find(valor=>Number.isFinite(Number(valor)) && Number(valor) >= 0);
+        duracionCantoManualSegundos = detectado !== undefined
+          ? Math.max(0, Math.floor(Number(detectado)))
+          : DURACION_CANTO_MANUAL_SEGUNDOS_FALLBACK;
         return;
       }
     } catch (error) {
@@ -4545,16 +4550,24 @@
 
   function actualizarContadorManualCanto(payload = manualCantoActivo){
     if(!nuevosGanadoresContadorEl) return;
+    const duracionSegundos = Math.max(0, Math.floor(Number(payload?.duracionSegundos) || 0));
+    const sinExpiracionAutomatica = duracionSegundos === 0;
     const abiertoMs = resolverMillisFechaFirestore(payload?.abiertoEn);
-    const duracionMs = Math.max(1000, Math.floor(Number(payload?.duracionSegundos) || duracionCantoManualSegundos) * 1000);
-    const expiraMs = resolverMillisFechaFirestore(payload?.expiraEn) || (Number.isFinite(abiertoMs) ? (abiertoMs + duracionMs) : null);
+    const duracionMs = duracionSegundos > 0 ? (duracionSegundos * 1000) : null;
+    const expiraMs = resolverMillisFechaFirestore(payload?.expiraEn)
+      || ((Number.isFinite(abiertoMs) && Number.isFinite(duracionMs)) ? (abiertoMs + duracionMs) : null);
     if(!payload?.activo){
       nuevosGanadoresContadorEl.textContent = '';
       nuevosGanadoresContadorEl.classList.remove('expirado');
       return;
     }
+    if(sinExpiracionAutomatica){
+      nuevosGanadoresContadorEl.textContent = 'Cierre manual: esperando confirmaciones del administrador.';
+      nuevosGanadoresContadorEl.classList.remove('expirado');
+      return;
+    }
     if(!expiraMs){
-      nuevosGanadoresContadorEl.textContent = `Tiempo manual: ${duracionCantoManualSegundos}s`;
+      nuevosGanadoresContadorEl.textContent = `Tiempo manual: ${duracionSegundos}s`;
       nuevosGanadoresContadorEl.classList.remove('expirado');
       return;
     }
@@ -4584,8 +4597,10 @@
 
   function manualCantoEstaExpirado(payload = manualCantoActivo){
     if(!payload?.activo) return false;
+    const duracionSegundos = Math.max(0, Math.floor(Number(payload?.duracionSegundos) || 0));
+    if(duracionSegundos === 0) return false;
     const abiertoMs = resolverMillisFechaFirestore(payload?.abiertoEn);
-    const duracionMs = Math.max(1000, Math.floor(Number(payload?.duracionSegundos) || duracionCantoManualSegundos) * 1000);
+    const duracionMs = duracionSegundos * 1000;
     const expiraMs = resolverMillisFechaFirestore(payload?.expiraEn) || (Number.isFinite(abiertoMs) ? (abiertoMs + duracionMs) : null);
     return Number.isFinite(expiraMs) && expiraMs <= Date.now();
   }
@@ -4640,14 +4655,8 @@
   function renderResumenDiagnosticoManual(payload = {}){
     if(!nuevosGanadoresDiagnosticoEl) return;
     const resumen = obtenerResumenDiagnosticoManual(payload);
-    nuevosGanadoresDiagnosticoEl.textContent = [
-      `Sorteo: ${resumen.sorteoId}`,
-      `Canto: ${resumen.cantoNumero ?? '-'}`,
-      `Estado: ${resumen.estado}`,
-      `Candidatos: ${resumen.cantidadCandidatos}`,
-      `Confirmados: ${resumen.cantidadConfirmados}`,
-      `Duración(ms): ${Number.isFinite(resumen.duracionMs) ? resumen.duracionMs : '-'}`
-    ].join(' · ');
+    const pendientes = Math.max(0, Number(resumen.cantidadCandidatos || 0) - Number(resumen.cantidadConfirmados || 0));
+    nuevosGanadoresDiagnosticoEl.textContent = `Confirmados: ${resumen.cantidadConfirmados} · Pendientes: ${pendientes}`;
   }
 
   async function registrarEventoManualBingo({
@@ -4947,6 +4956,7 @@
           return;
         }
         aperturaRealizada = true;
+        const tieneCierreAutomatico = duracionCantoManualSegundos > 0;
         transaction.set(docRef, {
           sorteoId: currentSorteoId,
           activo: true,
@@ -4956,7 +4966,7 @@
           cantados: [],
           resultado: null,
           abiertoEn: firebase.firestore.FieldValue.serverTimestamp(),
-          expiraEn: firebase.firestore.Timestamp.fromMillis(Date.now() + (duracionCantoManualSegundos * 1000)),
+          expiraEn: tieneCierreAutomatico ? firebase.firestore.Timestamp.fromMillis(Date.now() + (duracionCantoManualSegundos * 1000)) : null,
           duracionSegundos: duracionCantoManualSegundos,
           actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
