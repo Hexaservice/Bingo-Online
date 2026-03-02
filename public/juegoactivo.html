@@ -4654,8 +4654,10 @@
   let manualBingoPerdioEl = null;
   let manualBingoContadorEl = null;
   let manualBingoContadorIntervalo = null;
+  let manualConfirmacionLocalPendiente = false;
   let ultimoCantoPerdidoMostrado = null;
   let manualResultadosProcesados = new Set();
+  let manualCelebracionesMostradas = new Set();
 
   function normalizarClaveManual(valor){
     return (valor || '').toString().trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
@@ -4691,13 +4693,23 @@
 
   function actualizarContadorManualBingo(){
     if(!manualBingoContadorEl) return;
-    if(!manualBingoEstado?.activo || !esModoManualActivo()){
+    if(!manualBingoEstado?.activo || !esModoManualActivo() || manualConfirmacionLocalPendiente){
+      manualBingoContadorEl.style.display = 'none';
+      manualBingoContadorEl.textContent = '';
+      return;
+    }
+    if(!usuarioPendienteConfirmacionManual()){
       manualBingoContadorEl.style.display = 'none';
       manualBingoContadorEl.textContent = '';
       return;
     }
     const abiertoMs = resolverMillisDesdeFirestore(manualBingoEstado?.abiertoEn);
-    const duracionSegundos = Math.max(1, Math.floor(Number(manualBingoEstado?.duracionSegundos) || 20));
+    const duracionSegundos = Math.max(0, Math.floor(Number(manualBingoEstado?.duracionSegundos) || 0));
+    if(duracionSegundos === 0){
+      manualBingoContadorEl.textContent = '⏳ Canto manual activo · esperando cierre del administrador';
+      manualBingoContadorEl.style.display = 'block';
+      return;
+    }
     const expiraMs = resolverMillisDesdeFirestore(manualBingoEstado?.expiraEn) || (Number.isFinite(abiertoMs) ? (abiertoMs + (duracionSegundos * 1000)) : null);
     if(!expiraMs){
       manualBingoContadorEl.textContent = `⏳ Canto manual activo · ${duracionSegundos}s`;
@@ -4738,7 +4750,7 @@
   function usuarioConfirmoManual(resultado = obtenerResumenResultadoManual()) {
     if(!resultado) return false;
     const key = obtenerClaveManualUsuarioActual();
-    const confirmados = new Set(Array.isArray(resultado?.confirmados) ? resultado.confirmados : []);
+    const confirmados = new Set((Array.isArray(resultado?.confirmados) ? resultado.confirmados : []).map(normalizarClaveManual).filter(Boolean));
     return key ? confirmados.has(key) : false;
   }
 
@@ -4749,7 +4761,7 @@
     const candidatos = Array.isArray(manualBingoEstado?.candidatos) ? manualBingoEstado.candidatos : [];
     const esCandidato = candidatos.some(item=>normalizarClaveManual(item?.key || item?.userId || item?.email || item?.alias || item?.cartonId) === key);
     if(!esCandidato) return false;
-    const cantados = new Set(Array.isArray(manualBingoEstado?.cantados) ? manualBingoEstado.cantados : []);
+    const cantados = new Set((Array.isArray(manualBingoEstado?.cantados) ? manualBingoEstado.cantados : []).map(normalizarClaveManual).filter(Boolean));
     return !cantados.has(key);
   }
 
@@ -4774,9 +4786,9 @@
     });
     const salida = [];
     unicos.forEach((item, cantoNumero)=>{
-      const confirmados = new Set(Array.isArray(item?.confirmados) ? item.confirmados : []);
-      const candidatos = new Set(Array.isArray(item?.candidatos) ? item.candidatos : []);
-      const noConfirmados = new Set(Array.isArray(item?.noConfirmados) ? item.noConfirmados : []);
+      const confirmados = new Set((Array.isArray(item?.confirmados) ? item.confirmados : []).map(normalizarClaveManual).filter(Boolean));
+      const candidatos = new Set((Array.isArray(item?.candidatos) ? item.candidatos : []).map(normalizarClaveManual).filter(Boolean));
+      const noConfirmados = new Set((Array.isArray(item?.noConfirmados) ? item.noConfirmados : []).map(normalizarClaveManual).filter(Boolean));
       const participa = confirmados.has(key) || noConfirmados.has(key) || candidatos.has(key);
       if(!participa) return;
       salida.push({
@@ -4800,7 +4812,7 @@
   }
 
   function debePausarMensajesPorManual(){
-    return usuarioPendienteConfirmacionManual();
+    return usuarioPendienteConfirmacionManual() || usuarioConfirmoManual();
   }
 
   function asegurarUiManualBingo(){
@@ -4863,7 +4875,7 @@
         actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
       const candidatos = Array.isArray(manualBingoEstado?.candidatos) ? manualBingoEstado.candidatos : [];
-      const cantados = Array.isArray(manualBingoEstado?.cantados) ? manualBingoEstado.cantados : [];
+      const cantados = (Array.isArray(manualBingoEstado?.cantados) ? manualBingoEstado.cantados : []).map(normalizarClaveManual).filter(Boolean);
       const abiertosMs = manualBingoEstado?.abiertoEn?.toMillis ? manualBingoEstado.abiertoEn.toMillis() : null;
       await registrarEventoManualBingoJugador({
         eventType: 'player_confirmed',
@@ -4872,6 +4884,8 @@
         cantidadCandidatos: candidatos.length,
         cantidadConfirmados: cantados.length + 1
       });
+      manualConfirmacionLocalPendiente = true;
+      actualizarContadorManualBingo();
       setTimeout(()=>{
         ocultarBotonManualBingo();
         manualBingoBtnEl.src = 'img/boton-bingo.png';
@@ -4905,7 +4919,7 @@
     }
     const key = obtenerClaveManualUsuarioActual();
     const candidatos = Array.isArray(manualBingoEstado?.candidatos) ? manualBingoEstado.candidatos : [];
-    const cantados = new Set(Array.isArray(manualBingoEstado?.cantados) ? manualBingoEstado.cantados : []);
+    const cantados = new Set((Array.isArray(manualBingoEstado?.cantados) ? manualBingoEstado.cantados : []).map(normalizarClaveManual).filter(Boolean));
     const esCandidato = candidatos.some(item=>normalizarClaveManual(item?.key || item?.userId || item?.email || item?.alias || item?.cartonId) === key);
     const yaCantado = key ? cantados.has(key) : false;
     const mostrarBoton = usuarioPendienteConfirmacionManual() && esCandidato && !yaCantado;
@@ -4930,7 +4944,7 @@
     const key = normalizarClaveManual(usuarioActual?.uid || usuarioActual?.email || '');
     const candidatos = new Set((Array.isArray(previo?.candidatos) ? previo.candidatos : []).map(item=>normalizarClaveManual(item?.key || item?.userId || item?.email || item?.alias)).filter(Boolean));
     if(!key || !candidatos.has(key)) return;
-    const confirmados = new Set(Array.isArray(resultado?.confirmados) ? resultado.confirmados : (Array.isArray(previo?.cantados) ? previo.cantados : []));
+    const confirmados = new Set((Array.isArray(resultado?.confirmados) ? resultado.confirmados : (Array.isArray(previo?.cantados) ? previo.cantados : [])).map(normalizarClaveManual).filter(Boolean));
     if(confirmados.has(key)){
       const detallesConfirmados = Array.isArray(resultado?.formasPorUsuario?.[key]) ? resultado.formasPorUsuario[key] : [];
       if(detallesConfirmados.length && modalCelebracionEl && !celebracionModalActiva){
@@ -4966,11 +4980,16 @@
       if(previo?.activo && !manualBingoEstado?.activo){
         procesarResultadoCantoManualCerrado(previo, manualBingoEstado);
         const key = normalizarClaveManual(usuarioActual?.uid || usuarioActual?.email || '');
-        const cantados = new Set(Array.isArray(previo?.cantados) ? previo.cantados : []);
+        const cantados = new Set((Array.isArray(previo?.cantados) ? previo.cantados : []).map(normalizarClaveManual).filter(Boolean));
         if(!cantados.has(key) && ultimoCantoPerdidoMostrado !== previo?.cantoNumero){
           ultimoCantoPerdidoMostrado = previo?.cantoNumero;
           mostrarAvisoBingoPerdido(previo?.cantoNumero);
         }
+      }
+      const keyActual = normalizarClaveManual(usuarioActual?.uid || usuarioActual?.email || '');
+      const cantadosActuales = new Set((Array.isArray(manualBingoEstado?.cantados) ? manualBingoEstado.cantados : []).map(normalizarClaveManual).filter(Boolean));
+      if(!manualBingoEstado?.activo || (keyActual && cantadosActuales.has(keyActual))){
+        manualConfirmacionLocalPendiente = false;
       }
       actualizarUiManualBingo();
     }, err=>console.error('Error escuchando manualBingoCantos', err));
@@ -9842,7 +9861,11 @@
         }
       });
       if(detallesManual.length){
-        mostrarModalCelebracionGanador(detallesManual, false);
+        const llaveHistorial = detallesManual.map(item=>`${item.perdido?'p':'g'}-${item.idx}-${item.cartonLabel || ''}-${item.nombre || ''}`).join('|');
+        if(!manualCelebracionesMostradas.has(llaveHistorial)){
+          manualCelebracionesMostradas.add(llaveHistorial);
+          mostrarModalCelebracionGanador(detallesManual, false);
+        }
       }
       return;
     }
@@ -11186,6 +11209,9 @@
       suscribirSimulacionSorteo(null);
       if(manualBingoUnsub){ manualBingoUnsub(); manualBingoUnsub = null; }
       manualBingoEstado = null;
+      manualConfirmacionLocalPendiente = false;
+      manualResultadosProcesados.clear();
+      manualCelebracionesMostradas.clear();
       ocultarBotonManualBingo();
       if(sorteoManualSeleccionadoId && activeSorteoId===sorteoManualSeleccionadoId && activeSorteo){
         actualizarHeader();
@@ -11224,6 +11250,9 @@
     if(cambio){
       reiniciarAlertaFormasSinGanadores();
       reiniciarNotificacionesPremios();
+      manualConfirmacionLocalPendiente = false;
+      manualResultadosProcesados.clear();
+      manualCelebracionesMostradas.clear();
       todasFormasConGanadores=false;
       indiceUltimoGanador=null;
       cantosComplementariosActivos=false;

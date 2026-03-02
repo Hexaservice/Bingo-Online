@@ -767,6 +767,43 @@
     .live-link-actions button:hover {
       transform: scale(1.02);
     }
+
+    .cierre-cantos-row {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .cierre-cantos-input {
+      width: 74px;
+      min-height: 34px;
+      border-radius: 8px;
+      border: 1px solid #6b7280;
+      padding: 6px 8px;
+      box-sizing: border-box;
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 0.82rem;
+      color: #374151;
+      background: #f9fafb;
+    }
+    .cierre-cantos-input:focus {
+      outline: 2px solid rgba(107,114,128,0.35);
+    }
+    .cierre-cantos-btn {
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 0.8rem;
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid #6b7280;
+      background: #9ca3af;
+      color: #ffffff;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    .cierre-cantos-btn:hover {
+      transform: scale(1.02);
+    }
     @media (orientation: portrait) {
       #asignacion-usuarios-section {
         margin: 4px 0;
@@ -1200,6 +1237,12 @@
     <div class="whatsapp-actions">
       <button type="button" id="guardar-link-whatsapp">Guardar</button>
     </div>
+
+    <label for="segundos-cierre-cantos">Segundos para cierre Cantos</label>
+    <div class="cierre-cantos-row">
+      <input type="text" id="segundos-cierre-cantos" class="cierre-cantos-input" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="0">
+      <button type="button" id="guardar-segundos-cierre-cantos" class="cierre-cantos-btn">Guardar</button>
+    </div>
     <div class="publicidad-bloque" aria-labelledby="publicidad-sorteos-titulo">
       <p id="publicidad-sorteos-titulo" class="publicidad-titulo">Links de publicidad en Sorteos</p>
       <div class="publicidad-campos">
@@ -1451,6 +1494,8 @@
     const etiquetaNumeroWhatsapp=document.getElementById('numero-whatsapp-label');
     const campoLinkWhatsapp=document.getElementById('link-whatsapp');
     const botonGuardarLink=document.getElementById('guardar-link-whatsapp');
+    const campoSegundosCierreCantos=document.getElementById('segundos-cierre-cantos');
+    const botonGuardarSegundosCierreCantos=document.getElementById('guardar-segundos-cierre-cantos');
     const campoLinkPublicidadSorteos=document.getElementById('link-publicidad-sorteos');
     const campoLinkPublicidadSorteosDos=document.getElementById('link-publicidad-sorteos-2');
     const botonGuardarLinksPublicidad=document.getElementById('guardar-links-publicidad-sorteos');
@@ -1818,6 +1863,10 @@
           if(linkGuardado){
             campoLinkWhatsapp.value=linkGuardado;
           }
+          const segundosCierre = Number(data.segundosCierreCantos ?? data.segundosParaCierreCantos ?? data.cierreCantosSegundos ?? data.duracionCantoManualSegundos ?? data.tiempoCantoManualSegundos ?? data.manualBingoDuracionSegundos ?? 0);
+          if(campoSegundosCierreCantos){
+            campoSegundosCierreCantos.value = Number.isFinite(segundosCierre) && segundosCierre >= 0 ? String(Math.floor(segundosCierre)) : '0';
+          }
           const linkPublicidadPrimario=(data.linkPublicidadSorteos1??data.linkPublicidadSorteos??data.linkpublicidadsorteos??data.linkPublicidad??'').toString();
           const linkPublicidadSecundario=(data.linkPublicidadSorteos2??data.linkpublicidadsorteos2??data.linkPublicidad2??'').toString();
           if(linkPublicidadPrimario){
@@ -1907,7 +1956,41 @@
       botonGuardarNumeros.addEventListener('click',guardarListadoWhatsapp);
     }
 
-    botonGuardarLink.addEventListener('click',async ()=>{
+
+    if(campoSegundosCierreCantos){
+      campoSegundosCierreCantos.addEventListener('input',()=>{
+        campoSegundosCierreCantos.value=(campoSegundosCierreCantos.value||'').replace(/\D/g,'').slice(0,4);
+      });
+    }
+    if(botonGuardarSegundosCierreCantos){
+      botonGuardarSegundosCierreCantos.addEventListener('click',async ()=>{
+        const valorLimpio=(campoSegundosCierreCantos?.value||'').replace(/\D/g,'');
+        const segundos=valorLimpio===''?0:Math.max(0,Math.floor(Number(valorLimpio)||0));
+        const confirmar=await confirm('¿Deseas guardar los segundos para cierre de cantos? Si guardas 0, el cierre será manual.');
+        if(!confirmar) return;
+        try {
+          await db.collection('Variablesglobales').doc('Parametros').set({
+            segundosCierreCantos:segundos,
+            segundosParaCierreCantos:segundos,
+            cierreCantosSegundos:segundos,
+            duracionCantoManualSegundos:segundos,
+            tiempoCantoManualSegundos:segundos,
+            manualBingoDuracionSegundos:segundos
+          },{merge:true});
+          if(campoSegundosCierreCantos){
+            campoSegundosCierreCantos.value=String(segundos);
+          }
+          alert(segundos===0
+            ? 'Configuración guardada. El cierre de cantos será manual.'
+            : 'Configuración guardada correctamente.');
+        } catch(err){
+          console.error('No se pudo guardar los segundos para cierre de cantos',err);
+          alert('Ocurrió un error al guardar los segundos de cierre de cantos. Inténtalo nuevamente.');
+        }
+      });
+    }
+
+        botonGuardarLink.addEventListener('click',async ()=>{
       const valor=campoLinkWhatsapp.value.trim();
       if(!valor){
         alert('El campo link de WhatsApp no puede estar vacío');
