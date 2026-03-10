@@ -173,7 +173,9 @@
           const transitoActual=Math.max(0,this.toNumberSafe(billeteraData.creditostransito,0));
           const payload={};
           if(tipo==='recarga'){
-            payload.creditos=creditosActual+monto;
+            if(data.acreditacionAplicada!==true){
+              payload.creditos=creditosActual+monto;
+            }
           }else if(tipo==='retiro'){
             payload.creditos=Math.max(0,creditosActual-montoSolicitado);
             payload.creditostransito=Math.max(0,transitoActual-montoSolicitado);
