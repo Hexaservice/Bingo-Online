@@ -4725,6 +4725,10 @@
 
   function mostrarModalNuevosGanadores(payload){
     if(!nuevosGanadoresModalEl || !nuevosGanadoresListaEl) return;
+    if(!esModoManual()){
+      cerrarModalNuevosGanadores();
+      return;
+    }
     manualCantoActivo = payload || null;
     if(payload && typeof payload === 'object'){
       manualCantoEstadoRemoto = payload;
@@ -4993,6 +4997,12 @@
     }
     if(!currentSorteoId) return;
     manualCantoUnsub = db.collection('manualBingoCantos').doc(currentSorteoId).onSnapshot(doc=>{
+      if(!esModoManual()){
+        manualCantoEstadoRemoto = doc.exists ? (doc.data() || { activo: false }) : { activo: false };
+        cerrarModalNuevosGanadores();
+        actualizarTablaEstado();
+        return;
+      }
       if(!doc.exists){
         manualCantoEstadoRemoto = { activo: false };
         cerrarModalNuevosGanadores();
@@ -5066,9 +5076,7 @@
     if(esPrimerProcesamiento || !nuevos.length) return;
     if(esModoManual()){
       iniciarCantoManual(Array.from(candidatosManual.values()));
-      return;
     }
-    mostrarModalNuevosGanadores({ candidatos: nuevos.map(item=>({ alias: `${item.nombre} (${item.total})`, key: `${item.nombre}-${item.total}` })), cantados: [] });
   }
 
   function buildPremioId({ sorteoId, formaIdx, cartonId, prefijo = '' } = {}){
