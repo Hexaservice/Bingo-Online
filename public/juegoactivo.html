@@ -4421,6 +4421,11 @@
     TIE: 'TIE',
   });
 
+  const AUDIO_CANTO_MIN = 1;
+  const AUDIO_CANTO_MAX = 75;
+  const AUDIO_CANTO_EVENT_PREFIX = 'DRAW_NUMBER_CALL_';
+  const AUDIO_CANTO_DELAY_MS = 950;
+
   const AUDIO_EVENT_CONFIG = Object.freeze({
     [AUDIO_EVENTS.DRAW_NUMBER]: {
       manifestKey: 'sfx.drawNumber',
@@ -4466,6 +4471,62 @@
   let audioLastPriority = 0;
   let audioLastPriorityAt = 0;
   const AUDIO_PRIORITY_LOCK_MS = 900;
+  let audioCantoQueue = Promise.resolve();
+  const audioCantoEventsRegistrados = new Set();
+
+  function normalizarNumeroCantoAudio(numero){
+    const valor = Number(numero);
+    if(!Number.isFinite(valor)) return null;
+    const entero = Math.trunc(valor);
+    if(entero < AUDIO_CANTO_MIN || entero > AUDIO_CANTO_MAX) return null;
+    return entero;
+  }
+
+  function construirEventoCantoAudio(numero){
+    const normalizado = normalizarNumeroCantoAudio(numero);
+    if(normalizado === null) return null;
+    return `${AUDIO_CANTO_EVENT_PREFIX}${normalizado}`;
+  }
+
+  function registrarEventoCantoAudio(numero){
+    if(!window.audioManager || typeof window.audioManager.registerSfxEvent !== 'function') return null;
+    const normalizado = normalizarNumeroCantoAudio(numero);
+    if(normalizado === null) return null;
+    const eventName = construirEventoCantoAudio(normalizado);
+    if(!eventName) return null;
+    if(audioCantoEventsRegistrados.has(eventName)) return eventName;
+
+    window.audioManager.registerSfxEvent(eventName, {
+      sources: [{ format: 'wav', url: `sonidos/${normalizado}.wav` }],
+      preferredFormats: ['wav'],
+      category: 'sfx',
+      normalizationGain: 1,
+      maxBytes: 1024 * 1024,
+    }, {
+      critical: false,
+    });
+    audioCantoEventsRegistrados.add(eventName);
+    return eventName;
+  }
+
+  function encolarAudioCantoNumero(numero){
+    const normalizado = normalizarNumeroCantoAudio(numero);
+    if(normalizado === null) return;
+    const eventName = registrarEventoCantoAudio(normalizado);
+    if(!eventName || !window.audioManager || typeof window.audioManager.playSfx !== 'function') return;
+
+    audioCantoQueue = audioCantoQueue
+      .catch(()=>{})
+      .then(async ()=>{
+        try{
+          await window.audioManager.init?.();
+        }catch(_){
+          return;
+        }
+        await window.audioManager.playSfx(eventName).catch(()=>{});
+        await new Promise(resolve=>setTimeout(resolve, AUDIO_CANTO_DELAY_MS));
+      });
+  }
 
   function registrarEventosAudioJuego(){
     if(!window.audioManager || typeof window.audioManager.registerSfxEvent !== 'function') return;
@@ -4478,6 +4539,10 @@
         duckFadeMs: config.duckFadeMs,
       });
     });
+
+    for(let numero = AUDIO_CANTO_MIN; numero <= AUDIO_CANTO_MAX; numero += 1){
+      registrarEventoCantoAudio(numero);
+    }
   }
 
   function playGameAudioEvent(eventName, options={}){
@@ -10988,7 +11053,7 @@
       resaltarCeldasPenalizadasTemporalmente(nuevosPenalizados);
     }
     if(nuevosCantos.length){
-      playGameAudioEvent(AUDIO_EVENTS.DRAW_NUMBER);
+      nuevosCantos.forEach(numero=>encolarAudioCantoNumero(numero));
       if(existeNumeroMarcadoEnCartones(nuevosCantos)){
         playGameAudioEvent(AUDIO_EVENTS.MARK_CELL);
       }
