@@ -214,6 +214,7 @@
     });
 
     let estado = leerEstadoAudio();
+    let audioBloqueadoPorNavegador = false;
     let hideTimer = null;
     const promptGlobalAudio = obtenerPromptGlobalAudio();
 
@@ -239,7 +240,13 @@
       toggle.setAttribute('title', muted ? 'Activar sonido' : 'Silenciar sonido');
 
       if (statusEl) {
-        statusEl.textContent = muted ? '🔇 Audio silenciado' : '🔊 Audio activo';
+        if (muted) {
+          statusEl.textContent = '🔇 Audio silenciado por usuario';
+        } else if (audioBloqueadoPorNavegador) {
+          statusEl.textContent = '⚠️ Audio bloqueado por el navegador';
+        } else {
+          statusEl.textContent = '🔊 Audio activo';
+        }
       }
 
       masterInput.value = estado.masterVolume.toFixed(2);
@@ -281,31 +288,31 @@
     }
 
     function registrarEstadoBloqueado() {
-      if (statusEl) {
-        statusEl.textContent = '⚠️ Audio bloqueado por el navegador';
-      }
+      audioBloqueadoPorNavegador = true;
+      actualizarUI();
+    }
+
+    function registrarEstadoDesbloqueado() {
+      audioBloqueadoPorNavegador = false;
+      actualizarUI();
     }
 
     async function desbloquearAudioYMusica({ fadeInMs = 0 } = {}) {
-      await window.audioManager.init();
-
       let contextoListo = false;
       try {
-        if (typeof window.audioManager.ensureRunningContext === 'function') {
-          contextoListo = await window.audioManager.ensureRunningContext();
-        } else {
-          contextoListo = await window.audioManager.probeAutoplayState();
-        }
+        contextoListo = await window.audioManager.probeAutoplayState();
       } catch (_) {
         contextoListo = false;
       }
 
-      if (!contextoListo || window.audioManager.isAutoplayBlocked?.()) {
+      const contextoCorriendo = window.audioManager.audioContext?.state === 'running';
+      if (!contextoListo || !contextoCorriendo || window.audioManager.isAutoplayBlocked?.()) {
         registrarEstadoBloqueado();
         mostrarPromptAudio();
         return false;
       }
 
+      registrarEstadoDesbloqueado();
       aplicarGanancias();
       if (!estado.muted && (musicDescriptor || musicSrc)) {
         await window.audioManager.playMusic(musicTrackId, { fadeInMs });
@@ -395,25 +402,46 @@
     });
 
     promptGlobalAudio.setEnableHandler(async () => {
-      const desbloqueado = await desbloquearAudioYMusica({ fadeInMs: 900 });
-      if (!desbloqueado) {
-        registrarEstadoBloqueado();
+      let autoplayDisponible = false;
+      try {
+        autoplayDisponible = await window.audioManager.probeAutoplayState();
+      } catch (_) {
+        autoplayDisponible = false;
       }
+
+      const contextoCorriendo = window.audioManager.audioContext?.state === 'running';
+      if (!autoplayDisponible || !contextoCorriendo) {
+        registrarEstadoBloqueado();
+        mostrarPromptAudio();
+        return;
+      }
+
+      const desbloqueado = await desbloquearAudioYMusica({ fadeInMs: 900 });
+      if (!desbloqueado) registrarEstadoBloqueado();
     });
 
     persistirYRefrescar();
 
-    if (!estado.muted && usuarioHabilitoAudio()) {
-      intentarReproducirMusica();
-    } else {
-      window.audioManager.init().then(() => {
-        if (window.audioManager.isAutoplayBlocked?.()) {
-          mostrarPromptAudio();
-        }
-      }).catch(() => {
+    (async () => {
+      let autoplayDisponible = false;
+      try {
+        autoplayDisponible = await window.audioManager.probeAutoplayState();
+      } catch (_) {
+        autoplayDisponible = false;
+      }
+
+      const contextoCorriendo = window.audioManager.audioContext?.state === 'running';
+      if (!autoplayDisponible || !contextoCorriendo) {
+        registrarEstadoBloqueado();
         mostrarPromptAudio();
-      });
-    }
+        return;
+      }
+
+      registrarEstadoDesbloqueado();
+      if (!estado.muted && usuarioHabilitoAudio()) {
+        intentarReproducirMusica();
+      }
+    })();
 
     window.bingoAudioState = estado;
   }
