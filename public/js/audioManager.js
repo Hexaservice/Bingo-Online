@@ -240,18 +240,11 @@
     }
 
     async probeAutoplayState() {
-      await this.init();
       let blocked = false;
 
-      if (this.audioContext.state !== 'running') {
-        try {
-          await this.audioContext.resume();
-        } catch (_) {
-          blocked = true;
-        }
-      }
-
-      if (this.audioContext.state !== 'running') {
+      try {
+        await this.ensureRunningContext();
+      } catch (_) {
         blocked = true;
       }
 
@@ -273,6 +266,31 @@
 
       this.autoplayBlocked = blocked;
       return !blocked;
+    }
+
+    createBlockedAudioError() {
+      const error = new Error('El contexto de audio sigue bloqueado tras intentar reanudarlo.');
+      error.code = 'AUDIO_CONTEXT_BLOCKED';
+      return error;
+    }
+
+    async ensureRunningContext() {
+      await this.init();
+
+      if (this.audioContext.state !== 'running') {
+        try {
+          await this.audioContext.resume();
+        } catch (_) {}
+      }
+
+      const running = this.audioContext.state === 'running';
+      this.autoplayBlocked = !running;
+
+      if (!running) {
+        throw this.createBlockedAudioError();
+      }
+
+      return true;
     }
 
     isAutoplayBlocked() {
@@ -370,7 +388,7 @@
       const sourceDescriptor = this.musicTracks.get(trackId);
       if (!sourceDescriptor) return;
 
-      await this.init();
+      await this.ensureRunningContext();
       const buffer = await this.loadBufferBySource(sourceDescriptor);
       if (!buffer) return;
 
@@ -400,6 +418,7 @@
         this.musicGain.gain.linearRampToValueAtTime(targetGain, now + fadeInMs / 1000);
       }
 
+      await this.ensureRunningContext();
       source.start(0);
       this.currentMusicSource = source;
     }
@@ -410,7 +429,7 @@
       if (!eventConfig) return;
       if (this.activeSfxNodes.size >= this.maxSfxConcurrency) return;
 
-      await this.init();
+      await this.ensureRunningContext();
       const buffer = await this.loadBufferBySource(eventConfig.source);
       if (!buffer) return;
 
@@ -431,6 +450,7 @@
         sourceGain.disconnect();
       };
 
+      await this.ensureRunningContext();
       source.start(0);
 
       if (eventConfig.critical || this.isCriticalEvent(eventName)) {
