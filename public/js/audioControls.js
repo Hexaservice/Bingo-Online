@@ -280,21 +280,46 @@
       promptGlobalAudio.hide();
     }
 
+    function registrarEstadoBloqueado() {
+      if (statusEl) {
+        statusEl.textContent = '⚠️ Audio bloqueado por el navegador';
+      }
+    }
+
     async function desbloquearAudioYMusica({ fadeInMs = 0 } = {}) {
       await window.audioManager.init();
+
+      let contextoListo = false;
+      try {
+        if (typeof window.audioManager.ensureRunningContext === 'function') {
+          contextoListo = await window.audioManager.ensureRunningContext();
+        } else {
+          contextoListo = await window.audioManager.probeAutoplayState();
+        }
+      } catch (_) {
+        contextoListo = false;
+      }
+
+      if (!contextoListo || window.audioManager.isAutoplayBlocked?.()) {
+        registrarEstadoBloqueado();
+        mostrarPromptAudio();
+        return false;
+      }
+
       aplicarGanancias();
       if (!estado.muted && (musicDescriptor || musicSrc)) {
         await window.audioManager.playMusic(musicTrackId, { fadeInMs });
       }
       guardarConsentimientoAudio();
       ocultarPromptAudio();
+      return true;
     }
 
     async function intentarReproducirMusica(desdePrompt = false) {
       if (estado.muted || (!musicDescriptor && !musicSrc)) return;
       try {
-        await desbloquearAudioYMusica();
-        if (window.audioManager.isAutoplayBlocked?.()) {
+        const desbloqueado = await desbloquearAudioYMusica();
+        if (!desbloqueado || window.audioManager.isAutoplayBlocked?.()) {
           mostrarPromptAudio();
           return;
         }
@@ -356,8 +381,13 @@
 
     const manejarPrimerGesto = async () => {
       try {
-        await desbloquearAudioYMusica({ fadeInMs: 900 });
-      } catch (_) {}
+        const desbloqueado = await desbloquearAudioYMusica({ fadeInMs: 900 });
+        if (!desbloqueado) {
+          registrarEstadoBloqueado();
+        }
+      } catch (_) {
+        registrarEstadoBloqueado();
+      }
     };
 
     ['pointerdown', 'keydown'].forEach((evento) => {
@@ -365,7 +395,10 @@
     });
 
     promptGlobalAudio.setEnableHandler(async () => {
-      await desbloquearAudioYMusica({ fadeInMs: 900 });
+      const desbloqueado = await desbloquearAudioYMusica({ fadeInMs: 900 });
+      if (!desbloqueado) {
+        registrarEstadoBloqueado();
+      }
     });
 
     persistirYRefrescar();
