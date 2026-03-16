@@ -2,7 +2,7 @@
   const manifest = {
     manifestVersion: '2026.02.18-v2',
     globalAudioPolicy: {
-      preferredFormats: ['mp3', 'ogg'],
+      preferredFormats: ['wav', 'mp3', 'ogg'],
       musicPreload: 'deferred',
       criticalSfxPreload: 'on-game-enter',
       maxSfxBytes: 122880,
@@ -12,7 +12,7 @@
     music: {
       backgroundMain: {
         category: 'music',
-        preferredFormats: ['mp3', 'ogg'],
+        preferredFormats: ['wav', 'mp3', 'ogg'],
         preload: 'deferred',
         maxBytes: 1048576,
         normalizationGain: 0.92,
@@ -28,17 +28,28 @@
             kind: 'fallback',
           },
         ],
+        generator: {
+          kind: 'ambient-loop',
+          durationSec: 6,
+          rootFrequency: 196,
+          gain: 0.11,
+        },
         license: 'Mixkit Free Sound Effects License / Pixabay Content License',
-        attribution: 'Mixkit (principal) y Pixabay (respaldo)',
+        attribution: 'Mixkit (principal), Pixabay (respaldo) y sintetizador local (último respaldo)',
       },
     },
     sfx: {
       drawNumber: {
         category: 'sfx',
-        preferredFormats: ['mp3', 'ogg'],
+        preferredFormats: ['wav', 'mp3', 'ogg'],
         maxBytes: 122880,
         normalizationGain: 0.95,
         sources: [
+          {
+            format: 'wav',
+            url: '/sonidos/1.wav',
+            kind: 'local-primary',
+          },
           {
             format: 'mp3',
             url: 'https://assets.mixkit.co/sfx/preview/mixkit-select-click-1109.mp3',
@@ -50,15 +61,27 @@
             kind: 'fallback',
           },
         ],
+        generator: {
+          kind: 'pulse',
+          frequency: 880,
+          durationSec: 0.16,
+          gain: 0.22,
+          waveform: 'triangle',
+        },
         license: 'Mixkit Free Sound Effects License / Pixabay Content License',
-        attribution: 'Mixkit (principal) y Pixabay (respaldo)',
+        attribution: 'Sonido local / Mixkit / Pixabay + sintetizador local',
       },
       markCell: {
         category: 'sfx',
-        preferredFormats: ['mp3', 'ogg'],
+        preferredFormats: ['wav', 'mp3', 'ogg'],
         maxBytes: 122880,
         normalizationGain: 0.9,
         sources: [
+          {
+            format: 'wav',
+            url: '/sonidos/2.wav',
+            kind: 'local-primary',
+          },
           {
             format: 'mp3',
             url: 'https://assets.mixkit.co/sfx/preview/mixkit-modern-technology-select-3124.mp3',
@@ -70,15 +93,27 @@
             kind: 'fallback',
           },
         ],
+        generator: {
+          kind: 'pulse',
+          frequency: 660,
+          durationSec: 0.14,
+          gain: 0.22,
+          waveform: 'sine',
+        },
         license: 'Mixkit Free Sound Effects License / Pixabay Content License',
-        attribution: 'Mixkit (principal) y Pixabay (respaldo)',
+        attribution: 'Sonido local / Mixkit / Pixabay + sintetizador local',
       },
       openModal: {
         category: 'sfx',
-        preferredFormats: ['mp3', 'ogg'],
+        preferredFormats: ['wav', 'mp3', 'ogg'],
         maxBytes: 122880,
         normalizationGain: 0.88,
         sources: [
+          {
+            format: 'wav',
+            url: '/sonidos/3.wav',
+            kind: 'local-primary',
+          },
           {
             format: 'mp3',
             url: 'https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3',
@@ -90,16 +125,28 @@
             kind: 'fallback',
           },
         ],
+        generator: {
+          kind: 'pulse',
+          frequency: 740,
+          durationSec: 0.13,
+          gain: 0.2,
+          waveform: 'square',
+        },
         license: 'Mixkit Free Sound Effects License / Pixabay Content License',
-        attribution: 'Mixkit (principal) y Pixabay (respaldo)',
+        attribution: 'Sonido local / Mixkit / Pixabay + sintetizador local',
       },
       win: {
         category: 'sfx',
-        preferredFormats: ['mp3', 'ogg'],
+        preferredFormats: ['wav', 'mp3', 'ogg'],
         preloadCritical: true,
         maxBytes: 122880,
         normalizationGain: 0.86,
         sources: [
+          {
+            format: 'wav',
+            url: '/sonidos/4.wav',
+            kind: 'local-primary',
+          },
           {
             format: 'mp3',
             url: 'https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3',
@@ -111,8 +158,15 @@
             kind: 'fallback',
           },
         ],
+        generator: {
+          kind: 'pulse',
+          frequency: 523.25,
+          durationSec: 0.25,
+          gain: 0.26,
+          waveform: 'triangle',
+        },
         license: 'Mixkit Free Sound Effects License / Pixabay Content License',
-        attribution: 'Mixkit (principal) y Pixabay (respaldo)',
+        attribution: 'Sonido local / Mixkit / Pixabay + sintetizador local',
       },
     },
   };

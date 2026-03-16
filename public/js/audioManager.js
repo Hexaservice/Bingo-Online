@@ -133,6 +133,7 @@
       if (typeof source === 'string') {
         return {
           urls: [source],
+          generator: null,
           preferredFormats: ['mp3', 'ogg', 'wav'],
           normalizationGain: 1,
           category: 'sfx',
@@ -145,6 +146,7 @@
         if (manifestNode) {
           return {
             urls: this.resolveSources(manifestNode),
+            generator: manifestNode.generator || null,
             preferredFormats: manifestNode.preferredFormats || ['mp3', 'ogg', 'wav'],
             license: manifestNode.license || null,
             attribution: manifestNode.attribution || null,
@@ -164,6 +166,7 @@
       const urls = this.resolveSources(source);
       return {
         urls,
+        generator: source.generator || null,
         preferredFormats: source.preferredFormats || ['mp3', 'ogg', 'wav'],
         license: source.license || null,
         attribution: source.attribution || null,
@@ -335,7 +338,108 @@
         }
       }
 
+      if (descriptor.generator) {
+        const generated = this.createGeneratedBuffer(descriptor.generator, descriptor.category);
+        if (generated) {
+          if (urls[0]) {
+            this.buffers.set(urls[0], generated);
+          }
+          return generated;
+        }
+      }
+
       return null;
+    }
+
+    createGeneratedBuffer(generatorConfig = {}, category = 'sfx') {
+      if (!this.audioContext) return null;
+
+      const sampleRate = this.audioContext.sampleRate || 44100;
+      const kind = String(generatorConfig.kind || '').toLowerCase();
+
+      if (kind === 'pulse') {
+        const duration = Number.isFinite(generatorConfig.durationSec)
+          ? Math.max(0.05, generatorConfig.durationSec)
+          : 0.24;
+        const frequency = Number.isFinite(generatorConfig.frequency)
+          ? Math.max(80, generatorConfig.frequency)
+          : 880;
+        const gain = Number.isFinite(generatorConfig.gain)
+          ? clamp(generatorConfig.gain, 0.03, 1)
+          : 0.25;
+        const attack = Number.isFinite(generatorConfig.attackSec)
+          ? Math.max(0.001, generatorConfig.attackSec)
+          : 0.005;
+        const release = Number.isFinite(generatorConfig.releaseSec)
+          ? Math.max(0.01, generatorConfig.releaseSec)
+          : 0.14;
+        const waveform = generatorConfig.waveform || 'sine';
+        return this.generatePulseBuffer({ sampleRate, duration, frequency, gain, attack, release, waveform });
+      }
+
+      if (kind === 'ambient-loop' || category === 'music') {
+        const duration = Number.isFinite(generatorConfig.durationSec)
+          ? Math.max(1.5, generatorConfig.durationSec)
+          : 6;
+        return this.generateAmbientLoopBuffer({
+          sampleRate,
+          duration,
+          rootFrequency: Number.isFinite(generatorConfig.rootFrequency) ? generatorConfig.rootFrequency : 196,
+          gain: Number.isFinite(generatorConfig.gain) ? clamp(generatorConfig.gain, 0.02, 0.35) : 0.12,
+        });
+      }
+
+      return null;
+    }
+
+    generatePulseBuffer({ sampleRate, duration, frequency, gain, attack, release, waveform }) {
+      const totalSamples = Math.max(1, Math.floor(sampleRate * duration));
+      const buffer = this.audioContext.createBuffer(1, totalSamples, sampleRate);
+      const channel = buffer.getChannelData(0);
+      const sustainStart = attack;
+      const releaseStart = Math.max(sustainStart, duration - release);
+
+      for (let i = 0; i < totalSamples; i += 1) {
+        const t = i / sampleRate;
+        const phase = 2 * Math.PI * frequency * t;
+        let base = Math.sin(phase);
+        if (waveform === 'triangle') {
+          base = (2 / Math.PI) * Math.asin(Math.sin(phase));
+        }
+        if (waveform === 'square') {
+          base = Math.sign(Math.sin(phase));
+        }
+
+        let env = 1;
+        if (t < sustainStart) {
+          env = t / sustainStart;
+        } else if (t >= releaseStart) {
+          env = Math.max(0, (duration - t) / Math.max(0.001, release));
+        }
+
+        channel[i] = base * env * gain;
+      }
+
+      return buffer;
+    }
+
+    generateAmbientLoopBuffer({ sampleRate, duration, rootFrequency, gain }) {
+      const totalSamples = Math.max(1, Math.floor(sampleRate * duration));
+      const buffer = this.audioContext.createBuffer(1, totalSamples, sampleRate);
+      const channel = buffer.getChannelData(0);
+      const harmonic = rootFrequency * 1.5;
+      const shimmer = rootFrequency * 2;
+
+      for (let i = 0; i < totalSamples; i += 1) {
+        const t = i / sampleRate;
+        const fade = Math.sin(Math.PI * (i / totalSamples));
+        const bed = Math.sin(2 * Math.PI * rootFrequency * t) * 0.65;
+        const layer = Math.sin(2 * Math.PI * harmonic * t + Math.sin(t * 0.5) * 0.3) * 0.25;
+        const sparkle = Math.sin(2 * Math.PI * shimmer * t + Math.sin(t * 0.17) * 0.5) * 0.1;
+        channel[i] = (bed + layer + sparkle) * gain * fade;
+      }
+
+      return buffer;
     }
 
     async preloadCriticalSfx() {
