@@ -85,7 +85,7 @@
     resolveSources(node = {}) {
       const preferredFormats = Array.isArray(node.preferredFormats) && node.preferredFormats.length
         ? node.preferredFormats
-        : ['mp3', 'ogg'];
+        : ['mp3', 'ogg', 'wav'];
 
       const candidates = [];
       if (Array.isArray(node.sources)) {
@@ -133,7 +133,7 @@
       if (typeof source === 'string') {
         return {
           urls: [source],
-          preferredFormats: ['mp3', 'ogg'],
+          preferredFormats: ['mp3', 'ogg', 'wav'],
           normalizationGain: 1,
           category: 'sfx',
           maxBytes: this.defaultMaxSfxBytes,
@@ -145,7 +145,7 @@
         if (manifestNode) {
           return {
             urls: this.resolveSources(manifestNode),
-            preferredFormats: manifestNode.preferredFormats || ['mp3', 'ogg'],
+            preferredFormats: manifestNode.preferredFormats || ['mp3', 'ogg', 'wav'],
             license: manifestNode.license || null,
             attribution: manifestNode.attribution || null,
             normalizationGain: Number.isFinite(manifestNode.normalizationGain)
@@ -164,7 +164,7 @@
       const urls = this.resolveSources(source);
       return {
         urls,
-        preferredFormats: source.preferredFormats || ['mp3', 'ogg'],
+        preferredFormats: source.preferredFormats || ['mp3', 'ogg', 'wav'],
         license: source.license || null,
         attribution: source.attribution || null,
         normalizationGain: Number.isFinite(source.normalizationGain) ? clamp(source.normalizationGain, 0.1, 2) : 1,

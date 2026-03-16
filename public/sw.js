@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const APP_SHELL_CACHE = `bingo-app-shell-${CACHE_VERSION}`;
 const AUDIO_CACHE = `bingo-audio-runtime-${CACHE_VERSION}`;
 
@@ -47,7 +47,7 @@ self.addEventListener('activate', (event) => {
 function isAudioRequest(request) {
   const url = new URL(request.url);
   if (request.destination === 'audio') return true;
-  return /\.(mp3|ogg)(\?|$)/i.test(url.pathname);
+  return /\.(mp3|ogg|wav)(\?|$)/i.test(url.pathname);
 }
 
 self.addEventListener('fetch', (event) => {
