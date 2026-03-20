@@ -2423,6 +2423,14 @@
       .carton-tabla td.celda-forma-activa:not(.celda-forma-solo-borde) .cell-content {
           color: inherit;
       }
+      #carton-destacado .carton-tabla td.celda-forma-activa .cell-content,
+      #carton-destacado .carton-tabla td.celda-forma-temporal .cell-content,
+      #carton-destacado .carton-visual--principal.forma-manual-activa .carton-tabla td.celda-forma-activa.celda-forma-solo-borde .cell-content {
+          color: #000000;
+          -webkit-text-stroke: 0;
+          text-stroke: 0;
+          text-shadow: 0 0 6px rgba(255,255,255,0.92), 0 0 12px rgba(255,255,255,0.72);
+      }
       .carton-tabla td.celda-forma-activa.celda-forma-solo-borde::before {
           display: none;
       }
@@ -3363,6 +3371,70 @@
           #carton-destacado {
               max-width: none;
           }
+          #cantos-panel {
+              --canto-cell-size: clamp(34px, 3.2vw, 54px);
+          }
+          #carton-destacado {
+              --carton-destacado-margen: clamp(10px, 1.4vw, 18px);
+              --carton-contenido-ancho: clamp(360px, 31vw, 500px);
+              --carton-principal-padding: clamp(8px, 1vw, 14px);
+              --destacado-cell-size: clamp(52px, 5.6vw, 78px);
+              width: min(100%, calc(var(--carton-contenido-ancho) + (var(--carton-destacado-margen) * 2)));
+              max-width: min(100%, calc(var(--carton-contenido-ancho) + (var(--carton-destacado-margen) * 2)));
+              margin-inline: auto;
+              padding: var(--carton-destacado-margen);
+              box-sizing: border-box;
+              align-items: center;
+          }
+          #carton-destacado .carton-box,
+          #carton-destacado .carton-wrapper {
+              width: min(100%, var(--carton-contenido-ancho));
+              max-width: var(--carton-contenido-ancho);
+              margin-inline: auto;
+          }
+          #carton-destacado .carton-front,
+          #carton-destacado .carton-back {
+              border-radius: clamp(14px, 1.8vw, 22px);
+          }
+          #carton-destacado .carton-front {
+              justify-content: center;
+              padding: clamp(8px, 1vw, 14px);
+          }
+          #carton-destacado .carton-front .carton-visual {
+              justify-content: center;
+              align-items: center;
+              gap: clamp(4px, 0.6vw, 8px);
+          }
+          #carton-destacado .carton-tabla--principal thead th {
+              font-size: calc(var(--principal-cell-size, var(--cell-size)) * 0.9);
+              padding: 0;
+          }
+          #carton-destacado .carton-tabla--principal thead th .encabezado-letra {
+              width: 100%;
+              height: 100%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              line-height: 1;
+          }
+          #carton-destacado .carton-tabla--principal tbody td {
+              font-size: calc(var(--principal-cell-size, var(--cell-size)) * 0.7);
+          }
+          #carton-destacado .carton-tabla--principal td .cell-content {
+              font-weight: 700;
+              text-align: center;
+          }
+          #carton-destacado .carton-tabla--principal td.free .cell-content.numero-carton {
+              font-size: clamp(0.9rem, calc(var(--destacado-cell-size) * 0.24), 1.18rem);
+          }
+          #cantos-conducto-grid {
+              width: min(100%, calc(var(--canto-cell-size) * 5.08));
+              margin-inline: auto;
+          }
+          .conducto-sphere {
+              --conducto-esfera-base: clamp(calc(var(--conducto-cell-size-real) * 0.78), 40px, calc(var(--conducto-cell-size-real) * 0.96));
+              --conducto-esfera-font-base: clamp(0.9rem, 1.4vw, 1.18rem);
+          }
       }
       @media (max-width: 819px) {
           #panel-superior {
@@ -4077,13 +4149,14 @@
                 margin-left: 0;
             }
             #carton-destacado {
-                --destacado-cell-size: clamp(46px, 7.4vw, 112px);
+                --carton-contenido-ancho: clamp(380px, 30vw, 520px);
+                --destacado-cell-size: clamp(56px, 5.2vw, 82px);
             }
             #carton-destacado .carton-tabla--principal thead th {
-                font-size: calc(var(--principal-cell-size, var(--cell-size)) * 0.8);
+                font-size: calc(var(--principal-cell-size, var(--cell-size)) * 0.94);
             }
             #carton-destacado .carton-tabla--principal tbody td {
-                font-size: calc(var(--principal-cell-size, var(--cell-size)) * 0.64);
+                font-size: calc(var(--principal-cell-size, var(--cell-size)) * 0.72);
             }
         }
         @media (min-width: 1024px) {
@@ -4111,6 +4184,28 @@
             #carton-destacado {
                 max-width: none;
                 justify-self: stretch;
+            }
+            #cantos-panel {
+                --canto-cell-size: clamp(38px, 2.7vw, 56px);
+            }
+            #carton-destacado {
+                --carton-destacado-margen: clamp(12px, 1.2vw, 20px);
+                --carton-contenido-ancho: clamp(400px, 28vw, 540px);
+                --destacado-cell-size: clamp(60px, 4.8vw, 86px);
+            }
+            #carton-destacado .carton-box,
+            #carton-destacado .carton-wrapper {
+                max-width: min(100%, var(--carton-contenido-ancho));
+            }
+            #carton-destacado .carton-tabla--principal thead th {
+                font-size: calc(var(--principal-cell-size, var(--cell-size)) * 0.98);
+            }
+            #carton-destacado .carton-tabla--principal tbody td {
+                font-size: calc(var(--principal-cell-size, var(--cell-size)) * 0.76);
+            }
+            .conducto-sphere {
+                --conducto-esfera-base: clamp(calc(var(--conducto-cell-size-real) * 0.84), 44px, calc(var(--conducto-cell-size-real) * 0.98));
+                --conducto-esfera-font-base: clamp(0.96rem, 1.2vw, 1.24rem);
             }
             .whatsapp-flotante {
                 right: var(--app-desktop-side-padding, 18px);
