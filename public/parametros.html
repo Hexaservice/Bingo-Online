@@ -213,12 +213,22 @@
   <script>
     ensureAuth('Superadmin');
 
+    const CLAIM_GESTION_PARAMETROS = 'canManageGlobalParams';
+    const EMAIL_PERMITIDO_PARAMETROS = 'jhoseph.q@gmail.com';
     const camposContrasenaLegacy = ['contrasenasu','contrasenaSu','contrasenaSU','Contrasenasu','ContrasenaSu','ContrasenaSU'];
+
+    function tienePermisoDedicadoParametros(claims){
+      return claims?.[CLAIM_GESTION_PARAMETROS] === true;
+    }
 
     async function validarAutorizacionFuerteSuperadmin(){
       const verificacion = await verificarRolFuerte('Superadmin', { forceRefresh: true });
       if(!verificacion.ok){
         throw new Error('CLAIMS_SUPERADMIN_NO_VIGENTES');
+      }
+      const emailActual = String(verificacion.user?.email || '').trim().toLowerCase();
+      if(emailActual !== EMAIL_PERMITIDO_PARAMETROS || !tienePermisoDedicadoParametros(verificacion.claims)){
+        throw new Error('CLAIM_PARAMETROS_NO_AUTORIZADO');
       }
       if(!tieneReautenticacionReciente({ maxAgeMs: 10 * 60 * 1000 })){
         throw new Error('REAUTENTICACION_REQUERIDA_DESDE_MENU_SUPERADMIN');
@@ -366,6 +376,8 @@
                 alert('Para abrir Parámetros Globales, vuelve al menú Superadmin y toca tu nombre para validar el acceso una sola vez.');
               }else if(err && err.message === 'CLAIMS_SUPERADMIN_NO_VIGENTES'){
                 alert('Tus claims de Superadmin no están vigentes, cierre y abra sesión.');
+              }else if(err && err.message === 'CLAIM_PARAMETROS_NO_AUTORIZADO'){
+                alert('Esta cuenta no tiene el claim dedicado para gestionar parámetros globales.');
               }else{
                 alert('Tu sesión no cumple la autorización fuerte de Superadmin para acceder a Parámetros.');
               }

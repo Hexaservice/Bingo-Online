@@ -142,8 +142,13 @@
   <script>
   ensureAuth('Superadmin');
   const EMAIL_PERMITIDO_PARAMETROS = 'jhoseph.q@gmail.com';
+  const CLAIM_GESTION_PARAMETROS = 'canManageGlobalParams';
   const CAMPO_PASSW_PARAMETROS = 'passw';
   const PASSW_RESTAURADA_DEFAULT = 'Lib3lula14$';
+
+  function tienePermisoDedicadoParametros(claims){
+    return claims?.[CLAIM_GESTION_PARAMETROS] === true;
+  }
 
   async function solicitarClaveMenuOculto(user){
     const emailActual = String(user?.email || '').trim().toLowerCase();
@@ -193,6 +198,11 @@
       const verificacion = await verificarRolFuerte('Superadmin', { forceRefresh: true });
       if(!verificacion.ok){
         alert('No tienes claims de Superadmin vigentes. Vuelve a iniciar sesión o contacta al administrador del sistema.');
+        window.location.href='super.html';
+        return;
+      }
+      if(!tienePermisoDedicadoParametros(verificacion.claims)){
+        alert('Tu sesión no tiene el permiso dedicado para gestionar parámetros globales.');
         window.location.href='super.html';
         return;
       }
