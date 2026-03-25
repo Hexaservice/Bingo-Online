@@ -20,7 +20,16 @@ Este segundo script poblará la colección `Bancos` con los bancos iniciales.
 
 Debe disponer de un archivo `serviceAccountKey.json` con las credenciales de Firebase o definir la variable `GOOGLE_APPLICATION_CREDENTIALS` apuntando al archivo de claves.
 
-Este script creará las entradas en la colección `users` y actualizará los roles en caso de que ya existan.
+Este script crea/actualiza las entradas en la colección `users` y, en la misma ejecución, sincroniza Firebase Auth:
+
+- verifica cada correo con `getUserByEmail`
+- si el usuario no existe en Auth, lo crea automáticamente (o reporta claramente el error)
+- aplica `setCustomUserClaims` para cuentas **Superadmin** con:
+  - `role: 'Superadmin'`
+  - `roles: ['Superadmin']`
+  - `admin: true`
+
+De esta forma, la inicialización de usuarios especiales deja perfil (`users/{email}`) + *custom claims* sincronizados en una sola corrida.
 
 ## Subida de imágenes
 
