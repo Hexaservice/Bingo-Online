@@ -1,6 +1,14 @@
 const admin = require('firebase-admin');
 const fs = require('fs');
 
+const DEFAULT_CLAIMS_BY_ROLE = {
+  Superadmin: {
+    role: 'Superadmin',
+    roles: ['Superadmin'],
+    admin: true,
+  },
+};
+
 let credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || './serviceAccountKey.json';
 if (!fs.existsSync(credentialsPath)) {
   console.error('Service account credentials not found at', credentialsPath);
@@ -12,10 +20,30 @@ admin.initializeApp({
 });
 
 const db = admin.firestore();
+const auth = admin.auth();
 
-async function createUser(email, role) {
+async function ensureAuthUser(email) {
+  try {
+    const userRecord = await auth.getUserByEmail(email);
+    console.log(`[Auth] Usuario encontrado: ${email} (uid=${userRecord.uid})`);
+    return userRecord;
+  } catch (error) {
+    if (error && error.code === 'auth/user-not-found') {
+      const created = await auth.createUser({ email });
+      console.log(`[Auth] Usuario no existía y fue creado: ${email} (uid=${created.uid})`);
+      return created;
+    }
+
+    const details = error?.message || error;
+    console.error(`[Auth] No se pudo verificar/crear el usuario ${email}:`, details);
+    throw error;
+  }
+}
+
+async function syncSpecialUser(email, role) {
   const ref = db.collection('users').doc(email);
   const doc = await ref.get();
+
   if (!doc.exists) {
     await ref.set({
       email,
@@ -23,21 +51,29 @@ async function createUser(email, role) {
       role,
       aceptoNotificaciones: 'NO',
     });
-    console.log(`Created user ${email} with role ${role}`);
+    console.log(`[Firestore] Creado users/${email} con role=${role}`);
+  } else if (doc.data().role !== role) {
+    await ref.update({ role });
+    console.log(`[Firestore] Actualizado users/${email}.role a ${role}`);
   } else {
-    if (doc.data().role !== role) {
-      await ref.update({ role });
-      console.log(`Updated role for ${email} to ${role}`);
-    } else {
-      console.log(`User ${email} already exists`);
-    }
+    console.log(`[Firestore] users/${email}.role ya estaba en ${role}`);
+  }
+
+  const authUser = await ensureAuthUser(email);
+  const claims = DEFAULT_CLAIMS_BY_ROLE[role];
+
+  if (claims) {
+    await auth.setCustomUserClaims(authUser.uid, claims);
+    console.log(`[Claims] Aplicado claim para ${email}: ${JSON.stringify(claims)}`);
+  } else {
+    console.log(`[Claims] Sin cambios para ${email}: no hay claims definidos para role=${role}`);
   }
 }
 
 async function main() {
-  await createUser('jhoseph.q@gmail.com', 'Superadmin');
-  await createUser('cyz513@gmail.com', 'Superadmin');
-  await createUser('hexaservice.co@gmail.com', 'Colaborador');
+  await syncSpecialUser('jhoseph.q@gmail.com', 'Superadmin');
+  await syncSpecialUser('cyz513@gmail.com', 'Superadmin');
+  await syncSpecialUser('hexaservice.co@gmail.com', 'Colaborador');
 }
 
 main().then(() => process.exit(0)).catch(err => {
