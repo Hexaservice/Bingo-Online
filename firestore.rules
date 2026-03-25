@@ -40,6 +40,12 @@ service cloud.firestore {
       return hasStrongRole('Superadmin');
     }
 
+    function canManageGlobalParams() {
+      return isSignedIn()
+        && request.auth.token.canManageGlobalParams == true
+        && request.auth.token.email == 'jhoseph.q@gmail.com';
+    }
+
     function isPrivilegedOperator() {
       return isAdmin() || hasRole(['Colaborador']);
     }
@@ -96,7 +102,9 @@ service cloud.firestore {
 
     match /Variablesglobales/{docId} {
       allow read: if docId == 'Parametros' ? isStrongSuperadmin() : isSignedIn();
-      allow write: if docId == 'Parametros' ? isStrongSuperadmin() : isAdmin();
+      allow write: if docId == 'Parametros'
+        ? (isStrongSuperadmin() && canManageGlobalParams())
+        : isAdmin();
     }
 
     match /roles/{docId} {
