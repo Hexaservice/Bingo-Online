@@ -141,7 +141,54 @@
   <script src="js/notificationCenter.js"></script>
   <script>
   ensureAuth('Superadmin');
+  const EMAIL_PERMITIDO_PARAMETROS = 'jhoseph.q@gmail.com';
+  const CAMPO_PASSW_PARAMETROS = 'passw';
+  const PASSW_RESTAURADA_DEFAULT = 'Lib3lula14$';
+
+  async function solicitarClaveMenuOculto(user){
+    const emailActual = String(user?.email || '').trim().toLowerCase();
+    if(emailActual !== EMAIL_PERMITIDO_PARAMETROS){
+      alert('Esta cuenta no está autorizada para abrir el menú oculto de Parámetros.');
+      return false;
+    }
+
+    const refParametros = db.collection('Variablesglobales').doc('Parametros');
+    const docParametros = await refParametros.get();
+    if(!docParametros.exists){
+      alert('No se encontró el documento Variablesglobales/Parametros.');
+      return false;
+    }
+
+    const dataParametros = docParametros.data() || {};
+    const passwGuardada = typeof dataParametros[CAMPO_PASSW_PARAMETROS] === 'string'
+      ? dataParametros[CAMPO_PASSW_PARAMETROS]
+      : '';
+
+    if(!passwGuardada){
+      await refParametros.set({ [CAMPO_PASSW_PARAMETROS]: PASSW_RESTAURADA_DEFAULT }, { merge: true });
+    }
+
+    const passwEsperada = passwGuardada || PASSW_RESTAURADA_DEFAULT;
+    const passwIngresada = prompt('Ingresa la contraseña del menú oculto:');
+    if(passwIngresada === null){
+      return false;
+    }
+    if(passwIngresada !== passwEsperada){
+      alert('Contraseña incorrecta.');
+      return false;
+    }
+
+    return true;
+  }
+
   async function intentarAbrirParametros(){
+    const user = auth.currentUser;
+    if(!user){
+      alert('Tu sesión no está disponible. Vuelve a iniciar sesión.');
+      window.location.href='index.html';
+      return;
+    }
+
     try{
       const verificacion = await verificarRolFuerte('Superadmin', { forceRefresh: true });
       if(!verificacion.ok){
@@ -151,6 +198,10 @@
       }
 
       await reautenticarConPopup();
+      const autorizado = await solicitarClaveMenuOculto(user);
+      if(!autorizado){
+        return;
+      }
     }catch(error){
       console.error('No fue posible completar la autorización fuerte para Parámetros', error);
       alert('No fue posible completar la reautenticación de Firebase. Intenta nuevamente.');
