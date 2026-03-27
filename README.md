@@ -135,6 +135,28 @@ Los flujos definidos en `.github/workflows/` generan `public/firebase-config.js`
 
 Cada secreto debe contener el valor correspondiente del proyecto de Firebase. Si utiliza otras herramientas de despliegue, replique el mismo proceso de copiado y reemplazo de marcadores antes de publicar los archivos.
 
+## Mutaciones de Firestore por Pull Request (Bingoanimalito)
+
+Para replicar el flujo de cambios auditables vía PR en una base de Firebase, este repositorio incluye:
+
+- Workflow: `.github/workflows/bingoanimalito-firebase-pr-sync.yml`
+- Script: `scripts/applyFirestoreMutations.js`
+- Carpeta de cambios: `firebase/bingoanimalito/`
+
+### Cómo usarlo
+
+1. Cree un archivo JSON dentro de `firebase/bingoanimalito/` con las mutaciones (`set`, `update`, `delete`).
+2. Abra un PR hacia `main`.
+3. Al hacer merge, el workflow detecta los archivos JSON modificados y ejecuta las mutaciones con Firebase Admin SDK.
+
+También puede ejecutarse manualmente con `workflow_dispatch` pasando `files` (coma-separado) o localmente:
+
+```bash
+npm run apply-firebase-mutations -- --files firebase/bingoanimalito/mi-cambio.json
+```
+
+> Requisito: configurar el secreto `FIREBASE_SERVICE_ACCOUNT_BINGOANIMALITO` en GitHub con la cuenta de servicio JSON.
+
 ## Directrices de desarrollo
 
 - Toda obtención o cálculo de fechas y horas debe realizarse empleando el huso horario definido para el despliegue del sistema.
@@ -150,7 +172,6 @@ Cada secreto debe contener el valor correspondiente del proyecto de Firebase. Si
 - El documento `Variablesglobales/Parametros` contiene configuración sensible y se trata como **confidencial**.
 - En `firestore.rules`, su lectura y escritura requieren privilegio fuerte de **Superadmin** (`isStrongSuperadmin()`).
 - La página `public/parametros.html` está diseñada para este mismo nivel de privilegio; usuarios autenticados sin rol fuerte de Superadmin deben recibir denegación de acceso al intentar leer ese documento.
-
 
 
 
