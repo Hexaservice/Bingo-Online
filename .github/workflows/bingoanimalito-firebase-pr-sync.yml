@@ -1,0 +1,75 @@
+name: Bingoanimalito Firestore Sync by PR
+
+on:
+  pull_request:
+    branches: [main]
+    types: [closed]
+    paths:
+      - 'firebase/bingoanimalito/**.json'
+  workflow_dispatch:
+    inputs:
+      files:
+        description: 'Rutas JSON separadas por coma (opcional para ejecución manual)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  apply-mutations:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Detectar archivos JSON cambiados en el PR
+        id: changed
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          FILES=$(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.merge_commit_sha }}" | grep '^firebase/bingoanimalito/.*\.json$' | paste -sd, -)
+          echo "files=${FILES}" >> "$GITHUB_OUTPUT"
+
+      - name: Resolver archivos a procesar
+        id: target
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            FILES="${{ inputs.files }}"
+          else
+            FILES="${{ steps.changed.outputs.files }}"
+          fi
+
+          if [ -z "${FILES}" ]; then
+            echo "No hay archivos JSON para procesar."
+            echo "files=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "files=${FILES}" >> "$GITHUB_OUTPUT"
+          echo "Archivos detectados: ${FILES}"
+
+      - name: Aplicar mutaciones en Firestore (Bingoanimalito)
+        if: steps.target.outputs.files != ''
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/firebase-sa.json
+          FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BINGOANIMALITO }}
+        run: |
+          set -euo pipefail
+          if [ -z "${FIREBASE_SA_JSON}" ]; then
+            echo "::error::Falta el secreto FIREBASE_SERVICE_ACCOUNT_BINGOANIMALITO"
+            exit 1
+          fi
+          printf '%s' "${FIREBASE_SA_JSON}" > "${GOOGLE_APPLICATION_CREDENTIALS}"
+          node scripts/applyFirestoreMutations.js --files "${{ steps.target.outputs.files }}"
