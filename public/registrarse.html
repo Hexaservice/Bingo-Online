@@ -15,8 +15,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
     body {
-      background: linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)), url('https://img.freepik.com/vectores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg');
-      background-repeat: repeat;
+      background-color:#ffffff;
       display:flex;
       flex-direction:column;
       align-items:center;
@@ -25,6 +24,16 @@
       text-align:center;
       margin:0;
       position:relative;
+      overflow-x:hidden;
+    }
+    body::before{
+      content:'';
+      position:fixed;
+      inset:0;
+      background:url('https://img.freepik.com/vetores-premium/padrao-sem-costura-com-simbolos-de-dolar-e-porcentagem_637741-777.jpg') repeat;
+      opacity:0.08;
+      pointer-events:none;
+      z-index:-1;
     }
     h2{
       font-family:'Bangers',cursive;
@@ -168,6 +177,10 @@
     #resumen-confirmacion{font-family:'Poppins',sans-serif;font-size:0.74rem;text-align:left;background:#fffbeb;border:1px solid #f59e0b;border-radius:10px;padding:10px;margin:6px auto 8px;max-width:290px;}
     .step-nav{display:flex;justify-content:center;gap:8px;margin-top:6px;}
     .secondary-btn{font-family:'Poppins',sans-serif;border:1px solid #9ca3af;background:#fff;border-radius:8px;padding:7px 10px;cursor:pointer;font-size:0.78rem;}
+    .btn-attention{
+      animation:btn-attention 1s ease-in-out infinite;
+      transform-origin:center;
+    }
     .toast{
       position:fixed;
       left:50%;
@@ -221,6 +234,11 @@
       50%{transform:scale(1.08);}
       100%{transform:scale(1);}
     }
+    @keyframes btn-attention{
+      0%{transform:scale(1);}
+      45%{transform:scale(1.09);}
+      100%{transform:scale(1);}
+    }
     @media (min-width:1024px){
       body{font-size:1.02rem;}
       input,select{font-size:clamp(1rem,1vw,1.05rem);}
@@ -268,7 +286,7 @@
     <div id="status-cuenta"></div>
     <div class="provider-row" aria-label="Métodos de inicio de sesión">
       <button id="login-google" class="provider-btn" type="button" aria-label="Continuar con Google">Google</button>
-      <button id="login-apple" class="provider-btn" type="button" aria-label="Continuar con Apple">Apple</button>
+      <button id="login-apple" class="provider-btn" type="button" aria-label="Continuar con Apple" hidden>Apple</button>
     </div>
     <div id="msg-cuenta" class="field-msg"></div>
     <div class="small-label">CÓDIGO REFERIDO</div>
@@ -457,6 +475,8 @@
     let loginEnProceso = false;
     let pasoActual = 1;
     const registrarBtn = document.getElementById('registrar');
+    const btnPaso1 = document.getElementById('btn-step-1-next');
+    const btnPaso2 = document.getElementById('btn-step-2-next');
     const emailLabel = document.getElementById('email');
     const statusCuenta = document.getElementById('status-cuenta');
     const codigoReferidoInputEl = document.getElementById('codigo-referido');
@@ -576,13 +596,20 @@
       if(!resumen) return;
       const tel=validarTelefono(d);
       resumen.innerHTML = `
-        <strong>Revisa antes de guardar:</strong><br>
         Nombre: ${d.nombre || '-'} ${d.apellido || '-'}<br>
         Alias visible: ${d.alias || '-'}<br>
         Teléfono: ${tel.e164 || (d.codigoPais+d.celularLocal) || '-'}<br>
         Correo de cuenta: ${auth?.currentUser?.email || 'No autenticada'}<br>
         Código referido: ${d.codigoReferido || 'No aplica'}
       `;
+    }
+
+    function actualizarAnimacionesCTA(){
+      const paso1Ok = validarPaso1(false);
+      const paso2Ok = validarPaso2(false);
+      btnPaso1?.classList.toggle('btn-attention', paso1Ok);
+      btnPaso2?.classList.toggle('btn-attention', paso2Ok);
+      registrarBtn?.classList.toggle('btn-attention', paso1Ok && paso2Ok);
     }
 
     async function validarCuentaRegistrada(email){
@@ -666,6 +693,7 @@
       const requisitos = validarPaso1(false) && validarPaso2(false);
       registrarBtn.disabled = !requisitos;
       actualizarResumen();
+      actualizarAnimacionesCTA();
     }
 
     if(codigoReferidoInputEl){
@@ -690,7 +718,7 @@
     }
 
     document.getElementById('login-google').addEventListener('click', ()=>iniciarLoginConProveedor('google'));
-    document.getElementById('login-apple').addEventListener('click', ()=>iniciarLoginConProveedor('apple'));
+    document.getElementById('login-apple')?.addEventListener('click', ()=>iniciarLoginConProveedor('apple'));
     document.getElementById('btn-step-1-next').addEventListener('click', ()=>{ if(validarPaso1(true)){ irPaso(2); } });
     document.getElementById('btn-step-2-back').addEventListener('click', ()=>irPaso(1));
     document.getElementById('btn-step-2-next').addEventListener('click', ()=>{ if(validarPaso2(true)){ irPaso(3); } });
