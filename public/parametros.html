@@ -212,27 +212,12 @@
   <script src="js/notificationCenter.js"></script>
   <script>
     ensureAuth('Superadmin');
-
-    const CLAIM_GESTION_PARAMETROS = 'canManageGlobalParams';
     const EMAIL_PERMITIDO_PARAMETROS = 'jhoseph.q@gmail.com';
     const camposContrasenaLegacy = ['contrasenasu','contrasenaSu','contrasenaSU','Contrasenasu','ContrasenaSu','ContrasenaSU'];
 
-    function tienePermisoDedicadoParametros(claims){
-      return claims?.[CLAIM_GESTION_PARAMETROS] === true;
-    }
-
-    async function validarAutorizacionFuerteSuperadmin(){
-      const verificacion = await verificarRolFuerte('Superadmin', { forceRefresh: true });
-      if(!verificacion.ok){
-        throw new Error('CLAIMS_SUPERADMIN_NO_VIGENTES');
-      }
-      const emailActual = String(verificacion.user?.email || '').trim().toLowerCase();
-      if(emailActual !== EMAIL_PERMITIDO_PARAMETROS || !tienePermisoDedicadoParametros(verificacion.claims)){
-        throw new Error('CLAIM_PARAMETROS_NO_AUTORIZADO');
-      }
-      if(!tieneReautenticacionReciente({ maxAgeMs: 10 * 60 * 1000 })){
-        throw new Error('REAUTENTICACION_REQUERIDA_DESDE_MENU_SUPERADMIN');
-      }
+    function usuarioPuedeGestionarParametros(user){
+      const emailActual = String(user?.email || '').trim().toLowerCase();
+      return emailActual === EMAIL_PERMITIDO_PARAMETROS;
     }
 
     async function migrarContrasenaLegacyParametros(){
@@ -366,20 +351,18 @@
           auth.onAuthStateChanged(async usuario=>{
             if(!usuario || parametrosYaInicializados) return;
             try{
-              await validarAutorizacionFuerteSuperadmin();
+              if(!usuarioPuedeGestionarParametros(usuario)){
+                throw new Error('USUARIO_NO_AUTORIZADO_PARAMETROS');
+              }
               await iniciarParametros();
               parametrosYaInicializados=true;
             }catch(err){
               parametrosYaInicializados=false;
               console.error('Fallo al cargar parámetros tras autenticar',err);
-              if(err && err.message === 'REAUTENTICACION_REQUERIDA_DESDE_MENU_SUPERADMIN'){
-                alert('Para abrir Parámetros Globales, vuelve al menú Superadmin y toca tu nombre para validar el acceso una sola vez.');
-              }else if(err && err.message === 'CLAIMS_SUPERADMIN_NO_VIGENTES'){
-                alert('Tus claims de Superadmin no están vigentes, cierre y abra sesión.');
-              }else if(err && err.message === 'CLAIM_PARAMETROS_NO_AUTORIZADO'){
-                alert('Esta cuenta no tiene el claim dedicado para gestionar parámetros globales.');
+              if(err && err.message === 'USUARIO_NO_AUTORIZADO_PARAMETROS'){
+                alert('Esta cuenta no está autorizada para acceder a Parámetros.');
               }else{
-                alert('Tu sesión no cumple la autorización fuerte de Superadmin para acceder a Parámetros.');
+                alert('No fue posible cargar Parámetros en este momento.');
               }
               window.location.href='super.html';
             }
