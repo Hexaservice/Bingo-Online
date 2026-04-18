@@ -638,6 +638,26 @@
       text-shadow: none;
       margin-top: 12px;
     }
+    .live-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 14px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(255, 122, 0, 0.08);
+      border: 1px solid rgba(255, 122, 0, 0.25);
+    }
+    .live-toggle-row .live-toggle-label {
+      margin: 0;
+      color: #ea580c;
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+    .live-link-content[hidden] {
+      display: none !important;
+    }
     .whatsapp-section label.publicidad-label {
       color: #1d4ed8;
     }
@@ -1257,10 +1277,19 @@
         <button type="button" id="guardar-links-publicidad-sorteos">Guardar links</button>
       </div>
     </div>
-    <label for="link-live-tiktok">Link de Live TikTok/YouTube/Facebook/Twitch</label>
-    <textarea id="link-live-tiktok" placeholder="https://www.tiktok.com/@cuenta/live, https://youtube.com/watch?v=..., https://www.facebook.com/tuPagina/videos/... o https://www.twitch.tv/tuCanal" spellcheck="false"></textarea>
-    <div class="live-link-actions">
-      <button type="button" id="guardar-link-live-tiktok">Guardar</button>
+    <div class="live-toggle-row">
+      <span class="live-toggle-label">Transmitir en vivo</span>
+      <label class="switch">
+        <input type="checkbox" id="toggle-transmitir-vivo">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div id="live-link-content" class="live-link-content" hidden>
+      <label for="link-live-tiktok">Link de Live TikTok/YouTube/Facebook/Twitch</label>
+      <textarea id="link-live-tiktok" placeholder="https://www.tiktok.com/@cuenta/live, https://youtube.com/watch?v=..., https://www.facebook.com/tuPagina/videos/... o https://www.twitch.tv/tuCanal" spellcheck="false"></textarea>
+      <div class="live-link-actions">
+        <button type="button" id="guardar-link-live-tiktok">Guardar</button>
+      </div>
     </div>
   </section>
   <div id="whatsapp-modal-overlay" class="whatsapp-modal-overlay" aria-hidden="true">
@@ -1499,6 +1528,8 @@
     const campoLinkPublicidadSorteos=document.getElementById('link-publicidad-sorteos');
     const campoLinkPublicidadSorteosDos=document.getElementById('link-publicidad-sorteos-2');
     const botonGuardarLinksPublicidad=document.getElementById('guardar-links-publicidad-sorteos');
+    const toggleTransmitirVivo=document.getElementById('toggle-transmitir-vivo');
+    const liveLinkContentEl=document.getElementById('live-link-content');
     const campoLinkLiveTiktok=document.getElementById('link-live-tiktok');
     const botonGuardarLinkLive=document.getElementById('guardar-link-live-tiktok');
     const modalOverlay=document.getElementById('whatsapp-modal-overlay');
@@ -1623,6 +1654,10 @@
     function actualizarVisualizacionMensajes(toggle,contenedor){
       if(!toggle || !contenedor) return;
       contenedor.style.display=toggle.checked?'flex':'none';
+    }
+    function actualizarVisualizacionLive(){
+      if(!liveLinkContentEl || !toggleTransmitirVivo) return;
+      liveLinkContentEl.hidden=!toggleTransmitirVivo.checked;
     }
     async function cargarMensajesEditables(){
       try{
@@ -1879,9 +1914,16 @@
           if(linkLiveGuardado){
             campoLinkLiveTiktok.value=linkLiveGuardado;
           }
+          const liveHabilitadoRaw=data.transmitirEnVivo ?? data.transmitirenvivo ?? data.liveHabilitado ?? data.livehabilitado;
+          const liveHabilitado=(String(liveHabilitadoRaw ?? 'si').toLowerCase()==='si') || liveHabilitadoRaw===true;
+          if(toggleTransmitirVivo){
+            toggleTransmitirVivo.checked=liveHabilitado;
+          }
         }
       } catch(err){
         console.error('No se pudieron obtener los datos de WhatsApp',err);
+      } finally {
+        actualizarVisualizacionLive();
       }
     }
 
@@ -2038,6 +2080,21 @@
     }
     if(toggleMensajesReferidos){
       toggleMensajesReferidos.addEventListener('change',()=>actualizarVisualizacionMensajes(toggleMensajesReferidos,mensajesReferidosContent));
+    }
+    if(toggleTransmitirVivo){
+      toggleTransmitirVivo.addEventListener('change',async ()=>{
+        actualizarVisualizacionLive();
+        const valor=toggleTransmitirVivo.checked?'si':'no';
+        try{
+          await db.collection('Variablesglobales').doc('Parametros').set({
+            transmitirEnVivo:valor,
+            liveHabilitado:valor
+          },{merge:true});
+        }catch(err){
+          console.error('No se pudo guardar el estado de transmisión en vivo',err);
+          alert('No fue posible guardar el estado de transmisión en vivo.');
+        }
+      });
     }
     botonGuardarLinkLive.addEventListener('click',async ()=>{
       const valor=campoLinkLiveTiktok.value.trim();
