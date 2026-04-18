@@ -1801,7 +1801,7 @@
           display: inline-flex;
           align-items: center;
           gap: clamp(4px, 0.8vw, 8px);
-          padding: clamp(5px, 0.8vw, 8px) clamp(8px, 1.3vw, 12px);
+          padding: clamp(3px, 0.6vw, 6px) clamp(8px, 1.3vw, 12px);
           border-radius: 12px;
           border: 1px solid rgba(46,125,50,0.25);
           background: #eceff1;
@@ -1811,7 +1811,7 @@
           letter-spacing: .2px;
           line-height: 1.05;
           text-align: center;
-          min-height: 48px;
+          min-height: 40px;
           cursor: not-allowed;
           opacity: .75;
       }
@@ -1929,8 +1929,13 @@
           opacity: 1;
           background: rgba(255,255,255,0.96);
           box-shadow: 0 6px 18px rgba(0,0,0,0.16);
-          padding: 6px 18px;
+          padding: 0 clamp(10px, 2vw, 16px);
           border: 1px solid rgba(0,0,0,0.08);
+          min-height: var(--panel-forma-altura);
+          height: var(--panel-forma-altura);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
       }
       .panel-botones-formas__grid > .carton-forma-accion {
           width: auto;
@@ -2179,9 +2184,11 @@
           justify-content: center;
           align-items: center;
           display: inline-flex;
-          flex-direction: column;
-          padding-top: clamp(1px, 0.2vw, 2px);
-          padding-bottom: clamp(1px, 0.2vw, 2px);
+          flex-direction: row;
+          flex-wrap: nowrap;
+          gap: clamp(4px, 1.2vw, 10px);
+          padding-top: 0;
+          padding-bottom: 0;
       }
       .carton-forma-leyenda--panel:not(.visible) {
           display: none;
@@ -2190,18 +2197,19 @@
           opacity: 1;
       }
       .carton-forma-leyenda__titulo {
-          display: block;
+          display: inline;
           color: #000000;
-          font-size: clamp(0.52rem, 2vw, 0.7rem);
-          line-height: 0.95;
+          font-size: clamp(0.52rem, 1.8vw, 0.68rem);
+          line-height: 1;
           letter-spacing: 0.7px;
       }
       .carton-forma-leyenda__forma {
-          display: block;
+          display: inline;
           color: inherit;
-          font-size: clamp(0.48rem, 1.9vw, 0.64rem);
-          line-height: 0.95;
-          word-break: break-word;
+          font-size: clamp(0.52rem, 1.8vw, 0.68rem);
+          line-height: 1;
+          word-break: normal;
+          white-space: nowrap;
           text-align: center;
       }
       body.simulacion-cartones-activa .carton-visual,
@@ -4286,7 +4294,7 @@
   <button id="whatsapp-flotante" class="whatsapp-flotante" type="button" aria-label="Abrir grupo de WhatsApp">
     <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/WhatsApp_icon.png/598px-WhatsApp_icon.png" alt="">
   </button>
-  <button id="live-stream-toggle" class="live-stream-toggle" type="button" aria-label="Mostrar transmisión en vivo">LIVE</button>
+  <button id="live-stream-toggle" class="live-stream-toggle" type="button" aria-label="Mostrar transmisión en vivo" hidden aria-hidden="true" style="display:none;">LIVE</button>
   <div id="live-stream-window" class="live-stream-window" aria-hidden="true" role="dialog" aria-label="Transmisión en vivo">
     <div id="live-stream-handle" class="live-stream-header">
       <span class="live-stream-titulo">Transmisión en vivo</span>
@@ -4862,7 +4870,7 @@
   let liveStreamLinkValor = '';
   let liveStreamLinkCargado = false;
   let liveStreamLinkPromesa = null;
-  let liveStreamHabilitado = true;
+  let liveStreamHabilitado = false;
   let liveStreamVisible = false;
   let liveStreamDragState = {activo:false, offsetX:0, offsetY:0, pointerId:null};
   let liveStreamTieneTransmision = false;
@@ -8776,7 +8784,7 @@
           info.leyenda.innerHTML='';
           const titulo=document.createElement('span');
           titulo.className='carton-forma-leyenda__titulo';
-          titulo.textContent=modoSimulacionCartones?'HUBIESES GANADO CON':'GANASTE CON';
+          titulo.textContent='FORMA GANADORA';
           const nombre=document.createElement('span');
           nombre.className='carton-forma-leyenda__forma';
           nombre.textContent=etiqueta;
