@@ -1790,6 +1790,53 @@
           gap: calc(clamp(6px, 2vw, 14px) * var(--panel-botones-escala-limitada, 1));
           justify-items: center;
       }
+      .panel-pdf-jugadores {
+          width: 100%;
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: clamp(6px, 1vw, 10px);
+      }
+      .pdf-acceso-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: clamp(4px, 0.8vw, 8px);
+          padding: clamp(5px, 0.8vw, 8px) clamp(8px, 1.3vw, 12px);
+          border-radius: 999px;
+          border: 1px solid rgba(46,125,50,0.25);
+          background: #eceff1;
+          color: #546e7a;
+          font-size: clamp(0.58rem, 1.2vw, 0.74rem);
+          font-weight: 700;
+          letter-spacing: .2px;
+          cursor: not-allowed;
+          opacity: .75;
+      }
+      .pdf-acceso-btn .estado-luz {
+          width: clamp(7px, 0.9vw, 9px);
+          height: clamp(7px, 0.9vw, 9px);
+          border-radius: 50%;
+          background: #90a4ae;
+          box-shadow: 0 0 0 rgba(76,175,80,0);
+          flex: 0 0 auto;
+      }
+      .pdf-acceso-btn.habilitado {
+          background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
+          border-color: rgba(46,125,50,0.6);
+          color: #1b5e20;
+          cursor: pointer;
+          opacity: 1;
+      }
+      .pdf-acceso-btn.habilitado .estado-luz {
+          background: #00c853;
+          box-shadow: 0 0 0 0 rgba(0,200,83,.65);
+          animation: parpadeoPdfAcceso 1.15s infinite;
+      }
+      @keyframes parpadeoPdfAcceso {
+          0% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,200,83,.6); }
+          70% { opacity: .55; box-shadow: 0 0 0 8px rgba(0,200,83,0); }
+          100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,200,83,0); }
+      }
       .panel-botones-formas__mensaje {
           width: 100%;
           min-height: clamp(28px, 3vw, 40px);
@@ -4311,6 +4358,16 @@
         </div>
         <div class="panel-columna-derecha__rejilla panel-columna-derecha__modales">
           <div id="panel-botones-formas" role="region" aria-label="Ganadores por forma"></div>
+          <div id="panel-pdf-jugadores" class="panel-pdf-jugadores" role="group" aria-label="Accesos PDF para jugadores">
+            <button id="btn-pdf-cartones" type="button" class="pdf-acceso-btn" disabled>
+              <span class="estado-luz" aria-hidden="true"></span>
+              <span>Cartones sellados</span>
+            </button>
+            <button id="btn-pdf-resultados" type="button" class="pdf-acceso-btn" disabled>
+              <span class="estado-luz" aria-hidden="true"></span>
+              <span>Cartones ganadores</span>
+            </button>
+          </div>
         </div>
       </div>
     </section>
@@ -4687,6 +4744,9 @@
   const panelSuperiorEl = document.getElementById('panel-superior');
   const cantosPanelEl = document.getElementById('cantos-panel');
   const panelBotonesFormasEl = document.getElementById('panel-botones-formas');
+  const panelPdfJugadoresEl = document.getElementById('panel-pdf-jugadores');
+  const btnPdfCartonesEl = document.getElementById('btn-pdf-cartones');
+  const btnPdfResultadosEl = document.getElementById('btn-pdf-resultados');
   const formasMensajeEl = document.getElementById('formas-mensaje');
   const misCartonesSectionEl = document.getElementById('mis-cartones-section');
   const complementariosAvisoEl = document.getElementById('complementarios-aviso');
@@ -9493,6 +9553,7 @@
       }
       alternarVisibilidadEncabezadoSorteo(false);
       actualizarTituloFinalizadoBtn();
+      actualizarBotonesPdfJugadores();
       return;
     }
     if(!activeSorteo){
@@ -9504,6 +9565,7 @@
         sorteoDetallesEl.innerHTML='';
       }
       actualizarTituloFinalizadoBtn();
+      actualizarBotonesPdfJugadores();
       return;
     }
     alternarVisibilidadEncabezadoSorteo(true);
@@ -9555,6 +9617,45 @@
       sorteoDetallesEl.innerHTML=partes.join(' ');
     }
     actualizarTituloFinalizadoBtn();
+    actualizarBotonesPdfJugadores();
+  }
+
+  function estadoBanderaSi(valor){
+    return (valor || '').toString().trim().toLowerCase() === 'si';
+  }
+
+  function abrirVentanaPdfJugador(tipo){
+    if(!activeSorteoId) return;
+    const destino = tipo === 'resultados' ? 'pdfresultados.html' : 'pdfsorteo.html';
+    try{
+      const url = new URL(destino, window.location.href);
+      url.searchParams.set('s', activeSorteoId);
+      url.searchParams.set('modo', 'jugador');
+      window.location.assign(url.toString());
+    }catch(error){
+      window.location.href = `${destino}?s=${encodeURIComponent(activeSorteoId)}&modo=jugador`;
+    }
+  }
+
+  function actualizarBotonesPdfJugadores(){
+    if(!panelPdfJugadoresEl || !btnPdfCartonesEl || !btnPdfResultadosEl) return;
+    const haySorteo = !!(activeSorteoId && activeSorteo);
+    panelPdfJugadoresEl.style.display = haySorteo ? 'flex' : 'none';
+    if(!haySorteo){
+      [btnPdfCartonesEl, btnPdfResultadosEl].forEach(btn=>{
+        btn.disabled = true;
+        btn.classList.remove('habilitado');
+      });
+      return;
+    }
+    const estadoSorteo = (activeSorteo?.estado || '').toString().trim().toLowerCase();
+    const esFinalizado = estadoSorteo === 'finalizado';
+    const habilitadoJuego = esFinalizado || estadoBanderaSi(activeSorteo?.accesoPdfJuegoJugadores) || estadoBanderaSi(activeSorteo?.pdf);
+    const habilitadoResultados = esFinalizado || estadoBanderaSi(activeSorteo?.accesoPdfResultadosJugadores) || estadoBanderaSi(activeSorteo?.pdfresul);
+    btnPdfCartonesEl.disabled = !habilitadoJuego;
+    btnPdfResultadosEl.disabled = !habilitadoResultados;
+    btnPdfCartonesEl.classList.toggle('habilitado', habilitadoJuego);
+    btnPdfResultadosEl.classList.toggle('habilitado', habilitadoResultados);
   }
 
   function renderCantos(){
@@ -10505,6 +10606,18 @@
   }
   if(seleccionarFinalizadoBtn){
     seleccionarFinalizadoBtn.addEventListener('click',abrirModalSorteosFinalizados);
+  }
+  if(btnPdfCartonesEl){
+    btnPdfCartonesEl.addEventListener('click', ()=>{
+      if(btnPdfCartonesEl.disabled) return;
+      abrirVentanaPdfJugador('juego');
+    });
+  }
+  if(btnPdfResultadosEl){
+    btnPdfResultadosEl.addEventListener('click', ()=>{
+      if(btnPdfResultadosEl.disabled) return;
+      abrirVentanaPdfJugador('resultados');
+    });
   }
   if(jugarOtroSorteoBtn){
     jugarOtroSorteoBtn.addEventListener('click',()=>{
@@ -11623,10 +11736,15 @@
       unsubscribeSorteos();
       unsubscribeSorteos=null;
     }
-    unsubscribeSorteos=db.collection('sorteos').where('estado','==','Jugando').onSnapshot(snapshot=>{
+    unsubscribeSorteos=db.collection('sorteos').where('estado','in',['Jugando','Sellado']).onSnapshot(snapshot=>{
       const lista=[];
       snapshot.forEach(doc=>{
         const data=doc.data()||{};
+        const estadoSorteo = (data.estado || '').toString().toLowerCase();
+        const pdfJuegoHabilitado = estadoBanderaSi(data.accesoPdfJuegoJugadores) || estadoBanderaSi(data.pdf);
+        if(estadoSorteo === 'sellado' && !pdfJuegoHabilitado){
+          return;
+        }
         lista.push({id:doc.id,...data});
       });
       lista.sort((a,b)=>{

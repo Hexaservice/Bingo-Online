@@ -101,16 +101,6 @@
       background: linear-gradient(#008c3a, #66d17a);
       display: none;
     }
-    #pdf-listo-btn {
-      position: relative;
-      display: none;
-      background: linear-gradient(#b85c00, #ffaf40);
-      overflow: visible;
-    }
-    #pdf-listo-btn.pdf-disponible {
-      box-shadow: 0 0 18px rgba(255, 214, 102, 0.6);
-      transform: translateY(-2px);
-    }
     .orientacion-modal {
       position: fixed;
       inset: 0;
@@ -1324,7 +1314,6 @@
   <div id="acciones-fixed">
     <button id="generar-resultados-btn">Resultados</button>
     <button id="generar-pdf-btn">Generar PDF</button>
-    <button id="pdf-listo-btn">PDF LISTO</button>
   </div>
   <div id="orientacion-modal" class="orientacion-modal" role="dialog" aria-modal="true" aria-labelledby="orientacion-modal-titulo" aria-hidden="true">
     <div class="orientacion-modal-contenido">
@@ -1400,11 +1389,12 @@
   <script src="js/notificationCenter.js"></script>
   <script src="js/estadoPagoPremio.js"></script>
   <script>
-  ensureAuth('Administrador');
+  ensureAuth();
 
   const params = new URLSearchParams(window.location.search);
   const sorteoId = params.get('s');
-  const COMPAT_ORQUESTAR_PAGOS_AL_CONFIRMAR_PDF = false;
+  const modoVista = (params.get('modo') || '').toString().trim().toLowerCase();
+  const vistaJugador = modoVista === 'jugador';
   if(!sorteoId){
     alert('No se indicó un sorteo.');
     window.location.href = 'cantarsorteos.html';
@@ -1413,7 +1403,6 @@
   const salirBtn = document.getElementById('salir-btn');
   const generarResultadosBtn = document.getElementById('generar-resultados-btn');
   const pdfBtn = document.getElementById('generar-pdf-btn');
-  const pdfListoBtn = document.getElementById('pdf-listo-btn');
   const loadingOverlay = document.getElementById('loading-overlay');
   const loadingText = document.getElementById('loading-text');
   const nombreEl = document.getElementById('nombre-sorteo');
@@ -2375,11 +2364,10 @@
     return `#${hexCanal(mezcla(r))}${hexCanal(mezcla(g))}${hexCanal(mezcla(b))}`;
   }
 
-  salirBtn.addEventListener('click', ()=>{ window.location.href = 'cantarsorteos.html'; });
+  salirBtn.addEventListener('click', ()=>{ window.location.href = vistaJugador ? 'juegoactivo.html' : 'cantarsorteos.html'; });
   if(generarResultadosBtn){ generarResultadosBtn.disabled = true; }
   if(generarResultadosBtn){ generarResultadosBtn.addEventListener('click', manejarGenerarResultados); }
   if(pdfBtn){ pdfBtn.addEventListener('click', generarPDF); }
-  if(pdfListoBtn){ pdfListoBtn.addEventListener('click', confirmarPdfListo); }
   if(orientacionAceptarBtn){ orientacionAceptarBtn.addEventListener('click', ocultarModalOrientacion); }
   if(orientacionModal){
     orientacionModal.addEventListener('click', (event)=>{
@@ -2464,30 +2452,11 @@
 
   function mostrarMensajeCartonesPendientes(){
     if(!cartonesGrid) return;
-    cartonesGrid.innerHTML = '<div class="cartones-placeholder">Haz clic en "Resultados" para calcular y mostrar los cartones del sorteo.</div>';
+    cartonesGrid.innerHTML = vistaJugador
+      ? '<div class="cartones-placeholder">Cargando resultados del sorteo...</div>'
+      : '<div class="cartones-placeholder">Haz clic en "Resultados" para calcular y mostrar los cartones del sorteo.</div>';
   }
 
-  function actualizarBotonPdfListoSegunEstado(opciones = {}){
-    if(!pdfListoBtn) return;
-    const estado = (sorteoData?.pdfresul || '').toString().toLowerCase();
-    const forzarMostrar = opciones.forzarMostrar === true;
-    const mostrar = forzarMostrar || estado === 'si';
-    pdfListoBtn.style.display = mostrar ? 'block' : 'none';
-    if(estado === 'si' && !forzarMostrar){
-      pdfListoBtn.textContent = 'PDF confirmado';
-      pdfListoBtn.disabled = true;
-      pdfListoBtn.classList.add('pdf-disponible');
-      return;
-    }
-    pdfListoBtn.textContent = 'PDF LISTO';
-    const disabled = typeof opciones.disabled === 'boolean' ? opciones.disabled : true;
-    pdfListoBtn.disabled = disabled;
-    const marcarDisponible = opciones.disponible === true;
-    pdfListoBtn.classList.toggle('pdf-disponible', marcarDisponible);
-    if(!marcarDisponible && estado !== 'si'){
-      pdfListoBtn.classList.remove('pdf-disponible');
-    }
-  }
 
   function formatearFechaParaMostrar(fecha){
     if(!fecha) return '-';
@@ -2880,7 +2849,6 @@
 
   function renderCartones(){
     cartonesGrid.innerHTML = '';
-    actualizarBotonPdfListoSegunEstado();
     if(!cartonesMapa.size){
       cartonesGrid.innerHTML = '<div class="cartones-placeholder">No hay cartones generados para este sorteo.</div>';
       return;
@@ -3054,6 +3022,14 @@
         return;
       }
       sorteoData = sorteoDoc.data();
+      const estadoSorteo = (sorteoData.estado || '').toString().trim().toLowerCase();
+      const accesoResultadosHabilitado = estadoSorteo === 'finalizado'
+        || ['si', 'true'].includes((sorteoData.accesoPdfResultadosJugadores || sorteoData.pdfresul || '').toString().trim().toLowerCase());
+      if(vistaJugador && !accesoResultadosHabilitado){
+        alert('El acceso al PDF de resultados aún no ha sido habilitado para jugadores.');
+        window.location.href = 'juegoactivo.html';
+        return;
+      }
       const nombreBase = sorteoData.nombre || 'Sorteo';
       const tituloResultado = `RESULTADO ${nombreBase}`.trim();
       nombreEl.textContent = tituloResultado;
@@ -3115,7 +3091,12 @@
       renderFormas();
       mostrarMensajeCartonesPendientes();
       if(generarResultadosBtn){ generarResultadosBtn.disabled = false; }
-      actualizarBotonPdfListoSegunEstado();
+      if(generarResultadosBtn){
+        generarResultadosBtn.style.display = vistaJugador ? 'none' : 'block';
+      }
+      if(vistaJugador){
+        await cargarCartones();
+      }
     } catch (err) {
       console.error('Error cargando datos', err);
       alert('Ocurrió un error cargando la información del sorteo.');
@@ -3158,10 +3139,6 @@
       if(pdfBtn){
         pdfBtn.style.display = cartonesCargados ? 'block' : 'none';
         pdfBtn.disabled = !cartonesCargados;
-      }
-      if(pdfListoBtn){
-        pdfListoBtn.style.display = 'none';
-        pdfListoBtn.classList.remove('pdf-disponible');
       }
       if(generarResultadosBtn){ generarResultadosBtn.textContent = cartonesCargados ? 'Regenerar resultados' : 'Resultados'; }
     } catch (err) {
@@ -3223,23 +3200,12 @@
 
     try {
       await ensureFirebaseReady();
-      try {
-        await Promise.all([
-          db.collection('sorteos').doc(sorteoId).set({ pdfresul: 'no' }, { merge: true }),
-          db.collection('cantarsorteos').doc(sorteoId).set({ pdfresul: 'no' }, { merge: true })
-        ]);
-        if(sorteoData){
-          sorteoData.pdfresul = 'no';
-        }
-      } catch (errActualizar) {
-        console.error('No se pudo reiniciar el estado pdfresul', errActualizar);
-      }
+      if(generarResultadosBtn){ generarResultadosBtn.style.display = vistaJugador ? 'none' : 'block'; }
       if(generarResultadosBtn){ generarResultadosBtn.disabled = true; }
       if(pdfBtn){
         pdfBtn.disabled = true;
         pdfBtn.textContent = 'Generando PDF...';
       }
-      actualizarBotonPdfListoSegunEstado({ forzarMostrar: true, disabled: true });
       mostrarLoading('Generando PDF para descargar, por favor espera');
 
       if(debeForzarPaisaje){
@@ -3398,12 +3364,10 @@
       }
 
       pdf.save(nombreArchivo);
-      actualizarBotonPdfListoSegunEstado({ forzarMostrar: true, disponible: true, disabled: false });
-      alert('El PDF del sorteo ha sido generado. Descárgalo y luego confirma con "PDF LISTO".');
+      alert('El PDF del sorteo ha sido generado. Descárgalo.');
     } catch (err) {
       console.error('Error generando el PDF', err);
       alert('No se pudo generar el PDF del sorteo. Intenta nuevamente.');
-      actualizarBotonPdfListoSegunEstado();
     } finally {
       restaurarCartones();
       restaurarFormas();
@@ -3422,59 +3386,6 @@
         generarResultadosBtn.disabled = false;
         generarResultadosBtn.textContent = textoOriginalCartones || generarResultadosBtn.textContent;
       }
-      ocultarLoading();
-    }
-  }
-
-  async function confirmarPdfListo(){
-    if(!sorteoId){ return; }
-    const confirmar = await window.confirm('¿Confirmas que el PDF fue descargado correctamente?');
-    if(!confirmar) return;
-    try {
-      await ensureFirebaseReady();
-      if(pdfListoBtn){ pdfListoBtn.disabled = true; }
-      mostrarLoading('Actualizando el estado del PDF, por favor espera');
-      const timestamp = firebase.firestore.FieldValue.serverTimestamp();
-      const eliminar = firebase.firestore.FieldValue.delete();
-      const payload = {
-        pdf: 'si',
-        pdfActualizadoEn: timestamp,
-        pdfUrl: eliminar,
-        pdfStoragePath: eliminar,
-        pdfresul: 'si'
-      };
-      await Promise.all([
-        db.collection('sorteos').doc(sorteoId).set(payload, { merge: true }),
-        db.collection('cantarsorteos').doc(sorteoId).set(payload, { merge: true })
-      ]);
-      if(sorteoData){
-        sorteoData.pdfresul = 'si';
-      }
-      if(COMPAT_ORQUESTAR_PAGOS_AL_CONFIRMAR_PDF){
-        const resultadoOrquestacion = await orquestarCierreSorteoPdfListo();
-        if(sorteoData){
-          sorteoData.solicitudesPagosGeneradas = true;
-          sorteoData.pagosCentroAprobados = false;
-        }
-        const mensajeCorte = resultadoOrquestacion.corteYaEjecutado
-          ? 'El corte de premios ya estaba ejecutado, no se reprocesaron solicitudes.'
-          : `Premios consolidados: ${resultadoOrquestacion.ganadores}.`;
-        alert(
-          `El sorteo se marcó como PDF listo y se ejecutó la orquestación de pagos.\n`+
-          `${mensajeCorte}\n`+
-          `Solicitudes administrativas creadas: ${resultadoOrquestacion.administrativos}.\n`+
-          `Solicitudes de colaboradores creadas: ${resultadoOrquestacion.colaboradores}.\n`+
-          `Los pagos quedan en estado PENDIENTE hasta ser procesados/aprobados en Centro de Pagos.`
-        );
-      } else {
-        alert('El sorteo se marcó como PDF listo. La generación de premios/pagos se realiza manualmente desde Centro de Pagos.');
-      }
-      window.location.href = 'cantarsorteos.html';
-    } catch (err) {
-      console.error('Error actualizando el estado del PDF', err);
-      alert('No se pudo actualizar el estado del PDF. Intenta nuevamente.');
-      if(pdfListoBtn){ pdfListoBtn.disabled = false; }
-    } finally {
       ocultarLoading();
     }
   }
