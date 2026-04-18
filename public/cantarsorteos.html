@@ -6125,7 +6125,16 @@
           const d = doc.data() || {};
           const condicionRaw = (d?.condicion || '').toString().trim().toUpperCase();
           if(condicionRaw === 'ARCHIVADO') return;
-          const registro = { id: doc.id, ...d, pdf: d.pdf || 'no', cantos: [], formas: [] };
+          const registro = {
+            id: doc.id,
+            ...d,
+            pdf: d.pdf || 'no',
+            pdfresul: d.pdfresul || 'no',
+            accesoPdfJuegoJugadores: d.accesoPdfJuegoJugadores || 'no',
+            accesoPdfResultadosJugadores: d.accesoPdfResultadosJugadores || 'no',
+            cantos: [],
+            formas: []
+          };
           registro.pagosCentroAprobados = d.pagosCentroAprobados;
           registro.condicion = condicionRaw || 'VISIBLE';
           registro.nombre = registro.nombre || 'Sorteo';
@@ -6149,8 +6158,13 @@
         sorteos = Array.from(registrosMap.values());
         if(pendientesPdf.length){
           Promise.allSettled(pendientesPdf.map(id=>
-            db.collection('sorteos').doc(id).set({ pdf: 'no' }, { merge: true })
-          )).catch(err=>console.error('Error asegurando pdf en sorteos', err));
+            db.collection('sorteos').doc(id).set({
+              pdf: 'no',
+              pdfresul: 'no',
+              accesoPdfJuegoJugadores: 'no',
+              accesoPdfResultadosJugadores: 'no'
+            }, { merge: true })
+          )).catch(err=>console.error('Error asegurando estados PDF en sorteos', err));
         }
         const idsSorteos = Array.from(registrosMap.keys());
         const cargasDetalles = [];
@@ -6583,31 +6597,29 @@
 
     const estadoActual = obtenerEstadoActualNormalizado();
     if(estadoActual === 'finalizado'){
-      let estadoPdfResultado = (currentSorteoData.pdfresul || '').toString().trim().toLowerCase();
-      if(estadoPdfResultado !== 'si'){
-        try {
-          const docFinal = await db.collection('sorteos').doc(currentSorteoId).get();
-          if(docFinal.exists){
-            const datosFinal = docFinal.data() || {};
-            estadoPdfResultado = (datosFinal.pdfresul || '').toString().trim().toLowerCase() || estadoPdfResultado;
-            currentSorteoData.pdfresul = estadoPdfResultado;
-            const indiceSorteo = sorteos.findIndex(s=>s && s.id === currentSorteoId);
-            if(indiceSorteo >= 0){
-              sorteos[indiceSorteo] = { ...sorteos[indiceSorteo], pdfresul: estadoPdfResultado };
-            }
-          }
-        } catch (errFinal) {
-          console.warn('No se pudo actualizar el estado del PDF de resultados', errFinal);
-        }
+      const confirmar = await preguntarAccionEstado('¿Deseas habilitar el acceso a PDF Resultados a los Jugadores?');
+      if(!confirmar) return;
+      try {
+        const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+        const payload = {
+          accesoPdfResultadosJugadores: 'si',
+          pdfresul: 'si',
+          accesoPdfResultadosJugadoresEn: timestamp
+        };
+        await Promise.all([
+          db.collection('sorteos').doc(currentSorteoId).set(payload, { merge: true }),
+          db.collection('cantarsorteos').doc(currentSorteoId).set(payload, { merge: true })
+        ]);
+        currentSorteoData.accesoPdfResultadosJugadores = 'si';
+        currentSorteoData.pdfresul = 'si';
+        mensajeEl.textContent = 'Acceso a PDF de resultados habilitado para jugadores.';
+        actualizarBotones();
+        actualizarAnimaciones();
+        mostrarDatos();
+      } catch (errFinal) {
+        console.error('No se pudo habilitar el acceso a PDF de resultados', errFinal);
+        alert('Ocurrió un error habilitando el acceso al PDF de resultados.');
       }
-
-      if(estadoPdfResultado === 'no' || !estadoPdfResultado){
-        abrirPdfResultados();
-        return;
-      }
-
-      alert('El sorteo ya está finalizado y se confirmó la descarga del PDF de resultados.');
-      abrirPdfResultados();
       return;
     }
 
@@ -6624,20 +6636,25 @@
       }
       const datos = docRef.data() || {};
       const { estado: pdfEstadoNormalizado } = sincronizarDatosPdf(datos);
-
-      if(pdfEstadoNormalizado === 'no'){
-        try {
-          const destinoUrl = new URL('pdfsorteo.html', window.location.href);
-          destinoUrl.searchParams.set('s', currentSorteoId);
-          window.location.assign(destinoUrl.toString());
-        } catch (err) {
-          const fallback = `pdfsorteo.html?s=${encodeURIComponent(currentSorteoId)}`;
-          window.location.href = fallback;
-        }
+      if(pdfEstadoNormalizado === 'si'){
+        mostrarAvisoSimple('El acceso al PDF de juego ya estaba habilitado para jugadores.', 'PDF habilitado');
         return;
       }
-
-      alert('Ya se ha confirmado la descarga del archivo PDF de sellado de este sorteo');
+      const confirmar = await preguntarAccionEstado('¿Deseas habilitar el acceso a PDF de juego a los Jugadores?');
+      if(!confirmar) return;
+      const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+      const payload = {
+        pdf: 'si',
+        accesoPdfJuegoJugadores: 'si',
+        accesoPdfJuegoJugadoresEn: timestamp,
+        pdfActualizadoEn: timestamp
+      };
+      await Promise.all([
+        db.collection('sorteos').doc(currentSorteoId).set(payload, { merge: true }),
+        db.collection('cantarsorteos').doc(currentSorteoId).set(payload, { merge: true })
+      ]);
+      sincronizarDatosPdf({ ...datos, ...payload });
+      mensajeEl.textContent = 'Acceso a PDF de juego habilitado para jugadores.';
     } catch (error) {
       console.error('Error consultando el estado del PDF', error);
       alert('Ocurrió un error al consultar el estado del documento PDF.');
@@ -6655,10 +6672,11 @@
     try {
       const destinoUrl = new URL('pdfsorteo.html', window.location.href);
       destinoUrl.searchParams.set('s', currentSorteoId);
+      destinoUrl.searchParams.set('modo', 'admin');
       window.location.assign(destinoUrl.toString());
     } catch (error) {
       console.error('No se pudo abrir la ventana de PDF del sorteo', error);
-      const fallback = `pdfsorteo.html?s=${encodeURIComponent(currentSorteoId)}`;
+      const fallback = `pdfsorteo.html?s=${encodeURIComponent(currentSorteoId)}&modo=admin`;
       try {
         window.location.assign(fallback);
       } catch (fallbackError) {
@@ -6782,31 +6800,7 @@
     const estadoActual = obtenerEstadoActualNormalizado();
     if(estadoActual === 'finalizado'){
       forzarVisibilidadResultado(true);
-      let estadoPdfResultado = (currentSorteoData.pdfresul || '').toString().trim().toLowerCase();
-      if(estadoPdfResultado !== 'si'){
-        try {
-          await asegurarDbListo();
-          const docFinal = await db.collection('sorteos').doc(currentSorteoId).get();
-          if(docFinal.exists){
-            const datosFinal = docFinal.data() || {};
-            estadoPdfResultado = (datosFinal.pdfresul || '').toString().trim().toLowerCase() || estadoPdfResultado;
-            currentSorteoData.pdfresul = estadoPdfResultado;
-            const indiceSorteo = sorteos.findIndex(s=>s && s.id === currentSorteoId);
-            if(indiceSorteo >= 0){
-              sorteos[indiceSorteo] = { ...sorteos[indiceSorteo], pdfresul: estadoPdfResultado };
-            }
-          }
-        } catch (errFinal) {
-          console.warn('No se pudo actualizar el estado del PDF de resultados al reintentar la descarga', errFinal);
-        }
-      }
-
-      if(estadoPdfResultado !== 'si'){
-        mostrarAvisoSimple('El sorteo ya se encuentra finalizado. Se abrirá el PDF de resultados para que confirmes su descarga.', 'PDF pendiente');
-        abrirPdfResultados();
-      } else {
-        alert('El sorteo ya finalizó.');
-      }
+      alert('El sorteo ya finalizó.');
       return;
     }
     if(estadoActual !== 'jugando'){
@@ -6837,9 +6831,10 @@
     try {
       const destinoUrl = new URL('pdfresultados.html', window.location.href);
       destinoUrl.searchParams.set('s', currentSorteoId);
+      destinoUrl.searchParams.set('modo', 'admin');
       window.location.assign(destinoUrl.toString());
     } catch (error) {
-      const fallback = `pdfresultados.html?s=${encodeURIComponent(currentSorteoId)}`;
+      const fallback = `pdfresultados.html?s=${encodeURIComponent(currentSorteoId)}&modo=admin`;
       try {
         window.location.assign(fallback);
       } catch (fallbackError) {
@@ -6862,11 +6857,38 @@
     }
     const estadoPdfResultado = (currentSorteoData.pdfresul || '').toString().trim().toLowerCase();
     if(estadoPdfResultado === 'si'){
-      mostrarAvisoSimple('El PDF de resultados confirmado se abre desde el icono flotante del botón.', 'PDF disponible');
+      mostrarAvisoSimple('El acceso al PDF de resultados ya fue habilitado para jugadores.', 'PDF habilitado');
       return;
     }
-    mostrarAvisoSimple('Se abrirá el PDF de resultados para que confirmes su descarga.', 'PDF pendiente');
-    abrirPdfResultados();
+    preguntarAccionEstado('¿Deseas habilitar el acceso a PDF Resultados a los Jugadores?')
+      .then(async confirmar=>{
+        if(!confirmar) return;
+        try{
+          const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+          const payload = {
+            pdfresul: 'si',
+            accesoPdfResultadosJugadores: 'si',
+            accesoPdfResultadosJugadoresEn: timestamp
+          };
+          await Promise.all([
+            db.collection('sorteos').doc(currentSorteoId).set(payload, { merge: true }),
+            db.collection('cantarsorteos').doc(currentSorteoId).set(payload, { merge: true })
+          ]);
+          currentSorteoData.pdfresul = 'si';
+          currentSorteoData.accesoPdfResultadosJugadores = 'si';
+          const indiceSorteo = sorteos.findIndex(s=>s && s.id === currentSorteoId);
+          if(indiceSorteo >= 0){
+            sorteos[indiceSorteo] = { ...sorteos[indiceSorteo], ...payload };
+          }
+          mensajeEl.textContent = 'Acceso a PDF de resultados habilitado para jugadores.';
+          actualizarBotones();
+          actualizarAnimaciones();
+          mostrarDatos();
+        }catch(err){
+          console.error('No se pudo habilitar el acceso a PDF de resultados', err);
+          alert('No fue posible habilitar el acceso al PDF de resultados.');
+        }
+      });
   }
 
   function manejarClickPdfResultadosAlmacenado(evento){
