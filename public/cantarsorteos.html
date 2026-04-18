@@ -1059,6 +1059,35 @@
       color: var(--texto-secundario);
       text-align: center;
     }
+    #modal-ganadores-preview {
+      display: none;
+      justify-content: center;
+      align-items: center;
+      padding: 8px 0 2px;
+      width: 100%;
+    }
+    #modal-ganadores-preview .carton-tabla--mini {
+      border: 2px solid rgba(0, 0, 0, 0.15);
+      border-collapse: collapse;
+      background: linear-gradient(160deg, rgba(255,255,255,0.95), rgba(237,247,255,0.95));
+      box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    }
+    #modal-ganadores-preview .carton-tabla--mini th,
+    #modal-ganadores-preview .carton-tabla--mini td {
+      width: 30px;
+      height: 30px;
+      min-width: 30px;
+      font-size: 0.85rem;
+    }
+    #modal-ganadores-preview .carton-tabla--mini td.celda-forma-estrella {
+      background: linear-gradient(145deg, var(--forma-color-suave, #6fa8dc), rgba(255,255,255,0.92));
+    }
+    #modal-ganadores-preview .carton-tabla--mini td.celda-forma-estrella .forma-estrella {
+      color: var(--forma-color-intenso, #0b5394);
+      font-size: 0.95rem;
+      text-shadow: 0 0 7px rgba(255,255,255,0.85);
+      line-height: 1;
+    }
     .ganador-card {
       background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(240,240,240,0.96));
       border-radius: 14px;
@@ -1754,6 +1783,7 @@
       <div id="modal-ganadores-subtitulo" class="mensaje"></div>
       <div id="modal-ganadores-lista"></div>
       <div id="modal-ganadores-sin" class="modal-mensaje"></div>
+      <div id="modal-ganadores-preview" aria-hidden="true"></div>
     </div>
   </div>
   <div id="nuevos-ganadores-modal" class="modal modal-nuevos-ganadores" role="dialog" aria-modal="true" aria-labelledby="nuevos-ganadores-titulo" aria-hidden="true">
@@ -1907,6 +1937,7 @@
   const modalGanadoresSubtituloEl = document.getElementById('modal-ganadores-subtitulo');
   const modalGanadoresListaEl = document.getElementById('modal-ganadores-lista');
   const modalGanadoresSinEl = document.getElementById('modal-ganadores-sin');
+  const modalGanadoresPreviewEl = document.getElementById('modal-ganadores-preview');
   const modalPremioFormaEl = document.getElementById('modal-premio-forma');
   const modalPremioFormaValorEl = document.getElementById('modal-premio-forma-valor');
   const modalPremioFormaLabelEl = document.getElementById('modal-premio-forma-label');
@@ -4326,6 +4357,7 @@
     const resaltarTodas = datosForma.resaltarTodas === true;
     info.celdas.forEach(celda=>{
       celda.classList.remove('celda-forma-activa', 'celda-forma-solo-borde', 'celda-forma-temporal', 'celda-cantada', 'celda-canto-penalizado');
+      celda.classList.remove('celda-forma-estrella');
       if(celda.dataset.cantada === '1'){
         celda.classList.add('celda-cantada');
       }else if(celda.dataset.cantada === 'p'){
@@ -4333,6 +4365,8 @@
       }
       celda.style.removeProperty('--forma-rgb');
       celda.style.removeProperty('--forma-rgb-vivo');
+      const estrellas = celda.querySelectorAll('.forma-estrella');
+      estrellas.forEach(node=>node.remove());
     });
     posiciones.forEach(pos=>{
       const clave = `${pos.r}-${pos.c}`;
@@ -4343,6 +4377,13 @@
       if(datosForma.soloBorde) celda.classList.add('celda-forma-solo-borde');
       celda.style.setProperty('--forma-rgb', rgbBase);
       celda.style.setProperty('--forma-rgb-vivo', rgbVivo);
+      if(datosForma.mostrarEstrellas){
+        celda.classList.add('celda-forma-estrella');
+        const estrella = document.createElement('span');
+        estrella.className = 'forma-estrella';
+        estrella.textContent = '★';
+        celda.appendChild(estrella);
+      }
     });
     if(info.leyenda){
       if(datosForma.mostrarLeyenda === false){
@@ -4449,9 +4490,33 @@
     actualizarModalPremioForma(forma);
     modalGanadoresListaEl.innerHTML = '';
     modalGanadoresSinEl.textContent = '';
+    if(modalGanadoresPreviewEl){
+      modalGanadoresPreviewEl.innerHTML = '';
+      modalGanadoresPreviewEl.style.display = 'none';
+      modalGanadoresPreviewEl.setAttribute('aria-hidden', 'true');
+    }
     const ganadores = registro?.cartones ? [...registro.cartones] : [];
     if(!ganadores.length){
       modalGanadoresSinEl.textContent = forma?.nombre ? 'Aún no hay cartones ganadores para esta forma.' : 'Esta forma no está configurada para el sorteo.';
+      if(forma?.nombre && modalGanadoresPreviewEl){
+        const colorForma = obtenerColorParaForma(forma?.idx || 1);
+        const tablaInfo = crearTablaCartonVisual({ id: 'forma-preview', posiciones: [] }, 'mini');
+        aplicarResumenCarton(tablaInfo);
+        aplicarFormaCarton(tablaInfo, {
+          posiciones: obtenerPosicionesNormalizadas(forma),
+          color: colorForma,
+          nombre: forma?.nombre,
+          indice: forma?.idx,
+          mostrarLeyenda: false,
+          resaltarTodas: true,
+          mostrarEstrellas: true
+        });
+        modalGanadoresPreviewEl.style.setProperty('--forma-color-suave', ajustarLuminosidad(colorForma, 0.35));
+        modalGanadoresPreviewEl.style.setProperty('--forma-color-intenso', obtenerColorOscurecido(colorForma, 0.7));
+        modalGanadoresPreviewEl.appendChild(tablaInfo.tabla);
+        modalGanadoresPreviewEl.style.display = 'flex';
+        modalGanadoresPreviewEl.setAttribute('aria-hidden', 'false');
+      }
     }else{
       ganadores.sort((a,b)=>{
         const pasoA = obtenerPasoFormaCarton(a.id, idxNumero);
@@ -6819,11 +6884,43 @@
       mensajeEl.textContent = 'El sorteo fue finalizado correctamente.';
       finalizarBtn.classList.remove('attention');
       forzarVisibilidadResultado(true);
-      abrirPdfResultados();
+      const habilitarPdfJugadores = await preguntarAccionEstado('¿Deseas habilitar el acceso a PDF Resultados a los Jugadores?');
+      if(habilitarPdfJugadores){
+        await habilitarAccesoPdfResultadosJugadores();
+      }
+      mostrarAvisoSimple('Sorteo finalizado. Puedes abrir PDF resultados cuando quieras con el ícono flotante.', 'Finalizado');
     } catch (err) {
       console.error('Error finalizando sorteo', err);
       alert('No fue posible finalizar el sorteo.');
     }
+  }
+
+  async function habilitarAccesoPdfResultadosJugadores(){
+    if(!currentSorteoId || !currentSorteoData) return;
+    const estadoPdfResultado = (currentSorteoData.pdfresul || '').toString().trim().toLowerCase();
+    if(estadoPdfResultado === 'si'){
+      return;
+    }
+    const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+    const payload = {
+      pdfresul: 'si',
+      accesoPdfResultadosJugadores: 'si',
+      accesoPdfResultadosJugadoresEn: timestamp
+    };
+    await Promise.all([
+      db.collection('sorteos').doc(currentSorteoId).set(payload, { merge: true }),
+      db.collection('cantarsorteos').doc(currentSorteoId).set(payload, { merge: true })
+    ]);
+    currentSorteoData.pdfresul = 'si';
+    currentSorteoData.accesoPdfResultadosJugadores = 'si';
+    const indiceSorteo = sorteos.findIndex(s=>s && s.id === currentSorteoId);
+    if(indiceSorteo >= 0){
+      sorteos[indiceSorteo] = { ...sorteos[indiceSorteo], ...payload };
+    }
+    mensajeEl.textContent = 'Acceso a PDF de resultados habilitado para jugadores.';
+    actualizarBotones();
+    actualizarAnimaciones();
+    mostrarDatos();
   }
 
   function abrirPdfResultados(){
@@ -6864,26 +6961,7 @@
       .then(async confirmar=>{
         if(!confirmar) return;
         try{
-          const timestamp = firebase.firestore.FieldValue.serverTimestamp();
-          const payload = {
-            pdfresul: 'si',
-            accesoPdfResultadosJugadores: 'si',
-            accesoPdfResultadosJugadoresEn: timestamp
-          };
-          await Promise.all([
-            db.collection('sorteos').doc(currentSorteoId).set(payload, { merge: true }),
-            db.collection('cantarsorteos').doc(currentSorteoId).set(payload, { merge: true })
-          ]);
-          currentSorteoData.pdfresul = 'si';
-          currentSorteoData.accesoPdfResultadosJugadores = 'si';
-          const indiceSorteo = sorteos.findIndex(s=>s && s.id === currentSorteoId);
-          if(indiceSorteo >= 0){
-            sorteos[indiceSorteo] = { ...sorteos[indiceSorteo], ...payload };
-          }
-          mensajeEl.textContent = 'Acceso a PDF de resultados habilitado para jugadores.';
-          actualizarBotones();
-          actualizarAnimaciones();
-          mostrarDatos();
+          await habilitarAccesoPdfResultadosJugadores();
         }catch(err){
           console.error('No se pudo habilitar el acceso a PDF de resultados', err);
           alert('No fue posible habilitar el acceso al PDF de resultados.');

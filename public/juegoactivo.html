@@ -1802,13 +1802,16 @@
           align-items: center;
           gap: clamp(4px, 0.8vw, 8px);
           padding: clamp(5px, 0.8vw, 8px) clamp(8px, 1.3vw, 12px);
-          border-radius: 999px;
+          border-radius: 12px;
           border: 1px solid rgba(46,125,50,0.25);
           background: #eceff1;
           color: #546e7a;
           font-size: clamp(0.58rem, 1.2vw, 0.74rem);
           font-weight: 700;
           letter-spacing: .2px;
+          line-height: 1.05;
+          text-align: center;
+          min-height: 48px;
           cursor: not-allowed;
           opacity: .75;
       }
@@ -2177,6 +2180,8 @@
           align-items: center;
           display: inline-flex;
           flex-direction: column;
+          padding-top: clamp(1px, 0.2vw, 2px);
+          padding-bottom: clamp(1px, 0.2vw, 2px);
       }
       .carton-forma-leyenda--panel:not(.visible) {
           display: none;
@@ -2188,14 +2193,14 @@
           display: block;
           color: #000000;
           font-size: clamp(0.52rem, 2vw, 0.7rem);
-          line-height: 1.05;
+          line-height: 0.95;
           letter-spacing: 0.7px;
       }
       .carton-forma-leyenda__forma {
           display: block;
           color: inherit;
           font-size: clamp(0.48rem, 1.9vw, 0.64rem);
-          line-height: 1.05;
+          line-height: 0.95;
           word-break: break-word;
           text-align: center;
       }
@@ -4361,11 +4366,11 @@
           <div id="panel-pdf-jugadores" class="panel-pdf-jugadores" role="group" aria-label="Accesos PDF para jugadores">
             <button id="btn-pdf-cartones" type="button" class="pdf-acceso-btn" disabled>
               <span class="estado-luz" aria-hidden="true"></span>
-              <span>Cartones sellados</span>
+              <span>Cartones<br>sellados</span>
             </button>
             <button id="btn-pdf-resultados" type="button" class="pdf-acceso-btn" disabled>
               <span class="estado-luz" aria-hidden="true"></span>
-              <span>Cartones ganadores</span>
+              <span>Cartones<br>ganadores</span>
             </button>
           </div>
         </div>
@@ -4857,6 +4862,7 @@
   let liveStreamLinkValor = '';
   let liveStreamLinkCargado = false;
   let liveStreamLinkPromesa = null;
+  let liveStreamHabilitado = true;
   let liveStreamVisible = false;
   let liveStreamDragState = {activo:false, offsetX:0, offsetY:0, pointerId:null};
   let liveStreamTieneTransmision = false;
@@ -4871,6 +4877,7 @@
   let liveStreamPlatform = 'otro';
   let liveStreamIconInterval = null;
   let liveStreamMostrarTexto = true;
+  let autoConsultaFinalizadoEnCurso = false;
   const LIVE_ICON_INTERVAL_MS = 3000;
   let ventanaEnFoco = document.visibilityState === 'visible' && document.hasFocus();
   let cantosRecientesSinAnimacion = false;
@@ -6020,6 +6027,8 @@
         const doc = await db.collection('Variablesglobales').doc('Parametros').get();
         if(doc.exists){
           const data = doc.data() || {};
+          const liveHabilitadoRaw = data.transmitirEnVivo ?? data.transmitirenvivo ?? data.liveHabilitado ?? data.livehabilitado;
+          liveStreamHabilitado = (String(liveHabilitadoRaw ?? 'si').toLowerCase() === 'si') || liveHabilitadoRaw === true;
           const enlace = (data.linkLiveTiktok ?? data.linklivetiktok ?? data.link_live_tiktok ?? '').toString().trim();
           if(enlace){
             liveStreamLinkValor = enlace;
@@ -6029,12 +6038,32 @@
         console.error('Error obteniendo el enlace de la transmisión en vivo', err);
       }
       liveStreamLinkCargado = true;
+      actualizarVisibilidadBotonLive();
       return liveStreamLinkValor;
     })();
     return liveStreamLinkPromesa;
   }
 
+  function actualizarVisibilidadBotonLive(){
+    if(!liveStreamToggleBtn) return;
+    if(liveStreamHabilitado){
+      liveStreamToggleBtn.hidden = false;
+      liveStreamToggleBtn.style.display = '';
+      liveStreamToggleBtn.setAttribute('aria-hidden', 'false');
+    }else{
+      liveStreamToggleBtn.hidden = true;
+      liveStreamToggleBtn.style.display = 'none';
+      liveStreamToggleBtn.setAttribute('aria-hidden', 'true');
+      if(liveStreamVisible){
+        ocultarLiveStream();
+      }
+    }
+  }
+
   function prepararLiveStream(){
+    if(!liveStreamHabilitado){
+      return;
+    }
     mostrarLiveStream();
     mostrarMensajeLive('Buscando transmisiones en vivo...');
     if(!liveStreamAudioHabilitado){
@@ -6514,11 +6543,13 @@
       .then(link=>{
         liveStreamTieneTransmision = typeof link === 'string' && !!link.trim();
         actualizarPlataformaLive(liveStreamTieneTransmision ? link : '');
+        actualizarVisibilidadBotonLive();
         actualizarBotonLiveAnimacion();
       })
       .catch(()=>{
         liveStreamTieneTransmision = false;
         actualizarPlataformaLive('');
+        actualizarVisibilidadBotonLive();
         actualizarBotonLiveAnimacion();
       });
   }
@@ -10747,6 +10778,7 @@
 
   if(liveStreamToggleBtn){
     liveStreamToggleBtn.addEventListener('click',()=>{
+      if(!liveStreamHabilitado) return;
       if(liveStreamVisible){
         ocultarLiveStream();
       }else{
@@ -11481,8 +11513,40 @@
     });
   }
 
+  async function intentarAutoConsultarSorteoFinalizado(sorteoId){
+    if(!sorteoId || autoConsultaFinalizadoEnCurso || sorteoManualSeleccionadoId){
+      return false;
+    }
+    autoConsultaFinalizadoEnCurso = true;
+    try{
+      const doc = await db.collection('sorteos').doc(sorteoId).get();
+      if(!doc.exists) return false;
+      const data = doc.data() || {};
+      const estado = (data.estado || '').toString().trim().toLowerCase();
+      const condicionTexto = (data.condicion ?? data['condición'] ?? '').toString().trim().toUpperCase();
+      if(estado !== 'finalizado' || (condicionTexto && condicionTexto !== 'VISIBLE')){
+        return false;
+      }
+      await seleccionarSorteoFinalizado({
+        id: sorteoId,
+        nombre: data.nombre || 'Sorteo',
+        fecha: data.fecha || '',
+        hora: data.hora || '',
+        tipo: data.tipo || '',
+        estado: data.estado || 'Finalizado'
+      });
+      return true;
+    }catch(err){
+      console.error('No se pudo autoseleccionar el sorteo finalizado', err);
+      return false;
+    }finally{
+      autoConsultaFinalizadoEnCurso = false;
+    }
+  }
+
   function seleccionarSorteo(activos){
     const lista=Array.isArray(activos)?activos:[];
+    const sorteoActivoPrevioId = activeSorteoId;
     haySorteoJugando=lista.length>0;
     if(haySorteoJugando || !sorteoManualSeleccionadoId){
       contadoresOcultosPorFinalizado=false;
@@ -11496,6 +11560,9 @@
     }
     actualizarSinSorteoUI();
     if(!lista.length){
+      if(sorteoActivoPrevioId && !sorteoManualSeleccionadoId){
+        intentarAutoConsultarSorteoFinalizado(sorteoActivoPrevioId);
+      }
       suscribirSimulacionSorteo(null);
       if(manualBingoUnsub){ manualBingoUnsub(); manualBingoUnsub = null; }
       manualBingoEstado = null;

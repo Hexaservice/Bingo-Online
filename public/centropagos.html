@@ -912,6 +912,7 @@
         sorteoId,
         sorteoData: sorteoData || {},
         db: dbRef(),
+        parametrosData: null,
         formasData: [],
         cartonesMapa: new Map(),
         cartonesGanadoresPorForma: new Map(),
@@ -1232,13 +1233,40 @@
     }
 
     async function cpObtenerAdministrativosProcesados(ctx){
+      if(!ctx.parametrosData){
+        try{
+          const docParametros = await ctx.db.collection('Variablesglobales').doc('Parametros').get();
+          ctx.parametrosData = docParametros.exists ? (docParametros.data() || {}) : {};
+        }catch(err){
+          console.warn('No se pudieron cargar los parámetros globales para pagos administrativos', err);
+          ctx.parametrosData = {};
+        }
+      }
+      const valorCarton = Number(ctx.sorteoData?.valorCarton) || 0;
+      const cartonesPagados = Number(ctx.sorteoData?.cartonesjugando ?? ctx.sorteoData?.cartonesJugando ?? 0) || 0;
+      const premioInicial = Number(ctx.sorteoData?.premioInicial ?? 0) || 0;
+      const totalGeneradoPorPagados = Math.max(0, valorCarton) * Math.max(0, cartonesPagados);
+      const baseTotalSorteo = Math.max(0, premioInicial) + totalGeneradoPorPagados;
       const definiciones = [
-        { rolInterno: 'agencia', clavesMonto: ['totalporcentaje','totalPorcentaje','total_porcentaje'] },
-        { rolInterno: 'desarrollador', clavesMonto: ['totalporcentajesu','totalPorcentajeSu','total_porcentajesu'] }
+        {
+          rolInterno: 'agencia',
+          clavesMonto: ['totalporcentaje','totalPorcentaje','total_porcentaje'],
+          clavesPorcentaje: ['porcentaje']
+        },
+        {
+          rolInterno: 'desarrollador',
+          clavesMonto: ['totalporcentajesu','totalPorcentajeSu','total_porcentajesu'],
+          clavesPorcentaje: ['porcentajesu']
+        }
       ];
       const lista = [];
       for(const definicion of definiciones){
-        const monto = cpObtenerCampoNumeroFlexible(ctx.sorteoData || {}, definicion.clavesMonto);
+        const montoHistorico = cpObtenerCampoNumeroFlexible(ctx.sorteoData || {}, definicion.clavesMonto);
+        const porcentajeConfigurado = cpObtenerCampoNumeroFlexible(ctx.parametrosData || {}, definicion.clavesPorcentaje);
+        const montoCalculado = (baseTotalSorteo > 0 && porcentajeConfigurado > 0)
+          ? ((baseTotalSorteo * porcentajeConfigurado) / 100)
+          : 0;
+        const monto = montoCalculado > 0 ? montoCalculado : montoHistorico;
         const usuarios = await cpObtenerUsuariosPorRolInterno(ctx, definicion.rolInterno);
         usuarios.forEach(usuario=>{
           const email = cpNormalizarEmail(usuario.email || usuario.uid || '');
