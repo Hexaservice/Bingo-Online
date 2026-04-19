@@ -1457,64 +1457,6 @@
       return 0;
     }
 
-    function cpObtenerCartonesGratisSegundoForma(forma){
-      if(!forma) return 0;
-      const candidatos = [
-        forma?.cartonesGratis2,
-        forma?.cartonesgratis2,
-        forma?.cartones_gratis2,
-        forma?.cartonesGratisSegundo,
-        forma?.cartonesGratisSegundoLugar,
-        forma?.premioCartonesGratis2,
-        forma?.premioCartonesGratisSegundo,
-        forma?.premioCartonesGratisSegundoLugar
-      ];
-      for(const candidato of candidatos){
-        const numero = Number(candidato);
-        if(Number.isFinite(numero)){
-          return Math.max(0, Math.round(numero));
-        }
-      }
-      return 0;
-    }
-
-    function cpConstruirClaveJugador(carton){
-      const claveUsuario = (carton?.userId || carton?.usuarioId || '').toString().trim();
-      const correoCarton = cpNormalizarEmail(carton?.gmail || carton?.email || carton?.IDbilletera || '');
-      const aliasCarton = (carton?.alias || carton?.aliasCarton || '').toString();
-      return claveUsuario || (correoCarton ? `correo::${correoCarton}` : `alias::${aliasCarton.toLowerCase()}`);
-    }
-
-    function cpObtenerCartonesSegundoLugar(ctx, forma, pasoGanador){
-      const posiciones = cpObtenerPosicionesForma(forma);
-      if(!posiciones.length || posiciones.length <= 1) return [];
-      const pasoLimite = Number(pasoGanador);
-      if(!Number.isFinite(pasoLimite) || pasoLimite < 0) return [];
-      const resultado = [];
-      ctx.cartonesMapa.forEach(carton=>{
-        let faltantes = 0;
-        let validas = 0;
-        for(const pos of posiciones){
-          const valor = carton.valorPorPos.get(`${pos.r}-${pos.c}`);
-          if(valor === undefined){
-            faltantes = 2;
-            break;
-          }
-          const paso = ctx.cantosIndiceMap.get(valor);
-          if(paso === undefined || paso > pasoLimite){
-            faltantes += 1;
-            if(faltantes > 1) break;
-          }else{
-            validas += 1;
-          }
-        }
-        if(faltantes === 1 && validas > 0){
-          resultado.push(carton);
-        }
-      });
-      return resultado;
-    }
-
     function cpObtenerCartonesGratisPorGanador(forma,totalGanadores){
       const totalCartones = cpObtenerCartonesGratisForma(forma);
       if(totalCartones <= 0) return 0;
@@ -1637,9 +1579,10 @@
         const creditosPorGanador = cantidad > 0 ? Math.floor(totalCreditos / cantidad) : 0;
         const gratisPorGanador = cpObtenerCartonesGratisPorGanador(forma, cantidad);
         ganadores.forEach(carton=>{
-          const clave = cpConstruirClaveJugador(carton);
-          const correoCarton = cpNormalizarEmail(carton?.gmail || carton?.email || carton?.IDbilletera || '');
+          const claveUsuario = (carton?.userId || carton?.usuarioId || '').toString().trim();
+          const correoCarton = (carton?.gmail || carton?.email || carton?.IDbilletera || '').toString().trim();
           const aliasCarton = (carton?.alias || carton?.aliasCarton || '').toString();
+          const clave = claveUsuario || (correoCarton ? `correo::${correoCarton.toLowerCase()}` : `alias::${aliasCarton.toLowerCase()}`);
           if(!jugadoresMapa.has(clave)){
             jugadoresMapa.set(clave, {
               userId: carton?.userId || carton?.usuarioId || '',
@@ -1647,7 +1590,6 @@
               alias: aliasCarton,
               creditos: 0,
               cartonesGratis: 0,
-              cartonesGratisSegundoLugar: 0,
               formas: [],
               cartonesIds: new Set()
             });
@@ -1666,22 +1608,6 @@
             cartonesGratis: gratisPorGanador
           });
         });
-
-        const cartonesGratisSegundo = cpObtenerCartonesGratisSegundoForma(forma);
-        if(cartonesGratisSegundo > 0){
-          const pasoGanador = Number(registro?.paso);
-          const segundos = cpObtenerCartonesSegundoLugar(ctx, forma, pasoGanador);
-          const clavesSegundoOtorgadas = new Set();
-          segundos.forEach(cartonSegundo=>{
-            const claveSegundo = cpConstruirClaveJugador(cartonSegundo);
-            if(!claveSegundo || clavesSegundoOtorgadas.has(claveSegundo)) return;
-            clavesSegundoOtorgadas.add(claveSegundo);
-            const jugador = jugadoresMapa.get(claveSegundo);
-            if(!jugador) return;
-            jugador.cartonesGratis += cartonesGratisSegundo;
-            jugador.cartonesGratisSegundoLugar = (Number(jugador.cartonesGratisSegundoLugar) || 0) + cartonesGratisSegundo;
-          });
-        }
       });
 
       const agregados = new Map();
