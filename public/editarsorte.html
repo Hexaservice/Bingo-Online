@@ -308,31 +308,6 @@
   let formaSeleccionadaId=null;
   let premioInicialBase=0;
   let totalPremiosBase=0;
-  let porcentajePremioConfigurado=0;
-
-  function normalizarPorcentaje(valor){
-    const numero=Number(valor);
-    if(!Number.isFinite(numero)) return 0;
-    if(numero<0) return 0;
-    if(numero>100) return 100;
-    return numero;
-  }
-
-  async function cargarPorcentajePremioDesdeParametros(){
-    if(!db){
-      porcentajePremioConfigurado=0;
-      return porcentajePremioConfigurado;
-    }
-    try{
-      const doc=await db.collection('Variablesglobales').doc('Parametros').get();
-      const data=doc.exists?(doc.data()||{}):{};
-      porcentajePremioConfigurado=normalizarPorcentaje(data.porcentajepremio);
-    }catch(error){
-      console.error('No se pudo cargar el porcentaje premio desde parámetros',error);
-      porcentajePremioConfigurado=0;
-    }
-    return porcentajePremioConfigurado;
-  }
 
   function mostrarConfirmacion(mensaje){
     const modal=document.getElementById('confirm-modal');
@@ -531,18 +506,15 @@
     setCookie(cookieKey,JSON.stringify(data));
   }
 
-  async function iniciarSesionYEstadoLocal(){
-    await initFirebase();
-    auth.onAuthStateChanged(async u=>{
-      if(!u) return;
+firebase.auth().onAuthStateChanged(u=>{
+    if(u){
       cookieKey='editarsorteo_'+sorteoId+'_'+u.email.replace(/[^\w]/g,'_');
-      await cargarPorcentajePremioDesdeParametros();
       cargarDatos().then(()=>{
         loadState();
         setupSaveListeners();
       });
-    });
-  }
+    }
+  });
 
   function formatearHora(hora){
     if(!hora) return '';
@@ -738,10 +710,6 @@
   async function cargarFormasModal(idx){
     const grid=document.getElementById('formas-grid');
     if(!grid) return;
-    if(!db){
-      grid.innerHTML='<div class="formas-empty">Firebase aún no está listo. Reintenta en unos segundos.</div>';
-      return;
-    }
     grid.innerHTML='<div class="formas-empty">Cargando...</div>';
     formasModalDatos=[];
     formaSeleccionadaId=null;
@@ -1011,21 +979,8 @@
     return data.url;
   }
 
-  async function iniciarPaginaEditarSorteo(){
-    try{
-      await initFirebase();
-      await cargarPorcentajePremioDesdeParametros();
-    }catch(error){
-      console.error('No se pudo inicializar Firebase en Editar Sorteo',error);
-      alert('No se pudo inicializar la conexión con Firebase. Recarga la página e intenta nuevamente.');
-      return;
-    }
-    crearFormas();
-    actualizarTotales();
-    iniciarSesionYEstadoLocal().catch(err=>console.error('No se pudo iniciar el estado local de sesión',err));
-  }
-
-  iniciarPaginaEditarSorteo();
+  crearFormas();
+  actualizarTotales();
 
   document.getElementById('cerrar-formas-modal').addEventListener('click',cerrarFormasModal);
   document.getElementById('formas-modal').addEventListener('click',e=>{if(e.target.id==='formas-modal') cerrarFormasModal();});
@@ -1188,8 +1143,7 @@
     try{
       const premioInicialFinal=premioInicialVal??0;
       const totalPremiosNuevo=Math.max(0,totalPremiosBase-premioInicialBase+premioInicialFinal);
-      const porcentajePremioFinal=normalizarPorcentaje(porcentajePremioConfigurado);
-      const updateData={nombre,tipo,fecha,hora,horacierre:cierre,valorCarton:valor,estado,condicion,totalPremios:totalPremiosNuevo,porcentajepremio:porcentajePremioFinal};
+      const updateData={nombre,tipo,fecha,hora,horacierre:cierre,valorCarton:valor,estado,condicion,totalPremios:totalPremiosNuevo};
       if(premioInicialVal!==null){
         updateData.premioInicial=premioInicialVal;
       }else{

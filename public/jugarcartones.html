@@ -637,8 +637,6 @@
     .carton-center-info{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1;font-weight:bold;text-transform:none;}
     #carton-num-max{font-size:1.2rem;color:#006400;text-shadow:0 0 4px #fff,0 0 6px rgba(0,0,0,0.2);font-family:'Poppins',sans-serif;display:block;animation:wiggle 1s infinite;}
     .carton td.error{border:2px solid red;}
-    .carton td.azar-resaltado-verde{background:#1ca14c !important;color:#fff !important;text-shadow:none !important;transition:background-color .2s ease,color .2s ease;}
-    .carton td.azar-resaltado-azul{background:#1f4fbf !important;color:#fff !important;text-shadow:none !important;transition:background-color .2s ease,color .2s ease;}
     .carton-back{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:10px;backface-visibility:hidden;transform:rotateY(180deg);background:linear-gradient(white,gray);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:5px;overflow:hidden;}
     .carton-back img{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;height:auto;opacity:0.15;object-fit:contain;pointer-events:none;z-index:0;}
     .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);justify-content:center;align-items:center;z-index:1000;padding:12px;box-sizing:border-box;}
@@ -3527,30 +3525,8 @@ function toggleForma(idx){
     validateBoard();
   }
 
-  function obtenerEstadoCartonAzar(){
-    const celdasNoFree=[...document.querySelectorAll('#bingo-board td:not(.free)')];
-    const total=celdasNoFree.length;
-    let llenas=0;
-    celdasNoFree.forEach(td=>{
-      if((td.dataset.value||'').toString().trim()!=='') llenas++;
-    });
-    if(llenas===0) return 'vacio';
-    if(llenas===total) return 'lleno';
-    return 'parcial';
-  }
-
-  function resaltarCeldasModificadas(celdas=[],modo='verde'){
-    if(!Array.isArray(celdas) || celdas.length===0) return;
-    const clase=modo==='azul'?'azar-resaltado-azul':'azar-resaltado-verde';
-    celdas.forEach(td=>{
-      td.classList.remove('azar-resaltado-verde','azar-resaltado-azul');
-      td.classList.add(clase);
-      setTimeout(()=>td.classList.remove(clase),2000);
-    });
-  }
-
-  function cargarAzar({reemplazoTotal=false}={}){
-    const celdasModificadas=[];
+  function cargarAzar(){
+    limpiarcarton();
     for(let c=0;c<5;c++){
       const [start,end]=ranges[c];
       const nums=[];
@@ -3559,29 +3535,13 @@ function toggleForma(idx){
       for(let r=0;r<5;r++){
         if(r===2&&c===2) continue;
         const td=document.querySelector(`#bingo-board td[data-row="${r}"][data-col="${c}"]`);
-        const actual=(td.dataset.value||'').toString().trim();
-        if(!reemplazoTotal && actual!=='') continue;
         const val=nums.pop();
         td.dataset.value=val;
         td.textContent=val;
-        celdasModificadas.push(td);
       }
     }
-    resaltarCeldasModificadas(celdasModificadas,reemplazoTotal?'azul':'verde');
     validateBoard();
     saveToCookie();
-  }
-
-  async function manejarAzarContextual(){
-    const estado=obtenerEstadoCartonAzar();
-    let mensaje='¿Quieres cargar jugadas al azar?';
-    if(estado==='parcial'){
-      mensaje='¿Deseas elegir al azar los números restantes en el cartón?';
-    }else if(estado==='lleno'){
-      mensaje='¿Deseas cambiar todas las jugadas al azar en el cartón?';
-    }
-    if(!(await confirm(mensaje))) return;
-    cargarAzar({reemplazoTotal:estado==='lleno'});
   }
 
   async function actualizarDatosSorteo(){
@@ -3921,19 +3881,8 @@ function toggleForma(idx){
     const valor=toNumberSafe(sorteoData.valorCarton,0);
     const maxGratis=toNumberSafe(sorteoData.maxcartongratis,0);
     const vars=await db.collection('Variablesglobales').doc('Parametros').get();
-    const varsData=vars.data()||{};
     const porcentaje=toNumberSafe(vars.data()?.porcentaje,0);
     const porcentajesu=toNumberSafe(vars.data()?.porcentajesu,0);
-    const cuentasEspecialesRaw=Array.isArray(varsData.cuentasFondosEspeciales)
-      ? varsData.cuentasFondosEspeciales
-      : (Array.isArray(varsData.cuentasEspecialesFondos) ? varsData.cuentasEspecialesFondos : []);
-    const porcentajeCuentasActivas=cuentasEspecialesRaw
-      .filter(cuenta=>Boolean(cuenta?.activa))
-      .reduce((acc,cuenta)=>acc+toNumberSafe(cuenta?.porcentaje,0),0);
-    const porcentajePremioConfigurado=toNumberSafe(
-      sorteoData?.porcentajepremio,
-      toNumberSafe(varsData.porcentajepremio,0)
-    );
     let jugarGratis=false;
     const gratisJugandoJugador=gratisUsadosJugador;
     if(gratis>0 && (maxGratis<=0 || gratisJugandoJugador<maxGratis)){
@@ -3981,18 +3930,11 @@ function toggleForma(idx){
         if(!Number.isFinite(valorCartonActual) || valorCartonActual<0){
           throw new Error('VALOR_CARTON_INVALIDO');
         }
-        const porcentajeTx=Math.max(0,toNumberSafe(porcentaje,0));
-        const porcentajeSuTx=Math.max(0,toNumberSafe(porcentajesu,0));
-        const porcentajePremioBase=Math.max(0,toNumberSafe(
-          sorteoDataTx?.porcentajepremio,
-          porcentajePremioConfigurado
-        ));
-        const porcentajePremioTx=porcentajePremioBase>0
-          ? porcentajePremioBase
-          : Math.max(0,100-porcentajeTx-porcentajeSuTx-porcentajeCuentasActivas);
+        const porcentajeTx=toNumberSafe(porcentaje,0);
+        const porcentajeSuTx=toNumberSafe(porcentajesu,0);
         const porcentajeValTx=valorCartonActual*porcentajeTx/100;
         const porcentajeSuValTx=valorCartonActual*porcentajeSuTx/100;
-        const paraPremioTx=valorCartonActual*porcentajePremioTx/100;
+        const paraPremioTx=valorCartonActual-porcentajeValTx-porcentajeSuValTx;
         const creditosActual=toNumberSafe(billeteraSnap.data()?.creditos,0);
         const creditosTransitoActual=Math.max(0,toNumberSafe(billeteraSnap.data()?.creditostransito,0));
         const gratisActual=toNumberSafe(billeteraSnap.data()?.CartonesGratis,0);
@@ -4794,7 +4736,7 @@ document.getElementById('gratis-label').addEventListener('click',()=>{
   document.getElementById('premio-valor').addEventListener('click',mostrarPremiosModal);
   document.getElementById('premios-aceptar').addEventListener('click',()=>{document.getElementById('premios-modal').style.display='none';});
   document.getElementById('limpiar-btn').addEventListener('click',async()=>{if(await confirm('¿Deseas limpiar todas las jugadas del carton?')) limpiarcarton();});
-  document.getElementById('azar-btn').addEventListener('click',manejarAzarContextual);
+  document.getElementById('azar-btn').addEventListener('click',async()=>{if(await confirm('¿Quieres cargar jugadas al azar?')) cargarAzar();});
   document.getElementById('volver-btn').addEventListener('click',()=>{window.location.href='player.html';});
   document.getElementById('guardar-check').addEventListener('change',e=>{
     const show=e.target.checked;

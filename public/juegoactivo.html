@@ -8586,37 +8586,6 @@
     return resultado;
   }
 
-  function obtenerCantosActivosSet(){
-    const activos=new Set();
-    if(!Array.isArray(cantosOrdenados) || !cantosOrdenados.length){
-      return activos;
-    }
-    cantosOrdenados.forEach(numero=>{
-      const normalizado=Number(numero);
-      if(Number.isFinite(normalizado) && esCantoGanador(normalizado)){
-        activos.add(normalizado);
-      }
-    });
-    return activos;
-  }
-
-  function contarAciertosCarton(carton, cantosActivosSet=obtenerCantosActivosSet()){
-    if(!carton || !(cantosActivosSet instanceof Set) || !cantosActivosSet.size){
-      return 0;
-    }
-    const valores=carton.valorPorPos instanceof Map
-      ? Array.from(carton.valorPorPos.values())
-      : [];
-    let aciertos=0;
-    valores.forEach(valor=>{
-      const numero=Number(valor);
-      if(Number.isFinite(numero) && cantosActivosSet.has(numero)){
-        aciertos++;
-      }
-    });
-    return aciertos;
-  }
-
   function actualizarEtiquetaMisCartones(){
     if(!misCartonesLabelEl) return;
     misCartonesLabelEl.textContent = modoSimulacionCartones
@@ -10317,13 +10286,11 @@
       return;
     }
     cartonesMensajeEl.textContent='';
-    const cantosActivosSet=obtenerCantosActivosSet();
     const decorados=lista.map(carton=>{
       const formasGanadas=mapaFormasActivo.get(carton.id)||[];
       const primerPaso=formasGanadas.length?Math.min(...formasGanadas.map(f=>f.paso)):Infinity;
       const resumenGanancias=obtenerResumenGananciasCarton(carton,5);
-      const totalAciertos=contarAciertosCarton(carton, cantosActivosSet);
-      return {...carton, formasGanadas, primerPaso, resumenGanancias, totalAciertos};
+      return {...carton, formasGanadas, primerPaso, resumenGanancias};
     });
     totalGananciasJugador=decorados.reduce((acum,carton)=>{
       const total=Number(carton?.resumenGanancias?.total)||0;
@@ -10335,9 +10302,6 @@
       const aGan=a.formasGanadas.length>0;
       const bGan=b.formasGanadas.length>0;
       if(aGan!==bGan) return aGan?-1:1;
-      const aciertosA=Number(a.totalAciertos)||0;
-      const aciertosB=Number(b.totalAciertos)||0;
-      if(aciertosA!==aciertosB) return aciertosB-aciertosA;
       if(aGan && bGan){
         if(a.primerPaso!==b.primerPaso) return a.primerPaso-b.primerPaso;
       }
