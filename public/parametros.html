@@ -136,6 +136,126 @@
       margin-left: 4px;
       font-weight: bold;
     }
+    .fondos-especiales-section {
+      width: 100%;
+      border: 1px solid #d9d9d9;
+      border-radius: 10px;
+      padding: 12px;
+      box-sizing: border-box;
+      background: rgba(255, 255, 255, 0.9);
+    }
+    .fondos-especiales-section h3 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+      text-align: left;
+    }
+    .fondos-controls {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .fondos-fields {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      flex: 1;
+      flex-wrap: wrap;
+    }
+    .fondos-field {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+    .fondos-field input[type="text"],
+    .fondos-field input[type="number"] {
+      min-width: 150px;
+      padding: 5px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      background: #fff;
+    }
+    .fondos-checkbox {
+      flex-direction: row;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .icon-btn-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .icon-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid #bdbdbd;
+      background: #fff;
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .icon-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+    .fondos-table-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+    .fondos-table {
+      width: 100%;
+      min-width: 500px;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    .fondos-table th,
+    .fondos-table td {
+      border: 1px solid #d8d8d8;
+      padding: 6px 8px;
+      text-align: left;
+      white-space: nowrap;
+    }
+    .fondos-table th:last-child,
+    .fondos-table td:last-child {
+      text-align: center;
+    }
+    @media (max-width: 768px) {
+      #parametros-form {
+        width: 95%;
+      }
+      .form-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+      }
+      .form-row label {
+        text-align: left;
+        margin-right: 0;
+      }
+      .small-row {
+        justify-content: flex-start;
+      }
+      .small-row .field {
+        width: 100%;
+      }
+      .small-row .field input,
+      .small-row .field select {
+        flex: 1;
+        width: auto;
+      }
+      .fondos-controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .icon-btn-group {
+        width: 100%;
+      }
+    }
   </style>
   <link rel="stylesheet" href="css/desktopFrame.css">
 </head>
@@ -201,6 +321,44 @@
         <span class="percent">%</span>
       </div>
     </div>
+    <div class="fondos-especiales-section">
+      <h3>Cuentas especiales de fondos</h3>
+      <div class="fondos-controls">
+        <div class="fondos-fields">
+          <div class="fondos-field">
+            <label for="fondo-nombre">Nombre cuenta</label>
+            <input type="text" id="fondo-nombre" placeholder="Nombre de cuenta">
+          </div>
+          <div class="fondos-field">
+            <label for="fondo-porcentaje">Porcentaje</label>
+            <input type="number" id="fondo-porcentaje" placeholder="0" step="0.01">
+          </div>
+          <label class="fondos-field fondos-checkbox">
+            <input type="checkbox" id="fondo-activa">
+            Activa
+          </label>
+        </div>
+        <div class="icon-btn-group">
+          <button type="button" id="fondo-nuevo-btn" class="icon-btn" title="Nuevo">☀️</button>
+          <button type="button" id="fondo-editar-btn" class="icon-btn" title="Editar" disabled>✏️</button>
+          <button type="button" id="fondo-eliminar-btn" class="icon-btn" title="Eliminar" disabled>🗑️</button>
+        </div>
+      </div>
+      <div class="fondos-table-wrap">
+        <table class="fondos-table">
+          <thead>
+            <tr>
+              <th>N°</th>
+              <th>Nombre cuenta</th>
+              <th>Porcentaje</th>
+              <th>Estado</th>
+              <th>Sel.</th>
+            </tr>
+          </thead>
+          <tbody id="fondos-table-body"></tbody>
+        </table>
+      </div>
+    </div>
     <button id="editar-btn" class="menu-btn">Editar</button>
     <button id="guardar-btn" class="menu-btn" style="display:none;">Guardar</button>
   </div>
@@ -214,6 +372,14 @@
     ensureAuth('Superadmin');
     const EMAIL_PERMITIDO_PARAMETROS = 'jhoseph.q@gmail.com';
     const camposContrasenaLegacy = ['contrasenasu','contrasenaSu','contrasenaSU','Contrasenasu','ContrasenaSu','ContrasenaSU'];
+    let cuentasEspecialesFondos = [];
+    let cuentaEspecialSeleccionadaId = null;
+    function generarIdCuentaEspecial(){
+      if(window.crypto && typeof window.crypto.randomUUID === 'function'){
+        return window.crypto.randomUUID();
+      }
+      return `cuenta-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+    }
 
     function usuarioPuedeGestionarParametros(user){
       const emailActual = String(user?.email || '').trim().toLowerCase();
@@ -280,11 +446,127 @@
       document.getElementById('porcentajesu').value = data.porcentajesu || '';
       document.getElementById('porcentajeretiro').value = data.porcentajeretiro || '';
       document.getElementById('porcentajeadministra').value = data.porcentajeadministra || '';
+      cuentasEspecialesFondos = Array.isArray(data.cuentasEspecialesFondos)
+        ? data.cuentasEspecialesFondos.map(item => ({
+            id: item.id || generarIdCuentaEspecial(),
+            nombre: String(item.nombre || '').trim(),
+            porcentaje: Number(item.porcentaje) || 0,
+            activa: Boolean(item.activa)
+          }))
+        : [];
+      cuentaEspecialSeleccionadaId = null;
+      renderizarTablaFondos();
+      limpiarFormularioFondos();
+      actualizarEstadoAccionesFondos();
       /* Habilitar edición por defecto para permitir la selección inmediata del país */
       toggleEdicion(false);
     }
+    function limpiarFormularioFondos(){
+      document.getElementById('fondo-nombre').value = '';
+      document.getElementById('fondo-porcentaje').value = '';
+      document.getElementById('fondo-activa').checked = true;
+    }
+    function renderizarTablaFondos(){
+      const body = document.getElementById('fondos-table-body');
+      body.innerHTML = '';
+      cuentasEspecialesFondos.forEach((cuenta, index)=>{
+        const tr = document.createElement('tr');
+        const checked = cuentaEspecialSeleccionadaId === cuenta.id ? 'checked' : '';
+        tr.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${cuenta.nombre}</td>
+          <td>${cuenta.porcentaje}%</td>
+          <td>${cuenta.activa ? 'Activa' : 'Inactiva'}</td>
+          <td><input type="radio" name="fondo-seleccion" data-cuenta-id="${cuenta.id}" ${checked}></td>
+        `;
+        body.appendChild(tr);
+      });
+      body.querySelectorAll('input[name="fondo-seleccion"]').forEach(radio=>{
+        radio.addEventListener('change', (event)=>{
+          cuentaEspecialSeleccionadaId = event.target.dataset.cuentaId || null;
+          const seleccionada = obtenerCuentaSeleccionada();
+          if(seleccionada){
+            document.getElementById('fondo-nombre').value = seleccionada.nombre;
+            document.getElementById('fondo-porcentaje').value = seleccionada.porcentaje;
+            document.getElementById('fondo-activa').checked = seleccionada.activa;
+          }
+          actualizarEstadoAccionesFondos();
+        });
+      });
+    }
+    function actualizarEstadoAccionesFondos(){
+      const haySeleccion = Boolean(cuentaEspecialSeleccionadaId);
+      document.getElementById('fondo-editar-btn').disabled = !haySeleccion;
+      document.getElementById('fondo-eliminar-btn').disabled = !haySeleccion;
+    }
+    function obtenerCuentaSeleccionada(){
+      if(!cuentaEspecialSeleccionadaId){
+        return null;
+      }
+      return cuentasEspecialesFondos.find(c => c.id === cuentaEspecialSeleccionadaId) || null;
+    }
+    function leerCuentaDesdeFormulario(){
+      const nombre = document.getElementById('fondo-nombre').value.trim();
+      const porcentaje = parseFloat(document.getElementById('fondo-porcentaje').value);
+      const activa = document.getElementById('fondo-activa').checked;
+      if(!nombre){
+        alert('Debes indicar el nombre de la cuenta especial.');
+        return null;
+      }
+      return {
+        nombre,
+        porcentaje: Number.isFinite(porcentaje) ? porcentaje : 0,
+        activa
+      };
+    }
+    document.getElementById('fondo-nuevo-btn').addEventListener('click', ()=>{
+      const nuevaCuenta = leerCuentaDesdeFormulario();
+      if(!nuevaCuenta){
+        return;
+      }
+      cuentasEspecialesFondos.push({
+        id: generarIdCuentaEspecial(),
+        ...nuevaCuenta
+      });
+      cuentaEspecialSeleccionadaId = null;
+      renderizarTablaFondos();
+      limpiarFormularioFondos();
+      actualizarEstadoAccionesFondos();
+    });
+    document.getElementById('fondo-editar-btn').addEventListener('click', ()=>{
+      const cuentaSeleccionada = obtenerCuentaSeleccionada();
+      if(!cuentaSeleccionada){
+        return;
+      }
+      const datos = leerCuentaDesdeFormulario();
+      if(!datos){
+        return;
+      }
+      cuentaSeleccionada.nombre = datos.nombre;
+      cuentaSeleccionada.porcentaje = datos.porcentaje;
+      cuentaSeleccionada.activa = datos.activa;
+      renderizarTablaFondos();
+      actualizarEstadoAccionesFondos();
+    });
+    document.getElementById('fondo-eliminar-btn').addEventListener('click', ()=>{
+      if(!cuentaEspecialSeleccionadaId){
+        return;
+      }
+      cuentasEspecialesFondos = cuentasEspecialesFondos.filter(c=>c.id !== cuentaEspecialSeleccionadaId);
+      cuentaEspecialSeleccionadaId = null;
+      renderizarTablaFondos();
+      limpiarFormularioFondos();
+      actualizarEstadoAccionesFondos();
+    });
     function toggleEdicion(disabled){
       document.querySelectorAll('#parametros-form input, #parametros-form select').forEach(inp=>inp.disabled = disabled);
+      document.getElementById('fondo-nuevo-btn').disabled = disabled;
+      if(disabled){
+        document.getElementById('fondo-editar-btn').disabled = true;
+        document.getElementById('fondo-eliminar-btn').disabled = true;
+      }else{
+        actualizarEstadoAccionesFondos();
+      }
       document.getElementById('editar-btn').style.display = disabled ? 'block':'none';
       document.getElementById('guardar-btn').style.display = disabled ? 'none':'block';
     }
@@ -303,7 +585,13 @@
         porcentaje: parseFloat(document.getElementById('porcentaje').value)||0,
         porcentajesu: parseFloat(document.getElementById('porcentajesu').value)||0,
         porcentajeretiro: parseFloat(document.getElementById('porcentajeretiro').value)||0,
-        porcentajeadministra: parseFloat(document.getElementById('porcentajeadministra').value)||0
+        porcentajeadministra: parseFloat(document.getElementById('porcentajeadministra').value)||0,
+        cuentasEspecialesFondos: cuentasEspecialesFondos.map(({id, nombre, porcentaje, activa})=>({
+          id,
+          nombre,
+          porcentaje,
+          activa
+        }))
       };
       const limpiezaLegacy = Object.fromEntries(camposContrasenaLegacy.map(campo=>[campo, firebase.firestore.FieldValue.delete()]));
       await db.collection('Variablesglobales').doc('Parametros').set({ ...data, ...limpiezaLegacy },{merge:true});
