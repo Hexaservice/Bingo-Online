@@ -446,14 +446,17 @@
       document.getElementById('porcentajesu').value = data.porcentajesu || '';
       document.getElementById('porcentajeretiro').value = data.porcentajeretiro || '';
       document.getElementById('porcentajeadministra').value = data.porcentajeadministra || '';
-      cuentasEspecialesFondos = Array.isArray(data.cuentasEspecialesFondos)
-        ? data.cuentasEspecialesFondos.map(item => ({
+      const cuentasFondosRaw = Array.isArray(data.cuentasFondosEspeciales)
+        ? data.cuentasFondosEspeciales
+        : (Array.isArray(data.cuentasEspecialesFondos) ? data.cuentasEspecialesFondos : []);
+      cuentasEspecialesFondos = cuentasFondosRaw
+        .map(item => ({
             id: item.id || generarIdCuentaEspecial(),
             nombre: String(item.nombre || '').trim(),
             porcentaje: Number(item.porcentaje) || 0,
-            activa: Boolean(item.activa)
-          }))
-        : [];
+            activa: Boolean(item.activa),
+            updatedAt: item.updatedAt || null
+          }));
       cuentaEspecialSeleccionadaId = null;
       renderizarTablaFondos();
       limpiarFormularioFondos();
@@ -526,7 +529,8 @@
       }
       cuentasEspecialesFondos.push({
         id: generarIdCuentaEspecial(),
-        ...nuevaCuenta
+        ...nuevaCuenta,
+        updatedAt: new Date().toISOString()
       });
       cuentaEspecialSeleccionadaId = null;
       renderizarTablaFondos();
@@ -545,6 +549,7 @@
       cuentaSeleccionada.nombre = datos.nombre;
       cuentaSeleccionada.porcentaje = datos.porcentaje;
       cuentaSeleccionada.activa = datos.activa;
+      cuentaSeleccionada.updatedAt = new Date().toISOString();
       renderizarTablaFondos();
       actualizarEstadoAccionesFondos();
     });
@@ -572,6 +577,14 @@
     }
     document.getElementById('editar-btn').addEventListener('click', ()=>{ toggleEdicion(false); });
     document.getElementById('guardar-btn').addEventListener('click', async ()=>{
+      const timestampActualizacion = new Date().toISOString();
+      const cuentasNormalizadas = cuentasEspecialesFondos.map(({id, nombre, porcentaje, activa, updatedAt})=>({
+        id,
+        nombre,
+        porcentaje,
+        activa,
+        updatedAt: updatedAt || timestampActualizacion
+      }));
       const data={
         Aplicacion: document.getElementById('aplicacion').value.trim(),
         Cliente: document.getElementById('cliente').value.trim(),
@@ -586,12 +599,8 @@
         porcentajesu: parseFloat(document.getElementById('porcentajesu').value)||0,
         porcentajeretiro: parseFloat(document.getElementById('porcentajeretiro').value)||0,
         porcentajeadministra: parseFloat(document.getElementById('porcentajeadministra').value)||0,
-        cuentasEspecialesFondos: cuentasEspecialesFondos.map(({id, nombre, porcentaje, activa})=>({
-          id,
-          nombre,
-          porcentaje,
-          activa
-        }))
+        cuentasFondosEspeciales: cuentasNormalizadas,
+        cuentasEspecialesFondos: cuentasNormalizadas
       };
       const limpiezaLegacy = Object.fromEntries(camposContrasenaLegacy.map(campo=>[campo, firebase.firestore.FieldValue.delete()]));
       await db.collection('Variablesglobales').doc('Parametros').set({ ...data, ...limpiezaLegacy },{merge:true});
