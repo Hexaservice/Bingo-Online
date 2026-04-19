@@ -1992,6 +1992,10 @@
         if(idx >= 0) pagosAdminActivos[idx] = registro;
         else pagosAdminActivos.push(registro);
       });
+      const sorteoActivo = cpObtenerSorteoIdObjetivo();
+      if(sorteoActivo && sorteoActivo !== sorteoId){
+        return;
+      }
       renderPremios();
       renderPagos();
     }
@@ -2374,8 +2378,16 @@
       tbody.innerHTML = filas;
     }
 
+    function cpCoincideSorteoSeleccionado(item){
+      const sorteoObjetivo = cpObtenerSorteoIdObjetivo();
+      if(!sorteoObjetivo) return true;
+      return (item?.sorteoId || '') === sorteoObjetivo;
+    }
+
     function aplicarFiltrosPremios(origen){
+      const sorteoObjetivo = cpObtenerSorteoIdObjetivo();
       return origen.filter(item=>{
+        if(sorteoObjetivo && item.sorteoId !== sorteoObjetivo) return false;
         const jugador = `${item.gmail || ''} ${item.alias || ''} ${item.nombre || ''}`.toLowerCase();
         if(filtrosPremios.jugador && !jugador.includes(filtrosPremios.jugador)) return false;
         if(filtrosPremios.fecha && !(item.fechaMostrar || '').toLowerCase().includes(filtrosPremios.fecha)) return false;
@@ -2385,7 +2397,9 @@
     }
 
     function aplicarFiltrosPagos(origen){
+      const sorteoObjetivo = cpObtenerSorteoIdObjetivo();
       return origen.filter(item=>{
+        if(sorteoObjetivo && item.sorteoId !== sorteoObjetivo) return false;
         const jugador = `${item.gmail || ''} ${item.alias || ''} ${item.nombre || ''}`.toLowerCase();
         if(filtrosPagos.jugador && !jugador.includes(filtrosPagos.jugador)) return false;
         if(filtrosPagos.fecha && !(item.fechaMostrar || '').toLowerCase().includes(filtrosPagos.fecha)) return false;
@@ -2418,7 +2432,7 @@
     function renderPremios(){
       const lista = mostrarPremiosArchivo ? aplicarFiltrosPremios(premiosArchivados) : aplicarFiltrosPremios(premiosActivos);
       renderTabla(lista, 'tabla-premios', { mostrarArchivo: mostrarPremiosArchivo, tipo: 'premios' });
-      actualizarBadge('premios', premiosActivos.filter(item=>item.estado === 'PENDIENTE').length);
+      actualizarBadge('premios', premiosActivos.filter(item=>item.estado === 'PENDIENTE' && cpCoincideSorteoSeleccionado(item)).length);
       actualizarEstadoBotones();
       reconciliarIndicadorPagos().catch(err=>console.warn('No se pudo actualizar el indicador tras renderizar premios', err));
     }
@@ -2426,7 +2440,7 @@
     function renderPagos(){
       const lista = mostrarPagosArchivo ? aplicarFiltrosPagos(pagosAdminArchivados) : aplicarFiltrosPagos(pagosAdminActivos);
       renderTabla(lista, 'tabla-pagos', { mostrarArchivo: mostrarPagosArchivo, tipo: 'pagos' });
-      actualizarBadge('pagos', pagosAdminActivos.filter(item=>item.estado === 'PENDIENTE').length);
+      actualizarBadge('pagos', pagosAdminActivos.filter(item=>item.estado === 'PENDIENTE' && cpCoincideSorteoSeleccionado(item)).length);
       actualizarEstadoBotones();
       reconciliarIndicadorPagos().catch(err=>console.warn('No se pudo actualizar el indicador tras renderizar pagos', err));
     }
@@ -2900,6 +2914,12 @@
     }
     function configurarBotones(){
       const selectorSorteo = document.getElementById('cp-sorteo-selector');
+      if(selectorSorteo){
+        selectorSorteo.addEventListener('change', ()=>{
+          renderPremios();
+          renderPagos();
+        });
+      }
       const botonGenerarSolicitudes = document.getElementById('cp-generar-solicitudes');
       if(botonGenerarSolicitudes){
         botonGenerarSolicitudes.addEventListener('click', async()=>{
