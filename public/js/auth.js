@@ -34,8 +34,12 @@ function roleEquals(left, right){
 
 function getConfigFromWindow(){
   if(!hasWindow()) return null;
-  const cfg = window.firebaseConfig || window.__FIREBASE_CONFIG__;
-  if(cfg && Object.keys(cfg).length > 0) return cfg;
+  const candidates = [window.firebaseConfig, window.__FIREBASE_CONFIG__];
+  for(const cfg of candidates){
+    if(cfg && typeof cfg === 'object' && Object.keys(cfg).length > 0){
+      return cfg;
+    }
+  }
   return null;
 }
 
