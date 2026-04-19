@@ -602,7 +602,7 @@
         <thead>
           <tr class="filtros">
             <th>N°</th>
-            <th><input type="text" id="filtro-pagos-jugador" placeholder="Jugador"></th>
+            <th><input type="text" id="filtro-pagos-jugador" placeholder="Usuario"></th>
             <th>Créditos</th>
             <th><input type="text" id="filtro-pagos-fecha" placeholder="Fecha"></th>
             <th>
@@ -767,14 +767,14 @@
       if(docSorteo.exists){
         const data = docSorteo.data() || {};
         const nombre = (data.nombre || data.nombreSorteo || '').toString().trim();
-        if(nombre){ sorteosNombreCache.set(id, nombre); }
+        if(nombre && cpEstadoFinalizado(data)){ sorteosNombreCache.set(id, nombre); }
         return data;
       }
       const docCantar = await db.collection('cantarsorteos').doc(id).get();
       if(docCantar.exists){
         const data = docCantar.data() || {};
         const nombre = (data.nombre || data.nombreSorteo || '').toString().trim();
-        if(nombre){ sorteosNombreCache.set(id, nombre); }
+        if(nombre && cpEstadoFinalizado(data)){ sorteosNombreCache.set(id, nombre); }
         return data;
       }
       return null;
@@ -783,12 +783,16 @@
     function cpResolverNombreSorteo({ sorteoId = '', sorteoNombre = '' } = {}){
       const nombreDirecto = (sorteoNombre || '').toString().trim();
       if(nombreDirecto){
-        if(sorteoId){ sorteosNombreCache.set(sorteoId, nombreDirecto); }
+        if(sorteoId && sorteosNombreCache.has(sorteoId)){ sorteosNombreCache.set(sorteoId, nombreDirecto); }
         return nombreDirecto;
       }
       const id = (sorteoId || '').toString().trim();
       if(!id) return '';
       return (sorteosNombreCache.get(id) || '').toString().trim();
+    }
+
+    function cpEstadoFinalizado(data = {}){
+      return (data.estado || data.estadoactual || '').toString().trim().toLowerCase() === 'finalizado';
     }
 
     async function cpCargarSelectorSorteos(){
@@ -798,8 +802,11 @@
         await ensureFirebaseListo();
         const snap = await dbRef().collection('sorteos').limit(150).get();
         const lista = [];
+        sorteosNombreCache.clear();
         snap.forEach(doc=>{
           const data = doc.data() || {};
+          const estado = (data.estado || data.estadoactual || '').toString().trim().toLowerCase();
+          if(estado !== 'finalizado' || !cpEstadoFinalizado(data)) return;
           const nombre = (data.nombre || data.nombreSorteo || '').toString().trim();
           const fechaInfo = normalizarFecha(data.fecha || data.fechasorteo || data.fechaSorteo || data.createdAt);
           const etiqueta = `${nombre || 'Sorteo'} - ${fechaInfo.mostrar !== '-' ? fechaInfo.mostrar : 'Sin fecha'}`;
@@ -810,7 +817,16 @@
         selector.innerHTML = '<option value="">Selecciona un sorteo</option>' +
           lista.map(item=>`<option value="${escapeHtml(item.id)}">${escapeHtml(item.etiqueta)}</option>`).join('');
         if(sorteoIdDesdeQuery){
-          selector.value = sorteoIdDesdeQuery;
+          if(sorteosNombreCache.has(sorteoIdDesdeQuery)){
+            selector.setCustomValidity('');
+            selector.value = sorteoIdDesdeQuery;
+          } else {
+            selector.value = '';
+            selector.setCustomValidity('El sorteo indicado no está finalizado o no existe.');
+            selector.reportValidity();
+          }
+        } else {
+          selector.setCustomValidity('');
         }
       } catch (err) {
         console.warn('No se pudo cargar el selector de sorteos', err);
@@ -1187,6 +1203,12 @@
       return 0;
     }
 
+    function cpRedondearSeisDecimales(valor){
+      const numero = Number(valor);
+      if(!Number.isFinite(numero)) return 0;
+      return Math.round((numero + Number.EPSILON) * 1e6) / 1e6;
+    }
+
     async function cpObtenerUsuariosPorRolInterno(ctx, rolInterno){
       const resultados = [];
       const texto = (rolInterno || '').toString().trim();
@@ -1275,12 +1297,37 @@
             gmail: email,
             alias: usuario.alias || '',
             nombre: usuario.nombre || '',
-            creditos: Number.isFinite(monto) ? Number(monto) || 0 : 0,
+            creditos: cpRedondearSeisDecimales(Number.isFinite(monto) ? Number(monto) || 0 : 0),
             rolInterno: definicion.rolInterno,
             userIds: usuario.uid ? [usuario.uid] : []
           });
         });
       }
+
+      const cuentasEspecialesRaw = Array.isArray(ctx.parametrosData?.cuentasFondosEspeciales)
+        ? ctx.parametrosData.cuentasFondosEspeciales
+        : (Array.isArray(ctx.parametrosData?.cuentasEspecialesFondos) ? ctx.parametrosData.cuentasEspecialesFondos : []);
+      const cuentasEspecialesActivas = cuentasEspecialesRaw.filter(cuenta => Boolean(cuenta?.activa));
+      cuentasEspecialesActivas.forEach(cuenta=>{
+        const porcentajeCuenta = Number(cuenta?.porcentaje) || 0;
+        const montoCuenta = (baseTotalSorteo > 0 && porcentajeCuenta > 0)
+          ? ((baseTotalSorteo * porcentajeCuenta) / 100)
+          : 0;
+        const nombreCuenta = String(cuenta?.nombre || '').trim();
+        const cuentaId = String(cuenta?.id || '').trim();
+        const aliasCuenta = nombreCuenta || cuentaId || 'Fondo especial';
+        lista.push({
+          gmail: '',
+          alias: aliasCuenta,
+          nombre: aliasCuenta,
+          creditos: cpRedondearSeisDecimales(montoCuenta),
+          rolInterno: 'fondo_especial',
+          tipoRegistro: 'FONDO_ESPECIAL_SORTEO',
+          userIds: [],
+          cuentaEspecialId: cuentaId,
+          nombreCuentaEspecial: nombreCuenta
+        });
+      });
       return lista;
     }
 
@@ -1457,6 +1504,64 @@
       return 0;
     }
 
+    function cpObtenerCartonesGratisSegundoForma(forma){
+      if(!forma) return 0;
+      const candidatos = [
+        forma?.cartonesGratis2,
+        forma?.cartonesgratis2,
+        forma?.cartones_gratis2,
+        forma?.cartonesGratisSegundo,
+        forma?.cartonesGratisSegundoLugar,
+        forma?.premioCartonesGratis2,
+        forma?.premioCartonesGratisSegundo,
+        forma?.premioCartonesGratisSegundoLugar
+      ];
+      for(const candidato of candidatos){
+        const numero = Number(candidato);
+        if(Number.isFinite(numero)){
+          return Math.max(0, Math.round(numero));
+        }
+      }
+      return 0;
+    }
+
+    function cpConstruirClaveJugador(carton){
+      const claveUsuario = (carton?.userId || carton?.usuarioId || '').toString().trim();
+      const correoCarton = cpNormalizarEmail(carton?.gmail || carton?.email || carton?.IDbilletera || '');
+      const aliasCarton = (carton?.alias || carton?.aliasCarton || '').toString();
+      return claveUsuario || (correoCarton ? `correo::${correoCarton}` : `alias::${aliasCarton.toLowerCase()}`);
+    }
+
+    function cpObtenerCartonesSegundoLugar(ctx, forma, pasoGanador){
+      const posiciones = cpObtenerPosicionesForma(forma);
+      if(!posiciones.length || posiciones.length <= 1) return [];
+      const pasoLimite = Number(pasoGanador);
+      if(!Number.isFinite(pasoLimite) || pasoLimite < 0) return [];
+      const resultado = [];
+      ctx.cartonesMapa.forEach(carton=>{
+        let faltantes = 0;
+        let validas = 0;
+        for(const pos of posiciones){
+          const valor = carton.valorPorPos.get(`${pos.r}-${pos.c}`);
+          if(valor === undefined){
+            faltantes = 2;
+            break;
+          }
+          const paso = ctx.cantosIndiceMap.get(valor);
+          if(paso === undefined || paso > pasoLimite){
+            faltantes += 1;
+            if(faltantes > 1) break;
+          }else{
+            validas += 1;
+          }
+        }
+        if(faltantes === 1 && validas > 0){
+          resultado.push(carton);
+        }
+      });
+      return resultado;
+    }
+
     function cpObtenerCartonesGratisPorGanador(forma,totalGanadores){
       const totalCartones = cpObtenerCartonesGratisForma(forma);
       if(totalCartones <= 0) return 0;
@@ -1579,10 +1684,9 @@
         const creditosPorGanador = cantidad > 0 ? Math.floor(totalCreditos / cantidad) : 0;
         const gratisPorGanador = cpObtenerCartonesGratisPorGanador(forma, cantidad);
         ganadores.forEach(carton=>{
-          const claveUsuario = (carton?.userId || carton?.usuarioId || '').toString().trim();
-          const correoCarton = (carton?.gmail || carton?.email || carton?.IDbilletera || '').toString().trim();
+          const clave = cpConstruirClaveJugador(carton);
+          const correoCarton = cpNormalizarEmail(carton?.gmail || carton?.email || carton?.IDbilletera || '');
           const aliasCarton = (carton?.alias || carton?.aliasCarton || '').toString();
-          const clave = claveUsuario || (correoCarton ? `correo::${correoCarton.toLowerCase()}` : `alias::${aliasCarton.toLowerCase()}`);
           if(!jugadoresMapa.has(clave)){
             jugadoresMapa.set(clave, {
               userId: carton?.userId || carton?.usuarioId || '',
@@ -1590,6 +1694,7 @@
               alias: aliasCarton,
               creditos: 0,
               cartonesGratis: 0,
+              cartonesGratisSegundoLugar: 0,
               formas: [],
               cartonesIds: new Set()
             });
@@ -1608,6 +1713,22 @@
             cartonesGratis: gratisPorGanador
           });
         });
+
+        const cartonesGratisSegundo = cpObtenerCartonesGratisSegundoForma(forma);
+        if(cartonesGratisSegundo > 0){
+          const pasoGanador = Number(registro?.paso);
+          const segundos = cpObtenerCartonesSegundoLugar(ctx, forma, pasoGanador);
+          const clavesSegundoOtorgadas = new Set();
+          segundos.forEach(cartonSegundo=>{
+            const claveSegundo = cpConstruirClaveJugador(cartonSegundo);
+            if(!claveSegundo || clavesSegundoOtorgadas.has(claveSegundo)) return;
+            clavesSegundoOtorgadas.add(claveSegundo);
+            const jugador = jugadoresMapa.get(claveSegundo);
+            if(!jugador) return;
+            jugador.cartonesGratis += cartonesGratisSegundo;
+            jugador.cartonesGratisSegundoLugar = (Number(jugador.cartonesGratisSegundoLugar) || 0) + cartonesGratisSegundo;
+          });
+        }
       });
 
       const agregados = new Map();
@@ -1783,7 +1904,13 @@
 
       administrativos.forEach(administrativo=>{
         const email = cpNormalizarEmail(administrativo.gmail);
-        const docId = cpConstruirIdSolicitud(`${ctx.sorteoId}_admin_${administrativo.rolInterno || 'admin'}`, email || administrativo.alias || 'admin');
+        const cuentaEspecialId = String(administrativo.cuentaEspecialId || '').trim();
+        const nombreCuentaEspecial = String(administrativo.nombreCuentaEspecial || '').trim();
+        const esFondoEspecial = (administrativo.rolInterno || '').toString().toLowerCase() === 'fondo_especial';
+        const baseDocId = esFondoEspecial
+          ? `${ctx.sorteoId}_fondo_${cuentaEspecialId || administrativo.alias || 'especial'}`
+          : `${ctx.sorteoId}_admin_${administrativo.rolInterno || 'admin'}`;
+        const docId = cpConstruirIdSolicitud(baseDocId, email || administrativo.alias || cuentaEspecialId || 'admin');
         const payload = {
           sorteoId: ctx.sorteoId,
           sorteoNombre,
@@ -1797,9 +1924,11 @@
           fecha: timestamp,
           creadoEn: timestamp,
           actualizadoEn: timestamp,
-          tipoRegistro: 'ADMINISTRATIVO_SORTEO',
+          tipoRegistro: administrativo.tipoRegistro || 'ADMINISTRATIVO_SORTEO',
           rolInterno: administrativo.rolInterno || '',
           userIds: administrativo.userIds || [],
+          cuentaEspecialId,
+          nombreCuentaEspecial,
           generadoDesde: 'centropagos'
         };
         if(email){ payload.idBilletera = email; }
@@ -1827,7 +1956,10 @@
           alias: item.alias || '',
           nombre: item.nombre || '',
           rolInterno: item.rolInterno || '',
-          creditos: Number(item.creditos) || 0
+          creditos: Number(item.creditos) || 0,
+          cuentaEspecialId: String(item.cuentaEspecialId || '').trim(),
+          nombreCuentaEspecial: String(item.nombreCuentaEspecial || '').trim(),
+          tipoRegistro: item.tipoRegistro || 'ADMINISTRATIVO_SORTEO'
         })),
         colaboradores: colaboradores.map(item=>({
           gmail: cpNormalizarEmail(item.gmail || ''),
@@ -1902,6 +2034,10 @@
         if(idx >= 0) pagosAdminActivos[idx] = registro;
         else pagosAdminActivos.push(registro);
       });
+      const sorteoActivo = cpObtenerSorteoIdObjetivo();
+      if(sorteoActivo && sorteoActivo !== sorteoId){
+        return;
+      }
       renderPremios();
       renderPagos();
     }
@@ -2284,8 +2420,16 @@
       tbody.innerHTML = filas;
     }
 
+    function cpCoincideSorteoSeleccionado(item){
+      const sorteoObjetivo = cpObtenerSorteoIdObjetivo();
+      if(!sorteoObjetivo) return true;
+      return (item?.sorteoId || '') === sorteoObjetivo;
+    }
+
     function aplicarFiltrosPremios(origen){
+      const sorteoObjetivo = cpObtenerSorteoIdObjetivo();
       return origen.filter(item=>{
+        if(sorteoObjetivo && item.sorteoId !== sorteoObjetivo) return false;
         const jugador = `${item.gmail || ''} ${item.alias || ''} ${item.nombre || ''}`.toLowerCase();
         if(filtrosPremios.jugador && !jugador.includes(filtrosPremios.jugador)) return false;
         if(filtrosPremios.fecha && !(item.fechaMostrar || '').toLowerCase().includes(filtrosPremios.fecha)) return false;
@@ -2295,7 +2439,9 @@
     }
 
     function aplicarFiltrosPagos(origen){
+      const sorteoObjetivo = cpObtenerSorteoIdObjetivo();
       return origen.filter(item=>{
+        if(sorteoObjetivo && item.sorteoId !== sorteoObjetivo) return false;
         const jugador = `${item.gmail || ''} ${item.alias || ''} ${item.nombre || ''}`.toLowerCase();
         if(filtrosPagos.jugador && !jugador.includes(filtrosPagos.jugador)) return false;
         if(filtrosPagos.fecha && !(item.fechaMostrar || '').toLowerCase().includes(filtrosPagos.fecha)) return false;
@@ -2328,7 +2474,7 @@
     function renderPremios(){
       const lista = mostrarPremiosArchivo ? aplicarFiltrosPremios(premiosArchivados) : aplicarFiltrosPremios(premiosActivos);
       renderTabla(lista, 'tabla-premios', { mostrarArchivo: mostrarPremiosArchivo, tipo: 'premios' });
-      actualizarBadge('premios', premiosActivos.filter(item=>item.estado === 'PENDIENTE').length);
+      actualizarBadge('premios', premiosActivos.filter(item=>item.estado === 'PENDIENTE' && cpCoincideSorteoSeleccionado(item)).length);
       actualizarEstadoBotones();
       reconciliarIndicadorPagos().catch(err=>console.warn('No se pudo actualizar el indicador tras renderizar premios', err));
     }
@@ -2336,7 +2482,7 @@
     function renderPagos(){
       const lista = mostrarPagosArchivo ? aplicarFiltrosPagos(pagosAdminArchivados) : aplicarFiltrosPagos(pagosAdminActivos);
       renderTabla(lista, 'tabla-pagos', { mostrarArchivo: mostrarPagosArchivo, tipo: 'pagos' });
-      actualizarBadge('pagos', pagosAdminActivos.filter(item=>item.estado === 'PENDIENTE').length);
+      actualizarBadge('pagos', pagosAdminActivos.filter(item=>item.estado === 'PENDIENTE' && cpCoincideSorteoSeleccionado(item)).length);
       actualizarEstadoBotones();
       reconciliarIndicadorPagos().catch(err=>console.warn('No se pudo actualizar el indicador tras renderizar pagos', err));
     }
@@ -2810,6 +2956,12 @@
     }
     function configurarBotones(){
       const selectorSorteo = document.getElementById('cp-sorteo-selector');
+      if(selectorSorteo){
+        selectorSorteo.addEventListener('change', ()=>{
+          renderPremios();
+          renderPagos();
+        });
+      }
       const botonGenerarSolicitudes = document.getElementById('cp-generar-solicitudes');
       if(botonGenerarSolicitudes){
         botonGenerarSolicitudes.addEventListener('click', async()=>{

@@ -100,7 +100,15 @@ async function initFirebase(){
     appleProvider.addScope('name');
     await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     return app;
-  })();
+  })().catch(error=>{
+    app = null;
+    auth = null;
+    db = null;
+    provider = null;
+    appleProvider = null;
+    firebaseInitPromise = null;
+    throw error;
+  });
 
   return firebaseInitPromise;
 }
