@@ -211,6 +211,9 @@
       align-items: center;
       gap: 4px;
     }
+    .fondos-fields-bottom-extra {
+      margin-top: 4px;
+    }
     .fondos-fields-bottom .field label {
       font-weight: 700;
       text-align: left;
@@ -309,7 +312,7 @@
     }
     @media (max-width: 768px) {
       #parametros-form {
-        width: 95%;
+        width: min(95vw, 560px);
       }
       .form-row {
         flex-direction: column;
@@ -349,8 +352,9 @@
         gap: 8px;
       }
       .fondos-fields-bottom .field {
-        width: 100%;
-        justify-content: space-between;
+        width: auto;
+        min-width: 260px;
+        justify-content: flex-start;
       }
       .icon-btn-group {
         width: 100%;
@@ -372,12 +376,12 @@
       .fondos-controls,
       .fondos-fields {
         flex-direction: column;
-        align-items: stretch;
+        align-items: flex-start;
       }
       .fondos-field,
       .fondos-field input[type="text"],
       .fondos-field input[type="number"] {
-        width: 100%;
+        width: min(100%, 420px);
         min-width: 0;
       }
       .fondos-checkbox {
@@ -486,16 +490,6 @@
       </div>
       <div class="fondos-controls">
         <div class="fondos-fields">
-          <div class="fondos-fields-top">
-            <div class="fondos-field">
-              <label for="fondo-nombre">Nombre cuenta</label>
-              <input type="text" id="fondo-nombre" placeholder="Nombre de cuenta">
-            </div>
-            <div class="fondos-field">
-              <label for="fondo-porcentaje">Porcentaje</label>
-              <input type="number" id="fondo-porcentaje" placeholder="0" step="0.01">
-            </div>
-          </div>
           <div class="fondos-fields-bottom">
             <div class="field">
               <label for="porcentaje">Porcentaje Agencia:</label>
@@ -507,6 +501,23 @@
               <input type="number" id="porcentajesu" placeholder="0" />
               <span class="percent">%</span>
             </div>
+            <div class="field">
+              <label for="porcentajepremio">Porcentaje premio:</label>
+              <input type="number" id="porcentajepremio" placeholder="0" step="0.01" />
+              <span class="percent">%</span>
+            </div>
+          </div>
+          <div class="fondos-fields-top fondos-fields-bottom-extra">
+            <div class="fondos-field">
+              <label for="fondo-nombre">Nombre cuenta</label>
+              <input type="text" id="fondo-nombre" placeholder="Nombre de cuenta">
+            </div>
+            <div class="fondos-field">
+              <label for="fondo-porcentaje">Porcentaje</label>
+              <input type="number" id="fondo-porcentaje" placeholder="0" step="0.01">
+            </div>
+          </div>
+          <div class="fondos-fields-bottom">
             <label class="fondos-field fondos-checkbox">
               <input type="checkbox" id="fondo-activa">
               Activa
@@ -514,9 +525,9 @@
           </div>
         </div>
         <div class="icon-btn-group">
-          <button type="button" id="fondo-nuevo-btn" class="icon-btn" title="Nuevo">☀️</button>
+          <button type="button" id="fondo-nuevo-btn" class="icon-btn" title="Nuevo" aria-label="Nuevo" style="color:#0a7a26;">➕</button>
           <button type="button" id="fondo-editar-btn" class="icon-btn" title="Editar" disabled>✏️</button>
-          <button type="button" id="fondo-eliminar-btn" class="icon-btn" title="Eliminar" disabled>🗑️</button>
+          <button type="button" id="fondo-eliminar-btn" class="icon-btn" title="Eliminar" disabled style="color:#c0392b;">➖</button>
         </div>
       </div>
       <div class="fondos-table-wrap">
@@ -619,6 +630,7 @@
       if(data.Pais){ document.getElementById('pais').value = data.Pais; }
       document.getElementById('porcentaje').value = data.porcentaje || '';
       document.getElementById('porcentajesu').value = data.porcentajesu || '';
+      document.getElementById('porcentajepremio').value = data.porcentajepremio || '';
       document.getElementById('porcentajeretiro').value = data.porcentajeretiro || '';
       document.getElementById('porcentajeadministra').value = data.porcentajeadministra || '';
       const cuentasFondosRaw = Array.isArray(data.cuentasFondosEspeciales)
@@ -647,10 +659,11 @@
     function calcularPorcentajeTotalFondos(){
       const porcentajeAgencia = obtenerValorNumericoSeguro(document.getElementById('porcentaje')?.value);
       const porcentajeSuperadmin = obtenerValorNumericoSeguro(document.getElementById('porcentajesu')?.value);
+      const porcentajePremio = obtenerValorNumericoSeguro(document.getElementById('porcentajepremio')?.value);
       const porcentajeCuentasActivas = cuentasEspecialesFondos
         .filter(cuenta => cuenta && cuenta.activa)
         .reduce((acumulado, cuenta) => acumulado + obtenerValorNumericoSeguro(cuenta.porcentaje), 0);
-      return porcentajeAgencia + porcentajeSuperadmin + porcentajeCuentasActivas;
+      return porcentajeAgencia + porcentajeSuperadmin + porcentajePremio + porcentajeCuentasActivas;
     }
     function actualizarResumenPorcentajesFondos(){
       const total = calcularPorcentajeTotalFondos();
@@ -811,6 +824,7 @@
         ZonaHoraria: document.getElementById('pais').selectedOptions[0]?.dataset.timezone || '',
         porcentaje: parseFloat(document.getElementById('porcentaje').value)||0,
         porcentajesu: parseFloat(document.getElementById('porcentajesu').value)||0,
+        porcentajepremio: parseFloat(document.getElementById('porcentajepremio').value)||0,
         porcentajeretiro: parseFloat(document.getElementById('porcentajeretiro').value)||0,
         porcentajeadministra: parseFloat(document.getElementById('porcentajeadministra').value)||0,
         cuentasFondosEspeciales: cuentasNormalizadas,
@@ -821,7 +835,7 @@
       alert('Parámetros guardados');
       toggleEdicion(true);
     });
-    ['porcentaje','porcentajesu'].forEach(idCampo=>{
+    ['porcentaje','porcentajesu','porcentajepremio'].forEach(idCampo=>{
       const campo = document.getElementById(idCampo);
       if(campo){
         campo.addEventListener('input', actualizarResumenPorcentajesFondos);

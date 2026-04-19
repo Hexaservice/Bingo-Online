@@ -3921,8 +3921,19 @@ function toggleForma(idx){
     const valor=toNumberSafe(sorteoData.valorCarton,0);
     const maxGratis=toNumberSafe(sorteoData.maxcartongratis,0);
     const vars=await db.collection('Variablesglobales').doc('Parametros').get();
+    const varsData=vars.data()||{};
     const porcentaje=toNumberSafe(vars.data()?.porcentaje,0);
     const porcentajesu=toNumberSafe(vars.data()?.porcentajesu,0);
+    const cuentasEspecialesRaw=Array.isArray(varsData.cuentasFondosEspeciales)
+      ? varsData.cuentasFondosEspeciales
+      : (Array.isArray(varsData.cuentasEspecialesFondos) ? varsData.cuentasEspecialesFondos : []);
+    const porcentajeCuentasActivas=cuentasEspecialesRaw
+      .filter(cuenta=>Boolean(cuenta?.activa))
+      .reduce((acc,cuenta)=>acc+toNumberSafe(cuenta?.porcentaje,0),0);
+    const porcentajePremioConfigurado=toNumberSafe(
+      sorteoData?.porcentajepremio,
+      toNumberSafe(varsData.porcentajepremio,0)
+    );
     let jugarGratis=false;
     const gratisJugandoJugador=gratisUsadosJugador;
     if(gratis>0 && (maxGratis<=0 || gratisJugandoJugador<maxGratis)){
@@ -3970,11 +3981,18 @@ function toggleForma(idx){
         if(!Number.isFinite(valorCartonActual) || valorCartonActual<0){
           throw new Error('VALOR_CARTON_INVALIDO');
         }
-        const porcentajeTx=toNumberSafe(porcentaje,0);
-        const porcentajeSuTx=toNumberSafe(porcentajesu,0);
+        const porcentajeTx=Math.max(0,toNumberSafe(porcentaje,0));
+        const porcentajeSuTx=Math.max(0,toNumberSafe(porcentajesu,0));
+        const porcentajePremioBase=Math.max(0,toNumberSafe(
+          sorteoDataTx?.porcentajepremio,
+          porcentajePremioConfigurado
+        ));
+        const porcentajePremioTx=porcentajePremioBase>0
+          ? porcentajePremioBase
+          : Math.max(0,100-porcentajeTx-porcentajeSuTx-porcentajeCuentasActivas);
         const porcentajeValTx=valorCartonActual*porcentajeTx/100;
         const porcentajeSuValTx=valorCartonActual*porcentajeSuTx/100;
-        const paraPremioTx=valorCartonActual-porcentajeValTx-porcentajeSuValTx;
+        const paraPremioTx=valorCartonActual*porcentajePremioTx/100;
         const creditosActual=toNumberSafe(billeteraSnap.data()?.creditos,0);
         const creditosTransitoActual=Math.max(0,toNumberSafe(billeteraSnap.data()?.creditostransito,0));
         const gratisActual=toNumberSafe(billeteraSnap.data()?.CartonesGratis,0);
