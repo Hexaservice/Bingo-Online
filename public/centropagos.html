@@ -1203,6 +1203,12 @@
       return 0;
     }
 
+    function cpRedondearSeisDecimales(valor){
+      const numero = Number(valor);
+      if(!Number.isFinite(numero)) return 0;
+      return Math.round((numero + Number.EPSILON) * 1e6) / 1e6;
+    }
+
     async function cpObtenerUsuariosPorRolInterno(ctx, rolInterno){
       const resultados = [];
       const texto = (rolInterno || '').toString().trim();
@@ -1291,12 +1297,37 @@
             gmail: email,
             alias: usuario.alias || '',
             nombre: usuario.nombre || '',
-            creditos: Number.isFinite(monto) ? Number(monto) || 0 : 0,
+            creditos: cpRedondearSeisDecimales(Number.isFinite(monto) ? Number(monto) || 0 : 0),
             rolInterno: definicion.rolInterno,
             userIds: usuario.uid ? [usuario.uid] : []
           });
         });
       }
+
+      const cuentasEspecialesRaw = Array.isArray(ctx.parametrosData?.cuentasFondosEspeciales)
+        ? ctx.parametrosData.cuentasFondosEspeciales
+        : (Array.isArray(ctx.parametrosData?.cuentasEspecialesFondos) ? ctx.parametrosData.cuentasEspecialesFondos : []);
+      const cuentasEspecialesActivas = cuentasEspecialesRaw.filter(cuenta => Boolean(cuenta?.activa));
+      cuentasEspecialesActivas.forEach(cuenta=>{
+        const porcentajeCuenta = Number(cuenta?.porcentaje) || 0;
+        const montoCuenta = (baseTotalSorteo > 0 && porcentajeCuenta > 0)
+          ? ((baseTotalSorteo * porcentajeCuenta) / 100)
+          : 0;
+        const nombreCuenta = String(cuenta?.nombre || '').trim();
+        const cuentaId = String(cuenta?.id || '').trim();
+        const aliasCuenta = nombreCuenta || cuentaId || 'Fondo especial';
+        lista.push({
+          gmail: '',
+          alias: aliasCuenta,
+          nombre: aliasCuenta,
+          creditos: cpRedondearSeisDecimales(montoCuenta),
+          rolInterno: 'fondo_especial',
+          tipoRegistro: 'FONDO_ESPECIAL_SORTEO',
+          userIds: [],
+          cuentaEspecialId: cuentaId,
+          nombreCuentaEspecial: nombreCuenta
+        });
+      });
       return lista;
     }
 
@@ -1873,7 +1904,13 @@
 
       administrativos.forEach(administrativo=>{
         const email = cpNormalizarEmail(administrativo.gmail);
-        const docId = cpConstruirIdSolicitud(`${ctx.sorteoId}_admin_${administrativo.rolInterno || 'admin'}`, email || administrativo.alias || 'admin');
+        const cuentaEspecialId = String(administrativo.cuentaEspecialId || '').trim();
+        const nombreCuentaEspecial = String(administrativo.nombreCuentaEspecial || '').trim();
+        const esFondoEspecial = (administrativo.rolInterno || '').toString().toLowerCase() === 'fondo_especial';
+        const baseDocId = esFondoEspecial
+          ? `${ctx.sorteoId}_fondo_${cuentaEspecialId || administrativo.alias || 'especial'}`
+          : `${ctx.sorteoId}_admin_${administrativo.rolInterno || 'admin'}`;
+        const docId = cpConstruirIdSolicitud(baseDocId, email || administrativo.alias || cuentaEspecialId || 'admin');
         const payload = {
           sorteoId: ctx.sorteoId,
           sorteoNombre,
@@ -1887,9 +1924,11 @@
           fecha: timestamp,
           creadoEn: timestamp,
           actualizadoEn: timestamp,
-          tipoRegistro: 'ADMINISTRATIVO_SORTEO',
+          tipoRegistro: administrativo.tipoRegistro || 'ADMINISTRATIVO_SORTEO',
           rolInterno: administrativo.rolInterno || '',
           userIds: administrativo.userIds || [],
+          cuentaEspecialId,
+          nombreCuentaEspecial,
           generadoDesde: 'centropagos'
         };
         if(email){ payload.idBilletera = email; }
@@ -1917,7 +1956,10 @@
           alias: item.alias || '',
           nombre: item.nombre || '',
           rolInterno: item.rolInterno || '',
-          creditos: Number(item.creditos) || 0
+          creditos: Number(item.creditos) || 0,
+          cuentaEspecialId: String(item.cuentaEspecialId || '').trim(),
+          nombreCuentaEspecial: String(item.nombreCuentaEspecial || '').trim(),
+          tipoRegistro: item.tipoRegistro || 'ADMINISTRATIVO_SORTEO'
         })),
         colaboradores: colaboradores.map(item=>({
           gmail: cpNormalizarEmail(item.gmail || ''),
