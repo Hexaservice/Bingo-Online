@@ -767,14 +767,14 @@
       if(docSorteo.exists){
         const data = docSorteo.data() || {};
         const nombre = (data.nombre || data.nombreSorteo || '').toString().trim();
-        if(nombre){ sorteosNombreCache.set(id, nombre); }
+        if(nombre && cpEstadoFinalizado(data)){ sorteosNombreCache.set(id, nombre); }
         return data;
       }
       const docCantar = await db.collection('cantarsorteos').doc(id).get();
       if(docCantar.exists){
         const data = docCantar.data() || {};
         const nombre = (data.nombre || data.nombreSorteo || '').toString().trim();
-        if(nombre){ sorteosNombreCache.set(id, nombre); }
+        if(nombre && cpEstadoFinalizado(data)){ sorteosNombreCache.set(id, nombre); }
         return data;
       }
       return null;
@@ -783,12 +783,16 @@
     function cpResolverNombreSorteo({ sorteoId = '', sorteoNombre = '' } = {}){
       const nombreDirecto = (sorteoNombre || '').toString().trim();
       if(nombreDirecto){
-        if(sorteoId){ sorteosNombreCache.set(sorteoId, nombreDirecto); }
+        if(sorteoId && sorteosNombreCache.has(sorteoId)){ sorteosNombreCache.set(sorteoId, nombreDirecto); }
         return nombreDirecto;
       }
       const id = (sorteoId || '').toString().trim();
       if(!id) return '';
       return (sorteosNombreCache.get(id) || '').toString().trim();
+    }
+
+    function cpEstadoFinalizado(data = {}){
+      return (data.estado || data.estadoactual || '').toString().trim().toLowerCase() === 'finalizado';
     }
 
     async function cpCargarSelectorSorteos(){
@@ -798,8 +802,11 @@
         await ensureFirebaseListo();
         const snap = await dbRef().collection('sorteos').limit(150).get();
         const lista = [];
+        sorteosNombreCache.clear();
         snap.forEach(doc=>{
           const data = doc.data() || {};
+          const estado = (data.estado || data.estadoactual || '').toString().trim().toLowerCase();
+          if(estado !== 'finalizado' || !cpEstadoFinalizado(data)) return;
           const nombre = (data.nombre || data.nombreSorteo || '').toString().trim();
           const fechaInfo = normalizarFecha(data.fecha || data.fechasorteo || data.fechaSorteo || data.createdAt);
           const etiqueta = `${nombre || 'Sorteo'} - ${fechaInfo.mostrar !== '-' ? fechaInfo.mostrar : 'Sin fecha'}`;
@@ -810,7 +817,16 @@
         selector.innerHTML = '<option value="">Selecciona un sorteo</option>' +
           lista.map(item=>`<option value="${escapeHtml(item.id)}">${escapeHtml(item.etiqueta)}</option>`).join('');
         if(sorteoIdDesdeQuery){
-          selector.value = sorteoIdDesdeQuery;
+          if(sorteosNombreCache.has(sorteoIdDesdeQuery)){
+            selector.setCustomValidity('');
+            selector.value = sorteoIdDesdeQuery;
+          } else {
+            selector.value = '';
+            selector.setCustomValidity('El sorteo indicado no está finalizado o no existe.');
+            selector.reportValidity();
+          }
+        } else {
+          selector.setCustomValidity('');
         }
       } catch (err) {
         console.warn('No se pudo cargar el selector de sorteos', err);
