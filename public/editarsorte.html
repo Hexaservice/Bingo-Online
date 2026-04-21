@@ -302,6 +302,10 @@
   preloadLogo.src=LOGO_URL;
   const FORMA_COLORES={1:'#90ee90',2:'#fffacd',3:'#add8e6',4:'#d8b0ff',5:'#ffcc99'};
   const FORMAS_COLLECTION='formas_guardadas';
+  const PLACEHOLDER_PREMIO_BASE='% Premio';
+  const PLACEHOLDER_PREMIO_INTERVALO_MS=3000;
+  const PORCENTAJE_POR_ESTRELLA=2.083333;
+  const placeholderPremioTimersPorTab={};
   const formaEdicionPorTab={};
   let modalFormaIdx=null;
   let formasModalDatos=[];
@@ -482,6 +486,7 @@
             const td=div.querySelector(`td[data-row="${p.r}"][data-col="${p.c}"]`);
             if(td){td.classList.add('selected');td.innerHTML='<span class="star">\u2605</span>';}
           });
+          sincronizarPlaceholderPremio(div);
         });
         actualizarTotales();
       }catch(e){console.error('loadState',e);}
@@ -643,6 +648,7 @@
           td.addEventListener('click',()=>{
           td.classList.toggle('selected');
           td.innerHTML = td.classList.contains('selected') ? '<span class="star">\u2605</span>' : '';
+            sincronizarPlaceholderPremio(table.closest('.tab-content'));
             saveState();
           });
         }
@@ -684,6 +690,45 @@
       posiciones.push({r,c});
     });
     return posiciones;
+  }
+
+  function contarEstrellasTab(tab){
+    if(!tab) return 0;
+    return obtenerPosicionesDeTab(tab).length;
+  }
+
+  function calcularPorcentajeSugeridoPorTab(tab){
+    const estrellas=contarEstrellasTab(tab);
+    if(estrellas<=0) return 0;
+    return Math.round(estrellas*PORCENTAJE_POR_ESTRELLA);
+  }
+
+  function limpiarPlaceholderPremioTimer(tab){
+    if(!tab?.id) return;
+    const timer=placeholderPremioTimersPorTab[tab.id];
+    if(timer){
+      clearInterval(timer);
+      delete placeholderPremioTimersPorTab[tab.id];
+    }
+  }
+
+  function sincronizarPlaceholderPremio(tab){
+    if(!tab) return;
+    const input=tab.querySelector('.porcentaje-forma');
+    if(!input) return;
+    const sugerido=calcularPorcentajeSugeridoPorTab(tab);
+    if(sugerido<=0){
+      limpiarPlaceholderPremioTimer(tab);
+      input.placeholder=PLACEHOLDER_PREMIO_BASE;
+      return;
+    }
+    let mostrarSugerido=false;
+    input.placeholder=PLACEHOLDER_PREMIO_BASE;
+    limpiarPlaceholderPremioTimer(tab);
+    placeholderPremioTimersPorTab[tab.id]=window.setInterval(()=>{
+      mostrarSugerido=!mostrarSugerido;
+      input.placeholder=mostrarSugerido?`${sugerido}%`:PLACEHOLDER_PREMIO_BASE;
+    },PLACEHOLDER_PREMIO_INTERVALO_MS);
   }
 
   function generarClavePosiciones(posiciones){
@@ -758,6 +803,9 @@
           id:doc.id,
           indice:idx,
           nombre:datos.nombre||'',
+          porcentaje:datos.porcentaje??'',
+          cartones:datos.cartones??'',
+          cartones2:datos.cartones2??'',
           posiciones:Array.isArray(datos.posiciones)?datos.posiciones.map(p=>({r:p.r,c:p.c})):[]
         };
         formasModalDatos.push(info);
@@ -813,6 +861,18 @@
     if(opciones.asignarNombre!==false && nombreInput){
       nombreInput.value=datos.nombre||'';
     }
+    const porcentajeInput=tab.querySelector('.porcentaje-forma');
+    const cartonesInput=tab.querySelector('.cartones-forma');
+    const cartonesSegundoInput=tab.querySelector('.cartones-forma-2');
+    if(porcentajeInput){
+      porcentajeInput.value=datos.porcentaje??'';
+    }
+    if(cartonesInput){
+      cartonesInput.value=datos.cartones??'';
+    }
+    if(cartonesSegundoInput){
+      cartonesSegundoInput.value=datos.cartones2??'';
+    }
     const wrapper=tab.querySelector('.carton-wrapper');
     tab.querySelectorAll('td').forEach(td=>{
       const row=parseInt(td.dataset.row,10);
@@ -841,6 +901,8 @@
     if(wrapper){
       updateCartonBack(wrapper);
     }
+    sincronizarPlaceholderPremio(tab);
+    actualizarTotales();
     saveState();
   }
 
@@ -873,12 +935,33 @@
         alert(`Ya existe una forma con estas posiciones en Forma ${idx}, debes combinar diferente para poder guardar`);
         return;
       }
+      const porcentajeInput=tab.querySelector('.porcentaje-forma');
+      const cartonesInput=tab.querySelector('.cartones-forma');
+      const cartonesSegundoInput=tab.querySelector('.cartones-forma-2');
+      const porcentaje=porcentajeInput?porcentajeInput.value.trim():'';
+      const cartones=cartonesInput?cartonesInput.value.trim():'';
+      const cartones2=cartonesSegundoInput?cartonesSegundoInput.value.trim():'';
       const payload={
         indice:idx,
         nombre,
         posiciones,
         actualizado:firebase.firestore.FieldValue.serverTimestamp()
       };
+      if(porcentaje!==''){
+        payload.porcentaje=porcentaje;
+      }else if(editingId){
+        payload.porcentaje=firebase.firestore.FieldValue.delete();
+      }
+      if(cartones!==''){
+        payload.cartones=cartones;
+      }else if(editingId){
+        payload.cartones=firebase.firestore.FieldValue.delete();
+      }
+      if(cartones2!==''){
+        payload.cartones2=cartones2;
+      }else if(editingId){
+        payload.cartones2=firebase.firestore.FieldValue.delete();
+      }
       let mensaje='Forma guardada correctamente';
       if(editingId){
         await db.collection(FORMAS_COLLECTION).doc(editingId).set(payload,{merge:true});
@@ -918,7 +1001,7 @@
       div.id=`forma${i}`;
       div.className=`tab-content forma-item${i}${i===1?' active':''}`;
       div.innerHTML=`<div class=\"forma-label\">Forma ${i}</div><div class=\"forma-nombre-row\" data-idx=\"${i}\" style=\"--fx-color:${obtenerColorForma(i)}\"><button type=\"button\" class=\"fx-button\">F${i}</button><input class=\"nombre-forma\" placeholder=\"Nombre de forma\"><button type=\"button\" class=\"guardar-forma-btn\" title=\"Guardar forma\"><span>💾</span></button></div>\
-      <div class=\"premio-row\"><input type=\"number\" class=\"porcentaje-forma\" placeholder=\"% Premio\">\
+      <div class=\"premio-row\"><input type=\"number\" class=\"porcentaje-forma\" placeholder=\"${PLACEHOLDER_PREMIO_BASE}\">\
       <span class=\"porcentaje-restante\">100%<\/span>\
       <input type=\"number\" class=\"cartones-forma\" placeholder=\"C. Gratis\">\
       <span class=\"cartones-total\">0<\/span>\
@@ -944,6 +1027,7 @@
       wrapper.addEventListener('click',()=>{
         if(wrapper.classList.contains('flipped')) flipCard(wrapper);
       });
+      sincronizarPlaceholderPremio(div);
     }
 
     tabs.querySelectorAll('.tab-buttons button').forEach(btn=>{
