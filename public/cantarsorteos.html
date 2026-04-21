@@ -499,8 +499,8 @@
       gap: 6px;
       cursor: pointer;
       box-shadow: 0 4px 12px rgba(0,0,0,.2);
-      width: max-content;
-      min-width: 104px;
+      width: min(100%, 360px);
+      min-width: 150px;
       white-space: nowrap;
       order: 99;
       flex-basis: 100%;
@@ -524,12 +524,15 @@
     .auto-canto-bolitas {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      justify-content: flex-end;
+      gap: 5px;
       min-height: 26px;
-      max-width: 140px;
+      width: 100%;
       overflow: hidden;
       margin-left: 2px;
-      flex: 0 1 140px;
+      min-width: 0;
+      flex: 1 1 auto;
+      position: relative;
     }
     .auto-canto-bolita {
       width: 24px;
@@ -547,16 +550,13 @@
       justify-content: center;
       box-shadow: 0 1px 4px rgba(0,0,0,.35);
       flex: 0 0 auto;
-      animation: autoBolitaEntra .32s ease;
+      will-change: transform, opacity;
+      transition: transform .34s cubic-bezier(.22,.8,.32,1), opacity .24s ease;
     }
     .auto-canto-bolita.saliendo {
       opacity: .2;
       transform: translateX(6px) scale(.78);
       transition: opacity .25s ease, transform .25s ease;
-    }
-    @keyframes autoBolitaEntra {
-      from { opacity: 0; transform: translateX(-10px) scale(.65); }
-      to { opacity: 1; transform: translateX(0) scale(1); }
     }
     @keyframes giroDado { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
     @keyframes autoCantoPulso {
@@ -4784,16 +4784,55 @@
 
   function renderizarBolitasAutoCanto(){
     if(!autoCantoBolitasEl) return;
-    autoCantoBolitasEl.innerHTML = '';
-    autoCantoBolitasHistorial.forEach((valor, indice)=>{
-      const bolita = document.createElement('span');
-      bolita.className = 'auto-canto-bolita';
-      bolita.textContent = valor;
-      if(indice === autoCantoBolitasHistorial.length - 1 && autoCantoBolitasHistorial.length >= 6){
-        bolita.classList.add('saliendo');
+    const nodosPrevios = new Map();
+    const posicionesPrevias = new Map();
+    Array.from(autoCantoBolitasEl.children).forEach(nodo=>{
+      const clave = nodo.dataset.bolitaValor;
+      if(clave){
+        nodosPrevios.set(clave, nodo);
+        posicionesPrevias.set(clave, nodo.getBoundingClientRect());
       }
-      autoCantoBolitasEl.appendChild(bolita);
     });
+
+    const fragmento = document.createDocumentFragment();
+    autoCantoBolitasHistorial.forEach((valor, indice)=>{
+      const clave = String(valor);
+      let bolita = nodosPrevios.get(clave) || null;
+      const esNueva = !bolita;
+      if(!bolita){
+        bolita = document.createElement('span');
+        bolita.className = 'auto-canto-bolita';
+      }
+      bolita.dataset.bolitaValor = clave;
+      bolita.textContent = valor;
+      bolita.classList.toggle('saliendo', indice === autoCantoBolitasHistorial.length - 1 && autoCantoBolitasHistorial.length >= 6);
+      fragmento.appendChild(bolita);
+
+      requestAnimationFrame(()=>{
+        const posicionPrevia = posicionesPrevias.get(clave);
+        const posicionActual = bolita.getBoundingClientRect();
+        if(posicionPrevia){
+          const deltaX = posicionPrevia.left - posicionActual.left;
+          if(Math.abs(deltaX) > 0.5 && typeof bolita.animate === 'function'){
+            bolita.animate(
+              [{ transform: `translateX(${deltaX}px)` }, { transform: 'translateX(0)' }],
+              { duration: 360, easing: 'cubic-bezier(.22,.8,.32,1)' }
+            );
+          }
+        } else if(esNueva && typeof bolita.animate === 'function'){
+          bolita.animate(
+            [
+              { opacity: 0, transform: 'translateX(14px) scale(.62)' },
+              { opacity: 1, transform: 'translateX(0) scale(1)' }
+            ],
+            { duration: 300, easing: 'cubic-bezier(.22,.8,.32,1)' }
+          );
+        }
+      });
+    });
+
+    autoCantoBolitasEl.innerHTML = '';
+    autoCantoBolitasEl.appendChild(fragmento);
   }
 
   function registrarBolitaAutoCanto(clave){
@@ -4809,9 +4848,11 @@
 
   function actualizarEstadoBotonAutoCanto(){
     if(!autoCantoBtn) return;
-    const habilitado = obtenerEstadoActualNormalizado() === 'jugando';
+    const estadoJugando = obtenerEstadoActualNormalizado() === 'jugando';
+    const sinDisponibles = estadoJugando && !obtenerCantoAleatorioPendiente();
+    const habilitado = estadoJugando && !sinDisponibles;
     const etiquetaEl = autoCantoBtn.querySelector('.auto-canto-label');
-    const textoBoton = autoCantoAzarActivo ? 'CANTANDO' : 'CANTAR';
+    const textoBoton = autoCantoAzarActivo ? 'CANTANDO' : (sinDisponibles ? 'COMPLETO' : 'CANTAR');
     if(etiquetaEl){
       etiquetaEl.textContent = textoBoton;
     }
@@ -4820,13 +4861,16 @@
     autoCantoBtn.classList.toggle('activo', autoCantoAzarActivo);
   }
 
-  function detenerAutoCantosAzar(){
+  function detenerAutoCantosAzar(opciones = {}){
+    const limpiar = opciones.limpiarBolitas !== false;
     autoCantoAzarActivo = false;
     if(autoCantoAzarTimer){
       clearTimeout(autoCantoAzarTimer);
       autoCantoAzarTimer = null;
     }
-    limpiarBolitasAutoCanto();
+    if(limpiar){
+      limpiarBolitasAutoCanto();
+    }
     actualizarEstadoBotonAutoCanto();
   }
 
@@ -4850,7 +4894,7 @@
     }
     const siguiente = obtenerCantoAleatorioPendiente();
     if(!siguiente){
-      detenerAutoCantosAzar();
+      detenerAutoCantosAzar({ limpiarBolitas: false });
       return;
     }
     const cantoRegistrado = await registrarCanto(siguiente, { confirmarCanto: false, mostrarToast: true });
@@ -6975,7 +7019,7 @@
       const datos = docRef.data() || {};
       const { estado: pdfEstadoNormalizado } = sincronizarDatosPdf(datos);
       if(pdfEstadoNormalizado === 'si'){
-        mostrarAvisoSimple('Los cartones ya están publicados para los jugadores.', 'Cartones ya publicados');
+        mostrarAvisoSimple('El acceso al PDF del sorteo ya fue habilitado para jugadores.', 'PDF HABILITADO');
         return;
       }
       const confirmar = await preguntarAccionEstado('¿Deseas habilitar el acceso a PDF de juego a los Jugadores?');
