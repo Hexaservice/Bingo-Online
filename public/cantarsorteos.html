@@ -521,6 +521,43 @@
     }
     #auto-canto-btn.activo .dado-icon { animation: giroDado 2.8s linear infinite; }
     .auto-canto-label { font-family: "Bangers", cursive; letter-spacing: .6px; font-size: 1rem; line-height: 1; }
+    .auto-canto-bolitas {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      min-height: 26px;
+      max-width: 140px;
+      overflow: hidden;
+      margin-left: 2px;
+      flex: 0 1 140px;
+    }
+    .auto-canto-bolita {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 1.8px solid rgba(255,255,255,.85);
+      background: radial-gradient(circle at 35% 30%, #ffffff 0%, #fef08a 32%, #f59e0b 100%);
+      color: #0f172a;
+      font-family: "Bangers", cursive;
+      font-size: .72rem;
+      letter-spacing: .2px;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 4px rgba(0,0,0,.35);
+      flex: 0 0 auto;
+      animation: autoBolitaEntra .32s ease;
+    }
+    .auto-canto-bolita.saliendo {
+      opacity: .2;
+      transform: translateX(6px) scale(.78);
+      transition: opacity .25s ease, transform .25s ease;
+    }
+    @keyframes autoBolitaEntra {
+      from { opacity: 0; transform: translateX(-10px) scale(.65); }
+      to { opacity: 1; transform: translateX(0) scale(1); }
+    }
     @keyframes giroDado { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
     @keyframes autoCantoPulso {
       0%, 100% { transform: scale(1); }
@@ -1787,7 +1824,7 @@
       <div id="tipo-sorteo"></div>
     </div>
     <div id="acciones-sorteo">
-      <button id="auto-canto-btn" type="button" title="Cantos automáticos al azar" aria-label="Cantos automáticos al azar" disabled><span class="dado-icon" aria-hidden="true">🎲</span><span class="auto-canto-label">CANTAR</span></button>
+      <button id="auto-canto-btn" type="button" title="Cantos automáticos al azar" aria-label="Cantos automáticos al azar" disabled><span class="dado-icon" aria-hidden="true">🎲</span><span class="auto-canto-label">CANTAR</span><span class="auto-canto-bolitas" aria-live="polite" aria-label="Últimos cantos automáticos"></span></button>
       <button id="sellar-btn" class="estado-btn" title="Sellar sorteo">
         <span class="stop-icon">STOP</span>
       </button>
@@ -2009,6 +2046,7 @@
   const autoCantoBtn = document.getElementById('auto-canto-btn');
   const toastCantoAzarEl = document.getElementById('toast-canto-azar');
   const toastGanadorFormaEl = document.getElementById('toast-ganador-forma');
+  const autoCantoBolitasEl = autoCantoBtn ? autoCantoBtn.querySelector('.auto-canto-bolitas') : null;
   const finalizarBtn = document.getElementById('finalizar-btn');
   const resultadoBtn = document.getElementById('resultado-btn');
   const pdfGeneradoFloatingIcon = pdfBtn ? pdfBtn.querySelector('.pdf-floating-icon') : null;
@@ -2131,6 +2169,7 @@
   let autoCantoAzarActivo = false;
   let autoCantoAzarTimer = null;
   let toastCantoAzarTimer = null;
+  let autoCantoBolitasHistorial = [];
   let toastGanadorTimer = null;
   let formasGanadorasNotificadas = new Set();
   let contadorToastGanadorPorForma = new Map();
@@ -3244,28 +3283,28 @@
   }
 
   async function registrarCanto(clave, { confirmarCanto = true, mostrarToast = false } = {}){
-    if(!currentSorteoId || !currentSorteoData) return;
-    if(tablaCantosContainer.classList.contains('disabled')) return;
-    if(tablaCantosContainer.classList.contains('bloqueado')) return;
+    if(!currentSorteoId || !currentSorteoData) return false;
+    if(tablaCantosContainer.classList.contains('disabled')) return false;
+    if(tablaCantosContainer.classList.contains('bloqueado')) return false;
     if(autoCantoAzarActivo && confirmarCanto){
       mostrarAvisoSimple('No puedes cantar manualmente mientras el modo azar automático está activo.');
-      return;
+      return false;
     }
     if(cierreCantoManualEnProceso || manualCantoActivo?.activo || manualCantoEstadoRemoto?.activo){
       mostrarAvisoSimple('Debes cerrar el canto manual actual antes de continuar.');
-      return;
+      return false;
     }
     const claveNormalizada = (clave ?? '').toString().toUpperCase();
-    if(!claveNormalizada) return;
-    if(cantosSeleccionados.has(claveNormalizada)) return;
+    if(!claveNormalizada) return false;
+    if(cantosSeleccionados.has(claveNormalizada)) return false;
     const usuario = auth?.currentUser;
     if(!usuario){
       mostrarAvisoSimple('Debes iniciar sesión nuevamente para registrar los cantos.');
-      return;
+      return false;
     }
     if(confirmarCanto){
       const confirmar = await mostrarConfirmacionCanto(claveNormalizada);
-      if(!confirmar) return;
+      if(!confirmar) return false;
     }
     try {
       await db.runTransaction(async tx => {
@@ -3310,9 +3349,11 @@
         mostrarToastAutoCanto(`Bolita ${claveNormalizada} Cantada`);
       }
       solicitarSincronizacionMetadatos();
+      return true;
     } catch (err) {
       console.error('Error registrando canto', err);
       alert('No fue posible registrar el canto.');
+      return false;
     }
   }
 
@@ -4733,6 +4774,37 @@
     }
   }
 
+  function limpiarBolitasAutoCanto(){
+    autoCantoBolitasHistorial = [];
+    if(!autoCantoBolitasEl) return;
+    autoCantoBolitasEl.innerHTML = '';
+  }
+
+  function renderizarBolitasAutoCanto(){
+    if(!autoCantoBolitasEl) return;
+    autoCantoBolitasEl.innerHTML = '';
+    autoCantoBolitasHistorial.forEach((valor, indice)=>{
+      const bolita = document.createElement('span');
+      bolita.className = 'auto-canto-bolita';
+      bolita.textContent = valor;
+      if(indice === autoCantoBolitasHistorial.length - 1 && autoCantoBolitasHistorial.length >= 6){
+        bolita.classList.add('saliendo');
+      }
+      autoCantoBolitasEl.appendChild(bolita);
+    });
+  }
+
+  function registrarBolitaAutoCanto(clave){
+    const texto = (clave || '').toString().trim().toUpperCase();
+    if(!texto) return;
+    const numero = texto.includes('-') ? texto.split('-')[1] : texto;
+    autoCantoBolitasHistorial.unshift(numero);
+    if(autoCantoBolitasHistorial.length > 6){
+      autoCantoBolitasHistorial = autoCantoBolitasHistorial.slice(0, 6);
+    }
+    renderizarBolitasAutoCanto();
+  }
+
   function actualizarEstadoBotonAutoCanto(){
     if(!autoCantoBtn) return;
     const habilitado = obtenerEstadoActualNormalizado() === 'jugando';
@@ -4752,6 +4824,7 @@
       clearTimeout(autoCantoAzarTimer);
       autoCantoAzarTimer = null;
     }
+    limpiarBolitasAutoCanto();
     actualizarEstadoBotonAutoCanto();
   }
 
@@ -4778,7 +4851,10 @@
       detenerAutoCantosAzar();
       return;
     }
-    await registrarCanto(siguiente, { confirmarCanto: false, mostrarToast: true });
+    const cantoRegistrado = await registrarCanto(siguiente, { confirmarCanto: false, mostrarToast: true });
+    if(cantoRegistrado){
+      registrarBolitaAutoCanto(siguiente);
+    }
     if(!autoCantoAzarActivo) return;
     autoCantoAzarTimer = setTimeout(ejecutarAutoCantosAzar, Math.max(1, intervaloCantoAzarSegundos) * 1000);
   }
@@ -4800,6 +4876,7 @@
     const confirmar = await preguntarAccionEstado('¿Deseas iniciar jugadas automaticas al azar? al iniciar se debe esperar a su culminación');
     if(!confirmar) return;
     autoCantoAzarActivo = true;
+    limpiarBolitasAutoCanto();
     actualizarEstadoBotonAutoCanto();
     ejecutarAutoCantosAzar();
   }
@@ -6896,7 +6973,7 @@
       const datos = docRef.data() || {};
       const { estado: pdfEstadoNormalizado } = sincronizarDatosPdf(datos);
       if(pdfEstadoNormalizado === 'si'){
-        mostrarAvisoSimple('El acceso al PDF de juego ya estaba habilitado para jugadores.', 'PDF habilitado');
+        mostrarAvisoSimple('Los cartones ya están publicados para los jugadores.', 'Cartones ya publicados');
         return;
       }
       const confirmar = await preguntarAccionEstado('¿Deseas habilitar el acceso a PDF de juego a los Jugadores?');
