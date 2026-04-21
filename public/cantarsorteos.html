@@ -77,6 +77,14 @@
       #salir-btn { width: 40px; }
       #salir-btn .label { display: none; }
       #detalle-container { margin-left: 5px; margin-right: 5px; }
+      #acciones-sorteo {
+        padding-top: 48px;
+      }
+      #auto-canto-btn {
+        top: 8px;
+        right: 8px;
+        min-width: 100px;
+      }
     }
     #sorteo-btn {
       width: 240px;
@@ -376,6 +384,7 @@
       justify-content: center;
       gap: 8px;
       flex-wrap: wrap;
+      position: relative;
     }
     #acciones-sorteo {
       margin-top: 14px;
@@ -384,6 +393,9 @@
       align-items: flex-end;
       gap: 12px;
       flex-wrap: wrap;
+      position: relative;
+      padding: 40px 8px 0;
+      min-height: 96px;
     }
     #modo-toggle-container {
       display: inline-flex;
@@ -484,19 +496,41 @@
       background: linear-gradient(165deg,#1d4ed8,#60a5fa);
       color: #fff;
       font-size: 0.8rem;
-      padding: 6px 10px;
+      padding: 7px 12px;
       min-height: 34px;
       display: inline-flex;
       align-items: center;
       gap: 6px;
       cursor: pointer;
       box-shadow: 0 4px 12px rgba(0,0,0,.2);
+      width: max-content;
+      min-width: 104px;
+      white-space: nowrap;
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      z-index: 4;
+      transition: transform .25s ease, box-shadow .25s ease, filter .25s ease, opacity .2s ease;
     }
     #auto-canto-btn:disabled { opacity:.55; cursor:not-allowed; }
-    #auto-canto-btn .dado-icon { display:inline-flex; transform-origin:center; }
+    #auto-canto-btn .dado-icon {
+      display:inline-flex;
+      transform-origin:center;
+      font-size: 1.3rem;
+      line-height: 1;
+    }
+    #auto-canto-btn.activo {
+      animation: autoCantoPulso 1.2s ease-in-out infinite;
+      box-shadow: 0 8px 20px rgba(29, 78, 216, .45);
+      filter: saturate(1.12);
+    }
     #auto-canto-btn.activo .dado-icon { animation: giroDado 2.8s linear infinite; }
-    .auto-canto-label { font-family: "Bangers", cursive; letter-spacing: .6px; font-size: 1rem; }
+    .auto-canto-label { font-family: "Bangers", cursive; letter-spacing: .6px; font-size: 1rem; line-height: 1; }
     @keyframes giroDado { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
+    @keyframes autoCantoPulso {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
     .estado-btn img,
     .estado-btn svg { width: 24px; height: 24px; }
     .estado-btn .pdf-floating-icon {
@@ -1075,18 +1109,31 @@
       left: 50%;
       transform: translateX(-50%);
       z-index: 1900;
-      background: rgba(17,24,39,.94);
       color: #fff;
-      border-radius: 10px;
-      padding: 10px 16px;
-      box-shadow: 0 10px 22px rgba(0,0,0,.28);
+      border-radius: 14px;
+      padding: 11px 16px;
+      box-shadow: 0 12px 24px rgba(0,0,0,.34);
+      border: 1px solid rgba(255,255,255,.28);
+      backdrop-filter: blur(6px);
       opacity: 0;
       pointer-events: none;
       transition: opacity .25s ease, transform .25s ease;
       font-weight: 600;
+      max-width: min(92vw, 460px);
+      text-align: center;
+      letter-spacing: .25px;
+      font-size: clamp(.84rem, 2.4vw, 1rem);
     }
-    #toast-canto-azar { bottom: 16px; transform: translate(-50%, 22px);}
-    #toast-ganador-forma { top: 14px; transform: translate(-50%, -20px); background: rgba(22,101,52,.95);}
+    #toast-canto-azar {
+      bottom: 16px;
+      transform: translate(-50%, 22px);
+      background: linear-gradient(145deg, rgba(30,64,175,.96), rgba(59,130,246,.95));
+    }
+    #toast-ganador-forma {
+      top: 14px;
+      transform: translate(-50%, -20px);
+      background: linear-gradient(145deg, rgba(22,101,52,.97), rgba(34,197,94,.94));
+    }
     #toast-canto-azar.visible, #toast-ganador-forma.visible { opacity: 1; }
     #toast-canto-azar.visible { transform: translate(-50%, 0);}
     #toast-ganador-forma.visible { transform: translate(-50%, 0);}
@@ -1728,7 +1775,7 @@
     </div>
   </section>
   <section id="detalle-container">
-    <div id="sorteo-nombre-row"><div id="sorteo-nombre">Selecciona un sorteo para ver los detalles</div><button id="auto-canto-btn" type="button" title="Cantos automáticos al azar" aria-label="Cantos automáticos al azar" disabled><span class="dado-icon" aria-hidden="true">🎲</span><span class="auto-canto-label">Cantar</span></button></div>
+    <div id="sorteo-nombre-row"><div id="sorteo-nombre">Selecciona un sorteo para ver los detalles</div></div>
     <div id="estado-actual">
       <span id="tipo-estado" class="tipo-estado"></span>
       <span class="estado-etiqueta">ESTADO:</span>
@@ -1745,6 +1792,7 @@
       <div id="tipo-sorteo"></div>
     </div>
     <div id="acciones-sorteo">
+      <button id="auto-canto-btn" type="button" title="Cantos automáticos al azar" aria-label="Cantos automáticos al azar" disabled><span class="dado-icon" aria-hidden="true">🎲</span><span class="auto-canto-label">CANTAR</span></button>
       <button id="sellar-btn" class="estado-btn" title="Sellar sorteo">
         <span class="stop-icon">STOP</span>
       </button>
@@ -2090,6 +2138,7 @@
   let toastCantoAzarTimer = null;
   let toastGanadorTimer = null;
   let formasGanadorasNotificadas = new Set();
+  let contadorToastGanadorPorForma = new Map();
   let evaluandoCantoActual = false;
   const advertenciasGanadorSinEmail = new Set();
   function manejarAceptarConfirmacionCanto(){
@@ -2141,6 +2190,17 @@
     toastGanadorTimer = setTimeout(()=>{
       toastGanadorFormaEl.classList.remove('visible');
     }, 2000);
+  }
+
+  function registrarToastGanadorForma(idx){
+    const actual = Number(contadorToastGanadorPorForma.get(idx) || 0);
+    const siguiente = actual + 1;
+    contadorToastGanadorPorForma.set(idx, siguiente);
+    return siguiente;
+  }
+
+  function puedeMostrarToastGanadorForma(idx){
+    return Number(contadorToastGanadorPorForma.get(idx) || 0) < 3;
   }
 
   function mostrarAvisoSimple(mensaje, titulo = 'Aviso'){
@@ -3904,11 +3964,12 @@
       }
     });
     formasConGanadorActual.forEach(idx=>{
-      if(!formasGanadorasNotificadas.has(idx)){
+      if(!formasGanadorasNotificadas.has(idx) && puedeMostrarToastGanadorForma(idx)){
         const forma = formasActivas.find(item=>Number(item?.idx) === idx);
         const nombreForma = (forma?.nombre || '').toString().trim();
         const etiqueta = nombreForma ? `Forma ${String(idx).padStart(2,'0')} - ${nombreForma}` : `Forma ${String(idx).padStart(2,'0')}`;
         mostrarToastGanador(`Hay ganador en ${etiqueta}`);
+        registrarToastGanadorForma(idx);
         formasGanadorasNotificadas.add(idx);
       }
     });
@@ -4680,6 +4741,12 @@
   function actualizarEstadoBotonAutoCanto(){
     if(!autoCantoBtn) return;
     const habilitado = obtenerEstadoActualNormalizado() === 'jugando';
+    const etiquetaEl = autoCantoBtn.querySelector('.auto-canto-label');
+    const textoBoton = autoCantoAzarActivo ? 'CANTANDO' : 'CANTAR';
+    if(etiquetaEl){
+      etiquetaEl.textContent = textoBoton;
+    }
+    autoCantoBtn.setAttribute('aria-label', autoCantoAzarActivo ? 'Desactivar cantos automáticos al azar' : 'Activar cantos automáticos al azar');
     autoCantoBtn.disabled = !habilitado;
     autoCantoBtn.classList.toggle('activo', autoCantoAzarActivo);
   }
@@ -5355,6 +5422,7 @@
     indiceUltimoGanador = null;
     notificacionComplementariosMostrada = false;
     formasGanadorasNotificadas.clear();
+    contadorToastGanadorPorForma.clear();
     cantosInicializados = false;
     mostrarComplementariosPendiente = false;
     evaluandoCantoActual = false;
