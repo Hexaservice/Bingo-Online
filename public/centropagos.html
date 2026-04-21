@@ -110,6 +110,11 @@
     #pagos-section table td {
       color: #7a3f00;
     }
+    #tabla-pagos tr.registro-cuenta-especial td.gmail,
+    #tabla-pagos tr.registro-cuenta-especial td.creditos,
+    #tabla-pagos tr.registro-cuenta-especial td.fecha {
+      color: #0d47a1 !important;
+    }
     #colaboradores-section {
       color: #6a1b9a;
     }
@@ -2226,6 +2231,12 @@
       return `<span class="gmail-cell"><span class="gmail-full">${largoSeguro}</span><span class="gmail-short">${cortoSeguro}</span></span>`;
     }
 
+    function esRegistroCuentaEspecial(item = {}){
+      const tipoRegistro = (item.tipoRegistro || '').toString().toUpperCase();
+      const rolInterno = (item.rolInterno || '').toString().toLowerCase();
+      return tipoRegistro === 'FONDO_ESPECIAL_SORTEO' || rolInterno === 'fondo_especial';
+    }
+
     function normalizarTipoUsuario(valor){
       const texto = (valor || '').toString().trim();
       if(!texto) return 'Colaborador';
@@ -2408,11 +2419,19 @@
             <td><input type="checkbox" data-id="${item.id}" ${disabled}></td>
           </tr>`;
         }
-        return `<tr data-id="${item.id}">
+        const esCuentaEspecial = esRegistroCuentaEspecial(item);
+        const usuarioVisible = esCuentaEspecial
+          ? (item.alias || item.nombre || item.nombreCuentaEspecial || item.cuentaEspecialId || '').toString()
+          : (item.gmail || '').toString();
+        const usuarioHtml = esCuentaEspecial
+          ? `<span class="gmail-cell"><span class="gmail-full">${escapeHtml(usuarioVisible)}</span><span class="gmail-short">${escapeHtml(usuarioVisible)}</span></span>`
+          : construirGmailHtml(usuarioVisible);
+        const claseEspecial = esCuentaEspecial ? ' registro-cuenta-especial' : '';
+        return `<tr data-id="${item.id}" class="${claseEspecial.trim()}">
           <td>${numero}</td>
-          <td class="gmail" data-gmail="${gmailAttr}" data-nombre="${nombreAttr}">${construirGmailHtml(item.gmail)}</td>
+          <td class="gmail" data-gmail="${gmailAttr}" data-nombre="${nombreAttr}">${usuarioHtml}</td>
           <td class="creditos">${formatNumberEntero.format(Math.round(item.creditos))}</td>
-          <td>${escapeHtml(item.fechaMostrar)}</td>
+          <td class="fecha">${escapeHtml(item.fechaMostrar)}</td>
           <td class="estado">${estadoHtml}</td>
           <td><input type="checkbox" data-id="${item.id}" ${disabled}></td>
         </tr>`;
