@@ -2215,6 +2215,7 @@
   }
 
   function mostrarToastGanador(mensaje){
+    if(obtenerEstadoActualNormalizado() !== 'jugando') return;
     if(!toastGanadorFormaEl) return;
     toastGanadorFormaEl.textContent = mensaje;
     toastGanadorFormaEl.classList.add('visible');
@@ -3999,8 +4000,9 @@
         if(paso > pasoMaximo) pasoMaximo = paso;
       }
     });
+    const sorteoJugando = obtenerEstadoActualNormalizado() === 'jugando';
     formasConGanadorActual.forEach(idx=>{
-      if(!formasGanadorasNotificadas.has(idx) && puedeMostrarToastGanadorForma(idx)){
+      if(sorteoJugando && !formasGanadorasNotificadas.has(idx) && puedeMostrarToastGanadorForma(idx)){
         const forma = formasActivas.find(item=>Number(item?.idx) === idx);
         const nombreForma = (forma?.nombre || '').toString().trim();
         const etiqueta = nombreForma ? `Forma ${String(idx).padStart(2,'0')} - ${nombreForma}` : `Forma ${String(idx).padStart(2,'0')}`;
