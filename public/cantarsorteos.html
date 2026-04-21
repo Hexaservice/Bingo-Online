@@ -369,6 +369,14 @@
     }
     #resumen-sorteo div { display: flex; justify-content: center; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 0.95rem; }
     #tipo-sorteo span { white-space: nowrap; text-transform: uppercase; }
+    #sorteo-nombre-row {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
     #acciones-sorteo {
       margin-top: 14px;
       display: flex;
@@ -470,6 +478,25 @@
     #centro-pagos-btn.animacion-pagos {
       animation: zoomPulse 1.9s ease-in-out infinite;
     }
+    #auto-canto-btn {
+      border: 2px solid #1e40af;
+      border-radius: 999px;
+      background: linear-gradient(165deg,#1d4ed8,#60a5fa);
+      color: #fff;
+      font-size: 0.8rem;
+      padding: 6px 10px;
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,.2);
+    }
+    #auto-canto-btn:disabled { opacity:.55; cursor:not-allowed; }
+    #auto-canto-btn .dado-icon { display:inline-flex; transform-origin:center; }
+    #auto-canto-btn.activo .dado-icon { animation: giroDado 2.8s linear infinite; }
+    .auto-canto-label { font-family: "Bangers", cursive; letter-spacing: .6px; font-size: 1rem; }
+    @keyframes giroDado { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
     .estado-btn img,
     .estado-btn svg { width: 24px; height: 24px; }
     .estado-btn .pdf-floating-icon {
@@ -1041,6 +1068,28 @@
       background: linear-gradient(160deg, rgba(255,179,71,0.92), rgba(255,224,178,0.95));
       color: #512000;
     }
+    
+    #toast-canto-azar,
+    #toast-ganador-forma {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1900;
+      background: rgba(17,24,39,.94);
+      color: #fff;
+      border-radius: 10px;
+      padding: 10px 16px;
+      box-shadow: 0 10px 22px rgba(0,0,0,.28);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s ease, transform .25s ease;
+      font-weight: 600;
+    }
+    #toast-canto-azar { bottom: 16px; transform: translate(-50%, 22px);}
+    #toast-ganador-forma { top: 14px; transform: translate(-50%, -20px); background: rgba(22,101,52,.95);}
+    #toast-canto-azar.visible, #toast-ganador-forma.visible { opacity: 1; }
+    #toast-canto-azar.visible { transform: translate(-50%, 0);}
+    #toast-ganador-forma.visible { transform: translate(-50%, 0);}
     .modal-ganadores .modal-cerrar {
       align-self: flex-end;
       background: none;
@@ -1679,7 +1728,7 @@
     </div>
   </section>
   <section id="detalle-container">
-    <div id="sorteo-nombre">Selecciona un sorteo para ver los detalles</div>
+    <div id="sorteo-nombre-row"><div id="sorteo-nombre">Selecciona un sorteo para ver los detalles</div><button id="auto-canto-btn" type="button" title="Cantos automáticos al azar" aria-label="Cantos automáticos al azar" disabled><span class="dado-icon" aria-hidden="true">🎲</span><span class="auto-canto-label">Cantar</span></button></div>
     <div id="estado-actual">
       <span id="tipo-estado" class="tipo-estado"></span>
       <span class="estado-etiqueta">ESTADO:</span>
@@ -1798,15 +1847,9 @@
     </div>
   </div>
   <button id="nuevos-ganadores-flotante" type="button" aria-label="Mostrar seguimiento de canto manual" hidden>🟢 Ver canto manual</button>
-  <div id="modo-recordatorio-modal" class="info-overlay" role="dialog" aria-modal="true" aria-labelledby="modo-recordatorio-titulo" aria-hidden="true">
-    <div class="info-overlay__box">
-      <h2 id="modo-recordatorio-titulo" class="info-overlay__titulo">Modo de juego</h2>
-      <p class="info-overlay__mensaje">Recuerda que puedes jugar el sorteo en modo AUTOMATICO o en modo MANUAL. ajusta tu opción antes del primer canto</p>
-      <div class="info-overlay__acciones">
-        <button type="button" id="modo-recordatorio-aceptar">Aceptar</button>
-      </div>
-    </div>
-  </div>
+  <div id="toast-canto-azar" aria-live="polite"></div>
+  <div id="toast-ganador-forma" aria-live="polite"></div>
+
   <div id="mensaje-area">Selecciona un sorteo para administrar su estado.</div>
   <div id="footer">
     <div id="fecha-hora"></div>
@@ -1851,10 +1894,8 @@
   <div id="complementarios-modal" class="info-overlay info-overlay--complementarios" role="dialog" aria-modal="true" aria-labelledby="complementarios-modal-titulo" aria-hidden="true">
     <div class="info-overlay__box">
       <h2 id="complementarios-modal-titulo" class="info-overlay__titulo">Transparencia en curso</h2>
-      <p id="complementarios-modal-mensaje" class="info-overlay__mensaje">Se han completado los ganadores en todas las formas, se procede a continuar con los cantos complementarios.</p>
-      <div class="info-overlay__acciones">
-        <button type="button" id="complementarios-modal-aceptar">Aceptar</button>
-      </div>
+      <p id="complementarios-modal-mensaje" class="info-overlay__mensaje">Ya hay GANADORES en todas las FORMAS, a continuación se terminan de cantar los números restantes</p>
+      
     </div>
   </div>
   <div id="aviso-modal" class="info-overlay" role="dialog" aria-modal="true" aria-labelledby="aviso-modal-titulo" aria-hidden="true">
@@ -1922,6 +1963,9 @@
   const sellarBtn = document.getElementById('sellar-btn');
   const pdfBtn = document.getElementById('pdf-btn');
   const jugarBtn = document.getElementById('jugar-btn');
+  const autoCantoBtn = document.getElementById('auto-canto-btn');
+  const toastCantoAzarEl = document.getElementById('toast-canto-azar');
+  const toastGanadorFormaEl = document.getElementById('toast-ganador-forma');
   const finalizarBtn = document.getElementById('finalizar-btn');
   const resultadoBtn = document.getElementById('resultado-btn');
   const pdfGeneradoFloatingIcon = pdfBtn ? pdfBtn.querySelector('.pdf-floating-icon') : null;
@@ -1949,11 +1993,8 @@
   const nuevosGanadoresCerrarBtn = document.getElementById('nuevos-ganadores-cerrar');
   const nuevosGanadoresCerrarCantoBtn = document.getElementById('nuevos-ganadores-cerrar-canto');
   const nuevosGanadoresFlotanteBtn = document.getElementById('nuevos-ganadores-flotante');
-  const modoRecordatorioModalEl = document.getElementById('modo-recordatorio-modal');
-  const modoRecordatorioAceptarBtn = document.getElementById('modo-recordatorio-aceptar');
   const modalComplementariosEl = document.getElementById('complementarios-modal');
   const modalComplementariosMensajeEl = document.getElementById('complementarios-modal-mensaje');
-  const modalComplementariosAceptarBtn = document.getElementById('complementarios-modal-aceptar');
   const avisoModalEl = document.getElementById('aviso-modal');
   const avisoModalTituloEl = document.getElementById('aviso-modal-titulo');
   const avisoModalMensajeEl = document.getElementById('aviso-modal-mensaje');
@@ -1971,7 +2012,6 @@
   const INTERVALO_CACHE_SORTEOS_MS = 30000;
   const TAM_MAX_CONSULTA_IN = 10;
   let modoManual = false;
-  let modoRecordatorioMostrado = false;
   let manualCantoUnsub = null;
   let manualCantoActivo = null;
   let manualCantoEstadoRemoto = null;
@@ -1980,7 +2020,6 @@
   let manualCantoContadorIntervalo = null;
   let duracionCantoManualSegundos = 20;
   const DURACION_CANTO_MANUAL_SEGUNDOS_FALLBACK = 20;
-  const MODO_RECORDATORIO_STORAGE_PREFIX = 'cantarsorteos_modo_recordatorio_v1_';
   let infoTiempoSorteo = {
     fecha: null,
     fechaCierre: null,
@@ -2045,6 +2084,12 @@
   let cantosInicializados = false;
   let nuevosGanadoresModalActivo = false;
   let mostrarComplementariosPendiente = false;
+  let intervaloCantoAzarSegundos = 0;
+  let autoCantoAzarActivo = false;
+  let autoCantoAzarTimer = null;
+  let toastCantoAzarTimer = null;
+  let toastGanadorTimer = null;
+  let formasGanadorasNotificadas = new Set();
   let evaluandoCantoActual = false;
   const advertenciasGanadorSinEmail = new Set();
   function manejarAceptarConfirmacionCanto(){
@@ -2065,15 +2110,37 @@
     if(!modalComplementariosEl) return;
     modalComplementariosEl.classList.add('activa');
     modalComplementariosEl.setAttribute('aria-hidden', 'false');
-    if(modalComplementariosAceptarBtn){
-      modalComplementariosAceptarBtn.focus({ preventScroll: true });
-    }
+    setTimeout(cerrarModalComplementarios, 2200);
   }
 
   function cerrarModalComplementarios(){
     if(!modalComplementariosEl) return;
     modalComplementariosEl.classList.remove('activa');
     modalComplementariosEl.setAttribute('aria-hidden', 'true');
+  }
+
+  function mostrarToastAutoCanto(mensaje){
+    if(!toastCantoAzarEl) return;
+    toastCantoAzarEl.textContent = mensaje;
+    toastCantoAzarEl.classList.add('visible');
+    if(toastCantoAzarTimer){
+      clearTimeout(toastCantoAzarTimer);
+    }
+    toastCantoAzarTimer = setTimeout(()=>{
+      toastCantoAzarEl.classList.remove('visible');
+    }, 2000);
+  }
+
+  function mostrarToastGanador(mensaje){
+    if(!toastGanadorFormaEl) return;
+    toastGanadorFormaEl.textContent = mensaje;
+    toastGanadorFormaEl.classList.add('visible');
+    if(toastGanadorTimer){
+      clearTimeout(toastGanadorTimer);
+    }
+    toastGanadorTimer = setTimeout(()=>{
+      toastGanadorFormaEl.classList.remove('visible');
+    }, 2000);
   }
 
   function mostrarAvisoSimple(mensaje, titulo = 'Aviso'){
@@ -2502,23 +2569,7 @@
       }
     });
   }
-  if(modoRecordatorioAceptarBtn){
-    modoRecordatorioAceptarBtn.addEventListener('click', ()=>{
-      marcarRecordatorioModoMostrado();
-      cerrarModalRecordatorioModo();
-    });
-  }
-  if(modoRecordatorioModalEl){
-    modoRecordatorioModalEl.addEventListener('click', evento=>{
-      if(evento.target === modoRecordatorioModalEl){
-        cerrarModalRecordatorioModo();
-      }
-    });
-  }
   document.addEventListener('keydown', manejarTeclaModalGanadores);
-  if(modalComplementariosAceptarBtn){
-    modalComplementariosAceptarBtn.addEventListener('click', cerrarModalComplementarios);
-  }
   if(modalComplementariosEl){
     modalComplementariosEl.addEventListener('click', evento=>{
       if(evento.target === modalComplementariosEl){
@@ -2564,6 +2615,9 @@
     resultadoBtn.addEventListener('click', manejarClickResultadoBtn);
   }
   jugarBtn.addEventListener('click', cambiarAJugando);
+  if(autoCantoBtn){
+    autoCantoBtn.addEventListener('click', alternarAutoCantosAzar);
+  }
   finalizarBtn.addEventListener('click', finalizarSorteo);
   if(centroPagosBtn){
     centroPagosBtn.addEventListener('click', ()=>{
@@ -3006,39 +3060,6 @@
     }
   }
 
-  function abrirModalRecordatorioModo(){
-    if(!modoRecordatorioModalEl) return;
-    modoRecordatorioModalEl.classList.add('activa');
-    modoRecordatorioModalEl.setAttribute('aria-hidden', 'false');
-  }
-
-  function obtenerClaveRecordatorioModo(){
-    const id = sanitizarId(currentSorteoId || currentSorteoData?.id || 'general');
-    return `${MODO_RECORDATORIO_STORAGE_PREFIX}${id || 'general'}`;
-  }
-
-  function marcarRecordatorioModoMostrado(){
-    try {
-      localStorage.setItem(obtenerClaveRecordatorioModo(), '1');
-    } catch (error) {
-      console.warn('No se pudo persistir el recordatorio de modo.', error);
-    }
-  }
-
-  function yaSeMostroRecordatorioModo(){
-    try {
-      return localStorage.getItem(obtenerClaveRecordatorioModo()) === '1';
-    } catch (error) {
-      return false;
-    }
-  }
-
-  function cerrarModalRecordatorioModo(){
-    if(!modoRecordatorioModalEl) return;
-    modoRecordatorioModalEl.classList.remove('activa');
-    modoRecordatorioModalEl.setAttribute('aria-hidden', 'true');
-  }
-
   function actualizarValoresActuales(){
     if(!fechaActualValorEl || !horaActualValorEl) return;
     try {
@@ -3167,10 +3188,14 @@
     tablaCantosContainer.appendChild(tabla);
   }
 
-  async function manejarCantoClick(clave){
+  async function registrarCanto(clave, { confirmarCanto = true, mostrarToast = false } = {}){
     if(!currentSorteoId || !currentSorteoData) return;
     if(tablaCantosContainer.classList.contains('disabled')) return;
     if(tablaCantosContainer.classList.contains('bloqueado')) return;
+    if(autoCantoAzarActivo && confirmarCanto){
+      mostrarAvisoSimple('No puedes cantar manualmente mientras el modo azar automático está activo.');
+      return;
+    }
     if(cierreCantoManualEnProceso || manualCantoActivo?.activo || manualCantoEstadoRemoto?.activo){
       mostrarAvisoSimple('Debes cerrar el canto manual actual antes de continuar.');
       return;
@@ -3183,8 +3208,10 @@
       mostrarAvisoSimple('Debes iniciar sesión nuevamente para registrar los cantos.');
       return;
     }
-    const confirmar = await mostrarConfirmacionCanto(claveNormalizada);
-    if(!confirmar) return;
+    if(confirmarCanto){
+      const confirmar = await mostrarConfirmacionCanto(claveNormalizada);
+      if(!confirmar) return;
+    }
     try {
       await db.runTransaction(async tx => {
         const docRef = db.collection('cantos').doc(currentSorteoId);
@@ -3224,11 +3251,18 @@
         tx.set(docRef, payload, { merge: true });
       });
       mensajeEl.textContent = `Se registró la jugada ${claveNormalizada}.`;
+      if(mostrarToast){
+        mostrarToastAutoCanto(`Bolita ${claveNormalizada} Cantada`);
+      }
       solicitarSincronizacionMetadatos();
     } catch (err) {
       console.error('Error registrando canto', err);
       alert('No fue posible registrar el canto.');
     }
+  }
+
+  async function manejarCantoClick(clave){
+    await registrarCanto(clave, { confirmarCanto: true, mostrarToast: false });
   }
 
   function actualizarCantosSeleccionados(lista){
@@ -3851,6 +3885,7 @@
 
   function evaluarEstadoFormasGanadoras(){
     const estadoAnterior = todasFormasConGanadores;
+    const formasConGanadorActual = new Set();
     let totalEvaluables = 0;
     let totalGanadoras = 0;
     let pasoMaximo = -1;
@@ -3863,8 +3898,18 @@
       const registro = cartonesGanadoresPorForma.get(idx);
       const paso = Number(registro?.paso);
       if(Number.isFinite(paso)){
+        formasConGanadorActual.add(idx);
         totalGanadoras++;
         if(paso > pasoMaximo) pasoMaximo = paso;
+      }
+    });
+    formasConGanadorActual.forEach(idx=>{
+      if(!formasGanadorasNotificadas.has(idx)){
+        const forma = formasActivas.find(item=>Number(item?.idx) === idx);
+        const nombreForma = (forma?.nombre || '').toString().trim();
+        const etiqueta = nombreForma ? `Forma ${String(idx).padStart(2,'0')} - ${nombreForma}` : `Forma ${String(idx).padStart(2,'0')}`;
+        mostrarToastGanador(`Hay ganador en ${etiqueta}`);
+        formasGanadorasNotificadas.add(idx);
       }
     });
     if(totalEvaluables > 0 && totalGanadoras === totalEvaluables){
@@ -3878,6 +3923,7 @@
       cerrarModalComplementarios();
       notificacionComplementariosMostrada = false;
       mostrarComplementariosPendiente = false;
+      formasGanadorasNotificadas.clear();
     } else {
       const transicion = !estadoAnterior
         && Number.isInteger(indiceUltimoGanador)
@@ -4613,6 +4659,89 @@
     duracionCantoManualSegundos = DURACION_CANTO_MANUAL_SEGUNDOS_FALLBACK;
   }
 
+  async function cargarIntervaloCantoAzarDesdeParametros(){
+    intervaloCantoAzarSegundos = 0;
+    try {
+      const doc = await db.collection('Variablesglobales').doc('Parametros').get();
+      if(!doc.exists) return;
+      const data = doc.data() || {};
+      const candidatos = [
+        data.segundosIntervaloCantoAzar,
+        data.intervaloCantoAzarSegundos,
+        data.segundosCantoAzar
+      ];
+      const detectado = candidatos.find(valor=>Number.isFinite(Number(valor)) && Number(valor) >= 0);
+      intervaloCantoAzarSegundos = detectado !== undefined ? Math.max(0, Math.floor(Number(detectado))) : 0;
+    } catch (error) {
+      console.warn('No se pudo cargar el intervalo de canto al azar.', error);
+    }
+  }
+
+  function actualizarEstadoBotonAutoCanto(){
+    if(!autoCantoBtn) return;
+    const habilitado = obtenerEstadoActualNormalizado() === 'jugando';
+    autoCantoBtn.disabled = !habilitado;
+    autoCantoBtn.classList.toggle('activo', autoCantoAzarActivo);
+  }
+
+  function detenerAutoCantosAzar(){
+    autoCantoAzarActivo = false;
+    if(autoCantoAzarTimer){
+      clearTimeout(autoCantoAzarTimer);
+      autoCantoAzarTimer = null;
+    }
+    actualizarEstadoBotonAutoCanto();
+  }
+
+  function obtenerCantoAleatorioPendiente(){
+    const disponibles = [];
+    for(const [clave] of cantoCeldas){
+      if(!cantosSeleccionados.has(clave)){
+        disponibles.push(clave);
+      }
+    }
+    if(!disponibles.length) return null;
+    const idx = Math.floor(Math.random() * disponibles.length);
+    return disponibles[idx] || null;
+  }
+
+  async function ejecutarAutoCantosAzar(){
+    if(!autoCantoAzarActivo) return;
+    if(obtenerEstadoActualNormalizado() !== 'jugando'){
+      detenerAutoCantosAzar();
+      return;
+    }
+    const siguiente = obtenerCantoAleatorioPendiente();
+    if(!siguiente){
+      detenerAutoCantosAzar();
+      return;
+    }
+    await registrarCanto(siguiente, { confirmarCanto: false, mostrarToast: true });
+    if(!autoCantoAzarActivo) return;
+    autoCantoAzarTimer = setTimeout(ejecutarAutoCantosAzar, Math.max(1, intervaloCantoAzarSegundos) * 1000);
+  }
+
+  async function alternarAutoCantosAzar(){
+    if(autoCantoAzarActivo){
+      detenerAutoCantosAzar();
+      return;
+    }
+    if(obtenerEstadoActualNormalizado() !== 'jugando'){
+      mostrarAvisoSimple('La opción de canto al azar solo está disponible cuando el sorteo está en estado JUGANDO.');
+      return;
+    }
+    await cargarIntervaloCantoAzarDesdeParametros();
+    if(!Number.isFinite(intervaloCantoAzarSegundos) || intervaloCantoAzarSegundos <= 0){
+      mostrarAvisoSimple('Debes definir un mínimo de segundos en la ventana configuración antes de activar esta opción');
+      return;
+    }
+    const confirmar = await preguntarAccionEstado('¿Deseas iniciar jugadas automaticas al azar? al iniciar se debe esperar a su culminación');
+    if(!confirmar) return;
+    autoCantoAzarActivo = true;
+    actualizarEstadoBotonAutoCanto();
+    ejecutarAutoCantosAzar();
+  }
+
   function actualizarContadorManualCanto(payload = manualCantoActivo){
     if(!nuevosGanadoresContadorEl) return;
     const duracionSegundos = Math.max(0, Math.floor(Number(payload?.duracionSegundos) || 0));
@@ -5225,6 +5354,7 @@
     todasFormasConGanadores = false;
     indiceUltimoGanador = null;
     notificacionComplementariosMostrada = false;
+    formasGanadorasNotificadas.clear();
     cantosInicializados = false;
     mostrarComplementariosPendiente = false;
     evaluandoCantoActual = false;
@@ -5881,6 +6011,8 @@
         centroPagosBtn.classList.remove('animacion-pagos');
       }
       forzarVisibilidadResultado(false);
+      detenerAutoCantosAzar();
+      actualizarEstadoBotonAutoCanto();
       return;
     }
     const estado = obtenerEstadoActualNormalizado();
@@ -5906,6 +6038,10 @@
       centroPagosBtn.classList.toggle('animacion-pagos', animarPagos);
     }
     forzarVisibilidadResultado(esFinalizado);
+    if(estado !== 'jugando' && autoCantoAzarActivo){
+      detenerAutoCantosAzar();
+    }
+    actualizarEstadoBotonAutoCanto();
   }
 
   function forzarVisibilidadResultado(visible){
@@ -5952,7 +6088,7 @@
       }
       forzarVisibilidadResultado(false);
       modoManual = false;
-      modoRecordatorioMostrado = false;
+      detenerAutoCantosAzar();
       actualizarEstadoModo();
       actualizarAnimaciones();
       aplicarDatosCantos([]);
@@ -6054,11 +6190,6 @@
     actualizarTablaEstado();
     actualizarEstadoModo();
     if(obtenerEstadoActualNormalizado() !== 'jugando'){
-      modoRecordatorioMostrado = false;
-    }
-    if(obtenerEstadoActualNormalizado() === 'jugando' && !modoRecordatorioMostrado && !yaSeMostroRecordatorioModo()){
-      modoRecordatorioMostrado = true;
-      abrirModalRecordatorioModo();
     }
   }
 
