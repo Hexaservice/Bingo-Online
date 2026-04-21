@@ -12,7 +12,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Juego Activo</title>
   <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/audioControls.css">
   <style>
       :root {
           --panel-bg: rgba(255, 255, 255, 0.88);
@@ -4494,43 +4493,7 @@
     </div>
   </div>
 
-  <div id="audio-control-game" class="audio-control audio-control--left">
-    <div class="audio-control__volume" hidden aria-hidden="true">
-      <div id="audio-status-game" class="audio-control__status" role="status" aria-live="polite">🔊 Audio activo</div>
-      <div class="audio-control__rows">
-        <div class="audio-control__row">
-          <label for="audio-volume-master-game">General</label>
-          <input id="audio-volume-master-game" class="audio-control__range" type="range" min="0" max="1" step="0.05" value="1" aria-label="Volumen general">
-          <span id="audio-value-master-game" class="audio-control__value">100%</span>
-        </div>
-        <div class="audio-control__row">
-          <label for="audio-volume-game">Música</label>
-          <input id="audio-volume-game" class="audio-control__range" type="range" min="0" max="1" step="0.05" value="0.22" aria-label="Volumen de música">
-          <span id="audio-value-game" class="audio-control__value">22%</span>
-        </div>
-        <div class="audio-control__row">
-          <label for="audio-volume-sfx-game">Efectos</label>
-          <input id="audio-volume-sfx-game" class="audio-control__range" type="range" min="0" max="1" step="0.05" value="1" aria-label="Volumen de efectos">
-          <span id="audio-value-sfx-game" class="audio-control__value">100%</span>
-        </div>
-      </div>
-      <div class="audio-control__actions">
-        <button id="audio-reset-game" class="audio-control__reset" type="button" aria-label="Restablecer audio a valores por defecto">Restablecer</button>
-      </div>
-    </div>
-    <button id="audio-toggle-game" class="audio-control__toggle" type="button" aria-pressed="true" aria-label="Activar o silenciar todo el audio">
-      <svg class="audio-control__icon audio-control__icon--on" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M4 10v4h4l5 4V6l-5 4H4z" fill="currentColor"></path>
-        <path d="M16.5 8.5a4.5 4.5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path>
-        <path d="M18.8 6a7.5 7.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.8"></path>
-      </svg>
-      <svg class="audio-control__icon audio-control__icon--off" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M4 10v4h4l5 4V6l-5 4H4z" fill="currentColor"></path>
-        <path d="M18.5 8.5l-7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
-        <path d="M11.5 8.5l7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
-      </svg>
-    </button>
-  </div>
+
 
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore-compat.js"></script>
@@ -4542,7 +4505,6 @@
   <script src="js/timezone.js"></script>
   <script src="js/audioManifest.js"></script>
   <script src="js/audioManager.js"></script>
-  <script src="js/audioControls.js"></script>
   <script src="js/serviceWorkerRegistration.js"></script>
   <script>
   ensureAuth();
@@ -4561,30 +4523,6 @@
   const sorteoResumenEl = document.getElementById('sorteo-resumen');
   const sorteoDetallesEl = document.getElementById('sorteo-detalles');
 
-  initBingoAudioControl({
-    containerId: 'audio-control-game',
-    toggleId: 'audio-toggle-game',
-    volumeId: 'audio-volume-game',
-    masterVolumeId: 'audio-volume-master-game',
-    sfxVolumeId: 'audio-volume-sfx-game',
-    resetId: 'audio-reset-game',
-    statusId: 'audio-status-game',
-    masterValueId: 'audio-value-master-game',
-    musicValueId: 'audio-value-game',
-    sfxValueId: 'audio-value-sfx-game',
-    musicManifestKey: 'music.backgroundMain',
-    defaultVolume: 0.22,
-    musicTrackId: 'game-background',
-    sfxEvents: {
-      winner: {
-        manifestKey: 'sfx.win',
-        critical: true,
-        duckAmount: 0.3,
-        duckDurationMs: 2200,
-        duckFadeMs: 260,
-      },
-    },
-  });
 
   const AUDIO_EVENTS = Object.freeze({
     DRAW_NUMBER: 'DRAW_NUMBER',
