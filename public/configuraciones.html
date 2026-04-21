@@ -1263,6 +1263,11 @@
       <input type="text" id="segundos-cierre-cantos" class="cierre-cantos-input" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="0">
       <button type="button" id="guardar-segundos-cierre-cantos" class="cierre-cantos-btn">Guardar</button>
     </div>
+    <label for="segundos-intervalo-canto-azar">Segundos Intervalo de canto azar</label>
+    <div class="cierre-cantos-row">
+      <input type="text" id="segundos-intervalo-canto-azar" class="cierre-cantos-input" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="0">
+      <button type="button" id="guardar-segundos-intervalo-canto-azar" class="cierre-cantos-btn">Guardar</button>
+    </div>
     <div class="publicidad-bloque" aria-labelledby="publicidad-sorteos-titulo">
       <p id="publicidad-sorteos-titulo" class="publicidad-titulo">Links de publicidad en Sorteos</p>
       <div class="publicidad-campos">
@@ -1525,6 +1530,8 @@
     const botonGuardarLink=document.getElementById('guardar-link-whatsapp');
     const campoSegundosCierreCantos=document.getElementById('segundos-cierre-cantos');
     const botonGuardarSegundosCierreCantos=document.getElementById('guardar-segundos-cierre-cantos');
+    const campoSegundosIntervaloCantoAzar=document.getElementById('segundos-intervalo-canto-azar');
+    const botonGuardarSegundosIntervaloCantoAzar=document.getElementById('guardar-segundos-intervalo-canto-azar');
     const campoLinkPublicidadSorteos=document.getElementById('link-publicidad-sorteos');
     const campoLinkPublicidadSorteosDos=document.getElementById('link-publicidad-sorteos-2');
     const botonGuardarLinksPublicidad=document.getElementById('guardar-links-publicidad-sorteos');
@@ -1902,6 +1909,10 @@
           if(campoSegundosCierreCantos){
             campoSegundosCierreCantos.value = Number.isFinite(segundosCierre) && segundosCierre >= 0 ? String(Math.floor(segundosCierre)) : '0';
           }
+          const segundosAzar = Number(data.segundosIntervaloCantoAzar ?? data.intervaloCantoAzarSegundos ?? data.segundosCantoAzar ?? 0);
+          if(campoSegundosIntervaloCantoAzar){
+            campoSegundosIntervaloCantoAzar.value = Number.isFinite(segundosAzar) && segundosAzar >= 0 ? String(Math.floor(segundosAzar)) : '0';
+          }
           const linkPublicidadPrimario=(data.linkPublicidadSorteos1??data.linkPublicidadSorteos??data.linkpublicidadsorteos??data.linkPublicidad??'').toString();
           const linkPublicidadSecundario=(data.linkPublicidadSorteos2??data.linkpublicidadsorteos2??data.linkPublicidad2??'').toString();
           if(linkPublicidadPrimario){
@@ -2004,6 +2015,11 @@
         campoSegundosCierreCantos.value=(campoSegundosCierreCantos.value||'').replace(/\D/g,'').slice(0,4);
       });
     }
+    if(campoSegundosIntervaloCantoAzar){
+      campoSegundosIntervaloCantoAzar.addEventListener('input',()=>{
+        campoSegundosIntervaloCantoAzar.value=(campoSegundosIntervaloCantoAzar.value||'').replace(/\D/g,'').slice(0,4);
+      });
+    }
     if(botonGuardarSegundosCierreCantos){
       botonGuardarSegundosCierreCantos.addEventListener('click',async ()=>{
         const valorLimpio=(campoSegundosCierreCantos?.value||'').replace(/\D/g,'');
@@ -2028,6 +2044,28 @@
         } catch(err){
           console.error('No se pudo guardar los segundos para cierre de cantos',err);
           alert('Ocurrió un error al guardar los segundos de cierre de cantos. Inténtalo nuevamente.');
+        }
+      });
+    }
+    if(botonGuardarSegundosIntervaloCantoAzar){
+      botonGuardarSegundosIntervaloCantoAzar.addEventListener('click',async ()=>{
+        const valorLimpio=(campoSegundosIntervaloCantoAzar?.value||'').replace(/\D/g,'');
+        const segundos=valorLimpio===''?0:Math.max(0,Math.floor(Number(valorLimpio)||0));
+        const confirmar=await confirm('¿Deseas guardar los segundos del intervalo de canto al azar?');
+        if(!confirmar) return;
+        try {
+          await db.collection('Variablesglobales').doc('Parametros').set({
+            segundosIntervaloCantoAzar:segundos,
+            intervaloCantoAzarSegundos:segundos,
+            segundosCantoAzar:segundos
+          },{merge:true});
+          if(campoSegundosIntervaloCantoAzar){
+            campoSegundosIntervaloCantoAzar.value=String(segundos);
+          }
+          alert('Intervalo de canto al azar guardado correctamente.');
+        } catch(err){
+          console.error('No se pudo guardar el intervalo de canto al azar',err);
+          alert('Ocurrió un error al guardar el intervalo de canto al azar. Inténtalo nuevamente.');
         }
       });
     }
