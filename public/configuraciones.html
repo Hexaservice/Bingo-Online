@@ -1705,6 +1705,41 @@
     function construirListadoWhatsapp(){
       return numerosWhatsappList.map(item=>valorCompuestoNumero(item)).filter(Boolean);
     }
+    function extraerListaWhatsapp(rawLista){
+      if(!Array.isArray(rawLista)) return [];
+      return rawLista
+        .map(item=>{
+          if(typeof item === 'string' || typeof item === 'number'){
+            return normalizarNumeroWhatsapp(item);
+          }
+          if(item && typeof item === 'object'){
+            const prefijo = normalizarNumeroWhatsapp(item.prefijo ?? item.codigo ?? item.code ?? '');
+            const local = (item.local ?? item.numero ?? item.phone ?? item.telefono ?? '').toString().replace(/\D/g,'');
+            return normalizarNumeroWhatsapp(`${prefijo}${local}`);
+          }
+          return '';
+        })
+        .filter(Boolean);
+    }
+    function obtenerNumeroDesdeParametros(data){
+      return normalizarNumeroWhatsapp(
+        data.numeroWhatsapp
+        ?? data.numero_whatsapp
+        ?? data.numeroWhatsappAplicacion
+        ?? data.whatsappNumero
+        ?? ''
+      );
+    }
+    function obtenerEnteroNoNegativoDesdeClaves(data,claves){
+      for(const clave of claves){
+        if(!(clave in data)) continue;
+        const valor = Number(data[clave]);
+        if(Number.isFinite(valor)){
+          return Math.max(0, Math.floor(valor));
+        }
+      }
+      return 0;
+    }
     function marcarFilaSeleccionada(valor){
       if(!tablaWhatsapp) return;
       const filas=tablaWhatsapp.querySelectorAll('tr[data-valor]');
@@ -1887,9 +1922,9 @@
           if(nombreApp){
             etiquetaNumeroWhatsapp.textContent=`Número WhatsApp para ${nombreApp}`;
           }
-          const listaGuardada=Array.isArray(data.numerosWhatsapp)?data.numerosWhatsapp:[];
-          const numeroGuardado=normalizarNumeroWhatsapp(data.numeroWhatsapp??data.numero_whatsapp??'');
-          const listaNormalizada=listaGuardada.length>0?listaGuardada.map(normalizarNumeroWhatsapp):[];
+          const listaGuardada=extraerListaWhatsapp(data.numerosWhatsapp);
+          const numeroGuardado=obtenerNumeroDesdeParametros(data);
+          const listaNormalizada=listaGuardada.length>0?listaGuardada:[];
           const baseLista=listaNormalizada.length>0?listaNormalizada:[numeroGuardado].filter(Boolean);
           numerosWhatsappList=baseLista.map(valor=>{
             const {prefijo,local}=descomponerNumeroWhatsapp(valor);
@@ -1901,17 +1936,22 @@
           numeroSeleccionado=numeroGuardado|| (numerosWhatsappList[0] ? `${numerosWhatsappList[0].prefijo}${numerosWhatsappList[0].local}` : '');
           renderDropdownWhatsapp();
           registrarEstadoBaseWhatsapp(baseLista.length>0?baseLista:numerosWhatsappList.map(valorCompuestoNumero));
-          const linkGuardado=data.linkWhatsapp??data.linkwhatsapp??'';
-          if(linkGuardado){
-            campoLinkWhatsapp.value=linkGuardado;
-          }
-          const segundosCierre = Number(data.segundosCierreCantos ?? data.segundosParaCierreCantos ?? data.cierreCantosSegundos ?? data.duracionCantoManualSegundos ?? data.tiempoCantoManualSegundos ?? data.manualBingoDuracionSegundos ?? 0);
+          const linkGuardado=(data.linkWhatsapp??data.linkwhatsapp??data.link_whatsapp??'').toString().trim();
+          campoLinkWhatsapp.value=linkGuardado;
+          const segundosCierre = obtenerEnteroNoNegativoDesdeClaves(data,[
+            'segundosCierreCantos','segundosParaCierreCantos','cierreCantosSegundos',
+            'duracionCantoManualSegundos','tiempoCantoManualSegundos','manualBingoDuracionSegundos',
+            'segundos_cierre_cantos'
+          ]);
           if(campoSegundosCierreCantos){
-            campoSegundosCierreCantos.value = Number.isFinite(segundosCierre) && segundosCierre >= 0 ? String(Math.floor(segundosCierre)) : '0';
+            campoSegundosCierreCantos.value = String(segundosCierre);
           }
-          const segundosAzar = Number(data.segundosIntervaloCantoAzar ?? data.intervaloCantoAzarSegundos ?? data.segundosCantoAzar ?? 0);
+          const segundosAzar = obtenerEnteroNoNegativoDesdeClaves(data,[
+            'segundosIntervaloCantoAzar','intervaloCantoAzarSegundos','segundosCantoAzar',
+            'segundos_intervalo_canto_azar'
+          ]);
           if(campoSegundosIntervaloCantoAzar){
-            campoSegundosIntervaloCantoAzar.value = Number.isFinite(segundosAzar) && segundosAzar >= 0 ? String(Math.floor(segundosAzar)) : '0';
+            campoSegundosIntervaloCantoAzar.value = String(segundosAzar);
           }
           const linkPublicidadPrimario=(data.linkPublicidadSorteos1??data.linkPublicidadSorteos??data.linkpublicidadsorteos??data.linkPublicidad??'').toString();
           const linkPublicidadSecundario=(data.linkPublicidadSorteos2??data.linkpublicidadsorteos2??data.linkPublicidad2??'').toString();
