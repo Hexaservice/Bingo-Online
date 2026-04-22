@@ -197,6 +197,57 @@
       .live-stream-toggle.oculto {
           background: rgba(30,30,30,0.9);
       }
+      .game-audio-control {
+          position: fixed;
+          top: clamp(66px, 11vw, 82px);
+          right: clamp(12px, 3vw, 18px);
+          z-index: 43;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 8px;
+      }
+      .game-audio-toggle {
+          width: clamp(44px, 10vw, 54px);
+          height: clamp(44px, 10vw, 54px);
+          border-radius: 50%;
+          border: 3px solid rgba(255,255,255,0.72);
+          background: linear-gradient(150deg, rgba(32,32,32,0.95), rgba(18,18,18,0.95));
+          color: #fff;
+          font-size: clamp(1rem, 4.2vw, 1.3rem);
+          cursor: pointer;
+          box-shadow: 0 10px 22px rgba(0,0,0,0.28);
+      }
+      .game-audio-panel {
+          width: min(270px, 78vw);
+          border-radius: 14px;
+          border: 2px solid rgba(255,255,255,0.15);
+          background: rgba(17,17,17,0.94);
+          color: #fff;
+          padding: 10px 12px;
+          box-shadow: 0 12px 24px rgba(0,0,0,0.3);
+      }
+      .game-audio-panel[hidden] { display: none !important; }
+      .game-audio-row { display: grid; gap: 6px; margin-bottom: 8px; }
+      .game-audio-row:last-child { margin-bottom: 0; }
+      .game-audio-row label { font-size: 0.76rem; letter-spacing: 0.2px; color: #f4f4f4; }
+      .game-audio-row input[type="range"] { width: 100%; }
+      .game-audio-status {
+          font-size: 0.72rem;
+          color: #d1d5db;
+          margin-top: 2px;
+      }
+      .game-audio-mute-btn {
+          width: 100%;
+          border: 1px solid rgba(255,255,255,0.2);
+          border-radius: 10px;
+          background: rgba(255,255,255,0.1);
+          color: #fff;
+          font-size: 0.78rem;
+          font-weight: 600;
+          padding: 8px 10px;
+          cursor: pointer;
+      }
       .live-stream-window {
           --live-stream-max-gap: clamp(10px, 2vw, 20px);
           position: fixed;
@@ -4297,6 +4348,21 @@
   <button id="whatsapp-flotante" class="whatsapp-flotante" type="button" aria-label="Abrir grupo de WhatsApp">
     <img src="/img/whatsapp-icon.png" alt="">
   </button>
+  <div class="game-audio-control">
+    <button id="game-audio-toggle" class="game-audio-toggle" type="button" aria-label="Abrir controles de sonido" aria-expanded="false">🔊</button>
+    <div id="game-audio-panel" class="game-audio-panel" hidden aria-hidden="true">
+      <div class="game-audio-row">
+        <label for="game-audio-master">Volumen general</label>
+        <input id="game-audio-master" type="range" min="0" max="1" step="0.05" value="1">
+      </div>
+      <div class="game-audio-row">
+        <label for="game-audio-sfx">Volumen de cantos/efectos</label>
+        <input id="game-audio-sfx" type="range" min="0" max="1" step="0.05" value="1">
+      </div>
+      <button id="game-audio-mute" class="game-audio-mute-btn" type="button" aria-pressed="false">Silenciar</button>
+      <div id="game-audio-status" class="game-audio-status">Audio activo</div>
+    </div>
+  </div>
   <button id="live-stream-toggle" class="live-stream-toggle" type="button" aria-label="Mostrar transmisión en vivo" hidden aria-hidden="true" style="display:none;">LIVE</button>
   <div id="live-stream-window" class="live-stream-window" aria-hidden="true" role="dialog" aria-label="Transmisión en vivo">
     <div id="live-stream-handle" class="live-stream-header">
@@ -4550,6 +4616,12 @@
   const audioJuegoEventosRegistrados = new Set();
   const audioJuegoCantosCola = [];
   const audioJuegoUltimoEventoPorNombre = new Map();
+  const AUDIO_STORAGE_KEYS = Object.freeze({
+    master: 'audio:masterVolume',
+    sfx: 'audio:sfxVolume',
+    muted: 'audio:muted'
+  });
+  const audioJuegoPreferencias = { master: 1, sfx: 1, muted: false };
 
   function obtenerMarcaTiempoAudioMs(){
     if(typeof performance !== 'undefined' && typeof performance.now === 'function'){
@@ -4560,6 +4632,40 @@
 
   function esErrorAudioBloqueado(err){
     return err && (err.code === 'AUDIO_CONTEXT_BLOCKED' || /bloqueado/i.test(String(err?.message || '')));
+  }
+
+  function clampAudioValor(valor, fallback = 1){
+    const numero = Number(valor);
+    if(!Number.isFinite(numero)) return fallback;
+    return Math.max(0, Math.min(1, numero));
+  }
+
+  function cargarPreferenciasAudioJuego(){
+    try{
+      audioJuegoPreferencias.master = clampAudioValor(localStorage.getItem(AUDIO_STORAGE_KEYS.master), 1);
+      audioJuegoPreferencias.sfx = clampAudioValor(localStorage.getItem(AUDIO_STORAGE_KEYS.sfx), 1);
+      const mutedRaw = localStorage.getItem(AUDIO_STORAGE_KEYS.muted);
+      audioJuegoPreferencias.muted = mutedRaw === 'true';
+    }catch(_){}
+  }
+
+  function guardarPreferenciasAudioJuego(){
+    try{
+      localStorage.setItem(AUDIO_STORAGE_KEYS.master, String(audioJuegoPreferencias.master));
+      localStorage.setItem(AUDIO_STORAGE_KEYS.sfx, String(audioJuegoPreferencias.sfx));
+      localStorage.setItem(AUDIO_STORAGE_KEYS.muted, String(audioJuegoPreferencias.muted));
+    }catch(_){}
+  }
+
+  function aplicarPreferenciasAudioJuego(){
+    if(!window.audioManager) return;
+    if(typeof window.audioManager.setVolume === 'function'){
+      window.audioManager.setVolume('master', audioJuegoPreferencias.master);
+      window.audioManager.setVolume('sfx', audioJuegoPreferencias.sfx);
+    }
+    if(typeof window.audioManager.setMuted === 'function'){
+      window.audioManager.setMuted(audioJuegoPreferencias.muted);
+    }
   }
 
   function registrarAudioEventosBase(){
@@ -4595,10 +4701,8 @@
     }
     audioJuegoInitPromise = (async ()=>{
       registrarAudioEventosBase();
-      if(typeof window.audioManager.setVolume === 'function'){
-        window.audioManager.setVolume('master', 1);
-        window.audioManager.setVolume('sfx', 1);
-      }
+      cargarPreferenciasAudioJuego();
+      aplicarPreferenciasAudioJuego();
       if(typeof window.audioManager.probeAutoplayState === 'function'){
         try{
           await window.audioManager.probeAutoplayState();
@@ -4633,6 +4737,74 @@
     window.addEventListener('pointerdown', handler, { passive: true });
     window.addEventListener('keydown', handler, { passive: true });
     window.addEventListener('touchstart', handler, { passive: true });
+  }
+
+  function configurarControlesAudioJuego(){
+    if(!gameAudioToggleBtn || !gameAudioPanelEl || !gameAudioMasterInput || !gameAudioSfxInput || !gameAudioMuteBtn) return;
+    cargarPreferenciasAudioJuego();
+    registrarDesbloqueoAudioJuegoPorInteraccion();
+    let panelVisible = false;
+
+    const actualizarUI = ()=>{
+      gameAudioMasterInput.value = audioJuegoPreferencias.master.toFixed(2);
+      gameAudioSfxInput.value = audioJuegoPreferencias.sfx.toFixed(2);
+      gameAudioToggleBtn.textContent = audioJuegoPreferencias.muted ? '🔇' : '🔊';
+      gameAudioMuteBtn.textContent = audioJuegoPreferencias.muted ? 'Activar sonido' : 'Silenciar';
+      gameAudioMuteBtn.setAttribute('aria-pressed', audioJuegoPreferencias.muted ? 'true' : 'false');
+      if(gameAudioStatusEl){
+        if(audioJuegoPreferencias.muted){
+          gameAudioStatusEl.textContent = 'Audio silenciado por usuario';
+        }else if(window.audioManager?.isAutoplayBlocked && window.audioManager.isAutoplayBlocked()){
+          gameAudioStatusEl.textContent = 'Toca la pantalla para activar audio';
+        }else{
+          gameAudioStatusEl.textContent = 'Audio activo';
+        }
+      }
+    };
+
+    const aplicarYGuardar = ()=>{
+      aplicarPreferenciasAudioJuego();
+      guardarPreferenciasAudioJuego();
+      actualizarUI();
+    };
+
+    gameAudioToggleBtn.addEventListener('click', ()=>{
+      panelVisible = !panelVisible;
+      gameAudioPanelEl.hidden = !panelVisible;
+      gameAudioPanelEl.setAttribute('aria-hidden', panelVisible ? 'false' : 'true');
+      gameAudioToggleBtn.setAttribute('aria-expanded', panelVisible ? 'true' : 'false');
+      if(panelVisible){
+        void inicializarAudioJuego();
+        void intentarDesbloquearAudioJuego();
+      }
+    });
+
+    gameAudioMasterInput.addEventListener('input', (event)=>{
+      audioJuegoPreferencias.master = clampAudioValor(event?.target?.value, audioJuegoPreferencias.master);
+      audioJuegoPreferencias.muted = false;
+      aplicarYGuardar();
+    });
+    gameAudioSfxInput.addEventListener('input', (event)=>{
+      audioJuegoPreferencias.sfx = clampAudioValor(event?.target?.value, audioJuegoPreferencias.sfx);
+      audioJuegoPreferencias.muted = false;
+      aplicarYGuardar();
+    });
+    gameAudioMuteBtn.addEventListener('click', ()=>{
+      audioJuegoPreferencias.muted = !audioJuegoPreferencias.muted;
+      aplicarYGuardar();
+    });
+
+    document.addEventListener('click', (event)=>{
+      if(!panelVisible) return;
+      if(gameAudioPanelEl.contains(event.target) || gameAudioToggleBtn.contains(event.target)) return;
+      panelVisible = false;
+      gameAudioPanelEl.hidden = true;
+      gameAudioPanelEl.setAttribute('aria-hidden', 'true');
+      gameAudioToggleBtn.setAttribute('aria-expanded', 'false');
+    });
+
+    aplicarPreferenciasAudioJuego();
+    actualizarUI();
   }
 
   async function procesarColaAudioCantos(){
@@ -4770,6 +4942,12 @@
   const whatsappModalEl = document.getElementById('modal-whatsapp');
   const whatsappModalAceptarBtn = document.getElementById('modal-whatsapp-aceptar');
   const whatsappModalMensajeEl = document.getElementById('modal-whatsapp-mensaje');
+  const gameAudioToggleBtn = document.getElementById('game-audio-toggle');
+  const gameAudioPanelEl = document.getElementById('game-audio-panel');
+  const gameAudioMasterInput = document.getElementById('game-audio-master');
+  const gameAudioSfxInput = document.getElementById('game-audio-sfx');
+  const gameAudioMuteBtn = document.getElementById('game-audio-mute');
+  const gameAudioStatusEl = document.getElementById('game-audio-status');
   const liveStreamToggleBtn = document.getElementById('live-stream-toggle');
   const liveStreamWindowEl = document.getElementById('live-stream-window');
   const liveStreamIframeEl = document.getElementById('live-stream-iframe');
@@ -4836,6 +5014,7 @@
   const LIVE_ICON_INTERVAL_MS = 3000;
   let ventanaEnFoco = document.visibilityState === 'visible' && document.hasFocus();
   let cantosRecientesSinAnimacion = false;
+  configurarControlesAudioJuego();
   let resumenGanadoresPrevio = new Map();
   let manualBingoUnsub = null;
   let manualBingoEstado = null;
