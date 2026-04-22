@@ -46,8 +46,9 @@ self.addEventListener('activate', (event) => {
 
 function isAudioRequest(request) {
   const url = new URL(request.url);
+  if (!url.pathname.startsWith('/sonidos/')) return false;
   if (request.destination === 'audio') return true;
-  return /\.(mp3|ogg|wav)(\?|$)/i.test(url.pathname);
+  return /\.wav(\?|$)/i.test(url.pathname);
 }
 
 self.addEventListener('fetch', (event) => {
@@ -75,9 +76,6 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     caches.open(AUDIO_CACHE).then(async (cache) => {
-      const cached = await cache.match(event.request, { ignoreSearch: false });
-      if (cached) return cached;
-
       try {
         const networkResponse = await fetch(event.request);
         if (networkResponse && (networkResponse.ok || networkResponse.type === 'opaque')) {
@@ -85,6 +83,7 @@ self.addEventListener('fetch', (event) => {
         }
         return networkResponse;
       } catch (_) {
+        const cached = await cache.match(event.request, { ignoreSearch: false });
         if (cached) return cached;
         throw _;
       }
