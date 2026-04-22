@@ -4853,27 +4853,30 @@
   async function reproducirCantoAudioYEsperar(eventName){
     if(!eventName || !window.audioManager || typeof window.audioManager.playSfx !== 'function') return false;
     const sfxActivos = window.audioManager.activeSfxNodes;
-    const totalAntes = sfxActivos && typeof sfxActivos.size === 'number' ? sfxActivos.size : null;
+    const nodosActivosAntes = sfxActivos instanceof Set ? new Set(sfxActivos) : null;
 
     await window.audioManager.playSfx(eventName);
 
-    const totalDespues = sfxActivos && typeof sfxActivos.size === 'number' ? sfxActivos.size : null;
-    const inicioConfirmado = Number.isFinite(totalAntes) && Number.isFinite(totalDespues)
-      ? totalDespues > totalAntes
-      : true;
+    if(!(sfxActivos instanceof Set) || !(nodosActivosAntes instanceof Set)){
+      return true;
+    }
 
-    if(!inicioConfirmado){
+    const nodosNuevos = [];
+    for(const nodo of sfxActivos){
+      if(!nodosActivosAntes.has(nodo)){
+        nodosNuevos.push(nodo);
+      }
+    }
+    const nodoCanto = nodosNuevos.length ? nodosNuevos[nodosNuevos.length - 1] : null;
+    if(!nodoCanto){
       return false;
     }
 
-    if(Number.isFinite(totalDespues)){
-      const objetivo = Math.max(0, totalDespues - 1);
-      const inicioEspera = obtenerMarcaTiempoAudioMs();
-      while(sfxActivos.size > objetivo){
-        await new Promise((resolve)=>setTimeout(resolve, 40));
-        if((obtenerMarcaTiempoAudioMs() - inicioEspera) > 5000){
-          break;
-        }
+    const inicioEspera = obtenerMarcaTiempoAudioMs();
+    while(sfxActivos.has(nodoCanto)){
+      await new Promise((resolve)=>setTimeout(resolve, 40));
+      if((obtenerMarcaTiempoAudioMs() - inicioEspera) > 5000){
+        break;
       }
     }
 
