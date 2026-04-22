@@ -4635,6 +4635,8 @@
   }
 
   function clampAudioValor(valor, fallback = 1){
+    if(valor === null || typeof valor === 'undefined') return fallback;
+    if(typeof valor === 'string' && valor.trim() === '') return fallback;
     const numero = Number(valor);
     if(!Number.isFinite(numero)) return fallback;
     return Math.max(0, Math.min(1, numero));
@@ -4820,8 +4822,12 @@
           continue;
         }
         try{
-          await window.audioManager.playSfx(eventName);
-          audioJuegoCantosCola.shift();
+          const reproducido = await reproducirCantoAudioYEsperar(eventName);
+          if(reproducido){
+            audioJuegoCantosCola.shift();
+          }else{
+            await new Promise((resolve)=>setTimeout(resolve, 120));
+          }
         }catch(err){
           if(esErrorAudioBloqueado(err)){
             break;
@@ -4842,6 +4848,39 @@
     registrarDesbloqueoAudioJuegoPorInteraccion();
     audioJuegoCantosCola.push(normalizado);
     void procesarColaAudioCantos();
+  }
+
+  async function reproducirCantoAudioYEsperar(eventName){
+    if(!eventName || !window.audioManager || typeof window.audioManager.playSfx !== 'function') return false;
+    const sfxActivos = window.audioManager.activeSfxNodes;
+    const nodosActivosAntes = sfxActivos instanceof Set ? new Set(sfxActivos) : null;
+
+    await window.audioManager.playSfx(eventName);
+
+    if(!(sfxActivos instanceof Set) || !(nodosActivosAntes instanceof Set)){
+      return true;
+    }
+
+    const nodosNuevos = [];
+    for(const nodo of sfxActivos){
+      if(!nodosActivosAntes.has(nodo)){
+        nodosNuevos.push(nodo);
+      }
+    }
+    const nodoCanto = nodosNuevos.length ? nodosNuevos[nodosNuevos.length - 1] : null;
+    if(!nodoCanto){
+      return false;
+    }
+
+    const inicioEspera = obtenerMarcaTiempoAudioMs();
+    while(sfxActivos.has(nodoCanto)){
+      await new Promise((resolve)=>setTimeout(resolve, 40));
+      if((obtenerMarcaTiempoAudioMs() - inicioEspera) > 5000){
+        break;
+      }
+    }
+
+    return true;
   }
 
   async function playGameAudioEvent(eventName, options={}){
