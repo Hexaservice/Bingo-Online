@@ -1181,12 +1181,8 @@
       <button id="tutorial-prev" class="tutorial-nav-btn" type="button" aria-label="Paso anterior del tutorial">⏪</button>
       <button id="tutorial-play" class="tutorial-nav-btn" type="button" aria-label="Reproducir tutorial automáticamente">▶️</button>
       <button id="tutorial-next" class="tutorial-nav-btn" type="button" aria-label="Siguiente paso del tutorial">⏩</button>
-      <button id="tutorial-skip" class="tutorial-nav-btn tutorial-nav-btn--text" type="button">Saltar</button>
-      <button id="tutorial-dismiss" class="tutorial-nav-btn tutorial-nav-btn--text" type="button">No volver a mostrar</button>
     </div>
   </div>
-  <p id="tutorial-live-region" class="sr-only" aria-live="polite" aria-atomic="true"></p>
-
   <div id="fecha-hora"></div>
   <div id="derechos">Todos los derechos reservados ® Hexaservice <span class="current-year"></span></div>
 
@@ -1279,12 +1275,9 @@
   const tutorialPrev = document.getElementById('tutorial-prev');
   const tutorialPlay = document.getElementById('tutorial-play');
   const tutorialNext = document.getElementById('tutorial-next');
-  const tutorialSkip = document.getElementById('tutorial-skip');
-  const tutorialDismiss = document.getElementById('tutorial-dismiss');
   const tutorialHand = document.getElementById('tutorial-hand');
   const tutorialLabel = document.getElementById('tutorial-label');
   const tutorialOverlay = document.getElementById('tutorial-overlay');
-  const tutorialLiveRegion = document.getElementById('tutorial-live-region');
   const whatsappState = { enlace:'', cargado:false };
   const APP_NOMBRE = 'BingOnline';
   let firestoreRef = null;
@@ -1352,14 +1345,12 @@
     auto: { reproduciendo: false, intervalId: null, ciclos: 0, indiceInicio: 0, iniciado: false },
     inicioRegistrado: false,
     completo: false,
-    marcadoNoMostrar: false,
     pasosVistos: new Set(),
   };
   let tutorialDimTimeout = null;
 
   const TUTORIAL_COOKIE = 'tutorialIndice';
   const TUTORIAL_SEEN_KEY = 'tutorialSeen';
-  const TUTORIAL_DISABLED_KEY = 'tutorialDisabled';
   const TUTORIAL_METRICS_KEY = 'tutorialMetricsQueue';
 
   function guardarIndiceTutorial(indice){
@@ -1404,16 +1395,6 @@
 
   function marcarTutorialComoVisto(){
     setTutorialStorageFlag(TUTORIAL_SEEN_KEY, '1');
-  }
-
-  function marcarTutorialNoMostrar(){
-    tutorialState.marcadoNoMostrar = true;
-    setTutorialStorageFlag(TUTORIAL_DISABLED_KEY, '1');
-    marcarTutorialComoVisto();
-  }
-
-  function tutorialNoMostrarActivo(){
-    return getTutorialStorageFlag(TUTORIAL_DISABLED_KEY) === '1';
   }
 
   async function guardarPreferenciaTutorialUsuario(data = {}){
@@ -1468,7 +1449,6 @@
   }
 
   async function debeAutoIniciarTutorial(){
-    if(tutorialNoMostrarActivo()) return false;
     if(getTutorialStorageFlag(TUTORIAL_SEEN_KEY) === '1') return false;
     const userId = obtenerIdentificadorUsuario();
     if(!firestoreRef || !userId || userId === 'anonimo'){
@@ -1478,14 +1458,10 @@
       const userDoc = await firestoreRef.collection('users').doc(userId).get();
       const userData = userDoc.exists ? (userDoc.data() || {}) : {};
       const visto = userData?.tutorial?.visto === true;
-      const noMostrar = userData?.tutorial?.noMostrar === true;
       if(visto){
         marcarTutorialComoVisto();
       }
-      if(noMostrar){
-        marcarTutorialNoMostrar();
-      }
-      return !visto && !noMostrar;
+      return !visto;
     } catch (error) {
       console.warn('No se pudo validar el estado del tutorial en users', error);
       return getTutorialStorageFlag(TUTORIAL_SEEN_KEY) !== '1';
@@ -2075,10 +2051,6 @@
     tutorialState.pasosVistos.add(tutorialState.indice);
     registrarMetricaTutorial('paso_alcanzado', { pasoId: paso.elementId });
 
-    if(tutorialLiveRegion){
-      tutorialLiveRegion.textContent = `Paso ${tutorialState.indice + 1} de ${tutorialSteps.length}: ${paso.label}. ${paso.description}`;
-    }
-
     const rect = objetivo.getBoundingClientRect();
     const manoWidth = tutorialHand ? tutorialHand.width || 44 : 44;
     const manoHeight = tutorialHand ? tutorialHand.height || 44 : 44;
@@ -2173,7 +2145,7 @@
     if(tutorialState.pasosVistos.size === tutorialSteps.length && !tutorialState.completo){
       tutorialState.completo = true;
       marcarTutorialComoVisto();
-      guardarPreferenciaTutorialUsuario({ visto: true, noMostrar: tutorialNoMostrarActivo() });
+      guardarPreferenciaTutorialUsuario({ visto: true, noMostrar: false });
       registrarMetricaTutorial('completado', { totalPasos: tutorialSteps.length });
     }
   }
@@ -2342,7 +2314,7 @@
   }
 
   function configurarTutorial(){
-    if(!tutorialToggle || !tutorialNav || !tutorialPrev || !tutorialNext || !tutorialPlay || !tutorialSkip || !tutorialDismiss){
+    if(!tutorialToggle || !tutorialNav || !tutorialPrev || !tutorialNext || !tutorialPlay){
       return;
     }
     actualizarBotonPlay();
@@ -2370,16 +2342,6 @@
         return;
       }
       cambiarPasoTutorial(1);
-    });
-    tutorialSkip.addEventListener('click', ()=>{
-      registrarMetricaTutorial('abandono', { motivo: 'saltar' });
-      desactivarTutorial('saltar');
-    });
-    tutorialDismiss.addEventListener('click', async ()=>{
-      marcarTutorialNoMostrar();
-      await guardarPreferenciaTutorialUsuario({ visto: true, noMostrar: true });
-      registrarMetricaTutorial('abandono', { motivo: 'no_volver_mostrar' });
-      desactivarTutorial('no_mostrar');
     });
     window.addEventListener('beforeunload', ()=>{
       if(tutorialState.activo && !tutorialState.completo){
