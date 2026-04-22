@@ -4543,6 +4543,9 @@
     [AUDIO_EVENTS.TIE]: { manifestKey: 'sfx.win', critical: true, duckAmount: 0.3, duckDurationMs: 1800 }
   });
   const AUDIO_CANTO_EVENT_PREFIX = 'CANTO_NUM_';
+  const AUDIO_CANTO_FALLBACK_MS = 1400;
+  const AUDIO_CANTO_MIN_GAP_MS = 120;
+  const AUDIO_CANTO_REINTENTO_MS = 180;
   let audioJuegoInicializado = false;
   let audioJuegoInitPromise = null;
   let audioJuegoDesbloqueoRegistrado = false;
@@ -4550,6 +4553,7 @@
   const audioJuegoEventosRegistrados = new Set();
   const audioJuegoCantosCola = [];
   const audioJuegoUltimoEventoPorNombre = new Map();
+  const audioJuegoDuracionEventoMs = new Map();
 
   function obtenerMarcaTiempoAudioMs(){
     if(typeof performance !== 'undefined' && typeof performance.now === 'function'){
@@ -4560,6 +4564,54 @@
 
   function esErrorAudioBloqueado(err){
     return err && (err.code === 'AUDIO_CONTEXT_BLOCKED' || /bloqueado/i.test(String(err?.message || '')));
+  }
+
+  function esperarAudioJuegoMs(durationMs){
+    const normalizado = Number(durationMs);
+    const ms = Number.isFinite(normalizado) ? Math.max(0, normalizado) : 0;
+    if(ms <= 0) return Promise.resolve();
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function obtenerDuracionEventoAudioMs(eventName){
+    if(audioJuegoDuracionEventoMs.has(eventName)){
+      return audioJuegoDuracionEventoMs.get(eventName);
+    }
+    if(!window.audioManager || !window.audioManager.sfxEvents || typeof window.audioManager.loadBufferBySource !== 'function'){
+      return null;
+    }
+    const eventConfig = window.audioManager.sfxEvents.get(eventName);
+    if(!eventConfig?.source){
+      return null;
+    }
+    try{
+      const buffer = await window.audioManager.loadBufferBySource(eventConfig.source);
+      const durationMs = Number(buffer?.duration) * 1000;
+      if(Number.isFinite(durationMs) && durationMs > 0){
+        audioJuegoDuracionEventoMs.set(eventName, durationMs);
+        return durationMs;
+      }
+    }catch(_){}
+    return null;
+  }
+
+  async function reproducirCantoSerializado(eventName){
+    const activeBefore = Number(window.audioManager?.activeSfxNodes?.size);
+    const durationPromise = obtenerDuracionEventoAudioMs(eventName);
+    await window.audioManager.playSfx(eventName);
+    const activeAfter = Number(window.audioManager?.activeSfxNodes?.size);
+    const started = Number.isFinite(activeBefore) && Number.isFinite(activeAfter)
+      ? activeAfter > activeBefore
+      : true;
+    if(!started){
+      return false;
+    }
+    const durationMs = await durationPromise;
+    const waitMs = Number.isFinite(durationMs)
+      ? (durationMs + AUDIO_CANTO_MIN_GAP_MS)
+      : AUDIO_CANTO_FALLBACK_MS;
+    await esperarAudioJuegoMs(waitMs);
+    return true;
   }
 
   function registrarAudioEventosBase(){
@@ -4648,7 +4700,11 @@
           continue;
         }
         try{
-          await window.audioManager.playSfx(eventName);
+          const reproducido = await reproducirCantoSerializado(eventName);
+          if(!reproducido){
+            await esperarAudioJuegoMs(AUDIO_CANTO_REINTENTO_MS);
+            continue;
+          }
           audioJuegoCantosCola.shift();
         }catch(err){
           if(esErrorAudioBloqueado(err)){
