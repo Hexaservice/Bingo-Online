@@ -4853,23 +4853,22 @@
   async function reproducirCantoAudioYEsperar(eventName){
     if(!eventName || !window.audioManager || typeof window.audioManager.playSfx !== 'function') return false;
     const sfxActivos = window.audioManager.activeSfxNodes;
-    const totalAntes = sfxActivos && typeof sfxActivos.size === 'number' ? sfxActivos.size : null;
+    const activosAntes = sfxActivos instanceof Set ? new Set(sfxActivos) : null;
 
     await window.audioManager.playSfx(eventName);
 
-    const totalDespues = sfxActivos && typeof sfxActivos.size === 'number' ? sfxActivos.size : null;
-    const inicioConfirmado = Number.isFinite(totalAntes) && Number.isFinite(totalDespues)
-      ? totalDespues > totalAntes
-      : true;
+    const fuenteCanto = sfxActivos instanceof Set
+      ? Array.from(sfxActivos).find((source)=>!activosAntes?.has(source))
+      : null;
+    const inicioConfirmado = sfxActivos instanceof Set ? !!fuenteCanto : true;
 
     if(!inicioConfirmado){
       return false;
     }
 
-    if(Number.isFinite(totalDespues)){
-      const objetivo = Math.max(0, totalDespues - 1);
+    if(sfxActivos instanceof Set && fuenteCanto){
       const inicioEspera = obtenerMarcaTiempoAudioMs();
-      while(sfxActivos.size > objetivo){
+      while(sfxActivos.has(fuenteCanto)){
         await new Promise((resolve)=>setTimeout(resolve, 40));
         if((obtenerMarcaTiempoAudioMs() - inicioEspera) > 5000){
           break;
