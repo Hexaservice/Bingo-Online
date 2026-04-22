@@ -4635,6 +4635,8 @@
   }
 
   function clampAudioValor(valor, fallback = 1){
+    if(valor === null || typeof valor === 'undefined') return fallback;
+    if(typeof valor === 'string' && valor.trim() === '') return fallback;
     const numero = Number(valor);
     if(!Number.isFinite(numero)) return fallback;
     return Math.max(0, Math.min(1, numero));
@@ -4820,8 +4822,12 @@
           continue;
         }
         try{
-          await window.audioManager.playSfx(eventName);
-          audioJuegoCantosCola.shift();
+          const reproducido = await reproducirCantoAudioYEsperar(eventName);
+          if(reproducido){
+            audioJuegoCantosCola.shift();
+          }else{
+            await new Promise((resolve)=>setTimeout(resolve, 120));
+          }
         }catch(err){
           if(esErrorAudioBloqueado(err)){
             break;
@@ -4842,6 +4848,36 @@
     registrarDesbloqueoAudioJuegoPorInteraccion();
     audioJuegoCantosCola.push(normalizado);
     void procesarColaAudioCantos();
+  }
+
+  async function reproducirCantoAudioYEsperar(eventName){
+    if(!eventName || !window.audioManager || typeof window.audioManager.playSfx !== 'function') return false;
+    const sfxActivos = window.audioManager.activeSfxNodes;
+    const totalAntes = sfxActivos && typeof sfxActivos.size === 'number' ? sfxActivos.size : null;
+
+    await window.audioManager.playSfx(eventName);
+
+    const totalDespues = sfxActivos && typeof sfxActivos.size === 'number' ? sfxActivos.size : null;
+    const inicioConfirmado = Number.isFinite(totalAntes) && Number.isFinite(totalDespues)
+      ? totalDespues > totalAntes
+      : true;
+
+    if(!inicioConfirmado){
+      return false;
+    }
+
+    if(Number.isFinite(totalDespues)){
+      const objetivo = Math.max(0, totalDespues - 1);
+      const inicioEspera = obtenerMarcaTiempoAudioMs();
+      while(sfxActivos.size > objetivo){
+        await new Promise((resolve)=>setTimeout(resolve, 40));
+        if((obtenerMarcaTiempoAudioMs() - inicioEspera) > 5000){
+          break;
+        }
+      }
+    }
+
+    return true;
   }
 
   async function playGameAudioEvent(eventName, options={}){
