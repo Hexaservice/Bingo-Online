@@ -4534,14 +4534,167 @@
     TIE: 'TIE',
   });
 
-  // Audio de efectos del juego deshabilitado intencionalmente para mantener
-  // operativa la lógica de UI/estado sin reproducir SFX ni cola de cantos.
-  function encolarAudioCantoNumero(_numero){
-    return;
+  const AUDIO_EVENT_CONFIG = Object.freeze({
+    [AUDIO_EVENTS.DRAW_NUMBER]: { manifestKey: 'sfx.drawNumber' },
+    [AUDIO_EVENTS.MARK_CELL]: { manifestKey: 'sfx.markCell' },
+    [AUDIO_EVENTS.MODAL_OPEN]: { manifestKey: 'sfx.openModal' },
+    [AUDIO_EVENTS.MODAL_CLOSE]: { manifestKey: 'sfx.openModal' },
+    [AUDIO_EVENTS.WINNER]: { manifestKey: 'sfx.win', critical: true, duckAmount: 0.25, duckDurationMs: 2200 },
+    [AUDIO_EVENTS.TIE]: { manifestKey: 'sfx.win', critical: true, duckAmount: 0.3, duckDurationMs: 1800 }
+  });
+  const AUDIO_CANTO_EVENT_PREFIX = 'CANTO_NUM_';
+  let audioJuegoInicializado = false;
+  let audioJuegoInitPromise = null;
+  let audioJuegoDesbloqueoRegistrado = false;
+  let audioJuegoCantosEnProceso = false;
+  const audioJuegoEventosRegistrados = new Set();
+  const audioJuegoCantosCola = [];
+  const audioJuegoUltimoEventoPorNombre = new Map();
+
+  function obtenerMarcaTiempoAudioMs(){
+    if(typeof performance !== 'undefined' && typeof performance.now === 'function'){
+      return performance.now();
+    }
+    return 0;
   }
 
-  function playGameAudioEvent(_eventName, _options={}){
-    return;
+  function esErrorAudioBloqueado(err){
+    return err && (err.code === 'AUDIO_CONTEXT_BLOCKED' || /bloqueado/i.test(String(err?.message || '')));
+  }
+
+  function registrarAudioEventosBase(){
+    if(!window.audioManager || typeof window.audioManager.registerSfxEvent !== 'function') return;
+    Object.entries(AUDIO_EVENT_CONFIG).forEach(([eventName, config])=>{
+      if(audioJuegoEventosRegistrados.has(eventName)) return;
+      window.audioManager.registerSfxEvent(eventName, { manifestKey: config.manifestKey }, config);
+      audioJuegoEventosRegistrados.add(eventName);
+    });
+  }
+
+  function registrarAudioCantoNumero(numero){
+    if(!window.audioManager || typeof window.audioManager.registerSfxEvent !== 'function') return null;
+    const normalizado = Number(numero);
+    if(!Number.isInteger(normalizado) || normalizado < 1 || normalizado > 75) return null;
+    const eventName = `${AUDIO_CANTO_EVENT_PREFIX}${normalizado}`;
+    if(audioJuegoEventosRegistrados.has(eventName)) return eventName;
+    window.audioManager.registerSfxEvent(eventName, {
+      category: 'sfx',
+      preferredFormats: ['wav'],
+      normalizationGain: 1,
+      sources: [{ format: 'wav', url: `/sonidos/${normalizado}.wav` }]
+    });
+    audioJuegoEventosRegistrados.add(eventName);
+    return eventName;
+  }
+
+  async function inicializarAudioJuego(){
+    if(audioJuegoInicializado) return true;
+    if(audioJuegoInitPromise) return audioJuegoInitPromise;
+    if(!window.audioManager){
+      return false;
+    }
+    audioJuegoInitPromise = (async ()=>{
+      registrarAudioEventosBase();
+      if(typeof window.audioManager.setVolume === 'function'){
+        window.audioManager.setVolume('master', 1);
+        window.audioManager.setVolume('sfx', 1);
+      }
+      if(typeof window.audioManager.probeAutoplayState === 'function'){
+        try{
+          await window.audioManager.probeAutoplayState();
+        }catch(_){}
+      }
+      audioJuegoInicializado = true;
+      return true;
+    })().finally(()=>{
+      audioJuegoInitPromise = null;
+    });
+    return audioJuegoInitPromise;
+  }
+
+  async function intentarDesbloquearAudioJuego(){
+    if(!window.audioManager || typeof window.audioManager.ensureRunningContext !== 'function') return false;
+    try{
+      await window.audioManager.ensureRunningContext();
+      await procesarColaAudioCantos();
+      return true;
+    }catch(err){
+      if(!esErrorAudioBloqueado(err)){
+        console.warn('No se pudo desbloquear el contexto de audio del juego.', err);
+      }
+      return false;
+    }
+  }
+
+  function registrarDesbloqueoAudioJuegoPorInteraccion(){
+    if(audioJuegoDesbloqueoRegistrado) return;
+    audioJuegoDesbloqueoRegistrado = true;
+    const handler = ()=>{ void intentarDesbloquearAudioJuego(); };
+    window.addEventListener('pointerdown', handler, { passive: true });
+    window.addEventListener('keydown', handler, { passive: true });
+    window.addEventListener('touchstart', handler, { passive: true });
+  }
+
+  async function procesarColaAudioCantos(){
+    if(audioJuegoCantosEnProceso || !audioJuegoCantosCola.length) return;
+    if(!window.audioManager || typeof window.audioManager.playSfx !== 'function') return;
+    audioJuegoCantosEnProceso = true;
+    try{
+      while(audioJuegoCantosCola.length){
+        const numero = audioJuegoCantosCola[0];
+        const eventName = registrarAudioCantoNumero(numero);
+        if(!eventName){
+          audioJuegoCantosCola.shift();
+          continue;
+        }
+        try{
+          await window.audioManager.playSfx(eventName);
+          audioJuegoCantosCola.shift();
+        }catch(err){
+          if(esErrorAudioBloqueado(err)){
+            break;
+          }
+          console.warn('No se pudo reproducir el audio del canto.', { numero, err });
+          audioJuegoCantosCola.shift();
+        }
+      }
+    }finally{
+      audioJuegoCantosEnProceso = false;
+    }
+  }
+
+  function encolarAudioCantoNumero(numero){
+    const normalizado = Number(numero);
+    if(!Number.isInteger(normalizado) || normalizado < 1 || normalizado > 75) return;
+    void inicializarAudioJuego();
+    registrarDesbloqueoAudioJuegoPorInteraccion();
+    audioJuegoCantosCola.push(normalizado);
+    void procesarColaAudioCantos();
+  }
+
+  async function playGameAudioEvent(eventName, options={}){
+    if(!eventName || !window.audioManager || typeof window.audioManager.playSfx !== 'function') return;
+    await inicializarAudioJuego();
+    registrarDesbloqueoAudioJuegoPorInteraccion();
+
+    const throttleMs = Number(options?.throttleMs);
+    const force = !!options?.force;
+    if(!force && Number.isFinite(throttleMs) && throttleMs > 0){
+      const now = obtenerMarcaTiempoAudioMs();
+      const ultimo = Number(audioJuegoUltimoEventoPorNombre.get(eventName) || 0);
+      if((now - ultimo) < throttleMs){
+        return;
+      }
+      audioJuegoUltimoEventoPorNombre.set(eventName, now);
+    }
+
+    try{
+      await window.audioManager.playSfx(eventName);
+    }catch(err){
+      if(!esErrorAudioBloqueado(err)){
+        console.warn(`No se pudo reproducir el efecto de audio: ${eventName}`, err);
+      }
+    }
   }
 
   const sinSorteoContenedorEl = document.getElementById('sin-sorteo-contenedor');
