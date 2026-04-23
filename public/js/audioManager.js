@@ -29,11 +29,68 @@
       this.pendingInitPromise = null;
       this.autoplayBlocked = false;
       this.autoplayProbeDone = false;
+      this.pendingPlayRequests = [];
+      this.maxPendingPlayRequests = 40;
+      this.debugEnabled = false;
 
       this.manifestStorageKey = 'bingoAudioManifestCache';
       this.manifest = null;
       this.defaultMaxSfxBytes = 262144;
       this.defaultMaxMusicBytes = 1048576;
+    }
+
+    setDebugEnabled(value) {
+      this.debugEnabled = !!value;
+    }
+
+    logDebug(message, details = null) {
+      if (!this.debugEnabled) return;
+      if (details === null || typeof details === 'undefined') {
+        console.info(`[AudioManager] ${message}`);
+        return;
+      }
+      console.info(`[AudioManager] ${message}`, details);
+    }
+
+    logWarn(message, details = null) {
+      if (details === null || typeof details === 'undefined') {
+        console.warn(`[AudioManager] ${message}`);
+        return;
+      }
+      console.warn(`[AudioManager] ${message}`, details);
+    }
+
+    enqueuePendingPlay(type, payload) {
+      if (!type || !payload) return;
+      this.pendingPlayRequests.push({ type, payload, at: Date.now() });
+      if (this.pendingPlayRequests.length > this.maxPendingPlayRequests) {
+        this.pendingPlayRequests.shift();
+      }
+      this.logDebug('Reproducción encolada por bloqueo/autoplay.', { type, payload, pending: this.pendingPlayRequests.length });
+    }
+
+    async flushPendingPlayRequests() {
+      if (!this.pendingPlayRequests.length) return;
+      const pending = this.pendingPlayRequests.splice(0);
+      this.logDebug('Reintentando reproducciones encoladas.', { pending: pending.length });
+      for (let i = 0; i < pending.length; i += 1) {
+        const item = pending[i];
+        if (!item || !item.type) continue;
+        try {
+          if (item.type === 'sfx' && item.payload?.eventName) {
+            await this.playSfx(item.payload.eventName, { bypassQueueOnBlocked: true });
+          }
+          if (item.type === 'music' && item.payload?.trackId) {
+            await this.playMusic(item.payload.trackId, { ...item.payload.options, bypassQueueOnBlocked: true });
+          }
+        } catch (err) {
+          if (err?.code === 'AUDIO_CONTEXT_BLOCKED') {
+            this.pendingPlayRequests.unshift(item);
+            break;
+          }
+          this.logWarn('Falló reintento de reproducción en cola.', { item, err: String(err?.message || err) });
+        }
+      }
     }
 
     getCachedManifest() {
@@ -290,6 +347,10 @@
         throw this.createBlockedAudioError();
       }
 
+      if (this.pendingPlayRequests.length) {
+        await this.flushPendingPlayRequests();
+      }
+
       return true;
     }
 
@@ -384,11 +445,19 @@
       if (!trackId) return;
       this.currentMusicTrackId = trackId;
       const fadeInMs = Number.isFinite(options.fadeInMs) ? Math.max(0, options.fadeInMs) : 0;
+      const bypassQueueOnBlocked = !!options.bypassQueueOnBlocked;
 
       const sourceDescriptor = this.musicTracks.get(trackId);
       if (!sourceDescriptor) return;
 
-      await this.ensureRunningContext();
+      try {
+        await this.ensureRunningContext();
+      } catch (err) {
+        if (!bypassQueueOnBlocked && err?.code === 'AUDIO_CONTEXT_BLOCKED') {
+          this.enqueuePendingPlay('music', { trackId, options: { fadeInMs } });
+        }
+        throw err;
+      }
       const buffer = await this.loadBufferBySource(sourceDescriptor);
       if (!buffer) return;
 
@@ -423,13 +492,21 @@
       this.currentMusicSource = source;
     }
 
-    async playSfx(eventName) {
+    async playSfx(eventName, options = {}) {
       if (!eventName) return;
       const eventConfig = this.sfxEvents.get(eventName);
       if (!eventConfig) return;
       if (this.activeSfxNodes.size >= this.maxSfxConcurrency) return;
+      const bypassQueueOnBlocked = !!options.bypassQueueOnBlocked;
 
-      await this.ensureRunningContext();
+      try {
+        await this.ensureRunningContext();
+      } catch (err) {
+        if (!bypassQueueOnBlocked && err?.code === 'AUDIO_CONTEXT_BLOCKED') {
+          this.enqueuePendingPlay('sfx', { eventName });
+        }
+        throw err;
+      }
       const buffer = await this.loadBufferBySource(eventConfig.source);
       if (!buffer) return;
 
