@@ -29,11 +29,68 @@
       this.pendingInitPromise = null;
       this.autoplayBlocked = false;
       this.autoplayProbeDone = false;
+      this.pendingPlayRequests = [];
+      this.maxPendingPlayRequests = 40;
+      this.debugEnabled = false;
 
       this.manifestStorageKey = 'bingoAudioManifestCache';
       this.manifest = null;
       this.defaultMaxSfxBytes = 262144;
       this.defaultMaxMusicBytes = 1048576;
+    }
+
+    setDebugEnabled(value) {
+      this.debugEnabled = !!value;
+    }
+
+    logDebug(message, details = null) {
+      if (!this.debugEnabled) return;
+      if (details === null || typeof details === 'undefined') {
+        console.info(`[AudioManager] ${message}`);
+        return;
+      }
+      console.info(`[AudioManager] ${message}`, details);
+    }
+
+    logWarn(message, details = null) {
+      if (details === null || typeof details === 'undefined') {
+        console.warn(`[AudioManager] ${message}`);
+        return;
+      }
+      console.warn(`[AudioManager] ${message}`, details);
+    }
+
+    enqueuePendingPlay(type, payload) {
+      if (!type || !payload) return;
+      this.pendingPlayRequests.push({ type, payload, at: Date.now() });
+      if (this.pendingPlayRequests.length > this.maxPendingPlayRequests) {
+        this.pendingPlayRequests.shift();
+      }
+      this.logDebug('Reproducción encolada por bloqueo/autoplay.', { type, payload, pending: this.pendingPlayRequests.length });
+    }
+
+    async flushPendingPlayRequests() {
+      if (!this.pendingPlayRequests.length) return;
+      const pending = this.pendingPlayRequests.splice(0);
+      this.logDebug('Reintentando reproducciones encoladas.', { pending: pending.length });
+      for (let i = 0; i < pending.length; i += 1) {
+        const item = pending[i];
+        if (!item || !item.type) continue;
+        try {
+          if (item.type === 'sfx' && item.payload?.eventName) {
+            await this.playSfx(item.payload.eventName, { bypassQueueOnBlocked: true });
+          }
+          if (item.type === 'music' && item.payload?.trackId) {
+            await this.playMusic(item.payload.trackId, { ...item.payload.options, bypassQueueOnBlocked: true });
+          }
+        } catch (err) {
+          if (err?.code === 'AUDIO_CONTEXT_BLOCKED') {
+            this.pendingPlayRequests.unshift(item);
+            break;
+          }
+          this.logWarn('Falló reintento de reproducción en cola.', { item, err: String(err?.message || err) });
+        }
+      }
     }
 
     getCachedManifest() {
@@ -86,15 +143,43 @@
       if (!url || typeof url !== 'string') return false;
       const value = url.trim();
       if (!value) return false;
-      if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('//')) return false;
       if (value.startsWith('/sonidos/')) return true;
       if (value.startsWith('sonidos/')) return true;
       return false;
     }
 
+    isAllowedRemoteAudioUrl(url) {
+      if (!url || typeof url !== 'string') return false;
+      const value = url.trim();
+      if (!value) return false;
+
+      let parsed;
+      try {
+        parsed = new URL(value, window.location?.origin || 'http://localhost');
+      } catch (_) {
+        return false;
+      }
+
+      if (!parsed || (parsed.protocol !== 'https:' && parsed.protocol !== 'http:')) return false;
+      if (!/^https?:/i.test(value)) return false;
+
+      const manifestPolicy = this.getManifestNode('globalAudioPolicy');
+      const allowedHosts = Array.isArray(manifestPolicy?.allowedRemoteHosts)
+        ? manifestPolicy.allowedRemoteHosts.map((host) => String(host || '').trim().toLowerCase()).filter(Boolean)
+        : [];
+
+      if (!allowedHosts.length) return false;
+      return allowedHosts.includes(String(parsed.hostname || '').toLowerCase());
+    }
+
+    isAllowedAudioUrl(url) {
+      return this.isLocalAudioUrl(url) || this.isAllowedRemoteAudioUrl(url);
+    }
+
     normalizeAudioUrl(url) {
       const value = String(url || '').trim();
       if (!value) return null;
+      if (/^https?:\/\//i.test(value)) return value;
       if (value.startsWith('/')) return value;
       return `/${value.replace(/^\/+/, '')}`;
     }
@@ -107,7 +192,7 @@
       const candidates = [];
       if (Array.isArray(node.sources)) {
         node.sources.forEach((source) => {
-          if (!source?.url || !this.isLocalAudioUrl(source.url)) return;
+          if (!source?.url || !this.isAllowedAudioUrl(source.url)) return;
           candidates.push({
             url: this.normalizeAudioUrl(source.url),
             format: (source.format || '').toLowerCase() || null,
@@ -115,10 +200,10 @@
         });
       }
 
-      if (node.urlPrimary && this.isLocalAudioUrl(node.urlPrimary)) {
+      if (node.urlPrimary && this.isAllowedAudioUrl(node.urlPrimary)) {
         candidates.push({ url: this.normalizeAudioUrl(node.urlPrimary), format: (node.formatPrimary || '').toLowerCase() || null });
       }
-      if (node.urlFallback && this.isLocalAudioUrl(node.urlFallback)) {
+      if (node.urlFallback && this.isAllowedAudioUrl(node.urlFallback)) {
         candidates.push({ url: this.normalizeAudioUrl(node.urlFallback), format: (node.formatFallback || '').toLowerCase() || null });
       }
 
@@ -146,7 +231,7 @@
     normalizeSourceDescriptor(source) {
       if (!source) return null;
       if (typeof source === 'string') {
-        if (!this.isLocalAudioUrl(source)) return null;
+        if (!this.isAllowedAudioUrl(source)) return null;
         return {
           urls: [this.normalizeAudioUrl(source)],
           preferredFormats: ['wav'],
@@ -290,6 +375,10 @@
         throw this.createBlockedAudioError();
       }
 
+      if (this.pendingPlayRequests.length) {
+        await this.flushPendingPlayRequests();
+      }
+
       return true;
     }
 
@@ -298,7 +387,7 @@
     }
 
     async fetchAndDecode(src, descriptor = null) {
-      if (!this.isLocalAudioUrl(src)) {
+      if (!this.isAllowedAudioUrl(src)) {
         throw new Error(`Origen de audio no permitido: ${src}`);
       }
       if (!this.audioContext) {
@@ -384,11 +473,19 @@
       if (!trackId) return;
       this.currentMusicTrackId = trackId;
       const fadeInMs = Number.isFinite(options.fadeInMs) ? Math.max(0, options.fadeInMs) : 0;
+      const bypassQueueOnBlocked = !!options.bypassQueueOnBlocked;
 
       const sourceDescriptor = this.musicTracks.get(trackId);
       if (!sourceDescriptor) return;
 
-      await this.ensureRunningContext();
+      try {
+        await this.ensureRunningContext();
+      } catch (err) {
+        if (!bypassQueueOnBlocked && err?.code === 'AUDIO_CONTEXT_BLOCKED') {
+          this.enqueuePendingPlay('music', { trackId, options: { fadeInMs } });
+        }
+        throw err;
+      }
       const buffer = await this.loadBufferBySource(sourceDescriptor);
       if (!buffer) return;
 
@@ -423,13 +520,21 @@
       this.currentMusicSource = source;
     }
 
-    async playSfx(eventName) {
+    async playSfx(eventName, options = {}) {
       if (!eventName) return;
       const eventConfig = this.sfxEvents.get(eventName);
       if (!eventConfig) return;
       if (this.activeSfxNodes.size >= this.maxSfxConcurrency) return;
+      const bypassQueueOnBlocked = !!options.bypassQueueOnBlocked;
 
-      await this.ensureRunningContext();
+      try {
+        await this.ensureRunningContext();
+      } catch (err) {
+        if (!bypassQueueOnBlocked && err?.code === 'AUDIO_CONTEXT_BLOCKED') {
+          this.enqueuePendingPlay('sfx', { eventName });
+        }
+        throw err;
+      }
       const buffer = await this.loadBufferBySource(eventConfig.source);
       if (!buffer) return;
 
