@@ -143,15 +143,43 @@
       if (!url || typeof url !== 'string') return false;
       const value = url.trim();
       if (!value) return false;
-      if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('//')) return false;
       if (value.startsWith('/sonidos/')) return true;
       if (value.startsWith('sonidos/')) return true;
       return false;
     }
 
+    isAllowedRemoteAudioUrl(url) {
+      if (!url || typeof url !== 'string') return false;
+      const value = url.trim();
+      if (!value) return false;
+
+      let parsed;
+      try {
+        parsed = new URL(value, window.location?.origin || 'http://localhost');
+      } catch (_) {
+        return false;
+      }
+
+      if (!parsed || (parsed.protocol !== 'https:' && parsed.protocol !== 'http:')) return false;
+      if (!/^https?:/i.test(value)) return false;
+
+      const manifestPolicy = this.getManifestNode('globalAudioPolicy');
+      const allowedHosts = Array.isArray(manifestPolicy?.allowedRemoteHosts)
+        ? manifestPolicy.allowedRemoteHosts.map((host) => String(host || '').trim().toLowerCase()).filter(Boolean)
+        : [];
+
+      if (!allowedHosts.length) return false;
+      return allowedHosts.includes(String(parsed.hostname || '').toLowerCase());
+    }
+
+    isAllowedAudioUrl(url) {
+      return this.isLocalAudioUrl(url) || this.isAllowedRemoteAudioUrl(url);
+    }
+
     normalizeAudioUrl(url) {
       const value = String(url || '').trim();
       if (!value) return null;
+      if (/^https?:\/\//i.test(value)) return value;
       if (value.startsWith('/')) return value;
       return `/${value.replace(/^\/+/, '')}`;
     }
@@ -164,7 +192,7 @@
       const candidates = [];
       if (Array.isArray(node.sources)) {
         node.sources.forEach((source) => {
-          if (!source?.url || !this.isLocalAudioUrl(source.url)) return;
+          if (!source?.url || !this.isAllowedAudioUrl(source.url)) return;
           candidates.push({
             url: this.normalizeAudioUrl(source.url),
             format: (source.format || '').toLowerCase() || null,
@@ -172,10 +200,10 @@
         });
       }
 
-      if (node.urlPrimary && this.isLocalAudioUrl(node.urlPrimary)) {
+      if (node.urlPrimary && this.isAllowedAudioUrl(node.urlPrimary)) {
         candidates.push({ url: this.normalizeAudioUrl(node.urlPrimary), format: (node.formatPrimary || '').toLowerCase() || null });
       }
-      if (node.urlFallback && this.isLocalAudioUrl(node.urlFallback)) {
+      if (node.urlFallback && this.isAllowedAudioUrl(node.urlFallback)) {
         candidates.push({ url: this.normalizeAudioUrl(node.urlFallback), format: (node.formatFallback || '').toLowerCase() || null });
       }
 
@@ -203,7 +231,7 @@
     normalizeSourceDescriptor(source) {
       if (!source) return null;
       if (typeof source === 'string') {
-        if (!this.isLocalAudioUrl(source)) return null;
+        if (!this.isAllowedAudioUrl(source)) return null;
         return {
           urls: [this.normalizeAudioUrl(source)],
           preferredFormats: ['wav'],
@@ -359,7 +387,7 @@
     }
 
     async fetchAndDecode(src, descriptor = null) {
-      if (!this.isLocalAudioUrl(src)) {
+      if (!this.isAllowedAudioUrl(src)) {
         throw new Error(`Origen de audio no permitido: ${src}`);
       }
       if (!this.audioContext) {

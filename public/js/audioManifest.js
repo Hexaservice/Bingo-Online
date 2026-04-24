@@ -2,29 +2,35 @@
   const manifest = {
     manifestVersion: '2026.03.16-local-only-v1',
     globalAudioPolicy: {
-      allowedSourceType: 'repository-local-files-only',
+      allowedSourceType: 'repository-local-files-and-allowlisted-remote',
+      allowedRemoteHosts: ['raw.githubusercontent.com'],
       preferredFormats: ['wav'],
       musicPreload: 'deferred',
       criticalSfxPreload: 'on-game-enter',
       maxSfxBytes: 262144,
-      maxMusicBytes: 1048576,
+      maxMusicBytes: 6291456,
       normalizationNote: 'Todos los audios deben existir en /public/sonidos y versionarse dentro del repositorio.',
     },
     music: {
       backgroundMain: {
         category: 'music',
-        preferredFormats: ['wav'],
+        preferredFormats: ['ogg', 'wav'],
         preload: 'deferred',
-        maxBytes: 1048576,
-        normalizationGain: 0.55,
+        maxBytes: 6291456,
+        normalizationGain: 0.28,
         sources: [
+          {
+            format: 'ogg',
+            url: 'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/sounds/358232_j_s_song.ogg',
+            kind: 'remote-open-source',
+          },
           {
             format: 'wav',
             url: '/sonidos/5.wav',
             kind: 'local-primary',
           },
         ],
-        description: 'Pista base local (loop).',
+        description: 'Pista base para pruebas (remota con fallback local).',
       },
     },
     sfx: {

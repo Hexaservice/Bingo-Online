@@ -71,6 +71,7 @@ describe('AudioManager autoplay queue', () => {
         setItem: jest.fn(),
       },
       Date,
+      URL,
     });
     AudioManager = runtimeWindow.AudioManager;
   });
@@ -107,5 +108,17 @@ describe('AudioManager autoplay queue', () => {
 
     expect(manager.pendingPlayRequests).toHaveLength(0);
     expect(manager.activeSfxNodes.size).toBe(1);
+  });
+
+  test('acepta fuentes remotas solo en hosts permitidos del manifiesto', () => {
+    runtimeWindow.BINGO_AUDIO_MANIFEST = {
+      manifestVersion: 'test',
+      globalAudioPolicy: {
+        allowedRemoteHosts: ['raw.githubusercontent.com'],
+      },
+    };
+    const manager = new AudioManager();
+    expect(manager.isAllowedAudioUrl('https://raw.githubusercontent.com/org/repo/file.ogg')).toBe(true);
+    expect(manager.isAllowedAudioUrl('https://example.com/music.ogg')).toBe(false);
   });
 });

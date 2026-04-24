@@ -4614,10 +4614,14 @@
     [AUDIO_EVENTS.TIE]: { manifestKey: 'sfx.win', critical: true, duckAmount: 0.3, duckDurationMs: 1800 }
   });
   const AUDIO_CANTO_EVENT_PREFIX = 'CANTO_NUM_';
+  const AUDIO_BACKGROUND_TRACK_ID = 'GAMEPLAY_BG_MAIN';
+  const AUDIO_BACKGROUND_MANIFEST_KEY = 'music.backgroundMain';
   let audioJuegoInicializado = false;
   let audioJuegoInitPromise = null;
   let audioJuegoDesbloqueoRegistrado = false;
   let audioJuegoCantosEnProceso = false;
+  let audioJuegoMusicaRegistrada = false;
+  let audioJuegoMusicaIniciada = false;
   const audioJuegoEventosRegistrados = new Set();
   const audioJuegoCantosCola = [];
   const audioJuegoUltimoEventoPorNombre = new Map();
@@ -4668,14 +4672,37 @@
     if(typeof window.audioManager.setVolume === 'function'){
       window.audioManager.setVolume('master', audioJuegoPreferencias.master);
       window.audioManager.setVolume('sfx', audioJuegoPreferencias.sfx);
+      window.audioManager.setVolume('music', 0.22);
     }
     if(typeof window.audioManager.setMuted === 'function'){
       window.audioManager.setMuted(audioJuegoPreferencias.muted);
     }
   }
 
+  function registrarAudioMusicaJuego(){
+    if(audioJuegoMusicaRegistrada) return;
+    if(!window.audioManager || typeof window.audioManager.registerMusicTrack !== 'function') return;
+    window.audioManager.registerMusicTrack(AUDIO_BACKGROUND_TRACK_ID, { manifestKey: AUDIO_BACKGROUND_MANIFEST_KEY });
+    audioJuegoMusicaRegistrada = true;
+  }
+
+  async function intentarIniciarMusicaJuego(){
+    if(audioJuegoMusicaIniciada || audioJuegoPreferencias.muted) return;
+    if(!window.audioManager || typeof window.audioManager.playMusic !== 'function') return;
+    registrarAudioMusicaJuego();
+    try{
+      await window.audioManager.playMusic(AUDIO_BACKGROUND_TRACK_ID, { fadeInMs: 1200 });
+      audioJuegoMusicaIniciada = true;
+    }catch(err){
+      if(!esErrorAudioBloqueado(err)){
+        console.warn('No se pudo iniciar la música de fondo del juego.', err);
+      }
+    }
+  }
+
   function registrarAudioEventosBase(){
     if(!window.audioManager || typeof window.audioManager.registerSfxEvent !== 'function') return;
+    registrarAudioMusicaJuego();
     Object.entries(AUDIO_EVENT_CONFIG).forEach(([eventName, config])=>{
       if(audioJuegoEventosRegistrados.has(eventName)) return;
       window.audioManager.registerSfxEvent(eventName, { manifestKey: config.manifestKey }, config);
@@ -4726,6 +4753,7 @@
     if(!window.audioManager || typeof window.audioManager.ensureRunningContext !== 'function') return false;
     try{
       await window.audioManager.ensureRunningContext();
+      await intentarIniciarMusicaJuego();
       await procesarColaAudioCantos();
       return true;
     }catch(err){
@@ -4796,6 +4824,9 @@
       aplicarPreferenciasAudioJuego();
       guardarPreferenciasAudioJuego();
       actualizarUI();
+      if(!audioJuegoPreferencias.muted){
+        void intentarIniciarMusicaJuego();
+      }
     };
 
     gameAudioToggleBtn.addEventListener('click', ()=>{
