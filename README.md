@@ -105,35 +105,55 @@ El archivo `index.html` contiene toda la lógica de la aplicación. Sólo es nec
 
 ### Configuración de `firebase-config`
 
-El repositorio incluye la plantilla `public/firebase-config.template.js`. Antes de ejecutar el sitio debe copiarse a `public/firebase-config.js` y reemplazar los marcadores `__FIREBASE_*__` por los valores reales de Firebase:
+El repositorio incluye el script `scripts/generateFirebaseConfig.js` para generar `public/firebase-config.js` por entorno sin versionar credenciales. Comando base:
 
 ```bash
-cp public/firebase-config.template.js public/firebase-config.js
+npm run generate:firebase-config -- --env dev
 ```
 
-Luego edite el archivo resultante y actualice cada propiedad (`apiKey`, `authDomain`, `databaseURL`, `projectId`, `storageBucket`, `messagingSenderId`, `appId`). Este archivo contiene credenciales sensibles y está excluido del control de versiones mediante `.gitignore`.
+Entornos soportados:
+
+- `dev` → Hosting target `bingo-online-231fd-dev` y base de datos `dev-db`
+- `stg` → Hosting target `bingo-online-231fd-stg` y base de datos `stg-db`
+- `prod` (o `main`) → Hosting target `bingo-online-231fd` y base de datos default
+
+Variables requeridas por entorno (con fallback a versión global sin prefijo):
+
+- `FIREBASE_<ENV>_API_KEY`
+- `FIREBASE_<ENV>_AUTH_DOMAIN`
+- `FIREBASE_<ENV>_DATABASE_URL`
+- `FIREBASE_<ENV>_PROJECT_ID`
+- `FIREBASE_<ENV>_STORAGE_BUCKET`
+- `FIREBASE_<ENV>_MESSAGING_SENDER_ID`
+- `FIREBASE_<ENV>_APP_ID`
+
+> Ejemplo para staging (`<ENV>=STG`): `FIREBASE_STG_DATABASE_URL=https://bingo-online-231fd-stg-db.firebaseio.com`.
 
 > **Nota sobre Storage**: Si en la consola de Firebase el bucket aparece con el dominio `*.firebasestorage.app`, utilice ese valor sin modificarlo. La interfaz convierte automáticamente ese formato al identificador clásico (`*.appspot.com`) al inicializar el SDK para garantizar la compatibilidad con `firebase-storage-compat` y permitir la subida de los PDFs generados.
 
 ### Dominio y cookies
 
-A partir de las últimas versiones de los navegadores se bloquean las cookies de terceros por defecto. Si la aplicación se aloja en un dominio distinto al configurado en `authDomain` (por ejemplo GitHub Pages), Firebase no puede completar el inicio de sesión y la página queda cargando indefinidamente.
+A partir de las últimas versiones de los navegadores se bloquean las cookies de terceros por defecto. Si la aplicación se aloja en un dominio distinto al configurado en `authDomain`, Firebase no puede completar el inicio de sesión y la página queda cargando indefinidamente.
 
-Para evitarlo, despliegue el sitio en Firebase Hosting utilizando el dominio del proyecto (`bingo-online-231fd.web.app` o un dominio personalizado asociado). Así las cookies son del mismo sitio y la autenticación funciona de forma correcta.
+Para evitarlo, cada entorno debe usar su propio dominio Firebase Hosting como `authDomain`:
+
+- Desarrollo: `bingo-online-231fd-dev.web.app`
+- Pruebas: `bingo-online-231fd-stg.web.app`
+- Producción: `bingo-online-231fd.web.app`
+
+Además, en Firebase Authentication > Settings > Authorized domains agregue estos tres dominios para permitir login en cada ambiente de manera aislada.
 
 ### Despliegues automáticos (GitHub Actions)
 
-Los flujos definidos en `.github/workflows/` generan `public/firebase-config.js` a partir de la plantilla antes de invocar a Firebase Hosting. Configure los siguientes secretos en el repositorio para que la sustitución se realice correctamente:
+El flujo `.github/workflows/deploy-by-branch.yml` genera `public/firebase-config.js` con el script anterior y despliega por rama (`dev`, `staging`, `main`) usando targets de Hosting distintos.
 
-- `FIREBASE_WEB_API_KEY`
-- `FIREBASE_AUTH_DOMAIN`
-- `FIREBASE_DATABASE_URL`
-- `FIREBASE_PROJECT_ID`
-- `FIREBASE_STORAGE_BUCKET`
-- `FIREBASE_MESSAGING_SENDER_ID`
-- `FIREBASE_APP_ID`
+Configure los siguientes secretos por entorno en GitHub:
 
-Cada secreto debe contener el valor correspondiente del proyecto de Firebase. Si utiliza otras herramientas de despliegue, replique el mismo proceso de copiado y reemplazo de marcadores antes de publicar los archivos.
+- Dev: `FIREBASE_DEV_API_KEY`, `FIREBASE_DEV_AUTH_DOMAIN`, `FIREBASE_DEV_DATABASE_URL`, `FIREBASE_DEV_PROJECT_ID`, `FIREBASE_DEV_STORAGE_BUCKET`, `FIREBASE_DEV_MESSAGING_SENDER_ID`, `FIREBASE_DEV_APP_ID`
+- Staging: `FIREBASE_STG_API_KEY`, `FIREBASE_STG_AUTH_DOMAIN`, `FIREBASE_STG_DATABASE_URL`, `FIREBASE_STG_PROJECT_ID`, `FIREBASE_STG_STORAGE_BUCKET`, `FIREBASE_STG_MESSAGING_SENDER_ID`, `FIREBASE_STG_APP_ID`
+- Producción: `FIREBASE_PROD_API_KEY`, `FIREBASE_PROD_AUTH_DOMAIN`, `FIREBASE_PROD_DATABASE_URL`, `FIREBASE_PROD_PROJECT_ID`, `FIREBASE_PROD_STORAGE_BUCKET`, `FIREBASE_PROD_MESSAGING_SENDER_ID`, `FIREBASE_PROD_APP_ID`
+
+Además se mantiene el secreto de cuenta de servicio `FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_231FD` para publicar en Hosting.
 
 ## Mutaciones de Firestore por Pull Request (Bingoanimalito)
 

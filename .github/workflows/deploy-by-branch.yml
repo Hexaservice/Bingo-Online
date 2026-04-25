@@ -13,19 +13,27 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/dev'
     env:
+      DEPLOY_ENV: dev
       HAS_FIREBASE_SECRETS: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_231FD != '' &&
-        secrets.FIREBASE_WEB_API_KEY != '' &&
-        secrets.FIREBASE_AUTH_DOMAIN != '' &&
-        secrets.FIREBASE_DATABASE_URL != '' &&
-        secrets.FIREBASE_PROJECT_ID != '' &&
-        secrets.FIREBASE_STORAGE_BUCKET != '' &&
-        secrets.FIREBASE_MESSAGING_SENDER_ID != '' &&
-        secrets.FIREBASE_APP_ID != '' }}
+        secrets.FIREBASE_DEV_API_KEY != '' &&
+        secrets.FIREBASE_DEV_AUTH_DOMAIN != '' &&
+        secrets.FIREBASE_DEV_DATABASE_URL != '' &&
+        secrets.FIREBASE_DEV_PROJECT_ID != '' &&
+        secrets.FIREBASE_DEV_STORAGE_BUCKET != '' &&
+        secrets.FIREBASE_DEV_MESSAGING_SENDER_ID != '' &&
+        secrets.FIREBASE_DEV_APP_ID != '' }}
+      FIREBASE_DEV_API_KEY: ${{ secrets.FIREBASE_DEV_API_KEY }}
+      FIREBASE_DEV_AUTH_DOMAIN: ${{ secrets.FIREBASE_DEV_AUTH_DOMAIN }}
+      FIREBASE_DEV_DATABASE_URL: ${{ secrets.FIREBASE_DEV_DATABASE_URL }}
+      FIREBASE_DEV_PROJECT_ID: ${{ secrets.FIREBASE_DEV_PROJECT_ID }}
+      FIREBASE_DEV_STORAGE_BUCKET: ${{ secrets.FIREBASE_DEV_STORAGE_BUCKET }}
+      FIREBASE_DEV_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_DEV_MESSAGING_SENDER_ID }}
+      FIREBASE_DEV_APP_ID: ${{ secrets.FIREBASE_DEV_APP_ID }}
     steps:
       - name: Aviso por falta de credenciales
         if: env.HAS_FIREBASE_SECRETS != 'true'
         run: |
-          echo "::warning::No se encontraron todas las credenciales de Firebase necesarias."
+          echo "::warning::No se encontraron todas las credenciales de Firebase necesarias para dev."
           echo "::warning::Se omite el despliegue automático para la rama dev."
 
       - uses: actions/checkout@v4
@@ -33,24 +41,7 @@ jobs:
 
       - name: Generar firebase-config.js
         if: env.HAS_FIREBASE_SECRETS == 'true'
-        run: |
-          set -euo pipefail
-          cp public/firebase-config.template.js public/firebase-config.js
-          sed -i "s|__FIREBASE_API_KEY__|${FIREBASE_API_KEY}|g" public/firebase-config.js
-          sed -i "s|__FIREBASE_AUTH_DOMAIN__|${FIREBASE_AUTH_DOMAIN}|g" public/firebase-config.js
-          sed -i "s|__FIREBASE_DATABASE_URL__|${FIREBASE_DATABASE_URL}|g" public/firebase-config.js
-          sed -i "s|__FIREBASE_PROJECT_ID__|${FIREBASE_PROJECT_ID}|g" public/firebase-config.js
-          sed -i "s|__FIREBASE_STORAGE_BUCKET__|${FIREBASE_STORAGE_BUCKET}|g" public/firebase-config.js
-          sed -i "s|__FIREBASE_MESSAGING_SENDER_ID__|${FIREBASE_MESSAGING_SENDER_ID}|g" public/firebase-config.js
-          sed -i "s|__FIREBASE_APP_ID__|${FIREBASE_APP_ID}|g" public/firebase-config.js
-        env:
-          FIREBASE_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
-          FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
-          FIREBASE_DATABASE_URL: ${{ secrets.FIREBASE_DATABASE_URL }}
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
-          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
-          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+        run: node scripts/generateFirebaseConfig.js --env "${DEPLOY_ENV}"
 
       - name: Deploy to Firebase Hosting
         if: env.HAS_FIREBASE_SECRETS == 'true'
@@ -66,19 +57,27 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/staging'
     env:
+      DEPLOY_ENV: stg
       HAS_FIREBASE_SECRETS: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_231FD != '' &&
-        secrets.FIREBASE_WEB_API_KEY != '' &&
-        secrets.FIREBASE_AUTH_DOMAIN != '' &&
-        secrets.FIREBASE_DATABASE_URL != '' &&
-        secrets.FIREBASE_PROJECT_ID != '' &&
-        secrets.FIREBASE_STORAGE_BUCKET != '' &&
-        secrets.FIREBASE_MESSAGING_SENDER_ID != '' &&
-        secrets.FIREBASE_APP_ID != '' }}
+        secrets.FIREBASE_STG_API_KEY != '' &&
+        secrets.FIREBASE_STG_AUTH_DOMAIN != '' &&
+        secrets.FIREBASE_STG_DATABASE_URL != '' &&
+        secrets.FIREBASE_STG_PROJECT_ID != '' &&
+        secrets.FIREBASE_STG_STORAGE_BUCKET != '' &&
+        secrets.FIREBASE_STG_MESSAGING_SENDER_ID != '' &&
+        secrets.FIREBASE_STG_APP_ID != '' }}
+      FIREBASE_STG_API_KEY: ${{ secrets.FIREBASE_STG_API_KEY }}
+      FIREBASE_STG_AUTH_DOMAIN: ${{ secrets.FIREBASE_STG_AUTH_DOMAIN }}
+      FIREBASE_STG_DATABASE_URL: ${{ secrets.FIREBASE_STG_DATABASE_URL }}
+      FIREBASE_STG_PROJECT_ID: ${{ secrets.FIREBASE_STG_PROJECT_ID }}
+      FIREBASE_STG_STORAGE_BUCKET: ${{ secrets.FIREBASE_STG_STORAGE_BUCKET }}
+      FIREBASE_STG_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_STG_MESSAGING_SENDER_ID }}
+      FIREBASE_STG_APP_ID: ${{ secrets.FIREBASE_STG_APP_ID }}
     steps:
       - name: Aviso por falta de credenciales
         if: env.HAS_FIREBASE_SECRETS != 'true'
         run: |
-          echo "::warning::No se encontraron todas las credenciales de Firebase necesarias."
+          echo "::warning::No se encontraron todas las credenciales de Firebase necesarias para staging."
           echo "::warning::Se omite el despliegue automático para la rama staging."
 
       - uses: actions/checkout@v4
@@ -86,24 +85,7 @@ jobs:
 
       - name: Generar firebase-config.js
         if: env.HAS_FIREBASE_SECRETS == 'true'
-        run: |
-          set -euo pipefail
-          cp public/firebase-config.template.js public/firebase-config.js
-          sed -i "s|__FIREBASE_API_KEY__|${FIREBASE_API_KEY}|g" public/firebase-config.js
-          sed -i "s|__FIREBASE_AUTH_DOMAIN__|${FIREBASE_AUTH_DOMAIN}|g" public/firebase-config.js
-          sed -i "s|__FIREBASE_DATABASE_URL__|${FIREBASE_DATABASE_URL}|g" public/firebase-config.js
-          sed -i "s|__FIREBASE_PROJECT_ID__|${FIREBASE_PROJECT_ID}|g" public/firebase-config.js
-          sed -i "s|__FIREBASE_STORAGE_BUCKET__|${FIREBASE_STORAGE_BUCKET}|g" public/firebase-config.js
-          sed -i "s|__FIREBASE_MESSAGING_SENDER_ID__|${FIREBASE_MESSAGING_SENDER_ID}|g" public/firebase-config.js
-          sed -i "s|__FIREBASE_APP_ID__|${FIREBASE_APP_ID}|g" public/firebase-config.js
-        env:
-          FIREBASE_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
-          FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
-          FIREBASE_DATABASE_URL: ${{ secrets.FIREBASE_DATABASE_URL }}
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
-          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
-          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+        run: node scripts/generateFirebaseConfig.js --env "${DEPLOY_ENV}"
 
       - name: Deploy to Firebase Hosting
         if: env.HAS_FIREBASE_SECRETS == 'true'
@@ -119,19 +101,27 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     env:
+      DEPLOY_ENV: prod
       HAS_FIREBASE_SECRETS: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_231FD != '' &&
-        secrets.FIREBASE_WEB_API_KEY != '' &&
-        secrets.FIREBASE_AUTH_DOMAIN != '' &&
-        secrets.FIREBASE_DATABASE_URL != '' &&
-        secrets.FIREBASE_PROJECT_ID != '' &&
-        secrets.FIREBASE_STORAGE_BUCKET != '' &&
-        secrets.FIREBASE_MESSAGING_SENDER_ID != '' &&
-        secrets.FIREBASE_APP_ID != '' }}
+        secrets.FIREBASE_PROD_API_KEY != '' &&
+        secrets.FIREBASE_PROD_AUTH_DOMAIN != '' &&
+        secrets.FIREBASE_PROD_DATABASE_URL != '' &&
+        secrets.FIREBASE_PROD_PROJECT_ID != '' &&
+        secrets.FIREBASE_PROD_STORAGE_BUCKET != '' &&
+        secrets.FIREBASE_PROD_MESSAGING_SENDER_ID != '' &&
+        secrets.FIREBASE_PROD_APP_ID != '' }}
+      FIREBASE_PROD_API_KEY: ${{ secrets.FIREBASE_PROD_API_KEY }}
+      FIREBASE_PROD_AUTH_DOMAIN: ${{ secrets.FIREBASE_PROD_AUTH_DOMAIN }}
+      FIREBASE_PROD_DATABASE_URL: ${{ secrets.FIREBASE_PROD_DATABASE_URL }}
+      FIREBASE_PROD_PROJECT_ID: ${{ secrets.FIREBASE_PROD_PROJECT_ID }}
+      FIREBASE_PROD_STORAGE_BUCKET: ${{ secrets.FIREBASE_PROD_STORAGE_BUCKET }}
+      FIREBASE_PROD_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_PROD_MESSAGING_SENDER_ID }}
+      FIREBASE_PROD_APP_ID: ${{ secrets.FIREBASE_PROD_APP_ID }}
     steps:
       - name: Aviso por falta de credenciales
         if: env.HAS_FIREBASE_SECRETS != 'true'
         run: |
-          echo "::warning::No se encontraron todas las credenciales de Firebase necesarias."
+          echo "::warning::No se encontraron todas las credenciales de Firebase necesarias para producción."
           echo "::warning::Se omite el despliegue automático para la rama main."
 
       - uses: actions/checkout@v4
@@ -139,24 +129,7 @@ jobs:
 
       - name: Generar firebase-config.js
         if: env.HAS_FIREBASE_SECRETS == 'true'
-        run: |
-          set -euo pipefail
-          cp public/firebase-config.template.js public/firebase-config.js
-          sed -i "s|__FIREBASE_API_KEY__|${FIREBASE_API_KEY}|g" public/firebase-config.js
-          sed -i "s|__FIREBASE_AUTH_DOMAIN__|${FIREBASE_AUTH_DOMAIN}|g" public/firebase-config.js
-          sed -i "s|__FIREBASE_DATABASE_URL__|${FIREBASE_DATABASE_URL}|g" public/firebase-config.js
-          sed -i "s|__FIREBASE_PROJECT_ID__|${FIREBASE_PROJECT_ID}|g" public/firebase-config.js
-          sed -i "s|__FIREBASE_STORAGE_BUCKET__|${FIREBASE_STORAGE_BUCKET}|g" public/firebase-config.js
-          sed -i "s|__FIREBASE_MESSAGING_SENDER_ID__|${FIREBASE_MESSAGING_SENDER_ID}|g" public/firebase-config.js
-          sed -i "s|__FIREBASE_APP_ID__|${FIREBASE_APP_ID}|g" public/firebase-config.js
-        env:
-          FIREBASE_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
-          FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
-          FIREBASE_DATABASE_URL: ${{ secrets.FIREBASE_DATABASE_URL }}
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
-          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
-          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+        run: node scripts/generateFirebaseConfig.js --env "${DEPLOY_ENV}"
 
       - name: Deploy to Firebase Hosting
         if: env.HAS_FIREBASE_SECRETS == 'true'
