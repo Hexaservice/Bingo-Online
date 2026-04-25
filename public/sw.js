@@ -46,7 +46,8 @@ self.addEventListener('activate', (event) => {
 
 function isAudioRequest(request) {
   const url = new URL(request.url);
-  if (!url.pathname.startsWith('/sonidos/')) return false;
+  const esRutaSonidos = /(^|\/)sonidos\/.+/i.test(url.pathname);
+  if (!esRutaSonidos) return false;
   if (request.destination === 'audio') return true;
   return /\.wav(\?|$)/i.test(url.pathname);
 }

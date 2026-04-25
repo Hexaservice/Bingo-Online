@@ -56,6 +56,11 @@ describe('AudioManager autoplay queue', () => {
     runtimeWindow = {
       AudioContext: FakeAudioContext,
       webkitAudioContext: FakeAudioContext,
+      location: {
+        origin: 'https://bingo-online-231fd.web.app',
+        href: 'https://bingo-online-231fd.web.app/app/juegoactivo.html',
+        protocol: 'https:',
+      },
       setTimeout,
       clearTimeout,
     };
@@ -120,5 +125,12 @@ describe('AudioManager autoplay queue', () => {
     const manager = new AudioManager();
     expect(manager.isAllowedAudioUrl('https://raw.githubusercontent.com/org/repo/file.ogg')).toBe(true);
     expect(manager.isAllowedAudioUrl('https://example.com/music.ogg')).toBe(false);
+  });
+
+  test('acepta audios locales en despliegues bajo subruta', () => {
+    const manager = new AudioManager();
+    const urlSubruta = 'https://bingo-online-231fd.web.app/Bingo-Online/sonidos/1.wav';
+    expect(manager.isAllowedAudioUrl(urlSubruta)).toBe(true);
+    expect(manager.normalizeAudioCacheKey(urlSubruta)).toBe('/Bingo-Online/sonidos/1.wav');
   });
 });
