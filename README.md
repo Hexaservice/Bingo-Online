@@ -79,13 +79,33 @@ El archivo `index.html` contiene toda la lógica de la aplicación. Sólo es nec
 
 ### Configuración de `firebase-config`
 
-El repositorio incluye la plantilla `public/firebase-config.template.js`. Antes de ejecutar el sitio debe copiarse a `public/firebase-config.js` y reemplazar los marcadores `__FIREBASE_*__` por los valores reales de Firebase:
+El repositorio incluye la plantilla `public/firebase-config.template.js` y el generador `npm run generate:firebase-config` para crear `public/firebase-config.js` sin hardcodear credenciales en el código.
 
-```bash
-cp public/firebase-config.template.js public/firebase-config.js
+#### Entorno `dev` (Firebase project separado)
+
+1. Cree un archivo local `.env.dev` (no versionado) con sus valores de Firebase:
+
+```dotenv
+FIREBASE_API_KEY=...
+FIREBASE_AUTH_DOMAIN=...
+FIREBASE_PROJECT_ID=...
+FIREBASE_STORAGE_BUCKET=...
+FIREBASE_MESSAGING_SENDER_ID=...
+FIREBASE_APP_ID=...
+# Opcionales
+FIREBASE_DATABASE_URL=
+FIREBASE_MEASUREMENT_ID=
 ```
 
-Luego edite el archivo resultante y actualice cada propiedad (`apiKey`, `authDomain`, `databaseURL`, `projectId`, `storageBucket`, `messagingSenderId`, `appId`). Este archivo contiene credenciales sensibles y está excluido del control de versiones mediante `.gitignore`.
+2. Genere el archivo de configuración usado por el frontend:
+
+```bash
+FIREBASE_ENV_FILE=.env.dev npm run generate:firebase-config
+```
+
+3. Verifique que se creó `public/firebase-config.js` y luego levante la app.
+
+> `public/firebase-config.js` está excluido del control de versiones por `.gitignore`, por lo que cada entorno (dev/staging/prod) puede generar su propio archivo sin mezclar configuraciones.
 
 > **Nota sobre Storage**: Si en la consola de Firebase el bucket aparece con el dominio `*.firebasestorage.app`, utilice ese valor sin modificarlo. La interfaz convierte automáticamente ese formato al identificador clásico (`*.appspot.com`) al inicializar el SDK para garantizar la compatibilidad con `firebase-storage-compat` y permitir la subida de los PDFs generados.
 
@@ -106,6 +126,7 @@ Los flujos definidos en `.github/workflows/` generan `public/firebase-config.js`
 - `FIREBASE_STORAGE_BUCKET`
 - `FIREBASE_MESSAGING_SENDER_ID`
 - `FIREBASE_APP_ID`
+- `FIREBASE_MEASUREMENT_ID` (opcional)
 
 Cada secreto debe contener el valor correspondiente del proyecto de Firebase. Si utiliza otras herramientas de despliegue, replique el mismo proceso de copiado y reemplazo de marcadores antes de publicar los archivos.
 

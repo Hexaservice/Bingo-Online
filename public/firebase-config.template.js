@@ -1,5 +1,5 @@
 // Plantilla para generar la configuración de Firebase durante los despliegues.
-// Los valores __FIREBASE_*__ se reemplazan en los workflows de GitHub Actions.
+// Los valores __FIREBASE_*__ se reemplazan en CI/CD o con npm run generate:firebase-config.
 window.__FIREBASE_CONFIG__ = {
   apiKey: "__FIREBASE_API_KEY__",
   authDomain: "__FIREBASE_AUTH_DOMAIN__",
@@ -7,5 +7,6 @@ window.__FIREBASE_CONFIG__ = {
   projectId: "__FIREBASE_PROJECT_ID__",
   storageBucket: "__FIREBASE_STORAGE_BUCKET__",
   messagingSenderId: "__FIREBASE_MESSAGING_SENDER_ID__",
-  appId: "__FIREBASE_APP_ID__"
+  appId: "__FIREBASE_APP_ID__",
+  measurementId: "__FIREBASE_MEASUREMENT_ID__"
 };
