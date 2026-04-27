@@ -286,12 +286,17 @@ async function loginGoogle(){
       return;
     }
     const popupErrorMessage = getGoogleAuthErrorMessage(err, 'popup');
-    if(popupErrorMessage){
+    const shouldFallbackToRedirect = err.code === 'auth/popup-blocked';
+    if(popupErrorMessage && !shouldFallbackToRedirect){
       console.error('Error de autenticación con Google (popup)', err);
       alert(popupErrorMessage);
       return;
     }
-    console.warn('Popup login failed, trying redirect', err);
+    if(shouldFallbackToRedirect){
+      console.warn('Google popup bloqueado; se intentará el flujo por redirección', err);
+    } else {
+      console.warn('Popup login failed, trying redirect', err);
+    }
     try {
       await auth.signInWithRedirect(provider);
     } catch(e){
