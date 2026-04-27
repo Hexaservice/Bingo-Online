@@ -285,14 +285,24 @@ async function loginGoogle(){
       alert(DISABLED_MSG);
       return;
     }
+    const popupErrorMessage = getGoogleAuthErrorMessage(err, 'popup');
+    if(popupErrorMessage){
+      console.error('Error de autenticación con Google (popup)', err);
+      alert(popupErrorMessage);
+      return;
+    }
     console.warn('Popup login failed, trying redirect', err);
     try {
       await auth.signInWithRedirect(provider);
     } catch(e){
+      const redirectErrorMessage = getGoogleAuthErrorMessage(e, 'redirect');
       if (e.code === 'auth/user-disabled') {
         alert(DISABLED_MSG);
       } else if (e.code === 'auth/web-storage-unsupported') {
         alert('El navegador ha bloqueado las cookies necesarias para continuar. Intenta habilitarlas o abre la aplicación desde un dominio configurado en Firebase.');
+      } else if(redirectErrorMessage){
+        console.error('Error de autenticación con Google (redirect)', e);
+        alert(redirectErrorMessage);
       } else {
         console.error('Error login Google', e);
         alert('Error al iniciar sesión con Google');
@@ -354,10 +364,39 @@ async function handleRedirect(){
       redirectByRole(role);
     }
   } catch(err){
+    const redirectErrorMessage = getGoogleAuthErrorMessage(err, 'redirect');
     if (err.code === 'auth/web-storage-unsupported') {
       alert('El navegador impide usar el almacenamiento necesario para mantener la sesión. Abre la aplicación desde un dominio configurado en Firebase o habilita las cookies.');
+    } else if(redirectErrorMessage){
+      alert(redirectErrorMessage);
     }
     console.error('Error processing redirect login', err);
+  }
+}
+
+function getGoogleAuthErrorMessage(error, flow = 'popup'){
+  if(!error || !error.code) return null;
+  const domain = hasWindow() ? window.location.hostname : '';
+  const flowLabel = flow === 'redirect' ? 'redirección' : 'popup';
+
+  switch(error.code){
+    case 'auth/unauthorized-domain':
+      return `El dominio "${domain}" no está autorizado en Firebase Auth. Agrega este dominio en Authentication > Settings > Authorized domains y vuelve a intentar.`;
+    case 'auth/operation-not-allowed':
+      return 'Google Sign-In no está habilitado en Firebase Authentication > Sign-in method. Activa el proveedor Google para este proyecto.';
+    case 'auth/invalid-api-key':
+    case 'auth/app-not-authorized':
+      return 'La configuración de Firebase del frontend no corresponde con este entorno. Regenera public/firebase-config.js con las variables del proyecto dev y valida authDomain/projectId.';
+    case 'auth/popup-blocked':
+      return 'El navegador bloqueó la ventana emergente de Google. Permite popups para este sitio o usa el flujo de redirección.';
+    case 'auth/popup-closed-by-user':
+      return 'Se cerró la ventana de Google antes de completar el inicio de sesión.';
+    case 'auth/cancelled-popup-request':
+      return `Había otra solicitud de inicio de sesión en curso (${flowLabel}). Espera unos segundos y vuelve a intentarlo.`;
+    case 'auth/network-request-failed':
+      return 'Falló la conexión de red durante el inicio de sesión con Google. Revisa tu conexión e intenta nuevamente.';
+    default:
+      return null;
   }
 }
 

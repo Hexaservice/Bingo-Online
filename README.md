@@ -115,6 +115,32 @@ A partir de las últimas versiones de los navegadores se bloquean las cookies de
 
 Para evitarlo, despliegue el sitio en Firebase Hosting utilizando el dominio del proyecto (`bingo-online-231fd.web.app` o un dominio personalizado asociado). Así las cookies son del mismo sitio y la autenticación funciona de forma correcta.
 
+### Diagnóstico rápido: error al iniciar sesión con Google en `dev`
+
+Si aparece el mensaje "Error al iniciar sesión con Google" en el dominio `https://bingo-online-dev.web.app/`, valide este checklist en orden:
+
+1. **Dominio autorizado en Firebase Auth**  
+   En Firebase Console > Authentication > Settings > Authorized domains, confirme que existe exactamente `bingo-online-dev.web.app`.
+
+2. **Proveedor Google habilitado**  
+   En Authentication > Sign-in method, confirme que el proveedor **Google** está en estado **Enabled** dentro del mismo proyecto `dev`.
+
+3. **Config frontend coherente con `dev`**  
+   Genere nuevamente `public/firebase-config.js` usando el `.env` del entorno dev:
+   ```bash
+   FIREBASE_ENV_FILE=.env.dev npm run generate:firebase-config
+   ```
+   Verifique que `authDomain` y `projectId` apunten al proyecto dev (no staging/prod).
+
+4. **Deploy con archivo actualizado**  
+   Verifique que el deploy de Hosting incluya el `public/firebase-config.js` recién generado y que no haya caché vieja del navegador (probar en incógnito).
+
+5. **Cookies / almacenamiento del navegador**  
+   Revise que el navegador no esté bloqueando almacenamiento para `*.web.app`, y que extensiones de privacidad no bloqueen `accounts.google.com`.
+
+6. **Revisar código de error exacto**  
+   Abra DevTools (Console) y capture el `error.code` devuelto por Firebase (`auth/unauthorized-domain`, `auth/operation-not-allowed`, etc.) para decidir la corrección puntual.
+
 ### Despliegues automáticos (GitHub Actions)
 
 Los flujos definidos en `.github/workflows/` generan `public/firebase-config.js` a partir de la plantilla antes de invocar a Firebase Hosting. Configure los siguientes secretos en el repositorio para que la sustitución se realice correctamente:
