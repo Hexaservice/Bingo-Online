@@ -131,6 +131,22 @@ Valores de STG proporcionados para cargar en esos secretos:
 > Nota: complete también `FIREBASE_DATABASE_URL_STG` según su Realtime Database en STG. El workflow requiere que ese secreto exista para permitir el despliegue.
 > Para `staging`, el despliegue de Hosting usa el proyecto `bingo-online-stg`; por eso el service account debe corresponder a ese proyecto.
 
+#### Matriz rama → proyecto → site → dominio (Hosting)
+
+Para evitar desalineaciones entre `.firebaserc`, `firebase.json` y `.github/workflows/deploy-by-branch.yml`, mantenga esta correspondencia:
+
+| Rama | Proyecto Firebase (`projectId`) | Hosting `target` | Hosting `site` | Dominio esperado |
+| --- | --- | --- | --- | --- |
+| `dev` | `bingo-online-231fd` | `dev` | `bingo-online-231fd-dev` | `bingo-online-231fd-dev.web.app` |
+| `staging` | `bingo-online-stg` | `stg` | `bingo-online-stg` | `bingo-online-stg.web.app` y `bingo-online-stg.firebaseapp.com` |
+| `main` | `bingo-online-231fd` | `prod` | `bingo-online-231fd` | `bingo-online-231fd.web.app` y `bingo-online-231fd.firebaseapp.com` |
+
+Reglas prácticas:
+
+- Si cambia un `target` en `firebase.json`, actualice también el bloque `targets` de `.firebaserc` para el mismo proyecto.
+- El `FIREBASE_AUTH_DOMAIN_STG` debe apuntar al dominio del `site` de staging (`bingo-online-stg.firebaseapp.com`), consistente con el despliegue del target `stg`.
+- No reutilice el target `stg` de `bingo-online-231fd` para desplegar `bingo-online-stg`; cada proyecto debe declarar sus propios `targets`.
+
 ## Directrices de desarrollo
 
 - Toda obtención o cálculo de fechas y horas debe realizarse empleando el huso horario definido para el despliegue del sistema.
