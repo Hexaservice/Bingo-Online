@@ -100,8 +100,34 @@ Los flujos definidos en `.github/workflows/` generan `public/firebase-config.js`
 - `FIREBASE_STORAGE_BUCKET`
 - `FIREBASE_MESSAGING_SENDER_ID`
 - `FIREBASE_APP_ID`
+- `FIREBASE_MEASUREMENT_ID`
 
 Cada secreto debe contener el valor correspondiente del proyecto de Firebase. Si utiliza otras herramientas de despliegue, replique el mismo proceso de copiado y reemplazo de marcadores antes de publicar los archivos.
+
+#### Variables para entorno `staging`
+
+La rama `staging` utiliza secretos dedicados con sufijo `_STG` en el workflow `deploy-by-branch.yml` para evitar mezclar credenciales entre ambientes:
+
+- `FIREBASE_WEB_API_KEY_STG`
+- `FIREBASE_AUTH_DOMAIN_STG`
+- `FIREBASE_DATABASE_URL_STG`
+- `FIREBASE_PROJECT_ID_STG`
+- `FIREBASE_STORAGE_BUCKET_STG`
+- `FIREBASE_MESSAGING_SENDER_ID_STG`
+- `FIREBASE_APP_ID_STG`
+- `FIREBASE_MEASUREMENT_ID_STG`
+
+Valores de STG proporcionados para cargar en esos secretos:
+
+- `FIREBASE_WEB_API_KEY_STG=AIzaSyB10dWsnd3p4bJb16MrXgwDs15jmREZSTI`
+- `FIREBASE_AUTH_DOMAIN_STG=bingo-online-stg.firebaseapp.com`
+- `FIREBASE_PROJECT_ID_STG=bingo-online-stg`
+- `FIREBASE_STORAGE_BUCKET_STG=bingo-online-stg.firebasestorage.app`
+- `FIREBASE_MESSAGING_SENDER_ID_STG=651184549228`
+- `FIREBASE_APP_ID_STG=1:651184549228:web:2c73f9c759b2efb0ec1749`
+- `FIREBASE_MEASUREMENT_ID_STG=G-WMMR4YWSWC`
+
+> Nota: complete también `FIREBASE_DATABASE_URL_STG` según su Realtime Database en STG. El workflow requiere que ese secreto exista para permitir el despliegue.
 
 ## Directrices de desarrollo
 
