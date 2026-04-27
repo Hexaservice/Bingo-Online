@@ -108,6 +108,7 @@ Cada secreto debe contener el valor correspondiente del proyecto de Firebase. Si
 
 La rama `staging` utiliza secretos dedicados con sufijo `_STG` en el workflow `deploy-by-branch.yml` para evitar mezclar credenciales entre ambientes:
 
+- `FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_STG`
 - `FIREBASE_WEB_API_KEY_STG`
 - `FIREBASE_AUTH_DOMAIN_STG`
 - `FIREBASE_DATABASE_URL_STG`
@@ -128,6 +129,7 @@ Valores de STG proporcionados para cargar en esos secretos:
 - `FIREBASE_MEASUREMENT_ID_STG=G-WMMR4YWSWC`
 
 > Nota: complete también `FIREBASE_DATABASE_URL_STG` según su Realtime Database en STG. El workflow requiere que ese secreto exista para permitir el despliegue.
+> Para `staging`, el despliegue de Hosting usa el proyecto `bingo-online-stg`; por eso el service account debe corresponder a ese proyecto.
 
 ## Directrices de desarrollo
 
