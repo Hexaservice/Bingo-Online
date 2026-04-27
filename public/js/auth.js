@@ -2,6 +2,13 @@ let app, auth, db, provider, appName = 'BingOnline';
 const DISABLED_MSG = "Tu cuenta ha sido deshabilitada, Motivado posiblemente a que has incumplido una o más clausulas en nuestros Terminos y condiciones. Contacta con un administrador del sistema si necesitas información.";
 let firebaseInitPromise = null;
 let firebaseConfigLoadPromise = null;
+const KNOWN_AUTH_CODES = [
+  'auth/unauthorized-domain',
+  'auth/operation-not-allowed',
+  'auth/popup-blocked',
+  'auth/web-storage-unsupported',
+  'auth/user-disabled'
+];
 
 function hasWindow(){
   return typeof window !== 'undefined';
@@ -183,6 +190,30 @@ function overrideDialogs(){
   };
 }
 
+function getActiveAuthDomain(){
+  const cfg = getConfigFromWindow();
+  return (cfg && cfg.authDomain) ? cfg.authDomain : 'desconocido';
+}
+
+function resolveAuthErrorCode(err){
+  const code = typeof err?.code === 'string' ? err.code.trim() : '';
+  if(code) return code;
+  const msg = String(err?.message || '').toLowerCase();
+  return KNOWN_AUTH_CODES.find(authCode => msg.includes(authCode.replace('auth/', ''))) || 'auth/unknown';
+}
+
+function getAuthErrorMessage(err){
+  const code = resolveAuthErrorCode(err);
+  const map = {
+    'auth/unauthorized-domain': 'Este dominio no está autorizado para iniciar sesión con Google. Contacta a soporte. (auth/unauthorized-domain)',
+    'auth/operation-not-allowed': 'El inicio de sesión con Google no está habilitado temporalmente. Intenta más tarde. (auth/operation-not-allowed)',
+    'auth/popup-blocked': 'Tu navegador bloqueó la ventana emergente de Google. Permite popups o continúa con redirección. (auth/popup-blocked)',
+    'auth/web-storage-unsupported': 'El navegador bloqueó el almacenamiento/cookies necesarios para continuar. Habilítalos o usa un dominio autorizado. (auth/web-storage-unsupported)',
+    'auth/user-disabled': `${DISABLED_MSG} (auth/user-disabled)`
+  };
+  return { code, message: map[code] || `No se pudo iniciar sesión con Google. Intenta de nuevo. (${code})` };
+}
+
 async function loginGoogle(){
   try {
     await initFirebase();
@@ -194,22 +225,21 @@ async function loginGoogle(){
   try {
     await auth.signInWithPopup(provider);
   } catch(err) {
-    if (err.code === 'auth/user-disabled') {
-      alert(DISABLED_MSG);
+    const authErr = getAuthErrorMessage(err);
+    console.error('Error en login con popup', { code: authErr.code, authDomain: getActiveAuthDomain() });
+    if (authErr.code === 'auth/user-disabled') {
+      alert(authErr.message);
       return;
     }
-    console.warn('Popup login failed, trying redirect', err);
+    if (authErr.code === 'auth/popup-blocked') {
+      alert(authErr.message);
+    }
     try {
       await auth.signInWithRedirect(provider);
     } catch(e){
-      if (e.code === 'auth/user-disabled') {
-        alert(DISABLED_MSG);
-      } else if (e.code === 'auth/web-storage-unsupported') {
-        alert('El navegador ha bloqueado las cookies necesarias para continuar. Intenta habilitarlas o abre la aplicación desde un dominio configurado en Firebase.');
-      } else {
-        console.error('Error login Google', e);
-        alert('Error al iniciar sesión con Google');
-      }
+      const redirectErr = getAuthErrorMessage(e);
+      console.error('Error en login con redirect', { code: redirectErr.code, authDomain: getActiveAuthDomain() });
+      alert(redirectErr.message);
     }
   }
 }
@@ -232,10 +262,9 @@ async function handleRedirect(){
       redirectByRole(role);
     }
   } catch(err){
-    if (err.code === 'auth/web-storage-unsupported') {
-      alert('El navegador impide usar el almacenamiento necesario para mantener la sesión. Abre la aplicación desde un dominio configurado en Firebase o habilita las cookies.');
-    }
-    console.error('Error processing redirect login', err);
+    const authErr = getAuthErrorMessage(err);
+    console.error('Error procesando redirect login', { code: authErr.code, authDomain: getActiveAuthDomain() });
+    alert(authErr.message);
   }
 }
 
