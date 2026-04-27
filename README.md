@@ -119,6 +119,9 @@ Para evitarlo, despliegue el sitio en Firebase Hosting utilizando el dominio del
 
 Si aparece el mensaje "Error al iniciar sesión con Google" en el dominio `https://bingo-online-dev.web.app/`, valide este checklist en orden:
 
+0. **Hosting `dev` sin redirecciones externas**  
+   En `firebase.json` el target `dev` debe resolver a `"/index.html"` (SPA) y no redirigir (`301`) a otros dominios como `www.juega-online.com`, porque eso rompe el flujo OAuth del proyecto `dev`.
+
 1. **Dominio autorizado en Firebase Auth**  
    En Firebase Console > Authentication > Settings > Authorized domains, confirme que existe exactamente `bingo-online-dev.web.app`.
 
