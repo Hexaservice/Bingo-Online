@@ -1740,6 +1740,24 @@
       }
       return 0;
     }
+    function obtenerValorDesdeRutas(data,rutas){
+      for(const ruta of rutas){
+        const segmentos=(ruta||'').split('.').filter(Boolean);
+        let actual=data;
+        let existe=true;
+        for(const segmento of segmentos){
+          if(!actual || typeof actual!=='object' || !(segmento in actual)){
+            existe=false;
+            break;
+          }
+          actual=actual[segmento];
+        }
+        if(existe && actual!==undefined && actual!==null){
+          return actual;
+        }
+      }
+      return undefined;
+    }
     function marcarFilaSeleccionada(valor){
       if(!tablaWhatsapp) return;
       const filas=tablaWhatsapp.querySelectorAll('tr[data-valor]');
@@ -1922,7 +1940,8 @@
           if(nombreApp){
             etiquetaNumeroWhatsapp.textContent=`Número WhatsApp para ${nombreApp}`;
           }
-          const listaGuardada=extraerListaWhatsapp(data.numerosWhatsapp);
+          const listaRaw=obtenerValorDesdeRutas(data,['numerosWhatsapp','whatsapp.numerosWhatsapp','whatsapp.numeros','configuracionWhatsapp.numerosWhatsapp','configuracionWhatsapp.numeros']);
+          const listaGuardada=extraerListaWhatsapp(listaRaw);
           const numeroGuardado=obtenerNumeroDesdeParametros(data);
           const listaNormalizada=listaGuardada.length>0?listaGuardada:[];
           const baseLista=listaNormalizada.length>0?listaNormalizada:[numeroGuardado].filter(Boolean);
@@ -1936,9 +1955,10 @@
           numeroSeleccionado=numeroGuardado|| (numerosWhatsappList[0] ? `${numerosWhatsappList[0].prefijo}${numerosWhatsappList[0].local}` : '');
           renderDropdownWhatsapp();
           registrarEstadoBaseWhatsapp(baseLista.length>0?baseLista:numerosWhatsappList.map(valorCompuestoNumero));
-          const linkGuardado=(data.linkWhatsapp??data.linkwhatsapp??data.link_whatsapp??'').toString().trim();
+          const linkGuardado=(obtenerValorDesdeRutas(data,['linkWhatsapp','linkwhatsapp','link_whatsapp','whatsapp.linkWhatsapp','whatsapp.link','configuracionWhatsapp.linkWhatsapp','configuracionWhatsapp.link'])??'').toString().trim();
           campoLinkWhatsapp.value=linkGuardado;
-          const segundosCierre = obtenerEnteroNoNegativoDesdeClaves(data,[
+          const dataSegundosCierre=(obtenerValorDesdeRutas(data,['whatsapp','configuracionWhatsapp']) && typeof obtenerValorDesdeRutas(data,['whatsapp','configuracionWhatsapp'])==='object') ? {...obtenerValorDesdeRutas(data,['whatsapp','configuracionWhatsapp']),...data} : data;
+          const segundosCierre = obtenerEnteroNoNegativoDesdeClaves(dataSegundosCierre,[
             'segundosCierreCantos','segundosParaCierreCantos','cierreCantosSegundos',
             'duracionCantoManualSegundos','tiempoCantoManualSegundos','manualBingoDuracionSegundos',
             'segundos_cierre_cantos'
@@ -1946,7 +1966,7 @@
           if(campoSegundosCierreCantos){
             campoSegundosCierreCantos.value = String(segundosCierre);
           }
-          const segundosAzar = obtenerEnteroNoNegativoDesdeClaves(data,[
+          const segundosAzar = obtenerEnteroNoNegativoDesdeClaves(dataSegundosCierre,[
             'segundosIntervaloCantoAzar','intervaloCantoAzarSegundos','segundosCantoAzar',
             'segundos_intervalo_canto_azar'
           ]);
