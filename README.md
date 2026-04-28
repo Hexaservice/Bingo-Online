@@ -113,8 +113,8 @@ npm run generate:firebase-config -- --env dev
 
 Entornos soportados:
 
-- `dev` → Hosting target `bingo-online-231fd-dev` y base de datos `dev-db`
-- `stg` → Hosting target `bingo-online-231fd-stg` y base de datos `stg-db`
+- `dev` → Proyecto Firebase `bingo-online-dev` (número `671201853237`), Hosting target `bingo-online-dev` y base de datos **default** (no `dev-db`)
+- `stg` → Proyecto Firebase `bingo-online-stg` (número `651184549228`), Hosting target `bingo-online-stg` y base de datos **default** (no `stg-db`)
 - `main` → Producción (Hosting target `bingo-online-231fd` y base de datos default)
   - Compatibilidad: también acepta `prod` y `production`, normalizados internamente como producción.
 
@@ -128,7 +128,7 @@ Variables requeridas por entorno (con fallback a versión global sin prefijo):
 - `FIREBASE_<ENV>_MESSAGING_SENDER_ID`
 - `FIREBASE_<ENV>_APP_ID`
 
-> Ejemplo para staging (`<ENV>=STG`): `FIREBASE_STG_DATABASE_URL=https://bingo-online-231fd-stg-db.firebaseio.com`.
+> Ejemplo para staging (`<ENV>=STG`): `FIREBASE_STG_DATABASE_URL=https://bingo-online-stg-default-rtdb.firebaseio.com` (base de datos **default**).
 
 > Para producción en `main` el script utiliza prefijo `FIREBASE_PROD_*` (compatibilidad actual).
 
@@ -140,11 +140,11 @@ A partir de las últimas versiones de los navegadores se bloquean las cookies de
 
 Para evitarlo, cada entorno debe usar su propio dominio Firebase Hosting como `authDomain`:
 
-- Desarrollo: `bingo-online-231fd-dev.web.app`
-- Pruebas: `bingo-online-231fd-stg.web.app`
+- Desarrollo: `bingo-online-dev.web.app` y `bingo-online-dev.firebaseapp.com`
+- Pruebas: `bingo-online-stg.web.app` y `bingo-online-stg.firebaseapp.com`
 - Producción: `bingo-online-231fd.web.app`
 
-Además, en Firebase Authentication > Settings > Authorized domains agregue estos tres dominios para permitir login en cada ambiente de manera aislada.
+Además, en Firebase Authentication > Settings > Authorized domains agregue todos los dominios de cada ambiente (`*.web.app` y `*.firebaseapp.com`) para permitir login en cada entorno de manera aislada.
 
 ### Despliegues automáticos (GitHub Actions)
 
