@@ -115,7 +115,8 @@ Entornos soportados:
 
 - `dev` → Hosting target `bingo-online-231fd-dev` y base de datos `dev-db`
 - `stg` → Hosting target `bingo-online-231fd-stg` y base de datos `stg-db`
-- `prod` (o `main`) → Hosting target `bingo-online-231fd` y base de datos default
+- `main` → Producción (Hosting target `bingo-online-231fd` y base de datos default)
+  - Compatibilidad: también acepta `prod` y `production`, normalizados internamente como producción.
 
 Variables requeridas por entorno (con fallback a versión global sin prefijo):
 
@@ -128,6 +129,8 @@ Variables requeridas por entorno (con fallback a versión global sin prefijo):
 - `FIREBASE_<ENV>_APP_ID`
 
 > Ejemplo para staging (`<ENV>=STG`): `FIREBASE_STG_DATABASE_URL=https://bingo-online-231fd-stg-db.firebaseio.com`.
+
+> Para producción en `main` el script utiliza prefijo `FIREBASE_PROD_*` (compatibilidad actual).
 
 > **Nota sobre Storage**: Si en la consola de Firebase el bucket aparece con el dominio `*.firebasestorage.app`, utilice ese valor sin modificarlo. La interfaz convierte automáticamente ese formato al identificador clásico (`*.appspot.com`) al inicializar el SDK para garantizar la compatibilidad con `firebase-storage-compat` y permitir la subida de los PDFs generados.
 
@@ -192,6 +195,5 @@ npm run apply-firebase-mutations -- --files firebase/bingoanimalito/mi-cambio.js
 - El documento `Variablesglobales/Parametros` contiene configuración sensible y se trata como **confidencial**.
 - En `firestore.rules`, su lectura y escritura requieren privilegio fuerte de **Superadmin** (`isStrongSuperadmin()`).
 - La página `public/parametros.html` está diseñada para este mismo nivel de privilegio; usuarios autenticados sin rol fuerte de Superadmin deben recibir denegación de acceso al intentar leer ese documento.
-
 
 

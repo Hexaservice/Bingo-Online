@@ -67,7 +67,7 @@ function escapeTemplateValue(value) {
 }
 
 function printHelp() {
-  console.log(`Uso:\n  node scripts/generateFirebaseConfig.js --env <dev|stg|prod> [--output public/firebase-config.js]\n\nVariables requeridas por entorno:\n  FIREBASE_<ENV>_API_KEY\n  FIREBASE_<ENV>_AUTH_DOMAIN\n  FIREBASE_<ENV>_DATABASE_URL\n  FIREBASE_<ENV>_PROJECT_ID\n  FIREBASE_<ENV>_STORAGE_BUCKET\n  FIREBASE_<ENV>_MESSAGING_SENDER_ID\n  FIREBASE_<ENV>_APP_ID\n\nTambién acepta fallback sin prefijo de entorno: FIREBASE_API_KEY, FIREBASE_AUTH_DOMAIN, etc.`);
+  console.log(`Uso:\n  node scripts/generateFirebaseConfig.js --env <dev|stg|main> [--output public/firebase-config.js]\n\nEntornos aceptados:\n  dev\n  stg\n  main (producción)\n  prod / production (compatibilidad retroactiva, se normalizan a main)\n\nVariables requeridas por entorno:\n  FIREBASE_<ENV>_API_KEY\n  FIREBASE_<ENV>_AUTH_DOMAIN\n  FIREBASE_<ENV>_DATABASE_URL\n  FIREBASE_<ENV>_PROJECT_ID\n  FIREBASE_<ENV>_STORAGE_BUCKET\n  FIREBASE_<ENV>_MESSAGING_SENDER_ID\n  FIREBASE_<ENV>_APP_ID\n\nPara producción (main) se buscan variables FIREBASE_PROD_*.\nTambién acepta fallback sin prefijo de entorno: FIREBASE_API_KEY, FIREBASE_AUTH_DOMAIN, etc.`);
 }
 
 function main() {
@@ -80,7 +80,7 @@ function main() {
 
   const environment = normalizeEnv(args.env);
   if (!['dev', 'stg', 'prod'].includes(environment)) {
-    throw new Error(`Entorno no soportado: ${args.env}. Use dev, stg o prod.`);
+    throw new Error(`Entorno no soportado: ${args.env}. Use dev, stg o main (prod/production también son válidos por compatibilidad).`);
   }
 
   const prefix = `FIREBASE_${environment.toUpperCase()}_`;
