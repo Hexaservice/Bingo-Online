@@ -40,7 +40,7 @@
     const style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = `
-      .bo-install-prompt{position:fixed;right:16px;bottom:16px;z-index:9800;display:none;font-family:'Poppins',sans-serif}
+      .bo-install-prompt{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:9800;display:none;font-family:'Poppins',sans-serif}
       .bo-install-prompt__banner{display:flex;align-items:center;gap:8px;background:#fff;color:#1f2937;border:1px solid #e5e7eb;border-radius:999px;padding:8px 10px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
       .bo-install-prompt__banner button{border:none;border-radius:999px;padding:7px 12px;cursor:pointer;font-weight:600}
       .bo-install-prompt__banner .bo-install-open{background:#7a00cc;color:#fff}
@@ -80,7 +80,7 @@
     bannerWrap.className = 'bo-install-prompt';
     bannerWrap.innerHTML = `
       <div class="bo-install-prompt__banner">
-        <span>Instala la app</span>
+        <span>Instala la app en tu dispositivo</span>
         <button type="button" class="bo-install-open">Instalar</button>
         <button type="button" class="bo-install-dismiss">Ahora no</button>
       </div>
@@ -128,6 +128,12 @@
       }
     }
 
+    function mostrarAyudaInstalacionManual() {
+      modal.style.display = 'flex';
+      modal.querySelector('h3').textContent = 'Instalar app';
+      modal.querySelector('p').textContent = 'Si no aparece la instalación automática, usa el menú del navegador y elige "Instalar aplicación" o "Añadir a pantalla de inicio".';
+    }
+
     if (isStandalone() || shouldPausePrompt()) {
       hideAll();
       return { destroy: hideAll };
@@ -135,17 +141,26 @@
 
     if (isIosSafari()) {
       if (!hasPriorityOverlay()) {
-        iosHint.style.display = 'block';
+        bannerWrap.style.display = 'block';
       }
       iosHint.querySelector('button').addEventListener('click', function () {
         markDismissed();
         iosHint.style.display = 'none';
       });
+    } else {
+      showEntry();
     }
 
     bannerWrap.querySelector('.bo-install-open').addEventListener('click', function () {
-      if (!deferredPrompt) return;
-      modal.style.display = 'flex';
+      if (deferredPrompt) {
+        modal.style.display = 'flex';
+        return;
+      }
+      if (isIosSafari()) {
+        iosHint.style.display = 'block';
+        return;
+      }
+      mostrarAyudaInstalacionManual();
     });
 
     bannerWrap.querySelector('.bo-install-dismiss').addEventListener('click', function () {
