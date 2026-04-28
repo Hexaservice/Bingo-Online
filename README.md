@@ -146,18 +146,47 @@ Si aparece el mensaje "Error al iniciar sesión con Google" en el dominio `https
 
 ### Despliegues automáticos (GitHub Actions)
 
-Los flujos definidos en `.github/workflows/` generan `public/firebase-config.js` a partir de la plantilla antes de invocar a Firebase Hosting. Configure los siguientes secretos en el repositorio para que la sustitución se realice correctamente:
+Los flujos definidos en `.github/workflows/` generan `public/firebase-config.js` a partir de la plantilla antes de invocar a Firebase Hosting.
 
-- `FIREBASE_WEB_API_KEY`
-- `FIREBASE_AUTH_DOMAIN`
-- `FIREBASE_DATABASE_URL`
-- `FIREBASE_PROJECT_ID`
-- `FIREBASE_STORAGE_BUCKET`
-- `FIREBASE_MESSAGING_SENDER_ID`
-- `FIREBASE_APP_ID`
-- `FIREBASE_MEASUREMENT_ID` (opcional)
+#### Aislamiento recomendado por entorno (evita afectar `main`)
 
-Cada secreto debe contener el valor correspondiente del proyecto de Firebase. Si utiliza otras herramientas de despliegue, replique el mismo proceso de copiado y reemplazo de marcadores antes de publicar los archivos.
+Para que la rama `dev` despliegue únicamente al proyecto **bingo-online-dev** (ID `bingo-online-dev`, número `671201853237`) y no mezcle credenciales con `staging`/`main`, use secretos separados:
+
+- `FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_DEV`
+- `FIREBASE_DEV_WEB_API_KEY`
+- `FIREBASE_DEV_AUTH_DOMAIN` (`bingo-online-dev.firebaseapp.com`)
+- `FIREBASE_DEV_DATABASE_URL` (Realtime Database `default`, si aplica)
+- `FIREBASE_DEV_PROJECT_ID` (`bingo-online-dev`)
+- `FIREBASE_DEV_STORAGE_BUCKET`
+- `FIREBASE_DEV_MESSAGING_SENDER_ID` (`671201853237`)
+- `FIREBASE_DEV_APP_ID`
+- `FIREBASE_DEV_MEASUREMENT_ID` (opcional)
+
+Para `staging` y `main` mantenga secretos independientes de sus respectivos proyectos (por ejemplo los actuales `FIREBASE_*` de producción), sin reutilizar los del entorno `dev`.
+
+#### Paso a paso (nivel inicial) para configurar secretos en GitHub
+
+1. Entre al repositorio en GitHub y abra **Settings**.
+2. En el menú lateral, entre a **Secrets and variables > Actions**.
+3. Presione **New repository secret**.
+4. Cree cada secreto de la lista anterior, uno por uno, copiando exactamente el nombre.
+5. Pegue el valor correspondiente del proyecto Firebase `bingo-online-dev` y guarde.
+6. Repita hasta completar todos los secretos de `dev`.
+7. Verifique que **no** reemplazó secretos usados por `main` (si tiene duda, compare nombres: los de `dev` empiezan con `FIREBASE_DEV_` o `FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_DEV`).
+8. Haga un push a la rama `dev` y revise el workflow **Deploy by branch to Firebase Hosting** en la pestaña **Actions**.
+9. Confirme en los logs que el paso de deploy use `projectId: bingo-online-dev` y `target: dev`.
+10. Abra `https://bingo-online-dev.web.app` y valide login con Google en ese dominio.
+
+#### Cómo obtener la cuenta de servicio para el secreto `FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_DEV`
+
+1. Abra Firebase Console en el proyecto `bingo-online-dev`.
+2. Entre a **Project settings > Service accounts**.
+3. Presione **Generate new private key** y descargue el JSON.
+4. Abra el archivo JSON con un editor de texto.
+5. Copie **todo el contenido** (desde `{` hasta `}`) y péguelo como valor del secreto `FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_DEV`.
+6. Elimine el archivo JSON de su computador si no lo necesita (buena práctica de seguridad).
+
+> Recomendación: use también **GitHub Environments** (`dev`, `staging`, `prod`) con aprobaciones y secretos por entorno para reducir aún más el riesgo de despliegues cruzados.
 
 ## Directrices de desarrollo
 
