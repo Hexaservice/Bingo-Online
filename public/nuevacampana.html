@@ -180,6 +180,16 @@
       <input id="cartones-nuevo" type="number" inputmode="numeric" min="0" placeholder="Cartones nuevo">
     </div>
   </div>
+  <div class="row row--premios">
+    <div class="field-inline">
+      <span class="field-label label-nuevo">CARTONES NUEVO USUARIO</span>
+      <input id="cartones-nuevo-campana" type="number" inputmode="numeric" min="0" placeholder="Cartones nuevo usuario">
+    </div>
+    <div class="field-inline">
+      <span class="field-label label-referidos">CÓDIGO DE CAMPAÑA</span>
+      <input id="codigo-campana" type="text" maxlength="24" placeholder="Código de campaña" style="text-transform:uppercase;">
+    </div>
+  </div>
   <div id="estado-group" class="toggle-group">
     <button data-value="ACTIVA">ACTIVA</button>
     <button data-value="INACTIVA">INACTIVA</button>
@@ -216,6 +226,8 @@
         cartonesPremio: document.getElementById('cartones-premio').value,
         referidosMin: document.getElementById('referidos-min').value,
         cartonesNuevo: document.getElementById('cartones-nuevo').value,
+        cartonesNuevoCampana: document.getElementById('cartones-nuevo-campana').value,
+        codigoCampana: document.getElementById('codigo-campana').value.trim().toUpperCase(),
         estado: estadoSeleccionado,
       };
     }
@@ -231,6 +243,8 @@
         actualizoValor(a.cartonesPremio) === actualizoValor(b.cartonesPremio) &&
         actualizoValor(a.referidosMin) === actualizoValor(b.referidosMin) &&
         actualizoValor(a.cartonesNuevo) === actualizoValor(b.cartonesNuevo) &&
+        actualizoValor(a.cartonesNuevoCampana) === actualizoValor(b.cartonesNuevoCampana) &&
+        actualizoValor(a.codigoCampana) === actualizoValor(b.codigoCampana) &&
         actualizoValor(a.estado) === actualizoValor(b.estado)
       );
     }
@@ -304,6 +318,8 @@
         document.getElementById('cartones-premio').value = data.cartonesPremio ?? '';
         document.getElementById('referidos-min').value = data.referidosMin ?? '';
         document.getElementById('cartones-nuevo').value = data.cartonesNuevo ?? '';
+        document.getElementById('cartones-nuevo-campana').value = data.cartonesNuevoCampana ?? '';
+        document.getElementById('codigo-campana').value = (data.codigoCampana || '').toString().toUpperCase();
         setEstado((data.estado || 'INACTIVA').toUpperCase());
         snapshotInicial = obtenerEstadoFormulario();
         actualizarBotonGuardar();
@@ -317,7 +333,7 @@
       btn.addEventListener('click', () => setEstado(btn.dataset.value));
     });
     setEstado(estadoSeleccionado);
-    ['nombre-campana','fecha-inicio','fecha-fin','cartones-premio','referidos-min','cartones-nuevo'].forEach(id=>{
+    ['nombre-campana','fecha-inicio','fecha-fin','cartones-premio','referidos-min','cartones-nuevo','cartones-nuevo-campana','codigo-campana'].forEach(id=>{
       const campo = document.getElementById(id);
       if(campo){
         campo.addEventListener('input', actualizarBotonGuardar);
@@ -332,6 +348,9 @@
       const cartonesPremio = toNumero(document.getElementById('cartones-premio').value);
       const referidosMin = toNumero(document.getElementById('referidos-min').value);
       const cartonesNuevo = toNumero(document.getElementById('cartones-nuevo').value);
+      const cartonesNuevoCampanaInput = document.getElementById('cartones-nuevo-campana').value.trim();
+      const codigoCampana = document.getElementById('codigo-campana').value.trim().toUpperCase();
+      const cartonesNuevoCampana = cartonesNuevoCampanaInput === '' ? NaN : toNumero(cartonesNuevoCampanaInput);
 
       if(!nombre){ alert('Debes colocar el nombre de la campaña'); return; }
       if(!fechaInicio){ alert('Debes seleccionar la fecha de inicio'); return; }
@@ -343,6 +362,12 @@
       if(!Number.isFinite(cartonesPremio) || cartonesPremio < 0){ alert('El número de cartones debe ser válido'); return; }
       if(!Number.isFinite(referidosMin) || referidosMin < 1){ alert('El número de referidos debe ser válido'); return; }
       if(!Number.isFinite(cartonesNuevo) || cartonesNuevo < 0){ alert('El número de cartones para el nuevo usuario debe ser válido'); return; }
+      if(cartonesNuevoCampanaInput !== '' && !codigoCampana){ alert('Falta el código de Referido de Campaña'); return; }
+      if(codigoCampana && cartonesNuevoCampanaInput === ''){ alert('Falta cantidad de cartones para registro de usuario'); return; }
+      if(cartonesNuevoCampanaInput !== '' && (!Number.isFinite(cartonesNuevoCampana) || cartonesNuevoCampana < 0)){
+        alert('El número de cartones para registro directo debe ser válido');
+        return;
+      }
 
       let estadoFinal = estadoSeleccionado;
       const hoy = hoySinHora();
@@ -371,6 +396,8 @@
         cartonesPremio,
         referidosMin,
         cartonesNuevo,
+        cartonesNuevoCampana: Number.isFinite(cartonesNuevoCampana) ? cartonesNuevoCampana : null,
+        codigoCampana: codigoCampana || '',
         estado: estadoFinal,
         actualizadoEn: new Date().toISOString()
       };
