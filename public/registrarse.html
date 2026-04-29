@@ -401,18 +401,20 @@
       setTimeout(()=>toast.classList.remove('mostrar'), 3500);
     }
 
-    async function obtenerCampanaActiva(){
+    async function obtenerCampanaActiva({ actualizarEstado = true } = {}){
       const snapshot = await db.collection('campanasReferidos').where('estado','==','ACTIVA').get();
       const hoy = hoySinHora();
       let activa = null;
-      const batch = db.batch();
+      const batch = actualizarEstado ? db.batch() : null;
       let cambios = 0;
       snapshot.forEach(doc => {
         const data = doc.data() || {};
         const fin = parseFecha(data.fechaFin);
         if(fin && fin < hoy){
-          batch.update(db.collection('campanasReferidos').doc(doc.id), { estado:'INACTIVA' });
-          cambios += 1;
+          if(actualizarEstado){
+            batch.update(db.collection('campanasReferidos').doc(doc.id), { estado:'INACTIVA' });
+            cambios += 1;
+          }
           return;
         }
         const inicio = parseFecha(data.fechaInicio);
@@ -420,7 +422,7 @@
           activa = { id: doc.id, ...data };
         }
       });
-      if(cambios){ await batch.commit(); }
+      if(actualizarEstado && cambios){ await batch.commit(); }
       return activa;
     }
 
@@ -666,7 +668,7 @@
           }
           campanaActiva = await obtenerCampanaActiva();
         }else{
-          campanaActiva = await obtenerCampanaActiva();
+          campanaActiva = await obtenerCampanaActiva({ actualizarEstado: false });
           modalidadRegistroDirecto = obtenerConfiguracionRegistroDirecto(campanaActiva);
         }
         await db.collection('users').doc(user.email).set({
