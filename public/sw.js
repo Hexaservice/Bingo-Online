@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const APP_SHELL_CACHE = `bingo-app-shell-${CACHE_VERSION}`;
 const AUDIO_CACHE = `bingo-audio-runtime-${CACHE_VERSION}`;
 
