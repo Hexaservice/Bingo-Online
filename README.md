@@ -148,6 +148,14 @@ Si aparece el mensaje "Error al iniciar sesión con Google" en el dominio `https
 
 Los flujos definidos en `.github/workflows/` generan `public/firebase-config.js` a partir de la plantilla antes de invocar a Firebase Hosting.
 
+#### Mapeo exacto rama → proyecto Firebase Hosting
+
+- `dev` → proyecto `bingo-online-dev` (target hosting: `dev`)
+- `staging` → proyecto `bingo-online-231fd` (target hosting: `stg`)
+- `main` → proyecto `bingo-online-231fd` (target hosting: `prod`)
+
+> Nota: aunque el target de Hosting se llame `stg`, la rama configurada en GitHub Actions actualmente es `staging`.
+
 #### Aislamiento recomendado por entorno (evita afectar `main`)
 
 Para que la rama `dev` despliegue únicamente al proyecto **bingo-online-dev** (ID `bingo-online-dev`, número `671201853237`) y no mezcle credenciales con `staging`/`main`, use secretos separados:
