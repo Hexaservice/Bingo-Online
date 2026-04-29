@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const APP_SHELL_CACHE = `bingo-app-shell-${CACHE_VERSION}`;
 const AUDIO_CACHE = `bingo-audio-runtime-${CACHE_VERSION}`;
 
@@ -11,8 +11,8 @@ const APP_SHELL_URLS = [
   '/img/android-chrome-192x192.png',
   '/img/android-chrome-512x512.png',
   '/img/favicon.ico',
-  '/img/favicon-16x16.ico',
-  '/img/favicon-32x32.ico',
+  '/img/favicon-16x16.png',
+  '/img/favicon-32x32.png',
 ];
 
 self.addEventListener('install', (event) => {
