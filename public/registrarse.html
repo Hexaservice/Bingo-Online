@@ -468,6 +468,14 @@
       return { premioReferidor };
     }
 
+    function obtenerConfiguracionRegistroDirecto(campana){
+      if(!campana) return null;
+      const codigoCampana = (campana.codigoCampana || '').toString().trim().toUpperCase();
+      const cartonesNuevoCampana = Number(campana.cartonesNuevoCampana || 0) || 0;
+      if(!codigoCampana || cartonesNuevoCampana <= 0) return null;
+      return { codigoCampana, cartonesNuevoCampana };
+    }
+
     const selectCodigoPais=document.getElementById('codigo-pais');
     poblarSelectCodigos(selectCodigoPais);
     const REGISTRO_PENDIENTE_KEY = 'registroPendienteBingoOnline';
@@ -645,6 +653,7 @@
         const codigoReferido = (datos.codigoReferido || '').trim().toUpperCase();
         let campanaActiva = null;
         let usuarioReferidor = null;
+        let modalidadRegistroDirecto = null;
         if(codigoReferido){
           usuarioReferidor = await buscarUsuarioPorCodigo(codigoReferido);
           if(!usuarioReferidor){
@@ -656,13 +665,18 @@
             throw new Error('codigo_propio');
           }
           campanaActiva = await obtenerCampanaActiva();
+        }else{
+          campanaActiva = await obtenerCampanaActiva();
+          modalidadRegistroDirecto = obtenerConfiguracionRegistroDirecto(campanaActiva);
         }
         await db.collection('users').doc(user.email).set({
           name:datos.nombre, apellido:datos.apellido, alias:datos.alias,
           celular:numeroCompleto, numerocel:numeroCompleto, email:user.email,
           photoURL:user.photoURL, role:'Jugador', aceptoNotificaciones:'NO',
           codigoPromocional, codigoReferidoUsado: codigoReferido || '',
-          referidoPorEmail: usuarioReferidor ? (usuarioReferidor.email || usuarioReferidor.id || '') : '',
+          referidoPorEmail: usuarioReferidor
+            ? (usuarioReferidor.email || usuarioReferidor.id || '')
+            : (modalidadRegistroDirecto ? modalidadRegistroDirecto.codigoCampana : ''),
           campanaReferidosId: campanaActiva ? campanaActiva.id : '',
           fechaRegistro: new Date().toISOString()
         });
@@ -674,6 +688,9 @@
           }
           const { premioReferidor } = await registrarReferido({ campana: campanaActiva, nuevoEmail: user.email, referidoEmail: usuarioReferidor.email || usuarioReferidor.id });
           if(premioReferidor > 0){ await actualizarBilletera(usuarioReferidor.email || usuarioReferidor.id, premioReferidor); }
+        }else if(modalidadRegistroDirecto){
+          await actualizarBilletera(user.email, modalidadRegistroDirecto.cartonesNuevoCampana);
+          alert(`Ganaste ${modalidadRegistroDirecto.cartonesNuevoCampana} cartones por haberte registrado.`);
         }
         limpiarRegistroPendiente();
         trackEvent('registro_exito',{email:user.email});
