@@ -123,6 +123,21 @@
       modal.querySelector('p').textContent = 'Si no aparece la instalación automática, usa el menú del navegador y elige "Instalar aplicación" o "Añadir a pantalla de inicio".';
     }
 
+    async function solicitarInstalacionDirecta() {
+      if (!deferredPrompt) {
+        mostrarAyudaInstalacionManual();
+        return;
+      }
+      hideAll();
+      deferredPrompt.prompt();
+      const choiceResult = await deferredPrompt.userChoice;
+      if (choiceResult.outcome !== 'accepted') {
+        showEntry();
+        return;
+      }
+      deferredPrompt = null;
+    }
+
     if (isStandalone() || shouldPausePrompt()) {
       hideAll();
       return { destroy: hideAll };
@@ -141,7 +156,7 @@
 
     bannerWrap.querySelector('.bo-install-open').addEventListener('click', function () {
       if (deferredPrompt) {
-        modal.style.display = 'flex';
+        solicitarInstalacionDirecta();
         return;
       }
       if (isIosSafari()) {
@@ -166,19 +181,7 @@
     });
 
     modal.querySelector('.bo-install-confirm').addEventListener('click', async function () {
-      if (!deferredPrompt) {
-        mostrarAyudaInstalacionManual();
-        return;
-      }
-      modal.style.display = 'none';
-      deferredPrompt.prompt();
-      const choiceResult = await deferredPrompt.userChoice;
-      if (choiceResult.outcome !== 'accepted') {
-        showEntry();
-        return;
-      }
-      hideAll();
-      deferredPrompt = null;
+      await solicitarInstalacionDirecta();
     });
 
     window.addEventListener('beforeinstallprompt', function (event) {
