@@ -3,6 +3,18 @@
     installed: 'installPromptInstalled'
   };
   const STYLE_ID = 'bo-install-prompt-style';
+  let globalDeferredInstallPrompt = null;
+
+  window.addEventListener('beforeinstallprompt', function (event) {
+    event.preventDefault();
+    globalDeferredInstallPrompt = event;
+    window.dispatchEvent(new CustomEvent('bo-install-prompt-ready'));
+  });
+
+  window.addEventListener('appinstalled', function () {
+    globalDeferredInstallPrompt = null;
+    localStorage.setItem(STORAGE_KEYS.installed, '1');
+  });
 
   function isStandalone() {
     return Boolean(
@@ -56,7 +68,7 @@
       mode: options?.mode === 'modal' ? 'modal' : 'banner'
     };
 
-    let deferredPrompt = null;
+    let deferredPrompt = globalDeferredInstallPrompt;
     let root = document.getElementById(settings.containerId);
     if (!root) {
       root = document.createElement('div');
@@ -136,6 +148,7 @@
         return;
       }
       deferredPrompt = null;
+      globalDeferredInstallPrompt = null;
     }
 
     if (isStandalone() || shouldPausePrompt()) {
@@ -184,14 +197,12 @@
       await solicitarInstalacionDirecta();
     });
 
-    window.addEventListener('beforeinstallprompt', function (event) {
-      event.preventDefault();
-      deferredPrompt = event;
+    window.addEventListener('bo-install-prompt-ready', function () {
+      deferredPrompt = globalDeferredInstallPrompt;
       showEntry();
     });
 
     window.addEventListener('appinstalled', function () {
-      localStorage.setItem(STORAGE_KEYS.installed, '1');
       hideAll();
     });
 
