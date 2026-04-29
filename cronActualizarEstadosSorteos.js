@@ -1,14 +1,12 @@
-const admin = require('firebase-admin');
+require('dotenv').config();
+const { initializeFirebaseAdmin } = require('./firebaseAdminConfig');
 
-// Verificar variable de entorno para credenciales
-if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-  console.error('Falta la variable de entorno GOOGLE_APPLICATION_CREDENTIALS');
+let admin;
+try {
+  admin = initializeFirebaseAdmin();
+} catch (error) {
+  console.error(error.message);
   process.exit(1);
-}
-
-// Inicializa Firebase Admin
-if (!admin.apps.length) {
-  admin.initializeApp();
 }
 
 const db = admin.firestore();
