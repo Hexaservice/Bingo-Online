@@ -2427,17 +2427,48 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       if (typeof window.initInstallPrompt !== 'function') return;
-      const postRegistroInstallPromptKey = 'bo_show_install_prompt_after_signup';
-      const installPromptEnabledKey = 'bo_install_prompt_enabled';
-      const mostrarPromptPostRegistro = sessionStorage.getItem(postRegistroInstallPromptKey) === '1';
+      // Storage keys instalador PWA:
+      // - bo_show_install_prompt_after_signup: bandera de sesión para flujo post-registro.
+      // - bo_install_prompt_enabled: habilita mostrar prompt entre recargas.
+      // - bo_install_prompt_now_later_until: bloqueo temporal explícito por "Ahora no".
+      // - bo_install_prompt_last_shown_at: timestamp de último despliegue para cooldown.
+      // - bo_install_prompt_shown_this_session: evita repetir más de una vez por sesión.
+      const STORAGE_KEYS = {
+        postRegistro: 'bo_show_install_prompt_after_signup',
+        habilitado: 'bo_install_prompt_enabled',
+        ahoraNoHasta: 'bo_install_prompt_now_later_until',
+        ultimoMostrado: 'bo_install_prompt_last_shown_at',
+        mostradoSesion: 'bo_install_prompt_shown_this_session'
+      };
+      const INSTALL_PROMPT_COOLDOWN_MS = 1000 * 60 * 60 * 12;
+      const estaStandalone = Boolean(
+        (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+        window.navigator.standalone
+      );
+      const ahora = Date.now();
+      const mostrarPromptPostRegistro = sessionStorage.getItem(STORAGE_KEYS.postRegistro) === '1';
       if (mostrarPromptPostRegistro) {
-        localStorage.setItem(installPromptEnabledKey, '1');
-        sessionStorage.removeItem(postRegistroInstallPromptKey);
+        localStorage.setItem(STORAGE_KEYS.habilitado, '1');
+        sessionStorage.removeItem(STORAGE_KEYS.postRegistro);
       }
+      const ultimoMostrado = Number(localStorage.getItem(STORAGE_KEYS.ultimoMostrado) || 0);
+      const ahoraNoHasta = Number(localStorage.getItem(STORAGE_KEYS.ahoraNoHasta) || 0);
+      const bloqueoUsuarioVigente = ahoraNoHasta > ahora;
+      const cooldownVigente = ultimoMostrado > 0 && (ahora - ultimoMostrado) < INSTALL_PROMPT_COOLDOWN_MS;
+      const yaMostradoEnSesion = sessionStorage.getItem(STORAGE_KEYS.mostradoSesion) === '1';
+      const habilitado = localStorage.getItem(STORAGE_KEYS.habilitado) === '1';
+      const puedeMostrar = habilitado && !estaStandalone && !bloqueoUsuarioVigente && !cooldownVigente && !yaMostradoEnSesion;
+
       window.addEventListener('appinstalled', () => {
-        localStorage.removeItem(installPromptEnabledKey);
+        localStorage.removeItem(STORAGE_KEYS.habilitado);
+        localStorage.removeItem(STORAGE_KEYS.ultimoMostrado);
+        localStorage.removeItem(STORAGE_KEYS.ahoraNoHasta);
+        sessionStorage.removeItem(STORAGE_KEYS.mostradoSesion);
       });
-      if (localStorage.getItem(installPromptEnabledKey) === '1') {
+
+      if (puedeMostrar) {
+        sessionStorage.setItem(STORAGE_KEYS.mostradoSesion, '1');
+        localStorage.setItem(STORAGE_KEYS.ultimoMostrado, String(ahora));
         window.initInstallPrompt({ containerId: 'install-prompt-player', mode: 'banner' });
       }
     });
