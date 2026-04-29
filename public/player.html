@@ -2428,11 +2428,18 @@
     document.addEventListener('DOMContentLoaded', () => {
       if (typeof window.initInstallPrompt !== 'function') return;
       const postRegistroInstallPromptKey = 'bo_show_install_prompt_after_signup';
+      const installPromptEnabledKey = 'bo_install_prompt_enabled';
       const mostrarPromptPostRegistro = sessionStorage.getItem(postRegistroInstallPromptKey) === '1';
       if (mostrarPromptPostRegistro) {
+        localStorage.setItem(installPromptEnabledKey, '1');
         sessionStorage.removeItem(postRegistroInstallPromptKey);
       }
-      window.initInstallPrompt({ containerId: 'install-prompt-player', mode: 'banner' });
+      window.addEventListener('appinstalled', () => {
+        localStorage.removeItem(installPromptEnabledKey);
+      });
+      if (localStorage.getItem(installPromptEnabledKey) === '1') {
+        window.initInstallPrompt({ containerId: 'install-prompt-player', mode: 'banner' });
+      }
     });
   </script>
 </body>

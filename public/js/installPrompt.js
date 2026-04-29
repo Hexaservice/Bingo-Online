@@ -1,10 +1,7 @@
 (function () {
   const STORAGE_KEYS = {
-    dismissedUntil: 'installPromptDismissedUntil',
-    installed: 'installPromptInstalled',
-    accepted: 'installPromptAccepted'
+    installed: 'installPromptInstalled'
   };
-  const DISMISS_DAYS = 7;
   const STYLE_ID = 'bo-install-prompt-style';
 
   function isStandalone() {
@@ -24,15 +21,8 @@
   }
 
   function shouldPausePrompt() {
-    const dismissedUntil = Number(localStorage.getItem(STORAGE_KEYS.dismissedUntil) || 0);
     const installed = localStorage.getItem(STORAGE_KEYS.installed) === '1';
-    const accepted = localStorage.getItem(STORAGE_KEYS.accepted) === '1';
-    return installed || accepted || Date.now() < dismissedUntil;
-  }
-
-  function markDismissed() {
-    const until = Date.now() + DISMISS_DAYS * 24 * 60 * 60 * 1000;
-    localStorage.setItem(STORAGE_KEYS.dismissedUntil, String(until));
+    return installed;
   }
 
   function ensureStyles() {
@@ -80,8 +70,7 @@
     bannerWrap.className = 'bo-install-prompt';
     bannerWrap.innerHTML = `
       <div class="bo-install-prompt__banner">
-        <span>Instala la app en tu dispositivo</span>
-        <button type="button" class="bo-install-open">Instalar</button>
+                <button type="button" class="bo-install-open">Instalar</button>
         <button type="button" class="bo-install-dismiss">Ahora no</button>
       </div>
     `;
@@ -144,7 +133,6 @@
         bannerWrap.style.display = 'block';
       }
       iosHint.querySelector('button').addEventListener('click', function () {
-        markDismissed();
         iosHint.style.display = 'none';
       });
     } else {
@@ -164,31 +152,30 @@
     });
 
     bannerWrap.querySelector('.bo-install-dismiss').addEventListener('click', function () {
-      markDismissed();
       hideAll();
     });
 
     modal.querySelector('.bo-install-close').addEventListener('click', function () {
-      markDismissed();
       hideAll();
     });
 
     modal.addEventListener('click', function (event) {
       if (event.target === modal) {
-        markDismissed();
         hideAll();
       }
     });
 
     modal.querySelector('.bo-install-confirm').addEventListener('click', async function () {
-      if (!deferredPrompt) return;
+      if (!deferredPrompt) {
+        mostrarAyudaInstalacionManual();
+        return;
+      }
       modal.style.display = 'none';
       deferredPrompt.prompt();
       const choiceResult = await deferredPrompt.userChoice;
-      if (choiceResult.outcome === 'accepted') {
-        localStorage.setItem(STORAGE_KEYS.accepted, '1');
-      } else {
-        markDismissed();
+      if (choiceResult.outcome !== 'accepted') {
+        showEntry();
+        return;
       }
       hideAll();
       deferredPrompt = null;
