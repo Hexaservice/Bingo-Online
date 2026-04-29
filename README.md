@@ -105,9 +105,52 @@ FIREBASE_ENV_FILE=.env.dev npm run generate:firebase-config
 
 3. Verifique que se creó `public/firebase-config.js` y luego levante la app.
 
+
+Variables recomendadas para scripts/backend (aplican a `uploadServer.js`, `initUsers.js`, `initBanks.js`, `initRoles.js` y `cronActualizarEstadosSorteos.js`):
+
+```dotenv
+GOOGLE_APPLICATION_CREDENTIALS=./serviceAccountKey.dev.json
+FIREBASE_DATABASE_URL=https://<tu-proyecto-dev>-default-rtdb.firebaseio.com
+# Guardas de seguridad para desarrollo
+FIREBASE_DEV_PROJECT_ID=bingo-online-dev
+FIREBASE_DEV_DATABASE_URL=https://<tu-proyecto-dev>-default-rtdb.firebaseio.com
+# Solo uploadServer.js
+FIREBASE_STORAGE_BUCKET=<tu-bucket-dev>
+```
+
+
 > `public/firebase-config.js` está excluido del control de versiones por `.gitignore`, por lo que cada entorno (dev/staging/prod) puede generar su propio archivo sin mezclar configuraciones.
 
 > **Nota sobre Storage**: Si en la consola de Firebase el bucket aparece con el dominio `*.firebasestorage.app`, utilice ese valor sin modificarlo. La interfaz convierte automáticamente ese formato al identificador clásico (`*.appspot.com`) al inicializar el SDK para garantizar la compatibilidad con `firebase-storage-compat` y permitir la subida de los PDFs generados.
+
+
+#### Entorno `stg` (staging)
+
+Cree un archivo local `.env.stg` con los valores de staging y genere la configuración:
+
+```dotenv
+FIREBASE_API_KEY=...
+FIREBASE_AUTH_DOMAIN=...
+FIREBASE_PROJECT_ID=...
+FIREBASE_STORAGE_BUCKET=...
+FIREBASE_MESSAGING_SENDER_ID=...
+FIREBASE_APP_ID=...
+FIREBASE_DATABASE_URL=https://<tu-proyecto-stg>-default-rtdb.firebaseio.com
+FIREBASE_MEASUREMENT_ID=
+
+# Backend/scripts en staging
+GOOGLE_APPLICATION_CREDENTIALS=./serviceAccountKey.stg.json
+```
+
+```bash
+FIREBASE_ENV_FILE=.env.stg npm run generate:firebase-config
+```
+
+> Importante: para scripts/local dev nunca reutilice credenciales ni `FIREBASE_DATABASE_URL` de producción.
+
+#### Guardas de arranque para desarrollo
+
+Cuando `NODE_ENV=development`, los scripts backend validan que `projectId` y `FIREBASE_DATABASE_URL` coincidan con los valores dev esperados (`FIREBASE_DEV_PROJECT_ID` y `FIREBASE_DEV_DATABASE_URL`). Si no coinciden, el proceso termina con error explícito para evitar operar accidentalmente contra prod.
 
 ### Dominio y cookies
 

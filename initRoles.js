@@ -1,15 +1,13 @@
-const admin = require('firebase-admin');
-const fs = require('fs');
+require('dotenv').config();
+const { initializeFirebaseAdmin } = require('./firebaseAdminConfig');
 
-let credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || './serviceAccountKey.json';
-if (!fs.existsSync(credentialsPath)) {
-  console.error('Service account credentials not found at', credentialsPath);
+let admin;
+try {
+  admin = initializeFirebaseAdmin();
+} catch (error) {
+  console.error(error.message);
   process.exit(1);
 }
-
-admin.initializeApp({
-  credential: admin.credential.cert(require(credentialsPath)),
-});
 
 const db = admin.firestore();
 

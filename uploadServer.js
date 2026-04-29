@@ -3,22 +3,14 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
-const admin = require('firebase-admin');
+const { initializeFirebaseAdmin } = require('./firebaseAdminConfig');
 
-// Verificar variables de entorno necesarias antes de inicializar Firebase
-const requiredEnv = ['GOOGLE_APPLICATION_CREDENTIALS', 'FIREBASE_STORAGE_BUCKET', 'SENDGRID_API_KEY'];
-for (const name of requiredEnv) {
-  if (!process.env[name]) {
-    console.error(`Falta la variable de entorno ${name}`);
-    process.exit(1);
-  }
-}
-
-// Inicializa Firebase Admin especificando el bucket de Storage
-if (!admin.apps.length) {
-  admin.initializeApp({
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET
-  });
+let admin;
+try {
+  admin = initializeFirebaseAdmin({ requireStorageBucket: true });
+} catch (error) {
+  console.error(error.message);
+  process.exit(1);
 }
 
 const app = express();
