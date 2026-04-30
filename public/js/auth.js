@@ -4,11 +4,18 @@ const STRONG_AUTH_SESSION_KEY = 'bo_superadmin_strong_auth';
 const SUPERADMIN_DEVICE_KEY = 'bo_superadmin_device_id';
 let firebaseInitPromise = null;
 let firebaseConfigLoadPromise = null;
-let adminSessionWatcher = null;
-let lastAuditStamp = null;
-const nativeAlert = hasWindow() ? window.alert.bind(window) : null;
-const nativeConfirm = hasWindow() ? window.confirm.bind(window) : null;
-const nativePrompt = hasWindow() ? window.prompt.bind(window) : null;
+
+function hasFirebaseConfigError(){
+  return hasWindow() && typeof window.__FIREBASE_CONFIG_ERROR__ === 'string' && window.__FIREBASE_CONFIG_ERROR__.trim() !== '';
+}
+
+function blockIfFirebaseConfigInvalid(){
+  if(!hasFirebaseConfigError()) return false;
+  const message = window.__FIREBASE_CONFIG_ERROR__;
+  console.error(message);
+  alert(message);
+  return true;
+}
 
 function hasWindow(){
   return typeof window !== 'undefined';
@@ -313,6 +320,7 @@ function overrideDialogs(){
 }
 
 async function loginGoogle(){
+  if(blockIfFirebaseConfigInvalid()) return;
   try {
     await initFirebase();
   } catch(initErr){
@@ -347,6 +355,7 @@ async function loginGoogle(){
 }
 
 async function loginApple(){
+  if(blockIfFirebaseConfigInvalid()) return;
   try {
     await initFirebase();
   } catch(initErr){
@@ -387,6 +396,7 @@ function logout(){
 }
 
 async function handleRedirect(){
+  if(blockIfFirebaseConfigInvalid()) return;
   try {
     await initFirebase();
   }catch(initErr){

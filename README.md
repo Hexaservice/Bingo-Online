@@ -160,6 +160,11 @@ Tabla de mapeo exacta usada por el workflow:
 
 Si llega una rama distinta de `dev`, `staging` o `main`, el job de validación falla con error. También falla si el target de Hosting queda vacío.
 
+### Checklist predeploy (configuración)
+
+- [ ] Ejecutar `npm run generate:firebase-config -- --env <dev|stg|main>` para generar `public/firebase-config.js` del entorno objetivo.
+- [ ] Verificar que los campos de Firebase config no estén vacíos (`apiKey`, `authDomain`, `databaseURL`, `projectId`, `storageBucket`, `messagingSenderId`, `appId`).
+
 Configure los siguientes secretos por entorno en GitHub:
 
 - Dev: `FIREBASE_DEV_API_KEY`, `FIREBASE_DEV_AUTH_DOMAIN`, `FIREBASE_DEV_DATABASE_URL`, `FIREBASE_DEV_PROJECT_ID`, `FIREBASE_DEV_STORAGE_BUCKET`, `FIREBASE_DEV_MESSAGING_SENDER_ID`, `FIREBASE_DEV_APP_ID`

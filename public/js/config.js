@@ -1,7 +1,52 @@
 const hasWindow = typeof window !== 'undefined';
+const REQUIRED_FIREBASE_CONFIG_FIELDS = [
+  'apiKey',
+  'authDomain',
+  'databaseURL',
+  'projectId',
+  'storageBucket',
+  'messagingSenderId',
+  'appId'
+];
 
 const firebaseConfigFromWindow =
   hasWindow && window.__FIREBASE_CONFIG__ ? window.__FIREBASE_CONFIG__ : undefined;
+
+export const firebaseConfig = firebaseConfigFromWindow || {};
+
+if (hasWindow) {
+  window.firebaseConfig = firebaseConfig;
+}
+
+export function getMissingFirebaseConfigFields(config = firebaseConfig) {
+  return REQUIRED_FIREBASE_CONFIG_FIELDS.filter(
+    (field) => typeof config[field] !== 'string' || config[field].trim() === ''
+  );
+}
+
+export function assertFirebaseConfigOrThrow(config = firebaseConfig) {
+  const missingFields = getMissingFirebaseConfigFields(config);
+  if (missingFields.length === 0) {
+    return config;
+  }
+
+  const message =
+    `[config] Firebase config incompleta. Faltan campos requeridos: ${missingFields.join(', ')}. ` +
+    'Genere public/firebase-config.js y verifique variables FIREBASE_<ENV>_* no vacías.';
+
+  if (hasWindow) {
+    window.__FIREBASE_CONFIG_ERROR__ = message;
+    if (typeof window.alert === 'function') {
+      window.alert(message);
+    }
+  }
+
+  throw new Error(message);
+}
+
+if (hasWindow) {
+  window.__FIREBASE_CONFIG_ERROR__ = '';
+}
 
 if (!firebaseConfigFromWindow) {
   console.error(
@@ -9,10 +54,10 @@ if (!firebaseConfigFromWindow) {
   );
 }
 
-export const firebaseConfig = firebaseConfigFromWindow || {};
-
-if (hasWindow) {
-  window.firebaseConfig = firebaseConfig;
+try {
+  assertFirebaseConfigOrThrow(firebaseConfig);
+} catch (error) {
+  console.error(error.message);
 }
 
 // Endpoint para la subida de imágenes. Se puede sobrescribir mediante la
