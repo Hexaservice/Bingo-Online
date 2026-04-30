@@ -4,6 +4,7 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const { initializeFirebaseAdmin } = require('./firebaseAdminConfig');
+const { applyFirebaseDevConfig } = require('./firebaseAdminConfigActions');
 
 let admin;
 try {
@@ -87,6 +88,16 @@ app.post('/upload', verificarToken, upload.single('file'), async (req, res) => {
   }
 });
 
+
+app.post('/admin/firebase-dev-config', verificarToken, async (req, res) => {
+  const result = await applyFirebaseDevConfig({
+    admin,
+    actor: req.user.email,
+    payload: req.body
+  });
+
+  return res.status(result.status).json(result.body);
+});
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servicio de subida escuchando en puerto ${PORT}`);
