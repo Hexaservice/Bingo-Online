@@ -253,3 +253,26 @@ Para `staging` y `main` mantenga secretos independientes de sus respectivos proy
 
 
 
+
+#### Validación temprana de entorno en frontend (`auth.js`)
+
+Las vistas sensibles (`accederusuario.html`, `admin.html`, `super.html`) ejecutan `validateFirebaseConfigForEnv()` antes de iniciar autenticación.
+
+- Si el host corresponde a `dev` (por ejemplo `bingo-online-dev.web.app` o `localhost`) y `projectId`/`authDomain` no son de `bingo-online-dev`, se detiene la inicialización y se muestra un mensaje accionable.
+- Mensaje esperado:
+
+```text
+Configuración Firebase inválida para entorno DEV.
+Detectado host: <host>.
+projectId actual: <valor>. Esperado: bingo-online-dev.
+authDomain actual: <valor>. Esperado: bingo-online-dev.firebaseapp.com o bingo-online-dev.web.app.
+Acción: regenera public/firebase-config.js con FIREBASE_ENV_FILE=.env.dev npm run generate:firebase-config y redepliega.
+```
+
+- Si la validación falla, no se ejecuta `ensureAuth(...)` ni `firebase.initializeApp(...)` para evitar autenticación cruzada entre entornos.
+
+Para regenerar la configuración del frontend en dev:
+
+```bash
+FIREBASE_ENV_FILE=.env.dev npm run generate:firebase-config
+```
