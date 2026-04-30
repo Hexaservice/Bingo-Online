@@ -5,6 +5,32 @@ const SUPERADMIN_DEVICE_KEY = 'bo_superadmin_device_id';
 let firebaseInitPromise = null;
 let firebaseConfigLoadPromise = null;
 
+let globalConfigAdapterPromise = null;
+function ensureGlobalConfigAdapterScript(){
+  if(typeof window === 'undefined') return Promise.resolve(null);
+  if(window.globalConfigAdapter) return Promise.resolve(window.globalConfigAdapter);
+  if(!globalConfigAdapterPromise){
+    globalConfigAdapterPromise = new Promise((resolve,reject)=>{
+      if(typeof document === 'undefined') return resolve(null);
+      const existing = document.querySelector('script[data-global-config-adapter]');
+      if(existing){
+        existing.addEventListener('load', ()=>resolve(window.globalConfigAdapter || null), { once:true });
+        existing.addEventListener('error', ()=>reject(new Error('No se pudo cargar globalConfigAdapter.js')), { once:true });
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'js/globalConfigAdapter.js';
+      script.async = false;
+      script.dataset.globalConfigAdapter = 'true';
+      script.onload = ()=>resolve(window.globalConfigAdapter || null);
+      script.onerror = ()=>reject(new Error('No se pudo cargar globalConfigAdapter.js'));
+      document.head.appendChild(script);
+    });
+  }
+  return globalConfigAdapterPromise;
+}
+
+
 function hasFirebaseConfigError(){
   return hasWindow() && typeof window.__FIREBASE_CONFIG_ERROR__ === 'string' && window.__FIREBASE_CONFIG_ERROR__.trim() !== '';
 }
@@ -137,8 +163,15 @@ async function initAppName(){
     return;
   }
   try{
+    const adapter = await ensureGlobalConfigAdapterScript();
     const doc = await db.collection('Variablesglobales').doc('Parametros').get();
-    if(doc.exists && doc.data().Aplicacion){
+    if(adapter){
+      const { normalized, validation } = adapter.fromSnapshot(doc);
+      if(!validation.valid){
+        console.warn('Variablesglobales/Parametros inválido, se usará fallback de lectura para Aplicacion', validation.errors);
+      }
+      appName = normalized.Aplicacion;
+    } else if(doc.exists && doc.data().Aplicacion){
       appName = doc.data().Aplicacion;
     }
   }catch(e){

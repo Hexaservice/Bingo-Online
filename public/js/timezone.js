@@ -12,6 +12,38 @@ const serverTime = {
   intervaloSync: null
 };
 
+
+let globalConfigAdapterRef = null;
+async function ensureGlobalConfigAdapter(){
+  if(globalConfigAdapterRef) return globalConfigAdapterRef;
+  if(typeof window !== 'undefined' && window.globalConfigAdapter){
+    globalConfigAdapterRef = window.globalConfigAdapter;
+    return globalConfigAdapterRef;
+  }
+  if(typeof document !== 'undefined'){
+    await new Promise((resolve,reject)=>{
+      const existing = document.querySelector('script[data-global-config-adapter]');
+      if(existing){
+        existing.addEventListener('load', ()=>resolve(), { once:true });
+        existing.addEventListener('error', ()=>reject(new Error('No se pudo cargar globalConfigAdapter.js')), { once:true });
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'js/globalConfigAdapter.js';
+      script.async = false;
+      script.dataset.globalConfigAdapter = 'true';
+      script.onload = ()=>resolve();
+      script.onerror = ()=>reject(new Error('No se pudo cargar globalConfigAdapter.js'));
+      document.head.appendChild(script);
+    });
+  }
+  if(typeof window !== 'undefined' && window.globalConfigAdapter){
+    globalConfigAdapterRef = window.globalConfigAdapter;
+    return globalConfigAdapterRef;
+  }
+  throw new Error('globalConfigAdapter no disponible');
+}
+
 const IANA_OVERRIDES = {
   Venezuela: 'America/Caracas',
   Colombia: 'America/Bogota',
@@ -178,10 +210,13 @@ async function initServerTime() {
   if (serverTime.zonaIana) return; // ya inicializado
   try {
     const database = await asegurarDb();
+    const adapter = await ensureGlobalConfigAdapter();
     const doc = await database.collection('Variablesglobales').doc('Parametros').get();
-    if (!doc.exists) throw new Error('Documento Parametros no existe');
-    const { Pais = '', ZonaHoraria = '' } = doc.data();
-    aplicarParametrosZona(Pais, ZonaHoraria);
+    const { normalized, validation } = adapter.fromSnapshot(doc);
+    if(!validation.valid){
+      console.warn('Variablesglobales/Parametros inválido, se aplicarán fallbacks de lectura', validation.errors);
+    }
+    aplicarParametrosZona(normalized.Pais, normalized.ZonaHoraria);
   } catch (e) {
     console.error('Error obteniendo parámetros', e);
     aplicarParametrosZona();

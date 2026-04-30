@@ -1,4 +1,5 @@
 const admin = require('firebase-admin');
+const globalConfigAdapter = require('./public/js/globalConfigAdapter');
 
 // Verificar variable de entorno para credenciales
 if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
@@ -76,8 +77,11 @@ async function sincronizarHora() {
 async function initServerTime() {
   try {
     const doc = await db.collection('Variablesglobales').doc('Parametros').get();
-    if (!doc.exists) throw new Error('Documento Parametros no existe');
-    const { ZonaHoraria = '', Pais = '' } = doc.data();
+    const { normalized, validation } = globalConfigAdapter.fromSnapshot(doc);
+    if(!validation.valid){
+      console.warn('Variablesglobales/Parametros inválido en cron, se aplican fallbacks de lectura', validation.errors);
+    }
+    const { ZonaHoraria, Pais } = normalized;
     serverTime.offsetMinutos = obtenerOffsetMinutos(ZonaHoraria);
     const override = IANA_OVERRIDES[Pais];
     const zonaNormalizada = override || parseZona(ZonaHoraria);
