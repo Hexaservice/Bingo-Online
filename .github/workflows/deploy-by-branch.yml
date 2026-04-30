@@ -9,11 +9,59 @@ permissions:
   id-token: write
 
 jobs:
+  validate-branch-target:
+    runs-on: ubuntu-latest
+    outputs:
+      deploy_env: ${{ steps.resolve.outputs.deploy_env }}
+      hosting_target: ${{ steps.resolve.outputs.hosting_target }}
+      project_id: ${{ steps.resolve.outputs.project_id }}
+    steps:
+      - name: Validar mapeo rama → entorno → target → proyecto
+        id: resolve
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          case "${BRANCH_NAME}" in
+            dev)
+              deploy_env="dev"
+              hosting_target="dev"
+              project_id="bingo-online-dev"
+              ;;
+            staging)
+              deploy_env="stg"
+              hosting_target="stg"
+              project_id="bingo-online-stg"
+              ;;
+            main)
+              deploy_env="prod"
+              hosting_target="prod"
+              project_id="bingo-online-231fd"
+              ;;
+            *)
+              echo "::error::Rama no contemplada para despliegue automático: ${BRANCH_NAME}"
+              exit 1
+              ;;
+          esac
+
+          if [ -z "${hosting_target}" ]; then
+            echo "::error::El hosting target quedó vacío para la rama ${BRANCH_NAME}"
+            exit 1
+          fi
+
+          echo "deploy_env=${deploy_env}" >> "${GITHUB_OUTPUT}"
+          echo "hosting_target=${hosting_target}" >> "${GITHUB_OUTPUT}"
+          echo "project_id=${project_id}" >> "${GITHUB_OUTPUT}"
+
   deploy-dev:
+    needs: validate-branch-target
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/dev'
     env:
-      DEPLOY_ENV: dev
+      DEPLOY_ENV: ${{ needs.validate-branch-target.outputs.deploy_env }}
+      HOSTING_TARGET: ${{ needs.validate-branch-target.outputs.hosting_target }}
+      FIREBASE_PROJECT_ID: ${{ needs.validate-branch-target.outputs.project_id }}
       HAS_FIREBASE_SECRETS: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_DEV != '' &&
         secrets.FIREBASE_DEV_API_KEY != '' &&
         secrets.FIREBASE_DEV_AUTH_DOMAIN != '' &&
@@ -43,21 +91,28 @@ jobs:
         if: env.HAS_FIREBASE_SECRETS == 'true'
         run: node scripts/generateFirebaseConfig.js --env "${DEPLOY_ENV}"
 
+      - name: Preparar credenciales de Firebase CLI
+        if: env.HAS_FIREBASE_SECRETS == 'true'
+        run: |
+          set -euo pipefail
+          printf '%s' "${FIREBASE_SERVICE_ACCOUNT_JSON}" > "${RUNNER_TEMP}/firebase-service-account.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=${RUNNER_TEMP}/firebase-service-account.json" >> "${GITHUB_ENV}"
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_DEV }}
+
       - name: Deploy to Firebase Hosting
         if: env.HAS_FIREBASE_SECRETS == 'true'
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_DEV }}
-          projectId: bingo-online-dev
-          target: dev
-          channelId: live
+        run: |
+          npx firebase-tools deploy --only "hosting:${HOSTING_TARGET}" --project "${FIREBASE_PROJECT_ID}" --non-interactive
 
   deploy-staging:
+    needs: validate-branch-target
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/staging'
     env:
-      DEPLOY_ENV: stg
+      DEPLOY_ENV: ${{ needs.validate-branch-target.outputs.deploy_env }}
+      HOSTING_TARGET: ${{ needs.validate-branch-target.outputs.hosting_target }}
+      FIREBASE_PROJECT_ID: ${{ needs.validate-branch-target.outputs.project_id }}
       HAS_FIREBASE_SECRETS: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_STG != '' &&
         secrets.FIREBASE_STG_API_KEY != '' &&
         secrets.FIREBASE_STG_AUTH_DOMAIN != '' &&
@@ -87,21 +142,28 @@ jobs:
         if: env.HAS_FIREBASE_SECRETS == 'true'
         run: node scripts/generateFirebaseConfig.js --env "${DEPLOY_ENV}"
 
+      - name: Preparar credenciales de Firebase CLI
+        if: env.HAS_FIREBASE_SECRETS == 'true'
+        run: |
+          set -euo pipefail
+          printf '%s' "${FIREBASE_SERVICE_ACCOUNT_JSON}" > "${RUNNER_TEMP}/firebase-service-account.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=${RUNNER_TEMP}/firebase-service-account.json" >> "${GITHUB_ENV}"
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_STG }}
+
       - name: Deploy to Firebase Hosting
         if: env.HAS_FIREBASE_SECRETS == 'true'
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_STG }}
-          projectId: bingo-online-stg
-          target: stg
-          channelId: live
+        run: |
+          npx firebase-tools deploy --only "hosting:${HOSTING_TARGET}" --project "${FIREBASE_PROJECT_ID}" --non-interactive
 
   deploy-prod:
+    needs: validate-branch-target
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     env:
-      DEPLOY_ENV: main
+      DEPLOY_ENV: ${{ needs.validate-branch-target.outputs.deploy_env }}
+      HOSTING_TARGET: ${{ needs.validate-branch-target.outputs.hosting_target }}
+      FIREBASE_PROJECT_ID: ${{ needs.validate-branch-target.outputs.project_id }}
       HAS_FIREBASE_SECRETS: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_231FD != '' &&
         secrets.FIREBASE_PROD_API_KEY != '' &&
         secrets.FIREBASE_PROD_AUTH_DOMAIN != '' &&
@@ -131,12 +193,16 @@ jobs:
         if: env.HAS_FIREBASE_SECRETS == 'true'
         run: node scripts/generateFirebaseConfig.js --env "${DEPLOY_ENV}"
 
+      - name: Preparar credenciales de Firebase CLI
+        if: env.HAS_FIREBASE_SECRETS == 'true'
+        run: |
+          set -euo pipefail
+          printf '%s' "${FIREBASE_SERVICE_ACCOUNT_JSON}" > "${RUNNER_TEMP}/firebase-service-account.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=${RUNNER_TEMP}/firebase-service-account.json" >> "${GITHUB_ENV}"
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_231FD }}
+
       - name: Deploy to Firebase Hosting
         if: env.HAS_FIREBASE_SECRETS == 'true'
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_231FD }}
-          projectId: bingo-online-231fd
-          target: main
-          channelId: live
+        run: |
+          npx firebase-tools deploy --only "hosting:${HOSTING_TARGET}" --project "${FIREBASE_PROJECT_ID}" --non-interactive
