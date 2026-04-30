@@ -10,6 +10,46 @@ function hasWindow(){
   return typeof window !== 'undefined';
 }
 
+
+function inferDeployEnvFromHostname(hostname){
+  const host = (hostname || '').toLowerCase();
+  if(!host) return 'unknown';
+  if(host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local')) return 'dev';
+  if(host.includes('-dev.') || host.startsWith('dev.')) return 'dev';
+  if(host.includes('-stg.') || host.includes('staging')) return 'stg';
+  if(host.includes('-prod.') || host.includes('production')) return 'prod';
+  return 'unknown';
+}
+
+function validateFirebaseConfigForEnv(){
+  if(!hasWindow()) return true;
+  const firebaseConfig = getConfigFromWindow();
+  if(!firebaseConfig) return true;
+  const forcedEnv = (window.BINGO_DEPLOY_ENV || '').toString().trim().toLowerCase();
+  const detectedEnv = forcedEnv || inferDeployEnvFromHostname(window.location && window.location.hostname);
+  if(detectedEnv !== 'dev') return true;
+
+  const expectedProjectIds = ['bingo-online-dev'];
+  const expectedAuthDomains = ['bingo-online-dev.firebaseapp.com', 'bingo-online-dev.web.app'];
+  const projectId = (firebaseConfig.projectId || '').trim().toLowerCase();
+  const authDomain = (firebaseConfig.authDomain || '').trim().toLowerCase();
+
+  const validProject = expectedProjectIds.includes(projectId);
+  const validDomain = expectedAuthDomains.includes(authDomain);
+  if(validProject && validDomain) return true;
+
+  const message = [
+    'Configuración Firebase inválida para entorno DEV.',
+    `Detectado host: ${window.location.hostname}.`,
+    `projectId actual: ${firebaseConfig.projectId || '(vacío)'}. Esperado: ${expectedProjectIds.join(' o ')}.`,
+    `authDomain actual: ${firebaseConfig.authDomain || '(vacío)'}. Esperado: ${expectedAuthDomains.join(' o ')}.`,
+    'Acción: regenera public/firebase-config.js con FIREBASE_ENV_FILE=.env.dev npm run generate:firebase-config y redepliega.'
+  ].join('\n');
+  console.error(message);
+  if(typeof window.alert === 'function') window.alert(message);
+  return false;
+}
+
 function getConfigFromWindow(){
   if(!hasWindow()) return null;
   const cfg = window.firebaseConfig || window.__FIREBASE_CONFIG__;
@@ -66,6 +106,9 @@ async function initFirebase(){
     const firebaseConfig = getConfigFromWindow();
     if (!firebaseConfig) {
       throw new Error('Firebase config no disponible. Genere public/firebase-config.js antes de cargar auth.js.');
+    }
+    if(!validateFirebaseConfigForEnv()){
+      throw new Error('Configuración de Firebase no válida para el entorno detectado.');
     }
     app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
 
@@ -578,4 +621,8 @@ function startUserStatusWatcher(){
   },60000);
 }
 
-if (typeof module !== "undefined") { module.exports = { redirectByRole, ensureAuth, setupSuperadminExit }; }
+if(hasWindow()){
+  window.validateFirebaseConfigForEnv = validateFirebaseConfigForEnv;
+}
+
+if (typeof module !== "undefined") { module.exports = { redirectByRole, ensureAuth, setupSuperadminExit, validateFirebaseConfigForEnv }; }
