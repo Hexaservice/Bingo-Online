@@ -148,7 +148,17 @@ Además, en Firebase Authentication > Settings > Authorized domains agregue todo
 
 ### Despliegues automáticos (GitHub Actions)
 
-El flujo `.github/workflows/deploy-by-branch.yml` genera `public/firebase-config.js` con el script anterior y despliega por rama (`dev`, `staging`, `main`) usando targets de Hosting distintos.
+El flujo `.github/workflows/deploy-by-branch.yml` genera `public/firebase-config.js`, valida explícitamente el mapeo de rama y despliega con `firebase-tools` usando siempre `--only hosting:<target>`.
+
+Tabla de mapeo exacta usada por el workflow:
+
+| Rama Git | Entorno lógico | Hosting target | Proyecto Firebase |
+| --- | --- | --- | --- |
+| `dev` | `dev` | `dev` | `bingo-online-dev` |
+| `staging` | `stg` | `stg` | `bingo-online-stg` |
+| `main` | `prod` | `prod` | `bingo-online-231fd` |
+
+Si llega una rama distinta de `dev`, `staging` o `main`, el job de validación falla con error. También falla si el target de Hosting queda vacío.
 
 Configure los siguientes secretos por entorno en GitHub:
 
@@ -195,5 +205,4 @@ npm run apply-firebase-mutations -- --files firebase/bingoanimalito/mi-cambio.js
 - El documento `Variablesglobales/Parametros` contiene configuración sensible y se trata como **confidencial**.
 - En `firestore.rules`, su lectura y escritura requieren privilegio fuerte de **Superadmin** (`isStrongSuperadmin()`).
 - La página `public/parametros.html` está diseñada para este mismo nivel de privilegio; usuarios autenticados sin rol fuerte de Superadmin deben recibir denegación de acceso al intentar leer ese documento.
-
 
