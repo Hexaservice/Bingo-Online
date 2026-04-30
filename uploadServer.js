@@ -7,6 +7,7 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const crypto = require('crypto');
 const admin = require('firebase-admin');
+const { requireRole } = require('./server/auth/requireRole');
 const EstadosPagoPremio = require('./public/js/estadoPagoPremio.js');
 const { isSorteoEligibleForAutoPrize } = require('./public/js/sorteoAutoPrizeEligibility.js');
 
@@ -248,73 +249,13 @@ async function validarUsuarioSuperadmin(decodedToken) {
   }
 }
 
-async function verificarToken(req, res, next) {
-  const authHeader = req.headers.authorization || '';
-  const match = authHeader.match(/^Bearer (.+)$/);
-  if (!match) {
-    return res.status(401).json({ error: 'No autorizado' });
-  }
+const verificarToken = requireRole(['Superadmin', 'Administrador'], {
+  onForbidden: 'Acceso restringido a roles administrativos'
+});
 
-  let decoded;
-  try {
-    decoded = await admin.auth().verifyIdToken(match[1]);
-  } catch (e) {
-    console.error('Error verificando token', e);
-    return res.status(401).json({ error: 'Token inválido' });
-  }
-
-  const email = decoded.email;
-  if (!email) {
-    return res.status(401).json({ error: 'Token sin correo asociado' });
-  }
-
-  try {
-    const doc = await admin.firestore().collection('users').doc(email).get();
-    const role = doc.exists ? doc.data().role : undefined;
-    if (!['Superadmin', 'Administrador'].includes(role)) {
-      return res.status(403).json({ error: 'Acceso restringido a roles administrativos' });
-    }
-    req.user = { uid: decoded.uid, email, role };
-    next();
-  } catch (e) {
-    console.error('Error obteniendo el rol del usuario', e);
-    return res.status(500).json({ error: 'Error verificando permisos', message: e.message });
-  }
-}
-
-async function verificarOperadorPrivilegiado(req, res, next) {
-  const authHeader = req.headers.authorization || '';
-  const match = authHeader.match(/^Bearer (.+)$/);
-  if (!match) {
-    return res.status(401).json({ error: 'No autorizado' });
-  }
-
-  let decoded;
-  try {
-    decoded = await admin.auth().verifyIdToken(match[1]);
-  } catch (e) {
-    console.error('Error verificando token', e);
-    return res.status(401).json({ error: 'Token inválido' });
-  }
-
-  const email = decoded.email;
-  if (!email) {
-    return res.status(401).json({ error: 'Token sin correo asociado' });
-  }
-
-  try {
-    const doc = await admin.firestore().collection('users').doc(email).get();
-    const role = doc.exists ? doc.data().role : undefined;
-    if (!['Superadmin', 'Administrador', 'Colaborador'].includes(role)) {
-      return res.status(403).json({ error: 'Acceso restringido a operadores autorizados' });
-    }
-    req.user = { uid: decoded.uid, email, role };
-    next();
-  } catch (e) {
-    console.error('Error obteniendo el rol del usuario', e);
-    return res.status(500).json({ error: 'Error verificando permisos', message: e.message });
-  }
-}
+const verificarOperadorPrivilegiado = requireRole(['Superadmin', 'Administrador', 'Colaborador'], {
+  onForbidden: 'Acceso restringido a operadores autorizados'
+});
 
 function normalizeString(value, maxLength = 200) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
