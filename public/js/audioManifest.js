@@ -1,9 +1,9 @@
 (function () {
   const manifest = {
-    manifestVersion: '2026.03.16-local-only-v1',
+    manifestVersion: '2026.04.30-local-critical-integrity-v1',
     globalAudioPolicy: {
-      allowedSourceType: 'repository-local-files-and-allowlisted-remote',
-      allowedRemoteHosts: ['raw.githubusercontent.com'],
+      allowedSourceType: 'repository-local-files-only-for-critical',
+      allowedRemoteHosts: [],
       preferredFormats: ['wav'],
       musicPreload: 'deferred',
       criticalSfxPreload: 'on-game-enter',
@@ -19,18 +19,9 @@
         maxBytes: 6291456,
         normalizationGain: 0.28,
         sources: [
-          {
-            format: 'ogg',
-            url: 'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/sounds/358232_j_s_song.ogg',
-            kind: 'remote-open-source',
-          },
-          {
-            format: 'wav',
-            url: '/sonidos/5.wav',
-            kind: 'local-primary',
-          },
+          { format: 'wav', url: '/sonidos/5.wav', kind: 'local-primary' },
         ],
-        description: 'Pista base para pruebas (remota con fallback local).',
+        description: 'Pista base local opcional para ambientación.',
       },
     },
     sfx: {

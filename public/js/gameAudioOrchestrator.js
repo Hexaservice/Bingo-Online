@@ -29,6 +29,7 @@
     cantosProcessing: false,
     musicRegistered: false,
     musicStarted: false,
+    musicOptional: true,
     registeredEvents: new Set(),
     cantoQueue: [],
     lastEventByName: new Map(),
@@ -62,9 +63,40 @@
       if (typeof window.audioManager.setMuted === 'function') window.audioManager.setMuted(this.preferences.muted);
     },
     registerMusic() {
-      if (this.musicRegistered || !window.audioManager?.registerMusicTrack) return;
+      if (this.musicOptional || this.musicRegistered || !window.audioManager?.registerMusicTrack) return;
       window.audioManager.registerMusicTrack(this.AUDIO_BACKGROUND_TRACK_ID, { manifestKey: this.AUDIO_BACKGROUND_MANIFEST_KEY });
       this.musicRegistered = true;
+    },
+    hasAtLeastOneLocalSource(manifestNode) {
+      if (!manifestNode || !Array.isArray(manifestNode.sources)) return false;
+      return manifestNode.sources.some((source) => {
+        const url = source?.url;
+        return typeof window.audioManager?.isLocalAudioUrl === 'function' && window.audioManager.isLocalAudioUrl(url);
+      });
+    },
+    validateCriticalAudioIntegrity() {
+      if (!window.audioManager?.getManifestNode) return { ok: false, errors: ['AudioManager no disponible para validación.'] };
+      const errors = [];
+
+      Object.entries(AUDIO_EVENT_CONFIG).forEach(([eventName, cfg]) => {
+        const node = window.audioManager.getManifestNode(cfg.manifestKey);
+        if (!this.hasAtLeastOneLocalSource(node)) {
+          errors.push(`Evento crítico/sfx "${eventName}" sin fuente local utilizable (${cfg.manifestKey}).`);
+        }
+      });
+
+      const musicNode = window.audioManager.getManifestNode(this.AUDIO_BACKGROUND_MANIFEST_KEY);
+      this.musicOptional = !this.hasAtLeastOneLocalSource(musicNode);
+
+      for (let n = 1; n <= 75; n += 1) {
+        const expectedUrl = `/sonidos/${n}.wav`;
+        if (typeof window.audioManager?.isLocalAudioUrl !== 'function' || !window.audioManager.isLocalAudioUrl(expectedUrl)) {
+          errors.push(`Canto ${n} sin ruta local válida (${expectedUrl}).`);
+          break;
+        }
+      }
+
+      return { ok: errors.length === 0, errors };
     },
     registerBaseEvents() {
       if (!window.audioManager?.registerSfxEvent) return;
@@ -91,6 +123,11 @@
       if (!window.audioManager) return false;
       this.initPromise = (async () => {
         this.registerBaseEvents();
+        const integrity = this.validateCriticalAudioIntegrity();
+        if (!integrity.ok) {
+          integrity.errors.forEach((msg) => console.error('[AudioIntegrity]', msg));
+          throw new Error('Validación de integridad de audio falló. Revisa fuentes locales críticas en /sonidos.');
+        }
         this.loadPreferences();
         this.applyPreferences();
         if (typeof window.audioManager.probeAutoplayState === 'function') { try { await window.audioManager.probeAutoplayState(); } catch (_) {} }
