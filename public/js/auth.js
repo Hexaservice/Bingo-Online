@@ -47,6 +47,17 @@ function hasWindow(){
   return typeof window !== 'undefined';
 }
 
+
+const nativeAlert = hasWindow() && typeof window.alert === 'function'
+  ? window.alert.bind(window)
+  : function(){};
+const nativeConfirm = hasWindow() && typeof window.confirm === 'function'
+  ? window.confirm.bind(window)
+  : function(){ return true; };
+const nativePrompt = hasWindow() && typeof window.prompt === 'function'
+  ? window.prompt.bind(window)
+  : function(){ return null; };
+
 function normalizeRole(role){
   if(typeof role !== 'string') return null;
   const limpio = role.trim().toLowerCase();
