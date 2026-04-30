@@ -1,8 +1,6 @@
 const admin = require('firebase-admin');
 const fs = require('fs');
 
-console.warn('[DEPRECATION] initUsers.js está deprecado y es candidato a retiro. Use `npm run assign-role` para altas/cambios de roles y claims de forma granular.');
-
 const DEFAULT_CLAIMS_BY_ROLE = {
   Superadmin: {
     role: 'Superadmin',

@@ -66,25 +66,6 @@ frontend. Esto permite separar el hosting estático del backend de subida y
 garantiza que las páginas servidas por HTTPS no disparen advertencias por
 contenido inseguro.
 
-### Matriz de configuración esperada por ambiente (`UPLOAD_ENDPOINT` y `ALLOWED_ORIGINS`)
-
-| Ambiente | `UPLOAD_ENDPOINT` esperado | `ALLOWED_ORIGINS` esperado |
-| --- | --- | --- |
-| `dev` (local) | `http://localhost:3000/upload` (o endpoint HTTPS de desarrollo) | `http://localhost:3000,http://127.0.0.1:3000` (u orígenes de dev) |
-| `stg` | **Obligatorio HTTPS no-local**, por ejemplo `https://api-stg.midominio.com/upload` | **Obligatorio no-local**, por ejemplo `https://bingo-online-stg.web.app,https://bingo-online-stg.firebaseapp.com` |
-| `prod` / `main` | **Obligatorio HTTPS no-local**, por ejemplo `https://api.midominio.com/upload` | **Obligatorio no-local**, por ejemplo `https://bingo-online-231fd.web.app` |
-
-`uploadServer.js` valida en arranque que, para entornos no-locales (`NODE_ENV`/`APP_ENV` en `production|prod|staging|stg|main`), no se mantenga el valor por defecto de localhost en `UPLOAD_ENDPOINT`. También emite advertencia si `ALLOWED_ORIGINS` sigue con localhost.
-
-### Valores mínimos obligatorios para despliegues en `stg` y `main`
-
-Para evitar bloqueos por CORS o errores de contenido mixto, en `stg` y `main` deben definirse al menos:
-
-- `GOOGLE_APPLICATION_CREDENTIALS`
-- `FIREBASE_STORAGE_BUCKET`
-- `UPLOAD_ENDPOINT` (HTTPS, no localhost)
-- `ALLOWED_ORIGINS` (dominios reales del frontend por ambiente, sin localhost)
-
 Para utilizar el botón de habilitar/deshabilitar usuarios en `gestionarusuarios.html` este servicio debe estar activo y accesible desde la URL indicada. El cliente envía un *ID token* de Firebase y el middleware `verificarToken` comprueba la colección `users/{email}` en Firestore: solo los roles **Superadmin** y **Administrador** pueden invocar `/toggleUser`.
 
 Para otorgar estos permisos use un proceso administrativo con Firebase Admin SDK (por ejemplo `npm run assign-role -- --email usuario@dominio.com --role Administrador`). Este flujo asigna el rol en *custom claims* y sincroniza el perfil en `users/{email}` desde backend, evitando depender de colecciones editables por cliente.
@@ -167,22 +148,7 @@ Además, en Firebase Authentication > Settings > Authorized domains agregue todo
 
 ### Despliegues automáticos (GitHub Actions)
 
-El flujo `.github/workflows/deploy-by-branch.yml` genera `public/firebase-config.js`, valida explícitamente el mapeo de rama y despliega con `firebase-tools` usando siempre `--only hosting:<target>`.
-
-Tabla de mapeo exacta usada por el workflow:
-
-| Rama Git | Entorno lógico | Hosting target | Proyecto Firebase |
-| --- | --- | --- | --- |
-| `dev` | `dev` | `dev` | `bingo-online-dev` |
-| `staging` | `stg` | `stg` | `bingo-online-stg` |
-| `main` | `prod` | `prod` | `bingo-online-231fd` |
-
-Si llega una rama distinta de `dev`, `staging` o `main`, el job de validación falla con error. También falla si el target de Hosting queda vacío.
-
-### Checklist predeploy (configuración)
-
-- [ ] Ejecutar `npm run generate:firebase-config -- --env <dev|stg|main>` para generar `public/firebase-config.js` del entorno objetivo.
-- [ ] Verificar que los campos de Firebase config no estén vacíos (`apiKey`, `authDomain`, `databaseURL`, `projectId`, `storageBucket`, `messagingSenderId`, `appId`).
+El flujo `.github/workflows/deploy-by-branch.yml` genera `public/firebase-config.js` con el script anterior y despliega por rama (`dev`, `staging`, `main`) usando targets de Hosting distintos.
 
 Configure los siguientes secretos por entorno en GitHub:
 
@@ -231,57 +197,3 @@ npm run apply-firebase-mutations -- --files firebase/bingoanimalito/mi-cambio.js
 - La página `public/parametros.html` está diseñada para este mismo nivel de privilegio; usuarios autenticados sin rol fuerte de Superadmin deben recibir denegación de acceso al intentar leer ese documento.
 
 
-## Inventario y adaptación de `Variablesglobales/Parametros`
-
-### Puntos de lectura/escritura identificados
-
-Se identificaron y clasificaron los accesos al documento `Variablesglobales/Parametros` con:
-
-```bash
-rg -n "Variablesglobales|Parametros|ZonaHoraria|Pais|Aplicacion"
-```
-
-Resumen operativo por capa:
-
-- **Frontend (lectura/escritura)**: páginas administrativas y operativas bajo `public/*.html` (por ejemplo `public/parametros.html`, `public/configuraciones.html`, `public/billetera.html`, `public/nuevosorteo.html`, `public/editarsorte.html`, `public/cantarsorteos.html`, `public/juegoactivo.html`, etc.).
-- **Frontend base (lectura global normalizada)**:
-  - `public/js/auth.js` (campo `Aplicacion` para nombre de app).
-  - `public/js/timezone.js` (campos `ZonaHoraria` y `Pais` para reloj y zona del despliegue).
-- **Scripts/backend (lectura)**:
-  - `cronActualizarEstadosSorteos.js` (campos `ZonaHoraria` y `Pais` para cálculo horario de transiciones de sorteos).
-
-> Nota: la detección completa de referencias queda trazable y repetible con el comando `rg` anterior.
-
-### Adaptador único de configuración global
-
-Se incorporó `public/js/globalConfigAdapter.js` como fuente única para:
-
-- Normalizar lectura de `Pais`, `ZonaHoraria` y `Aplicacion`.
-- Validar esquema mínimo (campos requeridos no vacíos).
-- Retornar un resultado uniforme `fromSnapshot(...)` con:
-  - `normalized`
-  - `validation`
-  - `source`
-
-Uso actual integrado en:
-
-- `public/js/auth.js`
-- `public/js/timezone.js`
-- `cronActualizarEstadosSorteos.js`
-
-### Política de fallback segura
-
-Se define la siguiente política:
-
-- **Solo lectura**: si el documento no existe o el esquema es inválido, se aplican valores por defecto para continuidad operativa:
-  - `Pais: Venezuela`
-  - `ZonaHoraria: UTC-04:00`
-  - `Aplicacion: BingOnline`
-- **Nunca escritura automática**: el adaptador **no** escribe en Firestore, ni corrige ni persiste defaults de forma implícita.
-- **Administración explícita**: cualquier cambio persistente del documento debe realizarse por usuarios autorizados desde los flujos administrativos existentes.
-
-### Inicialización por ambiente y responsables
-
-- Este documento (`Variablesglobales/Parametros`) se inicializa y mantiene mediante usuarios con privilegio fuerte de **Superadmin** (según `firestore.rules`).
-- Para cada ambiente (`dev`, `stg`, `main`) la carga y actualización de valores debe ejecutarse con credenciales administrativas del ambiente correspondiente y dentro de los flujos operativos del proyecto.
-- Se recomienda mantener un responsable explícito por ambiente (equipo de plataforma/operaciones) y registrar en PR cualquier cambio de `ZonaHoraria`, `Pais` o `Aplicacion` para sincronización con cron y frontend.

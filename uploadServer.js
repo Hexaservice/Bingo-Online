@@ -7,14 +7,10 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const crypto = require('crypto');
 const admin = require('firebase-admin');
-const { requireRole } = require('./server/auth/requireRole');
 const EstadosPagoPremio = require('./public/js/estadoPagoPremio.js');
 const { isSorteoEligibleForAutoPrize } = require('./public/js/sorteoAutoPrizeEligibility.js');
 
 const requiredEnv = ['GOOGLE_APPLICATION_CREDENTIALS', 'FIREBASE_STORAGE_BUCKET'];
-const defaultAllowedOrigins = 'http://localhost:3000,http://127.0.0.1:3000';
-const defaultUploadEndpoint = 'http://localhost:3000/upload';
-const nonLocalEnvironments = new Set(['production', 'prod', 'staging', 'stage', 'stg', 'main']);
 
 function getMissingRequiredEnv(env = process.env) {
   return requiredEnv.filter((name) => !env[name]);
@@ -25,38 +21,6 @@ function validateRequiredEnv(env = process.env) {
   if (missingRequiredEnv.length > 0) {
     console.error(
       `Faltan variables de entorno requeridas para uploadServer: ${missingRequiredEnv.join(', ')}`
-    );
-    process.exit(1);
-  }
-
-  validateNonLocalHostConfig(env);
-}
-
-function isNonLocalEnvironment(env = process.env) {
-  const normalizedNodeEnv = (env.NODE_ENV || '').trim().toLowerCase();
-  const normalizedAppEnv = (env.APP_ENV || env.ENVIRONMENT || '').trim().toLowerCase();
-  return nonLocalEnvironments.has(normalizedNodeEnv) || nonLocalEnvironments.has(normalizedAppEnv);
-}
-
-function validateNonLocalHostConfig(env = process.env) {
-  if (!isNonLocalEnvironment(env)) {
-    return;
-  }
-
-  const allowedOriginsRaw = (env.ALLOWED_ORIGINS || defaultAllowedOrigins).trim();
-  const uploadEndpointRaw = (env.UPLOAD_ENDPOINT || defaultUploadEndpoint).trim();
-  const usesLocalOrigins = !env.ALLOWED_ORIGINS || allowedOriginsRaw === defaultAllowedOrigins;
-  const usesLocalUploadEndpoint = !env.UPLOAD_ENDPOINT || uploadEndpointRaw === defaultUploadEndpoint;
-
-  if (usesLocalOrigins) {
-    console.warn(
-      '[config][uploadServer] Advertencia: entorno no-local usando ALLOWED_ORIGINS con valores localhost.'
-    );
-  }
-
-  if (usesLocalUploadEndpoint) {
-    console.error(
-      '[config][uploadServer] Error: entorno de producción no puede usar UPLOAD_ENDPOINT localhost por defecto.'
     );
     process.exit(1);
   }
@@ -72,7 +36,7 @@ function initializeFirebase() {
 
 const app = express();
 
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || defaultAllowedOrigins)
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
@@ -284,13 +248,73 @@ async function validarUsuarioSuperadmin(decodedToken) {
   }
 }
 
-const verificarToken = requireRole(['Superadmin', 'Administrador'], {
-  onForbidden: 'Acceso restringido a roles administrativos'
-});
+async function verificarToken(req, res, next) {
+  const authHeader = req.headers.authorization || '';
+  const match = authHeader.match(/^Bearer (.+)$/);
+  if (!match) {
+    return res.status(401).json({ error: 'No autorizado' });
+  }
 
-const verificarOperadorPrivilegiado = requireRole(['Superadmin', 'Administrador', 'Colaborador'], {
-  onForbidden: 'Acceso restringido a operadores autorizados'
-});
+  let decoded;
+  try {
+    decoded = await admin.auth().verifyIdToken(match[1]);
+  } catch (e) {
+    console.error('Error verificando token', e);
+    return res.status(401).json({ error: 'Token inválido' });
+  }
+
+  const email = decoded.email;
+  if (!email) {
+    return res.status(401).json({ error: 'Token sin correo asociado' });
+  }
+
+  try {
+    const doc = await admin.firestore().collection('users').doc(email).get();
+    const role = doc.exists ? doc.data().role : undefined;
+    if (!['Superadmin', 'Administrador'].includes(role)) {
+      return res.status(403).json({ error: 'Acceso restringido a roles administrativos' });
+    }
+    req.user = { uid: decoded.uid, email, role };
+    next();
+  } catch (e) {
+    console.error('Error obteniendo el rol del usuario', e);
+    return res.status(500).json({ error: 'Error verificando permisos', message: e.message });
+  }
+}
+
+async function verificarOperadorPrivilegiado(req, res, next) {
+  const authHeader = req.headers.authorization || '';
+  const match = authHeader.match(/^Bearer (.+)$/);
+  if (!match) {
+    return res.status(401).json({ error: 'No autorizado' });
+  }
+
+  let decoded;
+  try {
+    decoded = await admin.auth().verifyIdToken(match[1]);
+  } catch (e) {
+    console.error('Error verificando token', e);
+    return res.status(401).json({ error: 'Token inválido' });
+  }
+
+  const email = decoded.email;
+  if (!email) {
+    return res.status(401).json({ error: 'Token sin correo asociado' });
+  }
+
+  try {
+    const doc = await admin.firestore().collection('users').doc(email).get();
+    const role = doc.exists ? doc.data().role : undefined;
+    if (!['Superadmin', 'Administrador', 'Colaborador'].includes(role)) {
+      return res.status(403).json({ error: 'Acceso restringido a operadores autorizados' });
+    }
+    req.user = { uid: decoded.uid, email, role };
+    next();
+  } catch (e) {
+    console.error('Error obteniendo el rol del usuario', e);
+    return res.status(500).json({ error: 'Error verificando permisos', message: e.message });
+  }
+}
 
 function normalizeString(value, maxLength = 200) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
@@ -804,8 +828,6 @@ module.exports = {
   requiredEnv,
   getMissingRequiredEnv,
   validateRequiredEnv,
-  validateNonLocalHostConfig,
-  isNonLocalEnvironment,
   initializeFirebase,
   startServer,
   hashValue,
