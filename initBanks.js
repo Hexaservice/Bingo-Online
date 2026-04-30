@@ -1,6 +1,8 @@
 const admin = require('firebase-admin');
 const fs = require('fs');
 
+console.warn('[DEPRECATION] initBanks.js está deprecado y es candidato a retiro. Considere migrar la carga inicial de bancos a mutaciones versionadas (firebase/bingoanimalito/*.json).');
+
 let credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || './serviceAccountKey.json';
 if (!fs.existsSync(credentialsPath)) {
   console.error('Service account credentials not found at', credentialsPath);
