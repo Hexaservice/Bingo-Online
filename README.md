@@ -66,6 +66,25 @@ frontend. Esto permite separar el hosting estático del backend de subida y
 garantiza que las páginas servidas por HTTPS no disparen advertencias por
 contenido inseguro.
 
+### Matriz de configuración esperada por ambiente (`UPLOAD_ENDPOINT` y `ALLOWED_ORIGINS`)
+
+| Ambiente | `UPLOAD_ENDPOINT` esperado | `ALLOWED_ORIGINS` esperado |
+| --- | --- | --- |
+| `dev` (local) | `http://localhost:3000/upload` (o endpoint HTTPS de desarrollo) | `http://localhost:3000,http://127.0.0.1:3000` (u orígenes de dev) |
+| `stg` | **Obligatorio HTTPS no-local**, por ejemplo `https://api-stg.midominio.com/upload` | **Obligatorio no-local**, por ejemplo `https://bingo-online-stg.web.app,https://bingo-online-stg.firebaseapp.com` |
+| `prod` / `main` | **Obligatorio HTTPS no-local**, por ejemplo `https://api.midominio.com/upload` | **Obligatorio no-local**, por ejemplo `https://bingo-online-231fd.web.app` |
+
+`uploadServer.js` valida en arranque que, para entornos no-locales (`NODE_ENV`/`APP_ENV` en `production|prod|staging|stg|main`), no se mantenga el valor por defecto de localhost en `UPLOAD_ENDPOINT`. También emite advertencia si `ALLOWED_ORIGINS` sigue con localhost.
+
+### Valores mínimos obligatorios para despliegues en `stg` y `main`
+
+Para evitar bloqueos por CORS o errores de contenido mixto, en `stg` y `main` deben definirse al menos:
+
+- `GOOGLE_APPLICATION_CREDENTIALS`
+- `FIREBASE_STORAGE_BUCKET`
+- `UPLOAD_ENDPOINT` (HTTPS, no localhost)
+- `ALLOWED_ORIGINS` (dominios reales del frontend por ambiente, sin localhost)
+
 Para utilizar el botón de habilitar/deshabilitar usuarios en `gestionarusuarios.html` este servicio debe estar activo y accesible desde la URL indicada. El cliente envía un *ID token* de Firebase y el middleware `verificarToken` comprueba la colección `users/{email}` en Firestore: solo los roles **Superadmin** y **Administrador** pueden invocar `/toggleUser`.
 
 Para otorgar estos permisos use un proceso administrativo con Firebase Admin SDK (por ejemplo `npm run assign-role -- --email usuario@dominio.com --role Administrador`). Este flujo asigna el rol en *custom claims* y sincroniza el perfil en `users/{email}` desde backend, evitando depender de colecciones editables por cliente.

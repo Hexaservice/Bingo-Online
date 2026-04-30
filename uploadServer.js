@@ -12,6 +12,9 @@ const EstadosPagoPremio = require('./public/js/estadoPagoPremio.js');
 const { isSorteoEligibleForAutoPrize } = require('./public/js/sorteoAutoPrizeEligibility.js');
 
 const requiredEnv = ['GOOGLE_APPLICATION_CREDENTIALS', 'FIREBASE_STORAGE_BUCKET'];
+const defaultAllowedOrigins = 'http://localhost:3000,http://127.0.0.1:3000';
+const defaultUploadEndpoint = 'http://localhost:3000/upload';
+const nonLocalEnvironments = new Set(['production', 'prod', 'staging', 'stage', 'stg', 'main']);
 
 function getMissingRequiredEnv(env = process.env) {
   return requiredEnv.filter((name) => !env[name]);
@@ -22,6 +25,38 @@ function validateRequiredEnv(env = process.env) {
   if (missingRequiredEnv.length > 0) {
     console.error(
       `Faltan variables de entorno requeridas para uploadServer: ${missingRequiredEnv.join(', ')}`
+    );
+    process.exit(1);
+  }
+
+  validateNonLocalHostConfig(env);
+}
+
+function isNonLocalEnvironment(env = process.env) {
+  const normalizedNodeEnv = (env.NODE_ENV || '').trim().toLowerCase();
+  const normalizedAppEnv = (env.APP_ENV || env.ENVIRONMENT || '').trim().toLowerCase();
+  return nonLocalEnvironments.has(normalizedNodeEnv) || nonLocalEnvironments.has(normalizedAppEnv);
+}
+
+function validateNonLocalHostConfig(env = process.env) {
+  if (!isNonLocalEnvironment(env)) {
+    return;
+  }
+
+  const allowedOriginsRaw = (env.ALLOWED_ORIGINS || defaultAllowedOrigins).trim();
+  const uploadEndpointRaw = (env.UPLOAD_ENDPOINT || defaultUploadEndpoint).trim();
+  const usesLocalOrigins = !env.ALLOWED_ORIGINS || allowedOriginsRaw === defaultAllowedOrigins;
+  const usesLocalUploadEndpoint = !env.UPLOAD_ENDPOINT || uploadEndpointRaw === defaultUploadEndpoint;
+
+  if (usesLocalOrigins) {
+    console.warn(
+      '[config][uploadServer] Advertencia: entorno no-local usando ALLOWED_ORIGINS con valores localhost.'
+    );
+  }
+
+  if (usesLocalUploadEndpoint) {
+    console.error(
+      '[config][uploadServer] Error: entorno de producción no puede usar UPLOAD_ENDPOINT localhost por defecto.'
     );
     process.exit(1);
   }
@@ -37,7 +72,7 @@ function initializeFirebase() {
 
 const app = express();
 
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000')
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || defaultAllowedOrigins)
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
@@ -769,6 +804,8 @@ module.exports = {
   requiredEnv,
   getMissingRequiredEnv,
   validateRequiredEnv,
+  validateNonLocalHostConfig,
+  isNonLocalEnvironment,
   initializeFirebase,
   startServer,
   hashValue,
