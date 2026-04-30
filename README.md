@@ -211,3 +211,58 @@ npm run apply-firebase-mutations -- --files firebase/bingoanimalito/mi-cambio.js
 - En `firestore.rules`, su lectura y escritura requieren privilegio fuerte de **Superadmin** (`isStrongSuperadmin()`).
 - La página `public/parametros.html` está diseñada para este mismo nivel de privilegio; usuarios autenticados sin rol fuerte de Superadmin deben recibir denegación de acceso al intentar leer ese documento.
 
+
+## Inventario y adaptación de `Variablesglobales/Parametros`
+
+### Puntos de lectura/escritura identificados
+
+Se identificaron y clasificaron los accesos al documento `Variablesglobales/Parametros` con:
+
+```bash
+rg -n "Variablesglobales|Parametros|ZonaHoraria|Pais|Aplicacion"
+```
+
+Resumen operativo por capa:
+
+- **Frontend (lectura/escritura)**: páginas administrativas y operativas bajo `public/*.html` (por ejemplo `public/parametros.html`, `public/configuraciones.html`, `public/billetera.html`, `public/nuevosorteo.html`, `public/editarsorte.html`, `public/cantarsorteos.html`, `public/juegoactivo.html`, etc.).
+- **Frontend base (lectura global normalizada)**:
+  - `public/js/auth.js` (campo `Aplicacion` para nombre de app).
+  - `public/js/timezone.js` (campos `ZonaHoraria` y `Pais` para reloj y zona del despliegue).
+- **Scripts/backend (lectura)**:
+  - `cronActualizarEstadosSorteos.js` (campos `ZonaHoraria` y `Pais` para cálculo horario de transiciones de sorteos).
+
+> Nota: la detección completa de referencias queda trazable y repetible con el comando `rg` anterior.
+
+### Adaptador único de configuración global
+
+Se incorporó `public/js/globalConfigAdapter.js` como fuente única para:
+
+- Normalizar lectura de `Pais`, `ZonaHoraria` y `Aplicacion`.
+- Validar esquema mínimo (campos requeridos no vacíos).
+- Retornar un resultado uniforme `fromSnapshot(...)` con:
+  - `normalized`
+  - `validation`
+  - `source`
+
+Uso actual integrado en:
+
+- `public/js/auth.js`
+- `public/js/timezone.js`
+- `cronActualizarEstadosSorteos.js`
+
+### Política de fallback segura
+
+Se define la siguiente política:
+
+- **Solo lectura**: si el documento no existe o el esquema es inválido, se aplican valores por defecto para continuidad operativa:
+  - `Pais: Venezuela`
+  - `ZonaHoraria: UTC-04:00`
+  - `Aplicacion: BingOnline`
+- **Nunca escritura automática**: el adaptador **no** escribe en Firestore, ni corrige ni persiste defaults de forma implícita.
+- **Administración explícita**: cualquier cambio persistente del documento debe realizarse por usuarios autorizados desde los flujos administrativos existentes.
+
+### Inicialización por ambiente y responsables
+
+- Este documento (`Variablesglobales/Parametros`) se inicializa y mantiene mediante usuarios con privilegio fuerte de **Superadmin** (según `firestore.rules`).
+- Para cada ambiente (`dev`, `stg`, `main`) la carga y actualización de valores debe ejecutarse con credenciales administrativas del ambiente correspondiente y dentro de los flujos operativos del proyecto.
+- Se recomienda mantener un responsable explícito por ambiente (equipo de plataforma/operaciones) y registrar en PR cualquier cambio de `ZonaHoraria`, `Pais` o `Aplicacion` para sincronización con cron y frontend.
