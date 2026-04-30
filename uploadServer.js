@@ -3,12 +3,14 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
-const { initializeFirebaseAdmin } = require('./firebaseAdminConfig');
+const { initializeFirebaseAdmin, assertExpectedFirebaseProject } = require('./firebaseAdminConfig');
 const { applyFirebaseDevConfig } = require('./firebaseAdminConfigActions');
 
 let admin;
 try {
-  admin = initializeFirebaseAdmin({ requireStorageBucket: true });
+  const firebaseAdmin = initializeFirebaseAdmin({ requireStorageBucket: true });
+  assertExpectedFirebaseProject({ projectId: firebaseAdmin.projectId });
+  admin = firebaseAdmin.admin;
 } catch (error) {
   console.error(error.message);
   process.exit(1);

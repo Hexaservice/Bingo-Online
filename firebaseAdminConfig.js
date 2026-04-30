@@ -30,6 +30,31 @@ function validateDevelopmentProjectGuard({ projectId, databaseURL }) {
   }
 }
 
+function resolveExpectedProjectIdByEnvironment() {
+  const { NODE_ENV } = process.env;
+  const explicitExpected = process.env.FIREBASE_EXPECTED_PROJECT_ID;
+  if (explicitExpected) return explicitExpected;
+
+  if (NODE_ENV === 'development') return process.env.FIREBASE_DEV_PROJECT_ID;
+  if (NODE_ENV === 'staging') return process.env.FIREBASE_STAGING_PROJECT_ID || process.env.FIREBASE_STG_PROJECT_ID;
+  if (NODE_ENV === 'production') return process.env.FIREBASE_PROD_PROJECT_ID;
+
+  return null;
+}
+
+function assertExpectedFirebaseProject({ projectId, environment = process.env.NODE_ENV } = {}) {
+  const expectedProjectId = resolveExpectedProjectIdByEnvironment();
+  if (!expectedProjectId) return;
+
+  const detectedProjectId = projectId || '';
+  if (detectedProjectId !== expectedProjectId) {
+    throw new Error(
+      `Proyecto Firebase inesperado para NODE_ENV=${environment || 'no-definido'}. ` +
+      `projectId esperado: ${expectedProjectId}. projectId detectado: ${detectedProjectId || 'no-detectado'}.`
+    );
+  }
+}
+
 function initializeFirebaseAdmin({ requireStorageBucket = false } = {}) {
   const serviceAccount = loadServiceAccountFromEnv();
   const databaseURL = process.env.FIREBASE_DATABASE_URL;
@@ -60,7 +85,7 @@ function initializeFirebaseAdmin({ requireStorageBucket = false } = {}) {
     admin.initializeApp(options);
   }
 
-  return admin;
+  return { admin, projectId: serviceAccount.project_id };
 }
 
-module.exports = { initializeFirebaseAdmin };
+module.exports = { initializeFirebaseAdmin, assertExpectedFirebaseProject };

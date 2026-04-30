@@ -1,9 +1,11 @@
 require('dotenv').config();
-const { initializeFirebaseAdmin } = require('./firebaseAdminConfig');
+const { initializeFirebaseAdmin, assertExpectedFirebaseProject } = require('./firebaseAdminConfig');
 
 let admin;
 try {
-  admin = initializeFirebaseAdmin();
+  const firebaseAdmin = initializeFirebaseAdmin();
+  assertExpectedFirebaseProject({ projectId: firebaseAdmin.projectId });
+  admin = firebaseAdmin.admin;
 } catch (error) {
   console.error(error.message);
   process.exit(1);
