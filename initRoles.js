@@ -1,6 +1,8 @@
 const admin = require('firebase-admin');
 const fs = require('fs');
 
+console.warn('[DEPRECATION] initRoles.js está deprecado y es candidato a retiro. Administre permisos mediante custom claims y scripts de asignación de roles.');
+
 let credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || './serviceAccountKey.json';
 if (!fs.existsSync(credentialsPath)) {
   console.error('Service account credentials not found at', credentialsPath);
