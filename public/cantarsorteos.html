@@ -3310,7 +3310,6 @@
     try {
       await db.runTransaction(async tx => {
         const docRef = db.collection('cantos').doc(currentSorteoId);
-        const eventosRef = docRef.collection('eventos').doc();
         const snap = await tx.get(docRef);
         const data = snap.exists ? (snap.data() || {}) : {};
         const numerosExistentes = Array.isArray(data.numeros)
@@ -3336,8 +3335,7 @@
         const payload = {
           numeros: numerosExistentes,
           detalles: detallesExistentes,
-          actualizado: marcaTiempo,
-          lastSequence: numerosExistentes.length
+          actualizado: marcaTiempo
         };
         if(!data.iniciocantos){
           payload.iniciocantos = marcaTiempo;
@@ -3346,12 +3344,6 @@
           payload.fincantos = marcaTiempo;
         }
         tx.set(docRef, payload, { merge: true });
-        tx.set(eventosRef, {
-          numero: claveNormalizada,
-          emittedAt: getServerTimestamp(),
-          sequence: numerosExistentes.length,
-          sorteoId: currentSorteoId
-        });
       });
       mensajeEl.textContent = `Se registró la jugada ${claveNormalizada}.`;
       if(mostrarToast){

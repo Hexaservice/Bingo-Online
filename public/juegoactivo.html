@@ -4576,7 +4576,6 @@
   <script src="js/audioManifest.js"></script>
   <script src="js/audioManager.js"></script>
   <script src="js/audioManagerCompat.js"></script>
-  <script src="js/gameAudioOrchestrator.js"></script>
   <script src="js/serviceWorkerRegistration.js"></script>
   <script>
   ensureAuth();
@@ -4597,81 +4596,370 @@
   const sorteoDetallesEl = document.getElementById('sorteo-detalles');
 
 
-  const gameAudio = window.gameAudioOrchestrator || null;
+  const AUDIO_EVENTS = Object.freeze({
+    DRAW_NUMBER: 'DRAW_NUMBER',
+    MARK_CELL: 'MARK_CELL',
+    MODAL_OPEN: 'MODAL_OPEN',
+    MODAL_CLOSE: 'MODAL_CLOSE',
+    WINNER: 'WINNER',
+    TIE: 'TIE',
+  });
+
+  const AUDIO_EVENT_CONFIG = Object.freeze({
+    [AUDIO_EVENTS.DRAW_NUMBER]: { manifestKey: 'sfx.drawNumber' },
+    [AUDIO_EVENTS.MARK_CELL]: { manifestKey: 'sfx.markCell' },
+    [AUDIO_EVENTS.MODAL_OPEN]: { manifestKey: 'sfx.openModal' },
+    [AUDIO_EVENTS.MODAL_CLOSE]: { manifestKey: 'sfx.openModal' },
+    [AUDIO_EVENTS.WINNER]: { manifestKey: 'sfx.win', critical: true, duckAmount: 0.25, duckDurationMs: 2200 },
+    [AUDIO_EVENTS.TIE]: { manifestKey: 'sfx.win', critical: true, duckAmount: 0.3, duckDurationMs: 1800 }
+  });
+  const AUDIO_CANTO_EVENT_PREFIX = 'CANTO_NUM_';
+  const AUDIO_BACKGROUND_TRACK_ID = 'GAMEPLAY_BG_MAIN';
+  const AUDIO_BACKGROUND_MANIFEST_KEY = 'music.backgroundMain';
+  let audioJuegoInicializado = false;
+  let audioJuegoInitPromise = null;
+  let audioJuegoDesbloqueoRegistrado = false;
+  let audioJuegoCantosEnProceso = false;
+  let audioJuegoMusicaRegistrada = false;
+  let audioJuegoMusicaIniciada = false;
+  const audioJuegoEventosRegistrados = new Set();
+  const audioJuegoCantosCola = [];
+  const audioJuegoUltimoEventoPorNombre = new Map();
+  const AUDIO_CONTROL_DIM_DELAY_MS = 5000;
+  const AUDIO_STORAGE_KEYS = Object.freeze({
+    master: 'audio:masterVolume',
+    sfx: 'audio:sfxVolume',
+    muted: 'audio:muted'
+  });
+  const audioJuegoPreferencias = { master: 1, sfx: 1, muted: false };
+
+  function obtenerMarcaTiempoAudioMs(){
+    if(typeof performance !== 'undefined' && typeof performance.now === 'function'){
+      return performance.now();
+    }
+    return 0;
+  }
+
+  function esErrorAudioBloqueado(err){
+    return err && (err.code === 'AUDIO_CONTEXT_BLOCKED' || /bloqueado/i.test(String(err?.message || '')));
+  }
+
+  function clampAudioValor(valor, fallback = 1){
+    const numero = Number(valor);
+    if(!Number.isFinite(numero)) return fallback;
+    return Math.max(0, Math.min(1, numero));
+  }
+
+  function cargarPreferenciasAudioJuego(){
+    try{
+      audioJuegoPreferencias.master = clampAudioValor(localStorage.getItem(AUDIO_STORAGE_KEYS.master), 1);
+      audioJuegoPreferencias.sfx = clampAudioValor(localStorage.getItem(AUDIO_STORAGE_KEYS.sfx), 1);
+      const mutedRaw = localStorage.getItem(AUDIO_STORAGE_KEYS.muted);
+      audioJuegoPreferencias.muted = mutedRaw === 'true';
+    }catch(_){}
+  }
+
+  function guardarPreferenciasAudioJuego(){
+    try{
+      localStorage.setItem(AUDIO_STORAGE_KEYS.master, String(audioJuegoPreferencias.master));
+      localStorage.setItem(AUDIO_STORAGE_KEYS.sfx, String(audioJuegoPreferencias.sfx));
+      localStorage.setItem(AUDIO_STORAGE_KEYS.muted, String(audioJuegoPreferencias.muted));
+    }catch(_){}
+  }
+
+  function aplicarPreferenciasAudioJuego(){
+    if(!window.audioManager) return;
+    if(typeof window.audioManager.setVolume === 'function'){
+      window.audioManager.setVolume('master', audioJuegoPreferencias.master);
+      window.audioManager.setVolume('sfx', audioJuegoPreferencias.sfx);
+      window.audioManager.setVolume('music', 0.22);
+    }
+    if(typeof window.audioManager.setMuted === 'function'){
+      window.audioManager.setMuted(audioJuegoPreferencias.muted);
+    }
+  }
+
+  function registrarAudioMusicaJuego(){
+    if(audioJuegoMusicaRegistrada) return;
+    if(!window.audioManager || typeof window.audioManager.registerMusicTrack !== 'function') return;
+    window.audioManager.registerMusicTrack(AUDIO_BACKGROUND_TRACK_ID, { manifestKey: AUDIO_BACKGROUND_MANIFEST_KEY });
+    audioJuegoMusicaRegistrada = true;
+  }
+
+  async function intentarIniciarMusicaJuego(){
+    if(audioJuegoMusicaIniciada || audioJuegoPreferencias.muted) return;
+    if(!window.audioManager || typeof window.audioManager.playMusic !== 'function') return;
+    registrarAudioMusicaJuego();
+    try{
+      await window.audioManager.playMusic(AUDIO_BACKGROUND_TRACK_ID, { fadeInMs: 1200 });
+      audioJuegoMusicaIniciada = true;
+    }catch(err){
+      if(!esErrorAudioBloqueado(err)){
+        console.warn('No se pudo iniciar la música de fondo del juego.', err);
+      }
+    }
+  }
+
+  function registrarAudioEventosBase(){
+    if(!window.audioManager || typeof window.audioManager.registerSfxEvent !== 'function') return;
+    registrarAudioMusicaJuego();
+    Object.entries(AUDIO_EVENT_CONFIG).forEach(([eventName, config])=>{
+      if(audioJuegoEventosRegistrados.has(eventName)) return;
+      window.audioManager.registerSfxEvent(eventName, { manifestKey: config.manifestKey }, config);
+      audioJuegoEventosRegistrados.add(eventName);
+    });
+  }
+
+  function registrarAudioCantoNumero(numero){
+    if(!window.audioManager || typeof window.audioManager.registerSfxEvent !== 'function') return null;
+    const normalizado = Number(numero);
+    if(!Number.isInteger(normalizado) || normalizado < 1 || normalizado > 75) return null;
+    const eventName = `${AUDIO_CANTO_EVENT_PREFIX}${normalizado}`;
+    if(audioJuegoEventosRegistrados.has(eventName)) return eventName;
+    window.audioManager.registerSfxEvent(eventName, {
+      category: 'sfx',
+      preferredFormats: ['wav'],
+      normalizationGain: 1,
+      sources: [{ format: 'wav', url: `/sonidos/${normalizado}.wav` }]
+    });
+    audioJuegoEventosRegistrados.add(eventName);
+    return eventName;
+  }
 
   async function inicializarAudioJuego(){
-    if(!gameAudio) return false;
-    return gameAudio.init();
+    if(audioJuegoInicializado) return true;
+    if(audioJuegoInitPromise) return audioJuegoInitPromise;
+    if(!window.audioManager){
+      return false;
+    }
+    audioJuegoInitPromise = (async ()=>{
+      registrarAudioEventosBase();
+      cargarPreferenciasAudioJuego();
+      aplicarPreferenciasAudioJuego();
+      if(typeof window.audioManager.probeAutoplayState === 'function'){
+        try{
+          await window.audioManager.probeAutoplayState();
+        }catch(_){}
+      }
+      audioJuegoInicializado = true;
+      return true;
+    })().finally(()=>{
+      audioJuegoInitPromise = null;
+    });
+    return audioJuegoInitPromise;
   }
 
   async function intentarDesbloquearAudioJuego(){
-    if(!gameAudio) return false;
-    return gameAudio.unlock();
+    if(!window.audioManager || typeof window.audioManager.ensureRunningContext !== 'function') return false;
+    try{
+      await window.audioManager.ensureRunningContext();
+      await intentarIniciarMusicaJuego();
+      await procesarColaAudioCantos();
+      return true;
+    }catch(err){
+      if(!esErrorAudioBloqueado(err)){
+        console.warn('No se pudo desbloquear el contexto de audio del juego.', err);
+      }
+      return false;
+    }
   }
 
   function registrarDesbloqueoAudioJuegoPorInteraccion(){
-    if(!gameAudio) return;
-    gameAudio.registerUnlockOnInteraction();
-  }
-
-  async function procesarColaAudioCantos(){
-    if(!gameAudio) return;
-    await gameAudio.processQueue();
-  }
-
-  function encolarAudioCantoNumero(numero){
-    if(!gameAudio) return;
-    gameAudio.enqueueCanto(numero);
-  }
-
-  async function reproducirAudioCantoPorInteraccion(numero){
-    if(!gameAudio) return;
-    await gameAudio.playCantoByInteraction(numero);
-  }
-
-  async function playGameAudioEvent(eventName, options={}){
-    if(!gameAudio) return;
-    await gameAudio.playEvent(eventName, options);
+    if(audioJuegoDesbloqueoRegistrado) return;
+    audioJuegoDesbloqueoRegistrado = true;
+    const handler = ()=>{ void intentarDesbloquearAudioJuego(); };
+    window.addEventListener('pointerdown', handler, { passive: true });
+    window.addEventListener('keydown', handler, { passive: true });
+    window.addEventListener('touchstart', handler, { passive: true });
   }
 
   function configurarControlesAudioJuego(){
-    if(!gameAudioToggleBtn || !gameAudioPanelEl || !gameAudioMasterInput || !gameAudioSfxInput || !gameAudioMuteBtn || !gameAudioControlEl || !gameAudio) return;
-    gameAudio.loadPreferences();
+    if(!gameAudioToggleBtn || !gameAudioPanelEl || !gameAudioMasterInput || !gameAudioSfxInput || !gameAudioMuteBtn || !gameAudioControlEl) return;
+    cargarPreferenciasAudioJuego();
     registrarDesbloqueoAudioJuegoPorInteraccion();
     let panelVisible = false;
     let audioControlDimTimeout = null;
 
-    const limpiarDimAudio = ()=>{ if(audioControlDimTimeout){ clearTimeout(audioControlDimTimeout); audioControlDimTimeout = null; } };
-    const programarDimAudio = ()=>{ limpiarDimAudio(); if(panelVisible) return; gameAudioControlEl.classList.remove('game-audio-control--dimmed'); audioControlDimTimeout = setTimeout(()=>{ if(!panelVisible){ gameAudioControlEl.classList.add('game-audio-control--dimmed'); } }, gameAudio.AUDIO_CONTROL_DIM_DELAY_MS); };
-    const mostrarControlAudio = ()=>{ gameAudioControlEl.classList.remove('game-audio-control--dimmed'); programarDimAudio(); };
-
-    const actualizarUI = ()=>{
-      gameAudioMasterInput.value = gameAudio.preferences.master.toFixed(2);
-      gameAudioSfxInput.value = gameAudio.preferences.sfx.toFixed(2);
-      gameAudioToggleBtn.textContent = gameAudio.preferences.muted ? '🔇' : '🔊';
-      gameAudioMuteBtn.textContent = gameAudio.preferences.muted ? 'Activar sonido' : 'Silenciar';
-      gameAudioMuteBtn.setAttribute('aria-pressed', gameAudio.preferences.muted ? 'true' : 'false');
-      if(gameAudioStatusEl){
-        if(gameAudio.preferences.muted){ gameAudioStatusEl.textContent = 'Audio silenciado por usuario'; }
-        else if(window.audioManager?.isAutoplayBlocked && window.audioManager.isAutoplayBlocked()){ gameAudioStatusEl.textContent = 'Toca la pantalla para activar audio'; }
-        else{ gameAudioStatusEl.textContent = 'Audio activo'; }
+    const limpiarDimAudio = ()=>{
+      if(audioControlDimTimeout){
+        clearTimeout(audioControlDimTimeout);
+        audioControlDimTimeout = null;
       }
     };
 
-    const aplicarYGuardar = ()=>{ gameAudio.applyPreferences(); gameAudio.savePreferences(); actualizarUI(); if(!gameAudio.preferences.muted){ void gameAudio.startMusic(); } };
+    const programarDimAudio = ()=>{
+      limpiarDimAudio();
+      if(panelVisible) return;
+      gameAudioControlEl.classList.remove('game-audio-control--dimmed');
+      audioControlDimTimeout = setTimeout(()=>{
+        if(!panelVisible){
+          gameAudioControlEl.classList.add('game-audio-control--dimmed');
+        }
+      }, AUDIO_CONTROL_DIM_DELAY_MS);
+    };
 
-    gameAudioToggleBtn.addEventListener('click', ()=>{ panelVisible = !panelVisible; gameAudioPanelEl.hidden = !panelVisible; gameAudioPanelEl.setAttribute('aria-hidden', panelVisible ? 'false' : 'true'); gameAudioToggleBtn.setAttribute('aria-expanded', panelVisible ? 'true' : 'false'); if(panelVisible){ limpiarDimAudio(); gameAudioControlEl.classList.remove('game-audio-control--dimmed'); void inicializarAudioJuego(); void intentarDesbloquearAudioJuego(); } else { programarDimAudio(); } });
-    gameAudioMasterInput.addEventListener('input', (event)=>{ gameAudio.preferences.master = gameAudio.clamp(event?.target?.value, gameAudio.preferences.master); gameAudio.preferences.muted = false; aplicarYGuardar(); mostrarControlAudio(); });
-    gameAudioSfxInput.addEventListener('input', (event)=>{ gameAudio.preferences.sfx = gameAudio.clamp(event?.target?.value, gameAudio.preferences.sfx); gameAudio.preferences.muted = false; aplicarYGuardar(); mostrarControlAudio(); });
-    gameAudioMuteBtn.addEventListener('click', ()=>{ gameAudio.preferences.muted = !gameAudio.preferences.muted; aplicarYGuardar(); mostrarControlAudio(); });
+    const mostrarControlAudio = ()=>{
+      gameAudioControlEl.classList.remove('game-audio-control--dimmed');
+      programarDimAudio();
+    };
 
-    document.addEventListener('click', (event)=>{ if(!panelVisible) return; if(gameAudioPanelEl.contains(event.target) || gameAudioToggleBtn.contains(event.target)) return; panelVisible = false; gameAudioPanelEl.hidden = true; gameAudioPanelEl.setAttribute('aria-hidden', 'true'); gameAudioToggleBtn.setAttribute('aria-expanded', 'false'); programarDimAudio(); });
+    const actualizarUI = ()=>{
+      gameAudioMasterInput.value = audioJuegoPreferencias.master.toFixed(2);
+      gameAudioSfxInput.value = audioJuegoPreferencias.sfx.toFixed(2);
+      gameAudioToggleBtn.textContent = audioJuegoPreferencias.muted ? '🔇' : '🔊';
+      gameAudioMuteBtn.textContent = audioJuegoPreferencias.muted ? 'Activar sonido' : 'Silenciar';
+      gameAudioMuteBtn.setAttribute('aria-pressed', audioJuegoPreferencias.muted ? 'true' : 'false');
+      if(gameAudioStatusEl){
+        if(audioJuegoPreferencias.muted){
+          gameAudioStatusEl.textContent = 'Audio silenciado por usuario';
+        }else if(window.audioManager?.isAutoplayBlocked && window.audioManager.isAutoplayBlocked()){
+          gameAudioStatusEl.textContent = 'Toca la pantalla para activar audio';
+        }else{
+          gameAudioStatusEl.textContent = 'Audio activo';
+        }
+      }
+    };
+
+    const aplicarYGuardar = ()=>{
+      aplicarPreferenciasAudioJuego();
+      guardarPreferenciasAudioJuego();
+      actualizarUI();
+      if(!audioJuegoPreferencias.muted){
+        void intentarIniciarMusicaJuego();
+      }
+    };
+
+    gameAudioToggleBtn.addEventListener('click', ()=>{
+      panelVisible = !panelVisible;
+      gameAudioPanelEl.hidden = !panelVisible;
+      gameAudioPanelEl.setAttribute('aria-hidden', panelVisible ? 'false' : 'true');
+      gameAudioToggleBtn.setAttribute('aria-expanded', panelVisible ? 'true' : 'false');
+      if(panelVisible){
+        limpiarDimAudio();
+        gameAudioControlEl.classList.remove('game-audio-control--dimmed');
+      }else{
+        programarDimAudio();
+      }
+      if(panelVisible){
+        void inicializarAudioJuego();
+        void intentarDesbloquearAudioJuego();
+      }
+    });
+
+    gameAudioMasterInput.addEventListener('input', (event)=>{
+      audioJuegoPreferencias.master = clampAudioValor(event?.target?.value, audioJuegoPreferencias.master);
+      audioJuegoPreferencias.muted = false;
+      aplicarYGuardar();
+      mostrarControlAudio();
+    });
+    gameAudioSfxInput.addEventListener('input', (event)=>{
+      audioJuegoPreferencias.sfx = clampAudioValor(event?.target?.value, audioJuegoPreferencias.sfx);
+      audioJuegoPreferencias.muted = false;
+      aplicarYGuardar();
+      mostrarControlAudio();
+    });
+    gameAudioMuteBtn.addEventListener('click', ()=>{
+      audioJuegoPreferencias.muted = !audioJuegoPreferencias.muted;
+      aplicarYGuardar();
+      mostrarControlAudio();
+    });
+
+    document.addEventListener('click', (event)=>{
+      if(!panelVisible) return;
+      if(gameAudioPanelEl.contains(event.target) || gameAudioToggleBtn.contains(event.target)) return;
+      panelVisible = false;
+      gameAudioPanelEl.hidden = true;
+      gameAudioPanelEl.setAttribute('aria-hidden', 'true');
+      gameAudioToggleBtn.setAttribute('aria-expanded', 'false');
+      programarDimAudio();
+    });
+
     gameAudioControlEl.addEventListener('pointerdown', mostrarControlAudio, { passive: true });
     gameAudioControlEl.addEventListener('mouseenter', mostrarControlAudio);
 
-    gameAudio.applyPreferences();
+    aplicarPreferenciasAudioJuego();
     actualizarUI();
     programarDimAudio();
+  }
+
+  async function procesarColaAudioCantos(){
+    if(audioJuegoCantosEnProceso || !audioJuegoCantosCola.length) return;
+    if(!window.audioManager || typeof window.audioManager.playSfx !== 'function') return;
+    audioJuegoCantosEnProceso = true;
+    try{
+      while(audioJuegoCantosCola.length){
+        const numero = audioJuegoCantosCola[0];
+        const eventName = registrarAudioCantoNumero(numero);
+        if(!eventName){
+          audioJuegoCantosCola.shift();
+          continue;
+        }
+        try{
+          await window.audioManager.playSfx(eventName);
+          audioJuegoCantosCola.shift();
+        }catch(err){
+          if(esErrorAudioBloqueado(err)){
+            break;
+          }
+          console.warn('No se pudo reproducir el audio del canto.', { numero, err });
+          audioJuegoCantosCola.shift();
+        }
+      }
+    }finally{
+      audioJuegoCantosEnProceso = false;
+    }
+  }
+
+  function encolarAudioCantoNumero(numero){
+    const normalizado = Number(numero);
+    if(!Number.isInteger(normalizado) || normalizado < 1 || normalizado > 75) return;
+    void inicializarAudioJuego();
+    registrarDesbloqueoAudioJuegoPorInteraccion();
+    audioJuegoCantosCola.push(normalizado);
+    void procesarColaAudioCantos();
+  }
+
+  async function reproducirAudioCantoPorInteraccion(numero){
+    const normalizado = Number(numero);
+    if(!Number.isInteger(normalizado) || normalizado < 1 || normalizado > 75) return;
+    await inicializarAudioJuego();
+    registrarDesbloqueoAudioJuegoPorInteraccion();
+    await intentarDesbloquearAudioJuego();
+    const eventName = registrarAudioCantoNumero(normalizado);
+    if(!eventName || !window.audioManager || typeof window.audioManager.playSfx !== 'function') return;
+    try{
+      await window.audioManager.playSfx(eventName);
+    }catch(err){
+      if(!esErrorAudioBloqueado(err)){
+        console.warn('No se pudo reproducir el audio al interactuar con la bolita.', { numero: normalizado, err });
+      }
+      encolarAudioCantoNumero(normalizado);
+    }
+  }
+
+  async function playGameAudioEvent(eventName, options={}){
+    if(!eventName || !window.audioManager || typeof window.audioManager.playSfx !== 'function') return;
+    await inicializarAudioJuego();
+    registrarDesbloqueoAudioJuegoPorInteraccion();
+
+    const throttleMs = Number(options?.throttleMs);
+    const force = !!options?.force;
+    if(!force && Number.isFinite(throttleMs) && throttleMs > 0){
+      const now = obtenerMarcaTiempoAudioMs();
+      const ultimo = Number(audioJuegoUltimoEventoPorNombre.get(eventName) || 0);
+      if((now - ultimo) < throttleMs){
+        return;
+      }
+      audioJuegoUltimoEventoPorNombre.set(eventName, now);
+    }
+
+    try{
+      await window.audioManager.playSfx(eventName);
+    }catch(err){
+      if(!esErrorAudioBloqueado(err)){
+        console.warn(`No se pudo reproducir el efecto de audio: ${eventName}`, err);
+      }
+    }
   }
 
   const sinSorteoContenedorEl = document.getElementById('sin-sorteo-contenedor');
@@ -6787,12 +7075,8 @@
 
   let unsubscribeSorteos = null;
   let unsubscribeCantos = null;
-  let unsubscribeCantosEventos = null;
   let unsubscribeFormas = null;
   let unsubscribeCartones = null;
-  let ultimaSecuenciaCantoProcesada = 0;
-  let colaEventosCantos = [];
-  let procesandoColaEventosCantos = false;
   let todasFormasConGanadores = false;
   let indiceUltimoGanador = null;
   let cantosComplementariosActivos = false;
@@ -11294,6 +11578,12 @@
     if(nuevosPenalizados.length){
       resaltarCeldasPenalizadasTemporalmente(nuevosPenalizados);
     }
+    if(nuevosCantos.length){
+      nuevosCantos.forEach(numero=>encolarAudioCantoNumero(numero));
+      if(existeNumeroMarcadoEnCartones(nuevosCantos)){
+        playGameAudioEvent(AUDIO_EVENTS.MARK_CELL);
+      }
+    }
     const nuevosComplementarios=nuevosCantos.filter(esCantoComplementario);
     if(nuevosComplementarios.length){
       resaltarCeldasComplementariasTemporalmente(nuevosComplementarios);
@@ -11420,72 +11710,16 @@
     evaluarFormasSinGanadores(totalCantos);
   }
 
-  function encolarEventoCantoConfirmado(evento){
-    if(!evento || typeof evento !== 'object') return;
-    const sequence = Number(evento.sequence);
-    if(!Number.isInteger(sequence) || sequence <= 0) return;
-    if(sequence <= ultimaSecuenciaCantoProcesada) return;
-    const numero = normalizarNumero(evento.numero);
-    if(numero === null) return;
-    colaEventosCantos.push({ sequence, numero });
-    colaEventosCantos.sort((a,b)=>a.sequence-b.sequence);
-    procesarColaEventosCantosConfirmados();
-  }
-
-  function procesarColaEventosCantosConfirmados(){
-    if(procesandoColaEventosCantos) return;
-    procesandoColaEventosCantos = true;
-    try{
-      while(colaEventosCantos.length){
-        const siguiente = colaEventosCantos[0];
-        if(!siguiente || !Number.isInteger(siguiente.sequence) || siguiente.sequence <= ultimaSecuenciaCantoProcesada){
-          colaEventosCantos.shift();
-          continue;
-        }
-        colaEventosCantos.shift();
-        ultimaSecuenciaCantoProcesada = siguiente.sequence;
-        encolarAudioCantoNumero(siguiente.numero);
-        if(existeNumeroMarcadoEnCartones([siguiente.numero])){
-          playGameAudioEvent(AUDIO_EVENTS.MARK_CELL);
-        }
-      }
-    }finally{
-      procesandoColaEventosCantos = false;
-    }
-  }
-
-  function suscribirEventosCantos(){
-    if(unsubscribeCantosEventos){
-      unsubscribeCantosEventos();
-      unsubscribeCantosEventos = null;
-    }
-    if(!activeSorteoId) return;
-    unsubscribeCantosEventos = db.collection('cantos')
-      .doc(activeSorteoId)
-      .collection('eventos')
-      .orderBy('sequence','asc')
-      .onSnapshot(snapshot=>{
-        snapshot.docChanges().forEach(cambio=>{
-          if(cambio.type !== 'added') return;
-          encolarEventoCantoConfirmado(cambio.doc.data() || {});
-        });
-      },err=>console.error('Error escuchando stream de eventos de cantos', err));
-  }
-
   function suscribirCantos(){
     if(unsubscribeCantos){
       unsubscribeCantos();
       unsubscribeCantos=null;
     }
     if(!activeSorteoId) return;
-    ultimaSecuenciaCantoProcesada = 0;
-    colaEventosCantos = [];
     unsubscribeCantos=db.collection('cantos').doc(activeSorteoId).onSnapshot(doc=>{
       const datos=doc.exists?doc.data():null;
-      ultimaSecuenciaCantoProcesada = Number(datos?.lastSequence) || 0;
       procesarCantos(datos);
     },err=>console.error('Error escuchando cantos',err));
-    suscribirEventosCantos();
   }
 
   function suscribirFormas(){
@@ -11616,11 +11850,8 @@
       reiniciarNotificacionesPremios();
       reiniciarAlertaFormasSinGanadores();
       if(unsubscribeCantos){unsubscribeCantos();unsubscribeCantos=null;}
-      if(unsubscribeCantosEventos){unsubscribeCantosEventos();unsubscribeCantosEventos=null;}
       if(unsubscribeFormas){unsubscribeFormas();unsubscribeFormas=null;}
       if(unsubscribeCartones){unsubscribeCartones();unsubscribeCartones=null;}
-      ultimaSecuenciaCantoProcesada=0;
-      colaEventosCantos=[];
       procesarCantos([]);
       formasActivas=[];
       renderFormas();
