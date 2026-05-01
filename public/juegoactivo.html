@@ -6787,8 +6787,12 @@
 
   let unsubscribeSorteos = null;
   let unsubscribeCantos = null;
+  let unsubscribeCantosEventos = null;
   let unsubscribeFormas = null;
   let unsubscribeCartones = null;
+  let ultimaSecuenciaCantoProcesada = 0;
+  let colaEventosCantos = [];
+  let procesandoColaEventosCantos = false;
   let todasFormasConGanadores = false;
   let indiceUltimoGanador = null;
   let cantosComplementariosActivos = false;
@@ -11290,12 +11294,6 @@
     if(nuevosPenalizados.length){
       resaltarCeldasPenalizadasTemporalmente(nuevosPenalizados);
     }
-    if(nuevosCantos.length){
-      nuevosCantos.forEach(numero=>encolarAudioCantoNumero(numero));
-      if(existeNumeroMarcadoEnCartones(nuevosCantos)){
-        playGameAudioEvent(AUDIO_EVENTS.MARK_CELL);
-      }
-    }
     const nuevosComplementarios=nuevosCantos.filter(esCantoComplementario);
     if(nuevosComplementarios.length){
       resaltarCeldasComplementariasTemporalmente(nuevosComplementarios);
@@ -11422,16 +11420,72 @@
     evaluarFormasSinGanadores(totalCantos);
   }
 
+  function encolarEventoCantoConfirmado(evento){
+    if(!evento || typeof evento !== 'object') return;
+    const sequence = Number(evento.sequence);
+    if(!Number.isInteger(sequence) || sequence <= 0) return;
+    if(sequence <= ultimaSecuenciaCantoProcesada) return;
+    const numero = normalizarNumero(evento.numero);
+    if(numero === null) return;
+    colaEventosCantos.push({ sequence, numero });
+    colaEventosCantos.sort((a,b)=>a.sequence-b.sequence);
+    procesarColaEventosCantosConfirmados();
+  }
+
+  function procesarColaEventosCantosConfirmados(){
+    if(procesandoColaEventosCantos) return;
+    procesandoColaEventosCantos = true;
+    try{
+      while(colaEventosCantos.length){
+        const siguiente = colaEventosCantos[0];
+        if(!siguiente || !Number.isInteger(siguiente.sequence) || siguiente.sequence <= ultimaSecuenciaCantoProcesada){
+          colaEventosCantos.shift();
+          continue;
+        }
+        colaEventosCantos.shift();
+        ultimaSecuenciaCantoProcesada = siguiente.sequence;
+        encolarAudioCantoNumero(siguiente.numero);
+        if(existeNumeroMarcadoEnCartones([siguiente.numero])){
+          playGameAudioEvent(AUDIO_EVENTS.MARK_CELL);
+        }
+      }
+    }finally{
+      procesandoColaEventosCantos = false;
+    }
+  }
+
+  function suscribirEventosCantos(){
+    if(unsubscribeCantosEventos){
+      unsubscribeCantosEventos();
+      unsubscribeCantosEventos = null;
+    }
+    if(!activeSorteoId) return;
+    unsubscribeCantosEventos = db.collection('cantos')
+      .doc(activeSorteoId)
+      .collection('eventos')
+      .orderBy('sequence','asc')
+      .onSnapshot(snapshot=>{
+        snapshot.docChanges().forEach(cambio=>{
+          if(cambio.type !== 'added') return;
+          encolarEventoCantoConfirmado(cambio.doc.data() || {});
+        });
+      },err=>console.error('Error escuchando stream de eventos de cantos', err));
+  }
+
   function suscribirCantos(){
     if(unsubscribeCantos){
       unsubscribeCantos();
       unsubscribeCantos=null;
     }
     if(!activeSorteoId) return;
+    ultimaSecuenciaCantoProcesada = 0;
+    colaEventosCantos = [];
     unsubscribeCantos=db.collection('cantos').doc(activeSorteoId).onSnapshot(doc=>{
       const datos=doc.exists?doc.data():null;
+      ultimaSecuenciaCantoProcesada = Number(datos?.lastSequence) || 0;
       procesarCantos(datos);
     },err=>console.error('Error escuchando cantos',err));
+    suscribirEventosCantos();
   }
 
   function suscribirFormas(){
@@ -11562,8 +11616,11 @@
       reiniciarNotificacionesPremios();
       reiniciarAlertaFormasSinGanadores();
       if(unsubscribeCantos){unsubscribeCantos();unsubscribeCantos=null;}
+      if(unsubscribeCantosEventos){unsubscribeCantosEventos();unsubscribeCantosEventos=null;}
       if(unsubscribeFormas){unsubscribeFormas();unsubscribeFormas=null;}
       if(unsubscribeCartones){unsubscribeCartones();unsubscribeCartones=null;}
+      ultimaSecuenciaCantoProcesada=0;
+      colaEventosCantos=[];
       procesarCantos([]);
       formasActivas=[];
       renderFormas();
