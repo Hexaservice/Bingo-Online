@@ -32,7 +32,6 @@
       this.pendingPlayRequests = [];
       this.maxPendingPlayRequests = 40;
       this.debugEnabled = false;
-      this.debugListener = null;
 
       this.manifestStorageKey = 'bingoAudioManifestCache';
       this.manifest = null;
@@ -59,17 +58,6 @@
         return;
       }
       console.warn(`[AudioManager] ${message}`, details);
-    }
-
-    setDebugListener(listener) {
-      this.debugListener = typeof listener === 'function' ? listener : null;
-    }
-
-    emitDebugEvent(type, payload = {}) {
-      if (!this.debugListener) return;
-      try {
-        this.debugListener({ scope: 'audioManager', type, ...payload, ts: Date.now() });
-      } catch (_) {}
     }
 
     enqueuePendingPlay(type, payload) {
@@ -471,10 +459,8 @@
 
       for (let i = 0; i < urls.length; i += 1) {
         const url = urls[i];
-        this.emitDebugEvent('wav_selected', { url, category: descriptor?.category || 'sfx' });
         const cacheKey = this.normalizeAudioCacheKey(url);
         if (cacheKey && this.buffers.has(cacheKey)) {
-          this.emitDebugEvent('fetch_decode_ok', { url, fromCache: true });
           if (urls[0]) {
             const primaryCacheKey = this.normalizeAudioCacheKey(urls[0]);
             if (primaryCacheKey && !this.buffers.has(primaryCacheKey)) {
@@ -486,7 +472,6 @@
 
         try {
           const decoded = await this.fetchAndDecode(url, descriptor);
-          this.emitDebugEvent('fetch_decode_ok', { url, fromCache: false });
           if (urls[0] && url !== urls[0]) {
             const primaryCacheKey = this.normalizeAudioCacheKey(urls[0]);
             if (primaryCacheKey) {
@@ -495,7 +480,6 @@
           }
           return decoded;
         } catch (err) {
-          this.emitDebugEvent('fetch_decode_error', { url, error: err?.message || String(err) });
           if (i === urls.length - 1) {
             throw err;
           }
@@ -587,7 +571,6 @@
       try {
         await this.ensureRunningContext();
       } catch (err) {
-        this.emitDebugEvent('play_error', { eventName, reason: err?.code === 'AUDIO_CONTEXT_BLOCKED' ? 'bloqueo_contexto' : 'play_error', error: err?.message || String(err) });
         if (!bypassQueueOnBlocked && err?.code === 'AUDIO_CONTEXT_BLOCKED') {
           this.enqueuePendingPlay('sfx', { eventName });
         }
@@ -607,9 +590,7 @@
       sourceGain.connect(this.sfxGain);
 
       this.activeSfxNodes.add(source);
-      this.emitDebugEvent('play_start', { eventName });
       source.onended = () => {
-        this.emitDebugEvent('play_end', { eventName });
         this.activeSfxNodes.delete(source);
         source.disconnect();
         sourceGain.disconnect();

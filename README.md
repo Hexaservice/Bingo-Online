@@ -190,30 +190,10 @@ npm run apply-firebase-mutations -- --files firebase/bingoanimalito/mi-cambio.js
 - Cuando cree o actualice sorteos, guarde los campos `fecha`, `hora` y `horacierre` en formato `DD/MM/YYYY` y `HH:mm` (24 horas) para asegurar que `cronActualizarEstadosSorteos.js` pueda interpretar los datos sin errores.
 - Documente cualquier ajuste en la colección `Variablesglobales/Parametros` (especialmente `ZonaHoraria`, `Pais` y `Aplicacion`) y coordínelo con los responsables del cron para mantener sincronizados el frontend y las tareas programadas.
 
-## Contrato de audio en juego activo (stream de cantos confirmados)
-
-Para mantener sincronía entre animación, resaltados y audio en `public/juegoactivo.html`, cada canto confirmado en `public/cantarsorteos.html` publica un evento en Firestore bajo:
-
-- `cantos/{sorteoId}/eventos/{autoId}`
-
-Campos mínimos del payload del evento:
-
-- `numero`: texto del canto confirmado (ej. `B-12`).
-- `emittedAt`: `server timestamp` del momento en que se confirma el evento.
-- `sequence`: entero incremental por sorteo (1..N).
-- `sorteoId`: id del sorteo dueño del evento.
-
-Además, el documento `cantos/{sorteoId}` mantiene `lastSequence` como último `sequence` publicado.
-
-`public/juegoactivo.html` consume este stream ordenado por `sequence` y aplica estas reglas:
-
-1. Ignorar duplicados (`sequence <= ultimaSecuenciaCantoProcesada`).
-2. Encolar eventos por `sequence` ascendente.
-3. Disparar audio y efectos ligados al marcado desde ese evento confirmado (no desde diferencias locales del arreglo `numeros`).
-
 ## Seguridad de `Variablesglobales/Parametros`
 
 - El documento `Variablesglobales/Parametros` contiene configuración sensible y se trata como **confidencial**.
 - En `firestore.rules`, su lectura y escritura requieren privilegio fuerte de **Superadmin** (`isStrongSuperadmin()`).
 - La página `public/parametros.html` está diseñada para este mismo nivel de privilegio; usuarios autenticados sin rol fuerte de Superadmin deben recibir denegación de acceso al intentar leer ese documento.
+
 

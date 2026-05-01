@@ -11,9 +11,12 @@
     musicVolume: 'audio:musicVolume',
     sfxVolume: 'audio:sfxVolume',
     muted: 'audio:muted',
+    consent: 'audio:enabledByUser',
   });
 
-  const DEPRECATED_STORAGE_KEYS = Object.freeze([]);
+  const DEPRECATED_STORAGE_KEYS = Object.freeze([
+    STORAGE_KEYS.consent,
+  ]);
 
   function clamp01(value, fallback) {
     const parsed = Number(value);
@@ -23,6 +26,20 @@
 
   function porcentaje(value) {
     return `${Math.round(clamp01(value, 0) * 100)}%`;
+  }
+
+  function usuarioHabilitoAudio() {
+    try {
+      return localStorage.getItem(STORAGE_KEYS.consent) === 'true';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function guardarConsentimientoAudio() {
+    try {
+      localStorage.setItem(STORAGE_KEYS.consent, 'true');
+    } catch (_) {}
   }
 
   function limpiarClavesObsoletasAudio() {
@@ -159,11 +176,9 @@
   function initBingoAudioControl(config) {
     if (!config || !window.audioManager) return;
 
-    // Si existe orquestador de audio, centraliza estado/preferencias en ese módulo.
-    if (window.gameAudioOrchestrator) return;
-
     // Inicialización de controles deshabilitada temporalmente.
     // Conservamos la API pública para compatibilidad con páginas existentes.
+    limpiarClavesObsoletasAudio();
     const estado = leerEstadoAudio();
     try {
       window.audioManager.setVolume('master', estado.masterVolume);
