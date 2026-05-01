@@ -1244,10 +1244,19 @@
   <script src="js/audioManifest.js"></script>
   <script src="js/audioManager.js"></script>
   <script src="js/audioManagerCompat.js"></script>
+  <script src="js/audioSessionService.js"></script>
   <script src="js/serviceWorkerRegistration.js"></script>
 <script>
 (function(){
   const AVATAR_FALLBACK = 'img/avatar-generico.svg';
+  const audioSession = window.audioSessionService || null;
+  if(audioSession){
+    audioSession.init('player');
+    const markUnlock = ()=> audioSession.markUnlocked();
+    window.addEventListener('pointerdown', markUnlock, { passive:true });
+    window.addEventListener('keydown', markUnlock, { passive:true });
+    window.addEventListener('touchstart', markUnlock, { passive:true });
+  }
   const whatsappModalEl = document.getElementById('modal-whatsapp');
   const whatsappModalMensajeEl = document.getElementById('modal-whatsapp-mensaje');
   const whatsappModalAceptarBtn = document.getElementById('modal-whatsapp-aceptar');

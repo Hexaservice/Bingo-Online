@@ -40,6 +40,13 @@
     nowMs() { return (typeof performance !== 'undefined' && typeof performance.now === 'function') ? performance.now() : 0; },
 
     loadPreferences() {
+      const shared = window.audioSessionService?.state?.preferences;
+      if (shared) {
+        this.preferences.master = this.clamp(shared.master, 1);
+        this.preferences.sfx = this.clamp(shared.sfx, 1);
+        this.preferences.muted = !!shared.muted;
+        return;
+      }
       try {
         this.preferences.master = this.clamp(localStorage.getItem(this.AUDIO_STORAGE_KEYS.master), 1);
         this.preferences.sfx = this.clamp(localStorage.getItem(this.AUDIO_STORAGE_KEYS.sfx), 1);
@@ -47,6 +54,7 @@
       } catch (_) {}
     },
     savePreferences() {
+      window.audioSessionService?.updatePreferences(this.preferences);
       try {
         localStorage.setItem(this.AUDIO_STORAGE_KEYS.master, String(this.preferences.master));
         localStorage.setItem(this.AUDIO_STORAGE_KEYS.sfx, String(this.preferences.sfx));

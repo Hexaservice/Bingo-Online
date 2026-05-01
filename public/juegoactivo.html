@@ -4576,6 +4576,7 @@
   <script src="js/audioManifest.js"></script>
   <script src="js/audioManager.js"></script>
   <script src="js/audioManagerCompat.js"></script>
+  <script src="js/audioSessionService.js"></script>
   <script src="js/gameAudioOrchestrator.js"></script>
   <script src="js/serviceWorkerRegistration.js"></script>
   <script>
@@ -4598,6 +4599,8 @@
 
 
   const gameAudio = window.gameAudioOrchestrator || null;
+  const audioSession = window.audioSessionService || null;
+  if(audioSession){ audioSession.init('juegoactivo'); }
 
   async function inicializarAudioJuego(){
     if(!gameAudio) return false;
@@ -4606,7 +4609,9 @@
 
   async function intentarDesbloquearAudioJuego(){
     if(!gameAudio) return false;
-    return gameAudio.unlock();
+    const unlocked = await gameAudio.unlock();
+    if(unlocked) audioSession?.markUnlocked();
+    return unlocked;
   }
 
   function registrarDesbloqueoAudioJuegoPorInteraccion(){
@@ -4652,9 +4657,16 @@
       gameAudioMuteBtn.textContent = gameAudio.preferences.muted ? 'Activar sonido' : 'Silenciar';
       gameAudioMuteBtn.setAttribute('aria-pressed', gameAudio.preferences.muted ? 'true' : 'false');
       if(gameAudioStatusEl){
-        if(gameAudio.preferences.muted){ gameAudioStatusEl.textContent = 'Audio silenciado por usuario'; }
-        else if(window.audioManager?.isAutoplayBlocked && window.audioManager.isAutoplayBlocked()){ gameAudioStatusEl.textContent = 'Toca la pantalla para activar audio'; }
-        else{ gameAudioStatusEl.textContent = 'Audio activo'; }
+        if(gameAudio.preferences.muted){
+          audioSession?.setFallbackMode('normal');
+          gameAudioStatusEl.textContent = 'Audio silenciado por usuario';
+        } else if(window.audioManager?.isAutoplayBlocked && window.audioManager.isAutoplayBlocked()){
+          audioSession?.setFallbackMode('juegoactivo_only');
+          gameAudioStatusEl.textContent = 'Audio en segundo plano bloqueado: solo sonará en Juego Activo';
+        } else {
+          audioSession?.setFallbackMode('normal');
+          gameAudioStatusEl.textContent = 'Audio activo';
+        }
       }
     };
 
@@ -11444,6 +11456,7 @@
         }
         colaEventosCantos.shift();
         ultimaSecuenciaCantoProcesada = siguiente.sequence;
+        audioSession?.setLastSequence(siguiente.sequence);
         encolarAudioCantoNumero(siguiente.numero);
         if(existeNumeroMarcadoEnCartones([siguiente.numero])){
           playGameAudioEvent(AUDIO_EVENTS.MARK_CELL);
@@ -11478,7 +11491,7 @@
       unsubscribeCantos=null;
     }
     if(!activeSorteoId) return;
-    ultimaSecuenciaCantoProcesada = 0;
+    ultimaSecuenciaCantoProcesada = audioSession?.getLastSequence?.() || 0;
     colaEventosCantos = [];
     unsubscribeCantos=db.collection('cantos').doc(activeSorteoId).onSnapshot(doc=>{
       const datos=doc.exists?doc.data():null;
