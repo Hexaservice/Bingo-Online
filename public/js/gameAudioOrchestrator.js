@@ -34,10 +34,46 @@
     cantoQueue: [],
     lastEventByName: new Map(),
     preferences: { master: 1, sfx: 1, muted: false },
+    debugEnabled: false,
+    debugRows: [],
+    debugMaxRows: 20,
+    debugPanelEl: null,
 
     clamp(value, fallback = 1) { const n = Number(value); return Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : fallback; },
     isBlockedError(err) { return err && (err.code === 'AUDIO_CONTEXT_BLOCKED' || /bloqueado/i.test(String(err?.message || ''))); },
     nowMs() { return (typeof performance !== 'undefined' && typeof performance.now === 'function') ? performance.now() : 0; },
+    getFailureReason(err) {
+      if (!err) return null;
+      const msg = String(err?.message || err).toLowerCase();
+      if (err?.code === 'AUDIO_CONTEXT_BLOCKED' || msg.includes('bloqueado')) return 'bloqueo_contexto';
+      if (msg.includes('404') || msg.includes('no se pudo descargar')) return '404';
+      if (msg.includes('decode')) return 'decode_error';
+      if (this.preferences?.muted) return 'muted';
+      return 'desconocido';
+    },
+    initDebugMode() {
+      this.debugEnabled = (new URLSearchParams(window.location.search).get('audioDebug') === '1');
+      if (!this.debugEnabled) return;
+      if (window.audioManager?.setDebugListener) {
+        window.audioManager.setDebugListener((evt) => this.pushDebugRow(evt.type, evt));
+      }
+      const panel = document.createElement('div');
+      panel.style.cssText = 'position:fixed;right:12px;bottom:92px;z-index:10001;max-width:360px;max-height:280px;overflow:auto;background:rgba(0,0,0,.85);color:#fff;font:12px/1.3 monospace;border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:8px;';
+      panel.innerHTML = '<strong>Audio Debug</strong><div id="audio-debug-body" style="margin-top:6px;"></div><div style="margin-top:8px;border-top:1px solid rgba(255,255,255,.25);padding-top:6px;opacity:.9"><div><b>Checklist soporte</b></div><div>1) Validar ?audioDebug=1</div><div>2) Revisar mute/volumen y permisos</div><div>3) Confirmar 404/Decode en eventos</div><div>4) Copiar console.table + secuencia</div></div>';
+      document.body.appendChild(panel);
+      this.debugPanelEl = panel.querySelector('#audio-debug-body');
+      this.pushDebugRow('debug_enabled', { detail: 'Modo debug activo por ?audioDebug=1' });
+    },
+    pushDebugRow(evento, data = {}) {
+      if (!this.debugEnabled) return;
+      const row = { hora: new Date().toISOString(), evento, detalle: data?.eventName || data?.url || data?.detail || '', motivo: data?.reason || data?.error || '' };
+      this.debugRows.unshift(row);
+      if (this.debugRows.length > this.debugMaxRows) this.debugRows.length = this.debugMaxRows;
+      if (this.debugPanelEl) {
+        this.debugPanelEl.innerHTML = this.debugRows.map((r) => `<div>[${r.hora.slice(11, 19)}] ${r.evento} ${r.detalle ? `- ${r.detalle}` : ''} ${r.motivo ? `(${r.motivo})` : ''}</div>`).join('');
+      }
+      console.table(this.debugRows);
+    },
 
     loadPreferences() {
       try {
@@ -123,6 +159,7 @@
       if (!window.audioManager) return false;
       this.initPromise = (async () => {
         this.registerBaseEvents();
+        this.initDebugMode();
         const integrity = this.validateCriticalAudioIntegrity();
         if (!integrity.ok) {
           integrity.errors.forEach((msg) => console.error('[AudioIntegrity]', msg));
@@ -180,6 +217,7 @@
       void this.init();
       this.registerUnlockOnInteraction();
       this.cantoQueue.push(n);
+      this.pushDebugRow('evento_encolado', { detail: `numero=${n}` });
       void this.processQueue();
     },
     async playCantoByInteraction(numero) {
@@ -190,7 +228,8 @@
       await this.unlock();
       const eventName = this.registerCantoEvent(n);
       if (!eventName || !window.audioManager?.playSfx) return;
-      try { await window.audioManager.playSfx(eventName); } catch (err) { if (!this.isBlockedError(err)) console.warn('No se pudo reproducir audio.', err); this.enqueueCanto(n); }
+      this.pushDebugRow('evento_recibido', { eventName, detail: `numero=${n}` });
+      try { await window.audioManager.playSfx(eventName); } catch (err) { this.pushDebugRow('fallo_reproduccion', { eventName, reason: this.getFailureReason(err), error: err?.message || String(err) }); if (!this.isBlockedError(err)) console.warn('No se pudo reproducir audio.', err); this.enqueueCanto(n); }
     },
     async playEvent(eventName, options = {}) {
       if (!eventName || !window.audioManager?.playSfx) return;
