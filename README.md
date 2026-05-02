@@ -119,7 +119,7 @@ Entornos soportados:
 - `prod` → Producción (Proyecto Firebase `bingo-online-231fd`, Hosting target `main` y base de datos default)
   - Convención canónica: la rama `main` despliega al entorno `prod`.
 
-Variables requeridas por entorno (con fallback a versión global sin prefijo):
+Variables requeridas por entorno (modo estricto por defecto):
 
 - `FIREBASE_<ENV>_API_KEY`
 - `FIREBASE_<ENV>_AUTH_DOMAIN`
@@ -132,6 +132,16 @@ Variables requeridas por entorno (con fallback a versión global sin prefijo):
 > Ejemplo para stg (`<ENV>=STG`): `FIREBASE_STG_DATABASE_URL=https://bingo-online-stg-default-rtdb.firebaseio.com` (base de datos **default**).
 
 > Para producción (`prod`/`main`) el script utiliza prefijo `FIREBASE_MAIN_*`.
+
+El comando `npm run generate:firebase-config -- --env <dev|stg|main>` falla si falta al menos una variable `FIREBASE_<ENV>_*` del entorno seleccionado, mostrando exactamente cuáles faltan.
+
+Modo opcional solo para desarrollo local:
+
+```bash
+npm run generate:firebase-config -- --env dev --allow-global-fallback
+```
+
+Con `--allow-global-fallback`, si falta una variable `FIREBASE_<ENV>_*`, el script intenta usar su equivalente global sin prefijo (`FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, etc.). Este fallback viene desactivado por defecto para asegurar ejecuciones CI/CD estrictas.
 
 > **Nota sobre Storage**: Si en la consola de Firebase el bucket aparece con el dominio `*.firebasestorage.app`, utilice ese valor sin modificarlo. La interfaz convierte automáticamente ese formato al identificador clásico (`*.appspot.com`) al inicializar el SDK para garantizar la compatibilidad con `firebase-storage-compat` y permitir la subida de los PDFs generados.
 
@@ -206,4 +216,3 @@ npm run apply-firebase-mutations -- --files firebase/bingoanimalito/mi-cambio.js
 - El documento `Variablesglobales/Parametros` contiene configuración sensible y se trata como **confidencial**.
 - En `firestore.rules`, su lectura y escritura requieren privilegio fuerte de **Superadmin** (`isStrongSuperadmin()`).
 - La página `public/parametros.html` está diseñada para este mismo nivel de privilegio; usuarios autenticados sin rol fuerte de Superadmin deben recibir denegación de acceso al intentar leer ese documento.
-
