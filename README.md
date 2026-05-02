@@ -114,6 +114,7 @@ npm run generate:firebase-config -- --env dev
 Entornos soportados:
 
 - `dev` → Proyecto Firebase `bingo-online-dev` (número `671201853237`), Hosting target `bingo-online-dev` y base de datos **default** (no `dev-db`)
+  - Comportamiento de Hosting: **sirve la app estática del repositorio** (`public/` con rewrite SPA a `/index.html`), no funciona como redirector externo.
 - `stg` → Proyecto Firebase `bingo-online-stg` (número `651184549228`), Hosting target `bingo-online-stg` y base de datos **default** (no `stg-db`)
 - `main` → Producción (Hosting target `bingo-online-231fd` y base de datos default)
   - Entorno canónico de producción: `main`.
