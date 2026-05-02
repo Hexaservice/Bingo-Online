@@ -129,7 +129,7 @@ Variables requeridas por entorno (con fallback a versión global sin prefijo):
 - `FIREBASE_<ENV>_MESSAGING_SENDER_ID`
 - `FIREBASE_<ENV>_APP_ID`
 
-> Ejemplo para staging (`<ENV>=STG`): `FIREBASE_STG_DATABASE_URL=https://bingo-online-stg-default-rtdb.firebaseio.com` (base de datos **default**).
+> Ejemplo para stg (`<ENV>=STG`): `FIREBASE_STG_DATABASE_URL=https://bingo-online-stg-default-rtdb.firebaseio.com` (base de datos **default**).
 
 > Para producción (`prod`/`main`) el script utiliza prefijo `FIREBASE_MAIN_*`.
 
@@ -149,12 +149,12 @@ Además, en Firebase Authentication > Settings > Authorized domains agregue todo
 
 ### Despliegues automáticos (GitHub Actions)
 
-El flujo `.github/workflows/deploy-by-branch.yml` genera `public/firebase-config.js` con el script anterior y despliega por rama (`dev`, `staging`, `main`) usando targets de Hosting distintos (`dev`, `stg`, `prod`).
+El flujo `.github/workflows/deploy-by-branch.yml` genera `public/firebase-config.js` con el script anterior y despliega por rama (`dev`, `stg`, `main`) usando targets de Hosting distintos (`dev`, `stg`, `prod`).
 
 | Branch | Deploy env | Firebase projectId | Hosting target | Secret service account |
 | --- | --- | --- | --- | --- |
 | `dev` | `dev` | `bingo-online-dev` | `dev` | `FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_DEV` |
-| `staging` | `stg` | `bingo-online-stg` | `stg` | `FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_STG` |
+| `stg` | `stg` | `bingo-online-stg` | `stg` | `FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_STG` |
 | `main` | `prod` | `bingo-online-231fd` | `prod` | `FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_231FD` |
 
 > ⚠️ No cambiar el `target`/`projectId` de la rama `main` sin un PR de **alto riesgo** con validación explícita de impacto y rollback.
@@ -162,7 +162,7 @@ El flujo `.github/workflows/deploy-by-branch.yml` genera `public/firebase-config
 Configure los siguientes secretos por entorno en GitHub:
 
 - Dev: `FIREBASE_DEV_API_KEY`, `FIREBASE_DEV_AUTH_DOMAIN`, `FIREBASE_DEV_DATABASE_URL`, `FIREBASE_DEV_PROJECT_ID`, `FIREBASE_DEV_STORAGE_BUCKET`, `FIREBASE_DEV_MESSAGING_SENDER_ID`, `FIREBASE_DEV_APP_ID`
-- Staging: `FIREBASE_STG_API_KEY`, `FIREBASE_STG_AUTH_DOMAIN`, `FIREBASE_STG_DATABASE_URL`, `FIREBASE_STG_PROJECT_ID`, `FIREBASE_STG_STORAGE_BUCKET`, `FIREBASE_STG_MESSAGING_SENDER_ID`, `FIREBASE_STG_APP_ID`
+- Stg: `FIREBASE_STG_API_KEY`, `FIREBASE_STG_AUTH_DOMAIN`, `FIREBASE_STG_DATABASE_URL`, `FIREBASE_STG_PROJECT_ID`, `FIREBASE_STG_STORAGE_BUCKET`, `FIREBASE_STG_MESSAGING_SENDER_ID`, `FIREBASE_STG_APP_ID`
 - Producción: `FIREBASE_MAIN_API_KEY`, `FIREBASE_MAIN_AUTH_DOMAIN`, `FIREBASE_MAIN_DATABASE_URL`, `FIREBASE_MAIN_PROJECT_ID`, `FIREBASE_MAIN_STORAGE_BUCKET`, `FIREBASE_MAIN_MESSAGING_SENDER_ID`, `FIREBASE_MAIN_APP_ID`
 
 Además se mantiene el secreto de cuenta de servicio `FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_231FD` para publicar en Hosting.
