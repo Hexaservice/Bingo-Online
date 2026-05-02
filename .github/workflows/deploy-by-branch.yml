@@ -2,7 +2,7 @@ name: Deploy by branch to Firebase Hosting
 
 on:
   push:
-    branches: [dev, staging, main]
+    branches: [dev, main]
 
 permissions:
   contents: read
@@ -51,50 +51,6 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_DEV }}
           projectId: bingo-online-dev
           target: dev
-          channelId: live
-
-  deploy-staging:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/staging'
-    env:
-      DEPLOY_ENV: stg
-      HAS_FIREBASE_SECRETS: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_STG != '' &&
-        secrets.FIREBASE_STG_API_KEY != '' &&
-        secrets.FIREBASE_STG_AUTH_DOMAIN != '' &&
-        secrets.FIREBASE_STG_DATABASE_URL != '' &&
-        secrets.FIREBASE_STG_PROJECT_ID != '' &&
-        secrets.FIREBASE_STG_STORAGE_BUCKET != '' &&
-        secrets.FIREBASE_STG_MESSAGING_SENDER_ID != '' &&
-        secrets.FIREBASE_STG_APP_ID != '' }}
-      FIREBASE_STG_API_KEY: ${{ secrets.FIREBASE_STG_API_KEY }}
-      FIREBASE_STG_AUTH_DOMAIN: ${{ secrets.FIREBASE_STG_AUTH_DOMAIN }}
-      FIREBASE_STG_DATABASE_URL: ${{ secrets.FIREBASE_STG_DATABASE_URL }}
-      FIREBASE_STG_PROJECT_ID: ${{ secrets.FIREBASE_STG_PROJECT_ID }}
-      FIREBASE_STG_STORAGE_BUCKET: ${{ secrets.FIREBASE_STG_STORAGE_BUCKET }}
-      FIREBASE_STG_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_STG_MESSAGING_SENDER_ID }}
-      FIREBASE_STG_APP_ID: ${{ secrets.FIREBASE_STG_APP_ID }}
-    steps:
-      - name: Aviso por falta de credenciales
-        if: env.HAS_FIREBASE_SECRETS != 'true'
-        run: |
-          echo "::warning::No se encontraron todas las credenciales de Firebase necesarias para staging."
-          echo "::warning::Se omite el despliegue automático para la rama staging."
-
-      - uses: actions/checkout@v4
-        if: env.HAS_FIREBASE_SECRETS == 'true'
-
-      - name: Generar firebase-config.js
-        if: env.HAS_FIREBASE_SECRETS == 'true'
-        run: node scripts/generateFirebaseConfig.js --env "${DEPLOY_ENV}"
-
-      - name: Deploy to Firebase Hosting
-        if: env.HAS_FIREBASE_SECRETS == 'true'
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_STG }}
-          projectId: bingo-online-stg
-          target: stg
           channelId: live
 
   deploy-prod:
