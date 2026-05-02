@@ -10,10 +10,14 @@
 ## Matriz de impacto (alto riesgo si aplica a auth, premios, billetera o reglas)
 | Dimensión | Validación requerida | Evidencia |
 |---|---|---|
-| Usuario | Inicio de sesión funciona por entorno (dev/stg/main) | |
+| Usuario | Inicio de sesión funciona por entorno (dev/main) | |
 | Datos | Lecturas/escrituras se realizan en Firestore del proyecto correcto | |
 | Seguridad | Reglas intactas, sin ampliar permisos | |
 | Operación | Deploy por rama apunta al proyecto esperado | |
+
+## Flujo de ramas y promoción
+- [ ] Este PR se abre hacia `dev` (trabajo diario en `fix/*`, `feat/*`, `chore/*`, `docs/*`).
+- [ ] Si es release, este PR promueve `dev` → `main`.
 
 ## Checklist operativo de Firebase por entorno
 ### 1) Firebase Auth por proyecto
@@ -44,6 +48,11 @@
   - [ ] El proyecto destino no coincide con la rama.
 
 ## Evidencia de pruebas
+- [ ] `npm test` ejecutado y resultado adjunto.
+- [ ] `npm run generate:firebase-config` ejecutado (cuando aplique) y resultado adjunto.
+- [ ] `npm run generate:loterias-manifest` ejecutado (si hubo cambios de imágenes/manifiesto) y resultado adjunto.
+
+### Resultado de comandos
 ```bash
 npm test
 npm run generate:firebase-config    # cuando aplique
@@ -55,4 +64,6 @@ npm run generate:loterias-manifest  # cuando aplique
 ## Checklist de seguridad
 - [ ] No se subieron secretos ni credenciales.
 - [ ] No hay credenciales hardcodeadas.
+- [ ] Sin cambios no deseados en `firestore.rules`/`storage.rules`.
+- [ ] Verificación de entorno Firebase correcto (`dev` o `main`) antes de deploy.
 - [ ] Se mantienen contratos de datos y reglas de seguridad (Firestore/Storage).
