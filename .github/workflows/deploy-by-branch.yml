@@ -39,6 +39,26 @@ jobs:
       - uses: actions/checkout@v4
         if: env.HAS_FIREBASE_SECRETS == 'true'
 
+      - name: Validar configuración Firebase (dev)
+        if: env.HAS_FIREBASE_SECRETS == 'true'
+        run: |
+          set -euo pipefail
+
+          [[ "${FIREBASE_DEV_PROJECT_ID}" == "bingo-online-dev" ]] || {
+            echo "ERROR: FIREBASE_DEV_PROJECT_ID debe ser bingo-online-dev y llegó '${FIREBASE_DEV_PROJECT_ID}'."
+            exit 1
+          }
+
+          [[ "${FIREBASE_DEV_AUTH_DOMAIN}" =~ ^bingo-online-dev\.(web\.app|firebaseapp\.com)$ ]] || {
+            echo "ERROR: FIREBASE_DEV_AUTH_DOMAIN inválido ('${FIREBASE_DEV_AUTH_DOMAIN}'). Permitidos: bingo-online-dev.web.app o bingo-online-dev.firebaseapp.com."
+            exit 1
+          }
+
+          [[ "${FIREBASE_DEV_DATABASE_URL}" == "https://bingo-online-dev-default-rtdb.firebaseio.com" ]] || {
+            echo "ERROR: FIREBASE_DEV_DATABASE_URL debe usar la base default del proyecto (https://bingo-online-dev-default-rtdb.firebaseio.com)."
+            exit 1
+          }
+
       - name: Generar firebase-config.js
         if: env.HAS_FIREBASE_SECRETS == 'true'
         run: node scripts/generateFirebaseConfig.js --env "${DEPLOY_ENV}"
@@ -83,6 +103,26 @@ jobs:
       - uses: actions/checkout@v4
         if: env.HAS_FIREBASE_SECRETS == 'true'
 
+      - name: Validar configuración Firebase (stg)
+        if: env.HAS_FIREBASE_SECRETS == 'true'
+        run: |
+          set -euo pipefail
+
+          [[ "${FIREBASE_STG_PROJECT_ID}" == "bingo-online-stg" ]] || {
+            echo "ERROR: FIREBASE_STG_PROJECT_ID debe ser bingo-online-stg y llegó '${FIREBASE_STG_PROJECT_ID}'."
+            exit 1
+          }
+
+          [[ "${FIREBASE_STG_AUTH_DOMAIN}" =~ ^bingo-online-stg\.(web\.app|firebaseapp\.com)$ ]] || {
+            echo "ERROR: FIREBASE_STG_AUTH_DOMAIN inválido ('${FIREBASE_STG_AUTH_DOMAIN}'). Permitidos: bingo-online-stg.web.app o bingo-online-stg.firebaseapp.com."
+            exit 1
+          }
+
+          [[ "${FIREBASE_STG_DATABASE_URL}" == "https://bingo-online-stg-default-rtdb.firebaseio.com" ]] || {
+            echo "ERROR: FIREBASE_STG_DATABASE_URL debe usar la base default del proyecto (https://bingo-online-stg-default-rtdb.firebaseio.com)."
+            exit 1
+          }
+
       - name: Generar firebase-config.js
         if: env.HAS_FIREBASE_SECRETS == 'true'
         run: node scripts/generateFirebaseConfig.js --env "${DEPLOY_ENV}"
@@ -126,6 +166,26 @@ jobs:
 
       - uses: actions/checkout@v4
         if: env.HAS_FIREBASE_SECRETS == 'true'
+
+      - name: Validar configuración Firebase (main/prod)
+        if: env.HAS_FIREBASE_SECRETS == 'true'
+        run: |
+          set -euo pipefail
+
+          [[ "${FIREBASE_MAIN_PROJECT_ID}" == "bingo-online-231fd" ]] || {
+            echo "ERROR: FIREBASE_MAIN_PROJECT_ID debe ser bingo-online-231fd y llegó '${FIREBASE_MAIN_PROJECT_ID}'."
+            exit 1
+          }
+
+          [[ "${FIREBASE_MAIN_AUTH_DOMAIN}" =~ ^bingo-online-231fd\.(web\.app|firebaseapp\.com)$ ]] || {
+            echo "ERROR: FIREBASE_MAIN_AUTH_DOMAIN inválido ('${FIREBASE_MAIN_AUTH_DOMAIN}'). Permitidos: bingo-online-231fd.web.app o bingo-online-231fd.firebaseapp.com."
+            exit 1
+          }
+
+          [[ "${FIREBASE_MAIN_DATABASE_URL}" == "https://bingo-online-231fd-default-rtdb.firebaseio.com" ]] || {
+            echo "ERROR: FIREBASE_MAIN_DATABASE_URL debe usar la base default del proyecto (https://bingo-online-231fd-default-rtdb.firebaseio.com)."
+            exit 1
+          }
 
       - name: Generar firebase-config.js
         if: env.HAS_FIREBASE_SECRETS == 'true'

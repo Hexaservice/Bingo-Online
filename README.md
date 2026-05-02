@@ -171,6 +171,14 @@ El flujo `.github/workflows/deploy-by-branch.yml` genera `public/firebase-config
 
 > Verificación actual: en `.firebaserc`, el proyecto `bingo-online-231fd` expone el Hosting target `main`, alineado con este flujo.
 
+El workflow también ejecuta validaciones **bloqueantes** (`exit 1`) antes de generar `firebase-config.js` en cada job:
+
+- `dev`: exige `FIREBASE_DEV_PROJECT_ID=bingo-online-dev`, `FIREBASE_DEV_AUTH_DOMAIN` en `bingo-online-dev.web.app` o `bingo-online-dev.firebaseapp.com`, y `FIREBASE_DEV_DATABASE_URL=https://bingo-online-dev-default-rtdb.firebaseio.com` (base default, sin aliases).
+- `stg`: exige `FIREBASE_STG_PROJECT_ID=bingo-online-stg`, `FIREBASE_STG_AUTH_DOMAIN` en `bingo-online-stg.web.app` o `bingo-online-stg.firebaseapp.com`, y `FIREBASE_STG_DATABASE_URL=https://bingo-online-stg-default-rtdb.firebaseio.com` (base default, sin aliases).
+- `main/prod`: exige `FIREBASE_MAIN_PROJECT_ID=bingo-online-231fd`, `FIREBASE_MAIN_AUTH_DOMAIN` en `bingo-online-231fd.web.app` o `bingo-online-231fd.firebaseapp.com`, y `FIREBASE_MAIN_DATABASE_URL=https://bingo-online-231fd-default-rtdb.firebaseio.com` (base default, sin aliases).
+
+Si cualquiera de estas validaciones falla, el job se aborta inmediatamente para evitar desplegar una configuración cruzada entre entornos.
+
 Configure los siguientes secretos por entorno en GitHub:
 
 - Dev: `FIREBASE_DEV_API_KEY`, `FIREBASE_DEV_AUTH_DOMAIN`, `FIREBASE_DEV_DATABASE_URL`, `FIREBASE_DEV_PROJECT_ID`, `FIREBASE_DEV_STORAGE_BUCKET`, `FIREBASE_DEV_MESSAGING_SENDER_ID`, `FIREBASE_DEV_APP_ID`
