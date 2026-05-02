@@ -116,7 +116,7 @@ Entornos soportados:
 - `dev` → Proyecto Firebase `bingo-online-dev` (número `671201853237`), Hosting target `bingo-online-dev` y base de datos **default** (no `dev-db`)
 - `stg` → Proyecto Firebase `bingo-online-stg` (número `651184549228`), Hosting target `bingo-online-stg` y base de datos **default** (no `stg-db`)
 - `main` → Producción (Hosting target `bingo-online-231fd` y base de datos default)
-  - Compatibilidad: también acepta `prod` y `production`, normalizados internamente como producción.
+  - Entorno canónico de producción: `main`.
 
 Variables requeridas por entorno (con fallback a versión global sin prefijo):
 
@@ -130,7 +130,7 @@ Variables requeridas por entorno (con fallback a versión global sin prefijo):
 
 > Ejemplo para staging (`<ENV>=STG`): `FIREBASE_STG_DATABASE_URL=https://bingo-online-stg-default-rtdb.firebaseio.com` (base de datos **default**).
 
-> Para producción en `main` el script utiliza prefijo `FIREBASE_PROD_*` (compatibilidad actual).
+> Para producción en `main` el script utiliza prefijo `FIREBASE_MAIN_*`.
 
 > **Nota sobre Storage**: Si en la consola de Firebase el bucket aparece con el dominio `*.firebasestorage.app`, utilice ese valor sin modificarlo. La interfaz convierte automáticamente ese formato al identificador clásico (`*.appspot.com`) al inicializar el SDK para garantizar la compatibilidad con `firebase-storage-compat` y permitir la subida de los PDFs generados.
 
@@ -148,13 +148,13 @@ Además, en Firebase Authentication > Settings > Authorized domains agregue todo
 
 ### Despliegues automáticos (GitHub Actions)
 
-El flujo `.github/workflows/deploy-by-branch.yml` genera `public/firebase-config.js` con el script anterior y despliega por rama (`dev`, `staging`, `main`) usando targets de Hosting distintos.
+El flujo `.github/workflows/deploy-by-branch.yml` genera `public/firebase-config.js` con el script anterior y despliega por rama (`dev`, `staging`, `main`) usando targets de Hosting distintos (`dev`, `stg`, `main`).
 
 Configure los siguientes secretos por entorno en GitHub:
 
 - Dev: `FIREBASE_DEV_API_KEY`, `FIREBASE_DEV_AUTH_DOMAIN`, `FIREBASE_DEV_DATABASE_URL`, `FIREBASE_DEV_PROJECT_ID`, `FIREBASE_DEV_STORAGE_BUCKET`, `FIREBASE_DEV_MESSAGING_SENDER_ID`, `FIREBASE_DEV_APP_ID`
 - Staging: `FIREBASE_STG_API_KEY`, `FIREBASE_STG_AUTH_DOMAIN`, `FIREBASE_STG_DATABASE_URL`, `FIREBASE_STG_PROJECT_ID`, `FIREBASE_STG_STORAGE_BUCKET`, `FIREBASE_STG_MESSAGING_SENDER_ID`, `FIREBASE_STG_APP_ID`
-- Producción: `FIREBASE_PROD_API_KEY`, `FIREBASE_PROD_AUTH_DOMAIN`, `FIREBASE_PROD_DATABASE_URL`, `FIREBASE_PROD_PROJECT_ID`, `FIREBASE_PROD_STORAGE_BUCKET`, `FIREBASE_PROD_MESSAGING_SENDER_ID`, `FIREBASE_PROD_APP_ID`
+- Producción: `FIREBASE_MAIN_API_KEY`, `FIREBASE_MAIN_AUTH_DOMAIN`, `FIREBASE_MAIN_DATABASE_URL`, `FIREBASE_MAIN_PROJECT_ID`, `FIREBASE_MAIN_STORAGE_BUCKET`, `FIREBASE_MAIN_MESSAGING_SENDER_ID`, `FIREBASE_MAIN_APP_ID`
 
 Además se mantiene el secreto de cuenta de servicio `FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_231FD` para publicar en Hosting.
 
