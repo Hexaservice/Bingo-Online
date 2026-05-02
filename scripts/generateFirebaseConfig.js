@@ -11,7 +11,9 @@ const ENV_ALIASES = {
   stg: 'stg',
   stage: 'stg',
   staging: 'stg',
-  main: 'main'
+  main: 'main',
+  prod: 'main',
+  production: 'main'
 };
 
 const REQUIRED_KEYS = [

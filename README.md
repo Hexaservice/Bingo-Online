@@ -116,8 +116,8 @@ Entornos soportados:
 - `dev` → Proyecto Firebase `bingo-online-dev` (número `671201853237`), Hosting target `bingo-online-dev` y base de datos **default** (no `dev-db`)
   - Comportamiento de Hosting: **sirve la app estática del repositorio** (`public/` con rewrite SPA a `/index.html`), no funciona como redirector externo.
 - `stg` → Proyecto Firebase `bingo-online-stg` (número `651184549228`), Hosting target `bingo-online-stg` y base de datos **default** (no `stg-db`)
-- `main` → Producción (Hosting target `bingo-online-231fd` y base de datos default)
-  - Entorno canónico de producción: `main`.
+- `prod` → Producción (Proyecto Firebase `bingo-online-231fd`, Hosting target `prod` y base de datos default)
+  - Convención canónica: la rama `main` despliega al entorno `prod`.
 
 Variables requeridas por entorno (con fallback a versión global sin prefijo):
 
@@ -131,7 +131,7 @@ Variables requeridas por entorno (con fallback a versión global sin prefijo):
 
 > Ejemplo para staging (`<ENV>=STG`): `FIREBASE_STG_DATABASE_URL=https://bingo-online-stg-default-rtdb.firebaseio.com` (base de datos **default**).
 
-> Para producción en `main` el script utiliza prefijo `FIREBASE_MAIN_*`.
+> Para producción (`prod`/`main`) el script utiliza prefijo `FIREBASE_MAIN_*`.
 
 > **Nota sobre Storage**: Si en la consola de Firebase el bucket aparece con el dominio `*.firebasestorage.app`, utilice ese valor sin modificarlo. La interfaz convierte automáticamente ese formato al identificador clásico (`*.appspot.com`) al inicializar el SDK para garantizar la compatibilidad con `firebase-storage-compat` y permitir la subida de los PDFs generados.
 
@@ -149,7 +149,15 @@ Además, en Firebase Authentication > Settings > Authorized domains agregue todo
 
 ### Despliegues automáticos (GitHub Actions)
 
-El flujo `.github/workflows/deploy-by-branch.yml` genera `public/firebase-config.js` con el script anterior y despliega por rama (`dev`, `staging`, `main`) usando targets de Hosting distintos (`dev`, `stg`, `main`).
+El flujo `.github/workflows/deploy-by-branch.yml` genera `public/firebase-config.js` con el script anterior y despliega por rama (`dev`, `staging`, `main`) usando targets de Hosting distintos (`dev`, `stg`, `prod`).
+
+| Branch | Deploy env | Firebase projectId | Hosting target | Secret service account |
+| --- | --- | --- | --- | --- |
+| `dev` | `dev` | `bingo-online-dev` | `dev` | `FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_DEV` |
+| `staging` | `stg` | `bingo-online-stg` | `stg` | `FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_STG` |
+| `main` | `prod` | `bingo-online-231fd` | `prod` | `FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_231FD` |
+
+> ⚠️ No cambiar el `target`/`projectId` de la rama `main` sin un PR de **alto riesgo** con validación explícita de impacto y rollback.
 
 Configure los siguientes secretos por entorno en GitHub:
 
@@ -196,5 +204,4 @@ npm run apply-firebase-mutations -- --files firebase/bingoanimalito/mi-cambio.js
 - El documento `Variablesglobales/Parametros` contiene configuración sensible y se trata como **confidencial**.
 - En `firestore.rules`, su lectura y escritura requieren privilegio fuerte de **Superadmin** (`isStrongSuperadmin()`).
 - La página `public/parametros.html` está diseñada para este mismo nivel de privilegio; usuarios autenticados sin rol fuerte de Superadmin deben recibir denegación de acceso al intentar leer ese documento.
-
 
