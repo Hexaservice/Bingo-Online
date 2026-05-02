@@ -979,24 +979,9 @@
     emitirNotificacion(clave, mensaje, titulo){
       if(!mensaje) return;
       const tituloFinal = titulo || 'Bingo Online';
-      let mostrada = false;
-      if(typeof Notification !== 'undefined' && Notification.permission === 'granted'){
-        try{
-          new Notification(tituloFinal, {
-            body: mensaje,
-            icon: 'img/android-chrome-192x192.png',
-            tag: `${clave}-${Date.now()}`
-          });
-          mostrada = true;
-        }catch(err){
-          console.warn('No se pudo mostrar la notificación del navegador', err);
-        }
-      }
+      // Evita generar notificaciones a nivel de sistema operativo.
+      // Se conserva el canal interno (modal) para no perder avisos dentro de la app.
       this.mostrarModalNotificacion(tituloFinal, mensaje);
-      if(!mostrada){
-        try{ console.warn('Mostrando notificación en modal interno por falta de permiso de navegador'); }
-        catch(err){ console.warn('No se pudo mostrar alerta de notificación', err); }
-      }
     }
 
     notificarRepeticion(clave, mensaje, esNuevo){
