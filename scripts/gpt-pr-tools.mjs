@@ -24,7 +24,7 @@ const [owner, repo] = GITHUB_REPOSITORY.split("/");
 const files = (INPUT_FILES || "").split(",").map(s => s.trim()).filter(Boolean);
 if (files.length === 0) files.push("README.md");
 
-const SUPPORTED_BASES = new Set(["dev", "staging", "main"]);
+const SUPPORTED_BASES = new Set(["dev", "stg", "main"]);
 if (!SUPPORTED_BASES.has(INPUT_BASE)) {
   throw new Error(`INPUT_BASE debe ser una de: ${Array.from(SUPPORTED_BASES).join(", ")}. Valor recibido: "${INPUT_BASE}"`);
 }

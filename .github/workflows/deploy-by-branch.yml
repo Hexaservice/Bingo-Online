@@ -2,7 +2,7 @@ name: Deploy by branch to Firebase Hosting
 
 on:
   push:
-    branches: [dev, staging, main]
+    branches: [dev, stg, main]
 
 permissions:
   contents: read
@@ -53,9 +53,9 @@ jobs:
           target: dev
           channelId: live
 
-  deploy-staging:
+  deploy-stg:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/staging'
+    if: github.ref == 'refs/heads/stg'
     env:
       DEPLOY_ENV: stg
       HAS_FIREBASE_SECRETS: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_STG != '' &&
@@ -77,8 +77,8 @@ jobs:
       - name: Aviso por falta de credenciales
         if: env.HAS_FIREBASE_SECRETS != 'true'
         run: |
-          echo "::warning::No se encontraron todas las credenciales de Firebase necesarias para staging."
-          echo "::warning::Se omite el despliegue automático para la rama staging."
+          echo "::warning::No se encontraron todas las credenciales de Firebase necesarias para stg."
+          echo "::warning::Se omite el despliegue automático para la rama stg."
 
       - uses: actions/checkout@v4
         if: env.HAS_FIREBASE_SECRETS == 'true'

@@ -10,7 +10,6 @@ const ENV_ALIASES = {
   development: 'dev',
   stg: 'stg',
   stage: 'stg',
-  staging: 'stg',
   main: 'main',
   prod: 'main',
   production: 'main'
