@@ -26,7 +26,11 @@ const REQUIRED_KEYS = [
 ];
 
 function parseArgs(argv) {
-  const args = { env: process.env.APP_ENV || process.env.ENV || 'main', output: 'public/firebase-config.js' };
+  const args = {
+    env: process.env.APP_ENV || process.env.ENV || 'main',
+    output: 'public/firebase-config.js',
+    allowGlobalFallback: false
+  };
 
   for (let index = 2; index < argv.length; index += 1) {
     const current = argv[index];
@@ -40,6 +44,11 @@ function parseArgs(argv) {
     if ((current === '--output' || current === '-o') && argv[index + 1]) {
       args.output = argv[index + 1];
       index += 1;
+      continue;
+    }
+
+    if (current === '--allow-global-fallback') {
+      args.allowGlobalFallback = true;
       continue;
     }
 
@@ -57,16 +66,12 @@ function normalizeEnv(rawEnv) {
   return ENV_ALIASES[normalized] || normalized;
 }
 
-function resolveValue(key, envKey) {
-  return process.env[envKey] || process.env[key] || '';
-}
-
 function escapeTemplateValue(value) {
   return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
 function printHelp() {
-  console.log(`Uso:\n  node scripts/generateFirebaseConfig.js --env <dev|stg|main> [--output public/firebase-config.js]\n\nEntornos aceptados:\n  dev\n  stg\n  main (producción)\n  prod / production (compatibilidad retroactiva, se normalizan a main)\n\nVariables requeridas por entorno:\n  FIREBASE_<ENV>_API_KEY\n  FIREBASE_<ENV>_AUTH_DOMAIN\n  FIREBASE_<ENV>_DATABASE_URL\n  FIREBASE_<ENV>_PROJECT_ID\n  FIREBASE_<ENV>_STORAGE_BUCKET\n  FIREBASE_<ENV>_MESSAGING_SENDER_ID\n  FIREBASE_<ENV>_APP_ID\n\nPara producción (main) se buscan variables FIREBASE_MAIN_*.\nTambién acepta fallback sin prefijo de entorno: FIREBASE_API_KEY, FIREBASE_AUTH_DOMAIN, etc.`);
+  console.log(`Uso:\n  node scripts/generateFirebaseConfig.js --env <dev|stg|main> [--output public/firebase-config.js] [--allow-global-fallback]\n\nEntornos aceptados:\n  dev\n  stg\n  main (producción)\n  prod / production (compatibilidad retroactiva, se normalizan a main)\n\nVariables requeridas por entorno:\n  FIREBASE_<ENV>_API_KEY\n  FIREBASE_<ENV>_AUTH_DOMAIN\n  FIREBASE_<ENV>_DATABASE_URL\n  FIREBASE_<ENV>_PROJECT_ID\n  FIREBASE_<ENV>_STORAGE_BUCKET\n  FIREBASE_<ENV>_MESSAGING_SENDER_ID\n  FIREBASE_<ENV>_APP_ID\n\nComportamiento por defecto (estricto):\n  Solo acepta variables FIREBASE_<ENV>_* del entorno seleccionado.\n\nModo opcional para desarrollo local:\n  --allow-global-fallback habilita fallback a FIREBASE_API_KEY, FIREBASE_AUTH_DOMAIN, etc.`);
 }
 
 function main() {
@@ -85,15 +90,19 @@ function main() {
   const prefix = `FIREBASE_${environment.toUpperCase()}_`;
 
   const config = {};
-  const missing = [];
+  const missingEnvVars = [];
 
   for (const key of REQUIRED_KEYS) {
     const suffix = key.replace('FIREBASE_', '');
     const envKey = `${prefix}${suffix}`;
-    const value = resolveValue(key, envKey);
+    let value = process.env[envKey] || '';
+
+    if (!value && args.allowGlobalFallback) {
+      value = process.env[key] || '';
+    }
 
     if (!value) {
-      missing.push(`${envKey} (o fallback ${key})`);
+      missingEnvVars.push(envKey);
     }
 
     const targetKey = suffix
@@ -103,8 +112,15 @@ function main() {
     config[targetKey] = value;
   }
 
-  if (missing.length > 0) {
-    throw new Error(`Faltan variables requeridas para ${environment}:\n- ${missing.join('\n- ')}`);
+  if (missingEnvVars.length > 0) {
+    const modeHint = args.allowGlobalFallback
+      ? 'Nota: el modo --allow-global-fallback está activo, pero aún faltan variables con prefijo del entorno.'
+      : 'Puede habilitar --allow-global-fallback solo para desarrollo local si necesita compatibilidad temporal.';
+
+    throw new Error(
+      `Faltan variables requeridas para el entorno "${environment}".\n` +
+      `Variables esperadas (${prefix}*):\n- ${missingEnvVars.join('\n- ')}\n${modeHint}`
+    );
   }
 
   const outputPath = path.resolve(process.cwd(), args.output);
