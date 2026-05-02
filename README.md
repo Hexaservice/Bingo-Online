@@ -158,6 +158,13 @@ Configure los siguientes secretos por entorno en GitHub:
 
 Además se mantiene el secreto de cuenta de servicio `FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_231FD` para publicar en Hosting.
 
+### Verificación operativa recomendada (dev/main)
+
+- Rama `dev`: ejecutar `npm run generate:firebase-config -- --env dev` y validar que el resultado tenga `projectId: bingo-online-dev` y `databaseURL` apuntando a la base **default** (`https://bingo-online-dev-default-rtdb.firebaseio.com`).
+- Rama `main`: validar que la generación use únicamente variables `FIREBASE_PROD_*`, `projectId: bingo-online-231fd` y `databaseURL` de la base **default** del proyecto productivo.
+- Firebase Auth (proyecto dev): revisar en consola los dominios autorizados `bingo-online-dev.web.app` y `bingo-online-dev.firebaseapp.com`.
+
+
 ## Mutaciones de Firestore por Pull Request (Bingoanimalito)
 
 Para replicar el flujo de cambios auditables vía PR en una base de Firebase, este repositorio incluye:
