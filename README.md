@@ -116,7 +116,7 @@ Entornos soportados:
 - `dev` → Proyecto Firebase `bingo-online-dev` (número `671201853237`), Hosting target `bingo-online-dev` y base de datos **default** (no `dev-db`)
   - Comportamiento de Hosting: **sirve la app estática del repositorio** (`public/` con rewrite SPA a `/index.html`), no funciona como redirector externo.
 - `stg` → Proyecto Firebase `bingo-online-stg` (número `651184549228`), Hosting target `bingo-online-stg` y base de datos **default** (no `stg-db`)
-- `prod` → Producción (Proyecto Firebase `bingo-online-231fd`, Hosting target `prod` y base de datos default)
+- `prod` → Producción (Proyecto Firebase `bingo-online-231fd`, Hosting target `main` y base de datos default)
   - Convención canónica: la rama `main` despliega al entorno `prod`.
 
 Variables requeridas por entorno (con fallback a versión global sin prefijo):
@@ -149,15 +149,17 @@ Además, en Firebase Authentication > Settings > Authorized domains agregue todo
 
 ### Despliegues automáticos (GitHub Actions)
 
-El flujo `.github/workflows/deploy-by-branch.yml` genera `public/firebase-config.js` con el script anterior y despliega por rama (`dev`, `stg`, `main`) usando targets de Hosting distintos (`dev`, `stg`, `prod`).
+El flujo `.github/workflows/deploy-by-branch.yml` genera `public/firebase-config.js` con el script anterior y despliega por rama (`dev`, `stg`, `main`) usando targets de Hosting distintos (`dev`, `stg`, `main`).
 
 | Branch | Deploy env | Firebase projectId | Hosting target | Secret service account |
 | --- | --- | --- | --- | --- |
 | `dev` | `dev` | `bingo-online-dev` | `dev` | `FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_DEV` |
 | `stg` | `stg` | `bingo-online-stg` | `stg` | `FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_STG` |
-| `main` | `prod` | `bingo-online-231fd` | `prod` | `FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_231FD` |
+| `main` | `prod` | `bingo-online-231fd` | `main` | `FIREBASE_SERVICE_ACCOUNT_BINGO_ONLINE_231FD` |
 
 > ⚠️ No cambiar el `target`/`projectId` de la rama `main` sin un PR de **alto riesgo** con validación explícita de impacto y rollback.
+
+> Verificación actual: en `.firebaserc`, el proyecto `bingo-online-231fd` expone el Hosting target `main`, alineado con este flujo.
 
 Configure los siguientes secretos por entorno en GitHub:
 
