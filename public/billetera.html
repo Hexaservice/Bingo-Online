@@ -234,7 +234,7 @@
     #cedula{color:#4B0082;width:110px;max-width:110px;flex:0 0 110px;margin:0;height:38px !important;min-height:38px !important;max-height:38px !important;padding:5px 8px;line-height:1.2;box-sizing:border-box;appearance:none;-webkit-appearance:none;}
     #cedula-wrapper{display:contents;}
     #cedula-tipo{
-      justify-self:end;
+      justify-self:start;
       align-self:center;
       width:44px !important;
       min-width:44px;
@@ -246,6 +246,8 @@
       border-right:none;
       height:38px;
       box-sizing:border-box;
+      background:#fff;
+      border:1px solid #ccc;
     }
     #cedula{
       justify-self:start;
@@ -688,18 +690,17 @@
     }
 
     function descomponerCedula(valor){
-      const texto=(valor||'').toString().trim().toUpperCase();
-      if(!texto) return { tipo:'V', numero:'' };
-      const primer=texto.charAt(0);
-      if((primer==='V' || primer==='J') && texto.length>1){
-        return { tipo:primer, numero:texto.slice(1).replace(/\D/g,'') };
-      }
-      return { tipo:'V', numero:texto.replace(/\D/g,'') };
+      const limpio=(valor||'').toString().trim().toUpperCase();
+      const match=limpio.match(/^([VJ])[-\s]?([0-9]+)$/);
+      if(match) return { tipo:match[1], numero:match[2] };
+      return { tipo:'V', numero:limpio.replace(/\D/g,'') };
     }
 
-    function construirCedulaGuardado(_tipo,numero){
+    function construirCedulaGuardado(tipo,numero){
       const numeroNormalizado=(numero||'').toString().replace(/\D/g,'').trim();
-      return numeroNormalizado||'';
+      if(!numeroNormalizado) return '';
+      const tipoNormalizado=((tipo||'V').toString().trim().charAt(0)||'V').toUpperCase()==='J'?'J':'V';
+      return `${tipoNormalizado}${numeroNormalizado}`;
     }
 
     function actualizarPlaceholderCedula(){
