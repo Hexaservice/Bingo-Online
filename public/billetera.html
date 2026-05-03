@@ -2390,13 +2390,12 @@
           if(monto>disponibles){
             throw new Error('CREDITOS_INSUFICIENTES');
           }
-          const transaccionesUsuarioQuery=db.collection('transacciones')
-            .where('IDbilletera','==',user.email);
-          const transaccionesUsuarioSnap=await tx.get(transaccionesUsuarioQuery);
-          const retirosPendientes=(transaccionesUsuarioSnap?.docs||[]).filter(doc=>{
-            const transaccion=doc.data()||{};
-            return transaccion.tipotrans==='retiro' && transaccion.estado==='PENDIENTE';
-          }).length;
+          const retirosPendientesQuery=db.collection('transacciones')
+            .where('IDbilletera','==',user.email)
+            .where('tipotrans','==','retiro')
+            .where('estado','==','PENDIENTE');
+          const retirosPendientesSnap=await tx.get(retirosPendientesQuery);
+          const retirosPendientes=retirosPendientesSnap?.size||0;
           if(retirosPendientes>=3){
             throw new Error('MAX_RETIROS_PENDIENTES');
           }
