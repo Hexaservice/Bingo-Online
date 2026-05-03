@@ -457,8 +457,12 @@
         </select>
       </div>
       <div id="datos-pm">
-        <div class="campo">
-          <input type="text" id="cedula" placeholder="Cédula" inputmode="numeric">
+        <div class="campo" id="cedula-wrapper" style="display:flex;gap:8px;align-items:center;">
+          <select id="cedula-tipo" aria-label="Tipo de documento" style="max-width:72px;">
+            <option value="V" selected>V</option>
+            <option value="J">J</option>
+          </select>
+          <input type="text" id="cedula" placeholder="Cédula" inputmode="numeric" style="flex:1;">
         </div>
         <div class="campo">
           <input type="text" id="pagomovil" placeholder="Número Pago móvil" inputmode="tel">
@@ -658,12 +662,40 @@
       }
     }
 
+    function descomponerCedula(valor){
+      const texto=(valor||'').toString().trim().toUpperCase();
+      if(!texto) return { tipo:'V', numero:'' };
+      const primer=texto.charAt(0);
+      if((primer==='V' || primer==='J') && texto.length>1){
+        return { tipo:primer, numero:texto.slice(1).replace(/\D/g,'') };
+      }
+      return { tipo:'V', numero:texto.replace(/\D/g,'') };
+    }
+
+    function construirCedulaGuardado(tipo,numero){
+      const tipoNormalizado=(tipo||'V').toString().trim().toUpperCase()==='J'?'J':'V';
+      const numeroNormalizado=(numero||'').toString().replace(/\D/g,'').trim();
+      return numeroNormalizado?`${tipoNormalizado}${numeroNormalizado}`:'';
+    }
+
+    function actualizarPlaceholderCedula(){
+      const tipo=(document.getElementById('cedula-tipo')?.value||'V').toUpperCase();
+      const cedulaTipoInput=document.getElementById('cedula-tipo');
+      const cedulaInput=document.getElementById('cedula');
+      if(!cedulaInput) return;
+      cedulaInput.placeholder=tipo==='J'?'NIT/RIF':'Cédula';
+    }
+
     function aplicarDatosBilleteraEnPantalla(data){
       const datos=data||{};
       actualizarResumenCreditos(datos);
       document.getElementById('cartones-valor').textContent = datos.CartonesGratis || 0;
       const cedulaEl=document.getElementById('cedula');
-      cedulaEl.value=normalizarSoloNumeros(datos.cedula);
+      const cedulaTipoEl=document.getElementById('cedula-tipo');
+      const cedulaDescompuesta=descomponerCedula(datos.cedula);
+      if(cedulaTipoEl) cedulaTipoEl.value=cedulaDescompuesta.tipo;
+      cedulaEl.value=cedulaDescompuesta.numero;
+      actualizarPlaceholderCedula();
       const pagomovilEl=document.getElementById('pagomovil');
       pagomovilEl.value=normalizarPagoMovil(datos.pagomovil);
       document.getElementById('banco').value = datos.banco || '';
@@ -949,6 +981,8 @@
     limitarSoloNumeros(document.getElementById('cuenta'));
     limitarSoloNumeros(document.getElementById('cedula'));
     limitarPagoMovil(document.getElementById('pagomovil'));
+    document.getElementById('cedula-tipo')?.addEventListener('change',actualizarPlaceholderCedula);
+    actualizarPlaceholderCedula();
 
     function actualizarOpcionPagoFiltro(rol){
       const filtroTipoSelect = document.getElementById('filtro-tipo');
@@ -1034,12 +1068,13 @@
       const user = auth.currentUser;
       const bancoSelect=document.getElementById('banco');
       const cuentaInput=document.getElementById('cuenta');
+      const cedulaTipoInput=document.getElementById('cedula-tipo');
       const cedulaInput=document.getElementById('cedula');
       const pagoMovilInput=document.getElementById('pagomovil');
       const cuentaToggle=document.getElementById('cuenta-toggle');
       const tipoCuentaSeleccionada=document.querySelector('input[name="tipo-cuenta"]:checked');
       const data = {
-        cedula: cedulaInput.value.trim(),
+        cedula: construirCedulaGuardado(cedulaTipoInput?.value, cedulaInput.value),
         pagomovil: pagoMovilInput.value.trim(),
         banco: bancoSelect.value,
       };
@@ -1048,8 +1083,7 @@
         data.tipoCuenta=tipoCuentaSeleccionada?.value || '';
       }
       if(!data.banco){ alert('Seleccione su banco'); bancoSelect.focus(); return; }
-      if(!data.cedula){ alert('Ingrese su cédula'); cedulaInput.focus(); return; }
-      if(!/^\d+$/.test(data.cedula)){ alert('La cédula solo debe contener números'); cedulaInput.focus();return; }
+      if(!data.cedula){ alert('Ingrese su cédula o NIT/RIF'); cedulaInput.focus(); return; }
       if(!data.pagomovil){ alert('Ingrese su número de pago móvil'); pagoMovilInput.focus(); return; }
       if(!/^\+?\d+$/.test(data.pagomovil)){ alert('El pago móvil solo debe contener números y puede iniciar con +'); pagoMovilInput.focus(); return; }
       if(cuentaToggle.checked){
@@ -1241,7 +1275,7 @@
 
     const PASOS_MIS_DATOS = [
       { id:'banco-select', elementId:'banco', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Elige el Banco que usas', color:'#0b4c8c', requisitoTab:null },
-      { id:'cedula-input', elementId:'cedula', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Escribe tu número de Cédula', color:'#4b0082', requisitoTab:null },
+      { id:'cedula-input', elementId:'cedula', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Escribe tu número de Cédula o NIT/RIF', color:'#4b0082', requisitoTab:null },
       { id:'pago-movil', elementId:'pagomovil', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Escribe tu número usado para tus pagos moviles', color:'#e67e22', requisitoTab:null },
       { id:'cuenta-toggle', elementId:'cuenta-toggle', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Si marcas esta casilla puedes agregar tus datos de Cuenta bancaria para tener mas opciones al recibir los montos de premios', color:'#0b4c8c', requisitoTab:null },
       { id:'cuenta-input', elementId:'cuenta', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Escribe el número completo de tu cuenta bancaria', color:'#0a8800', requisitoTab:null },
