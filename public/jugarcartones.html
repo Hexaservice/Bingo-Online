@@ -427,6 +427,16 @@
       font-weight:600;
       color:#00204a;
     }
+    .datos-bancarios-input{
+      width:100%;
+      border:2px solid #90caf9;
+      border-radius:10px;
+      padding:10px 12px;
+      font-weight:700;
+      color:#0b1b4d;
+      background:#fff;
+      text-align:left;
+    }
     .datos-bancarios-boton{
       font-family:'Bangers',cursive;
       font-size:clamp(1rem,3.2vw,1.3rem);
@@ -1124,8 +1134,13 @@
       <div class="datos-bancarios-card" role="document">
           <span class="datos-bancarios-icono" aria-hidden="true">⚠️</span>
           <h2 id="datos-bancarios-titulo" class="datos-bancarios-titulo">DATOS BANCARIOS REQUERIDOS</h2>
-          <p class="datos-bancarios-mensaje">Antes de poder solicitar JUGAR CARTÓN o solicitud de recargas debes guardar tus datos bancarios.</p>
-          <button type="button" id="datos-bancarios-ir" class="datos-bancarios-boton">GUARDAR DATOS BANCARIOS</button>
+          <p class="datos-bancarios-mensaje">Para jugar debes registrar ahora tu banco, cédula y pago móvil.</p>
+          <select id="datos-bancarios-banco" class="datos-bancarios-input">
+            <option value="">Selecciona tu banco</option>
+          </select>
+          <input id="datos-bancarios-cedula" class="datos-bancarios-input" type="text" placeholder="Cédula" inputmode="numeric" maxlength="12">
+          <input id="datos-bancarios-pagomovil" class="datos-bancarios-input" type="text" placeholder="Número de pago móvil" inputmode="tel" maxlength="16">
+          <button type="button" id="datos-bancarios-guardar" class="datos-bancarios-boton">GUARDAR PAGO MÓVIL</button>
       </div>
   </div>
   <div id="creditos-modal" aria-hidden="true">
@@ -1249,7 +1264,10 @@
   let creditosDisponiblesActuales=0;
   let creditosRetenidosActuales=0;
   const datosBancariosModal=document.getElementById('datos-bancarios-modal');
-  const datosBancariosIrBtn=document.getElementById('datos-bancarios-ir');
+  const datosBancariosGuardarBtn=document.getElementById('datos-bancarios-guardar');
+  const datosBancariosBancoInput=document.getElementById('datos-bancarios-banco');
+  const datosBancariosCedulaInput=document.getElementById('datos-bancarios-cedula');
+  const datosBancariosPagoMovilInput=document.getElementById('datos-bancarios-pagomovil');
   const creditosModal=document.getElementById('creditos-modal');
   const creditosModalDisponibles=document.getElementById('creditos-modal-disponibles');
   const creditosModalRetenidos=document.getElementById('creditos-modal-retenidos');
@@ -2896,11 +2914,10 @@
   }
   function mostrarModalDatosBancarios(){
     if(!datosBancariosModal) return;
+    cargarBancosModalDatosBancarios();
     datosBancariosModal.classList.add('visible');
     datosBancariosModal.setAttribute('aria-hidden','false');
-    if(datosBancariosIrBtn){
-      datosBancariosIrBtn.focus();
-    }
+    if(datosBancariosBancoInput) datosBancariosBancoInput.focus();
   }
 
   function cerrarModalDatosBancarios(){
@@ -2909,14 +2926,43 @@
     datosBancariosModal.setAttribute('aria-hidden','true');
   }
 
-  if(datosBancariosIrBtn){
-    datosBancariosIrBtn.addEventListener('click',()=>{
+  async function cargarBancosModalDatosBancarios(){
+    if(!datosBancariosBancoInput || datosBancariosBancoInput.options.length>1) return;
+    try{
+      const snap=await db.collection('Bancos').get();
+      snap.forEach(doc=>{
+        const nombre=(doc.data()?.nombre||doc.id||'').toString().trim();
+        if(!nombre) return;
+        const op=document.createElement('option');
+        op.value=nombre;
+        op.textContent=nombre;
+        datosBancariosBancoInput.appendChild(op);
+      });
+    }catch(error){
+      console.warn('No se pudo cargar bancos para modal de pago móvil',error);
+    }
+  }
+  if(datosBancariosGuardarBtn){
+    datosBancariosGuardarBtn.addEventListener('click',async ()=>{
+      const banco=(datosBancariosBancoInput?.value||'').trim();
+      const cedula=(datosBancariosCedulaInput?.value||'').replace(/\D/g,'').trim();
+      const pagomovil=(datosBancariosPagoMovilInput?.value||'').replace(/\D/g,'').trim();
+      if(!banco){ mostrarCartonAviso('Selecciona tu banco.'); datosBancariosBancoInput?.focus(); return; }
+      if(!cedula){ mostrarCartonAviso('Ingresa tu cédula.'); datosBancariosCedulaInput?.focus(); return; }
+      if(!pagomovil){ mostrarCartonAviso('Ingresa tu número de pago móvil.'); datosBancariosPagoMovilInput?.focus(); return; }
       try{
-        sessionStorage.setItem('abrirDatosBancarios','1');
+        const user=auth.currentUser;
+        if(!user) return;
+        await db.collection('Billetera').doc(user.email).set({ banco, cedula, pagomovil, actualizadoEn: firebase.firestore.FieldValue.serverTimestamp() },{merge:true});
+        if(!billeteraDatosCache) billeteraDatosCache={};
+        Object.assign(billeteraDatosCache,{banco,cedula,pagomovil});
+        datosBancariosCompletos=true;
+        cerrarModalDatosBancarios();
+        await confirmarCompra();
       }catch(error){
-        console.warn('No se pudo establecer la indicación para abrir datos bancarios',error);
+        console.error('Error guardando datos de pago móvil',error);
+        mostrarCartonAviso('No se pudieron guardar los datos, intenta nuevamente.');
       }
-      window.location.href='billetera.html';
     });
   }
   if(datosBancariosModal){
