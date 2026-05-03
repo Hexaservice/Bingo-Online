@@ -543,7 +543,7 @@
         const monto=formatearMonto(montoNum);
         const tr=document.createElement('tr');
         const refValue=refCookies[t.id]!==undefined?refCookies[t.id]:(t.referencia||'');
-        tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;text-align:left;direction:ltr;unicode-bidi:plaintext;' contenteditable='false' inputmode='numeric'>${refValue}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
+        tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;text-align:center;direction:ltr;unicode-bidi:plaintext;' contenteditable='false' inputmode='numeric'>${refValue}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
         const estadoTd=tr.children[6];
         if(t.estado==='ANULADO'){
           tr.classList.add('anulado');
@@ -562,8 +562,25 @@
         refTd.dataset.original=t.referencia||'';
         chk.addEventListener('change',actualizarEditable);
         refTd.addEventListener('input',()=>{
-          refTd.textContent=refTd.textContent.replace(/[^0-9]/g,'').slice(0,5);
-          const nuevo=refTd.textContent.trim();
+          const textoActual=(refTd.textContent||'');
+          const posicionCursor=window.getSelection && window.getSelection().rangeCount
+            ? window.getSelection().getRangeAt(0).startOffset
+            : textoActual.length;
+          const textoNormalizado=textoActual.replace(/[^0-9]/g,'').slice(0,5);
+          if(textoNormalizado!==textoActual){
+            refTd.textContent=textoNormalizado;
+            const sel=window.getSelection && window.getSelection();
+            if(sel){
+              const rango=document.createRange();
+              const nodo=refTd.firstChild || refTd;
+              const limite=Math.max(0,Math.min(posicionCursor,textoNormalizado.length));
+              rango.setStart(nodo,limite);
+              rango.collapse(true);
+              sel.removeAllRanges();
+              sel.addRange(rango);
+            }
+          }
+          const nuevo=textoNormalizado.trim();
           refCookies[t.id]=nuevo;
           saveRefCookies();
         });
