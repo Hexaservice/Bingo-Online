@@ -2390,14 +2390,6 @@
           if(monto>disponibles){
             throw new Error('CREDITOS_INSUFICIENTES');
           }
-          const transaccionesPendientesQuery=db.collection('transacciones')
-            .where('IDbilletera','==',user.email)
-            .where('tipotrans','==','retiro')
-            .where('estado','==','PENDIENTE');
-          const pendientesSnap=await tx.get(transaccionesPendientesQuery);
-          if((pendientesSnap?.size||0)>=3){
-            throw new Error('MAX_RETIROS_PENDIENTES');
-          }
           const nuevoTransito=transitoActual+monto;
           if(!data.bancoreceptor){
             data.bancoreceptor=bancoSeleccionado;
@@ -2408,9 +2400,6 @@
       }catch(error){
         if(error?.message==='CREDITOS_INSUFICIENTES'){
           throw new Error('CREDITOS_INSUFICIENTES');
-        }
-        if(error?.message==='MAX_RETIROS_PENDIENTES'){
-          throw new Error('MAX_RETIROS_PENDIENTES');
         }
         console.error('No se pudo registrar el retiro',error);
         throw error;
@@ -2447,8 +2436,6 @@
         if(error?.message==='CREDITOS_INSUFICIENTES'){
           await refrescarResumenBilletera();
           await mostrarAlertaModal('El saldo disponible cambió. Inténtalo nuevamente.');
-        }else if(error?.message==='MAX_RETIROS_PENDIENTES'){
-          await mostrarAlertaModal('⚠️ Tienes un maximo de 3 solicitudes de RETIRO debes esperar que sean gestionadas');
         }else{
           await mostrarAlertaModal('No se pudo registrar la solicitud de retiro. Inténtalo nuevamente.');
         }
