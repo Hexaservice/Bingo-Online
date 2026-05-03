@@ -721,6 +721,22 @@
           });
         }
 
+        if(billeteraId && estado==='APROBADO' && esRetiro && !estadoEsAprobado(data.estado)){
+          const billeteraRef=db.collection('Billetera').doc(billeteraId);
+          await db.runTransaction(async t=>{
+            const bdoc=await t.get(billeteraRef);
+            const billeteraData=bdoc.exists?(bdoc.data()||{}):{};
+            const montoTransaccion=toNumberSafe((data.MontoSolicitado ?? data.Monto),0);
+            const creditosActual=Math.max(0,toNumberSafe(billeteraData.creditos,0));
+            const transitoActual=Math.max(0,toNumberSafe(billeteraData.creditostransito,0));
+            const payload={
+              creditos: Math.max(0,creditosActual-montoTransaccion),
+              creditostransito: Math.max(0,transitoActual-montoTransaccion)
+            };
+            t.set(billeteraRef,payload,{merge:true});
+          });
+        }
+
         if(billeteraId && estado==='APROBADO' && esRecarga && !estadoEsAprobado(data.estado)){
           const billeteraRef=db.collection('Billetera').doc(billeteraId);
           await db.runTransaction(async t=>{
