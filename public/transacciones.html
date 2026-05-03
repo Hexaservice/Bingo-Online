@@ -82,6 +82,26 @@
       border-top:8px solid red;
       border-right:8px solid transparent;
     }
+
+    .copy-highlight-row td{background:#fff2d9 !important;}
+    .copy-field-btn{margin-left:8px;border:1px solid #ccc;border-radius:4px;background:#f7f7f7;cursor:pointer;font-size:0.85rem;line-height:1;padding:2px 6px;}
+    .clipboard-toast{
+      position:fixed;
+      left:50%;
+      bottom:18px;
+      transform:translateX(-50%);
+      background:rgba(0,0,0,0.85);
+      color:#fff;
+      padding:12px 14px;
+      border-radius:8px;
+      font-family:Calibri, Arial, sans-serif;
+      font-size:0.95rem;
+      font-weight:bold;
+      text-align:left;
+      white-space:pre-line;
+      z-index:9999;
+      box-shadow:0 3px 10px rgba(0,0,0,0.3);
+    }
   </style>
   <link rel="stylesheet" href="css/desktopFrame.css">
 </head>
@@ -216,6 +236,8 @@
     let refCookies=loadRefCookies();
     let mostrarRecArch=false;
     let mostrarRetArch=false;
+    let retiroFilaCopiadaId=null;
+    let clipboardToastTimeout=null;
 
     function normalizarTipoOperacion(transaccion){
       const tipo=(transaccion.tipotrans||'').toLowerCase();
@@ -370,6 +392,68 @@
       const interna=transaccion && transaccion.notificacionInterna ? transaccion.notificacionInterna : {};
       return Boolean((interna && interna.aceptada) || transaccion.mensajeLeido===true);
     }
+    async function copiarAlPortapapeles(texto){
+      const valor=(texto??'').toString();
+      if(!valor) return false;
+      try{
+        if(navigator.clipboard && window.isSecureContext){
+          await navigator.clipboard.writeText(valor);
+          return true;
+        }
+      }catch(err){
+        console.warn('No se pudo copiar con API clipboard, se intentará fallback', err);
+      }
+      const textarea=document.createElement('textarea');
+      textarea.value=valor;
+      textarea.setAttribute('readonly','');
+      textarea.style.position='fixed';
+      textarea.style.left='-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      const ok=document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return ok;
+    }
+    function primerosCuatroBanco(valorBanco){
+      return ((valorBanco||'').toString().trim()).slice(0,4);
+    }
+    function limpiarResaltadoFilaCopiada(){
+      if(!retiroFilaCopiadaId) return;
+      const filaAnterior=document.querySelector(`#tabla-retiros tbody tr[data-id="${retiroFilaCopiadaId}"]`);
+      filaAnterior?.classList.remove('copy-highlight-row');
+      retiroFilaCopiadaId=null;
+    }
+    function mostrarToastClipboard(mensaje){
+      const existente=document.getElementById('clipboard-toast');
+      if(existente) existente.remove();
+      if(clipboardToastTimeout){
+        clearTimeout(clipboardToastTimeout);
+        clipboardToastTimeout=null;
+      }
+      const toast=document.createElement('div');
+      toast.id='clipboard-toast';
+      toast.className='clipboard-toast';
+      toast.textContent=mensaje;
+      document.body.appendChild(toast);
+      clipboardToastTimeout=setTimeout(()=>{
+        toast.remove();
+      },3000);
+    }
+    async function copiarDatosCompletosRetiro(t,fila){
+      if(!t || (t.estado||'').toString().toUpperCase()!=='PENDIENTE') return;
+      const banco4=primerosCuatroBanco(t.bancoreceptor);
+      const cedula=(t.cedula||'').toString().trim();
+      const pagoMovil=(t.pagomovil||'').toString().trim();
+      const monto=formatearMonto(t.Monto);
+      const bloque=`${banco4}\n${cedula}\n${pagoMovil}\n${monto}`;
+      const copiado=await copiarAlPortapapeles(bloque);
+      if(!copiado) return;
+      limpiarResaltadoFilaCopiada();
+      fila.classList.add('copy-highlight-row');
+      retiroFilaCopiadaId=t.id;
+      mostrarToastClipboard(`Copiados al Portapapeles:\nBanco: ${banco4}\nDocumento: ${cedula}\nN° P. Movil: ${pagoMovil}\nMonto: ${monto}`);
+    }
+
     async function mostrarInfoGmail(mail){
       const overlay=document.createElement('div');
       Object.assign(overlay.style,{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center'});
@@ -387,13 +471,24 @@
       box.innerHTML = `
         <div><span style="color:black;">Nombre:</span> <span style="color:#555;">${u.name||''}</span></div>
         <div><span style="color:black;">Alias:</span> <span style="color:#006400;">${u.alias||''}</span></div>
-        <div><span style="color:black;">Cédula:</span> <span style="color:#FF8C00;">${b.cedula||''}</span></div>
-        <div><span style="color:black;">Pago Movil:</span> <span style="color:#0000FF;">${b.pagomovil||''}</span></div>
-        <div><span style="color:black;">Banco:</span> <span style="color:#800080;">${b.banco||''}</span></div>
+        <div><span style="color:black;">Cédula:</span> <span style="color:#FF8C00;">${b.cedula||''}</span><button type="button" class="copy-field-btn" data-copy-value="${b.cedula||''}" title="Copiar cédula">📋</button></div>
+        <div><span style="color:black;">Pago Movil:</span> <span style="color:#0000FF;">${b.pagomovil||''}</span><button type="button" class="copy-field-btn" data-copy-value="${b.pagomovil||''}" title="Copiar pago móvil">📋</button></div>
+        <div><span style="color:black;">Banco:</span> <span style="color:#800080;">${b.banco||''}</span><button type="button" class="copy-field-btn" data-copy-value="${primerosCuatroBanco(b.banco)}" title="Copiar banco (4 primeros)">📋</button></div>
         <div><span style="color:black;">Cuenta:</span> <span style="color:#A52A2A;">${b.cuenta||''}</span></div>
         <div><span style="color:black;">Créditos:</span> <span style="color:#800080;">${b.creditos||0}</span></div>
         <div><span style="color:black;">Cartones gratis:</span> <span style="color:#008000;">${b.CartonesGratis||0}</span></div>
       `;
+      box.addEventListener('click',async (event)=>{
+        const boton=event.target.closest('.copy-field-btn');
+        if(!boton) return;
+        event.stopPropagation();
+        const valor=boton.dataset.copyValue||'';
+        const ok=await copiarAlPortapapeles(valor);
+        if(ok){
+          boton.textContent='✅';
+          setTimeout(()=>{boton.textContent='📋';},800);
+        }
+      });
       const btn=document.createElement('button');
       btn.textContent='Cerrar';
       btn.addEventListener('click',()=>document.body.removeChild(overlay));
@@ -512,6 +607,8 @@
         const mailTd=tr.children[2];
         mailTd.style.cursor='pointer';
         mailTd.addEventListener('click',()=>mostrarInfoGmail(t.IDbilletera));
+        const bancoTd=tr.children[3];
+        bancoTd.addEventListener('click',()=>copiarDatosCompletosRetiro(t,tr));
         const fechaTd=tr.children[5];
         fechaTd.style.cursor='pointer';
         fechaTd.addEventListener('click',()=>mostrarDatosTransaccion(t));
@@ -543,7 +640,8 @@
         const monto=formatearMonto(montoNum);
         const tr=document.createElement('tr');
         const refValue=refCookies[t.id]!==undefined?refCookies[t.id]:(t.referencia||'');
-        tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;text-align:center;direction:ltr;unicode-bidi:plaintext;' contenteditable='false' inputmode='numeric'>${refValue}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
+        tr.dataset.id=t.id;
+        tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td class='bank-copy-cell' style='cursor:pointer;'>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;text-align:center;direction:ltr;unicode-bidi:plaintext;' contenteditable='false' inputmode='numeric'>${refValue}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
         const estadoTd=tr.children[6];
         if(t.estado==='ANULADO'){
           tr.classList.add('anulado');
