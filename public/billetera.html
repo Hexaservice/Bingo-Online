@@ -231,7 +231,21 @@
     #banco,#cuenta,#cedula,#pagomovil{font-weight:bold;background:#fff !important;}
     #banco{color:#00008B;width:100%;box-sizing:border-box;}
     #cuenta{color:#006400;width:100%;box-sizing:border-box;}
-    #cedula{color:#4B0082;}
+    #cedula{color:#4B0082;width:190px;max-width:190px;flex:0 0 190px;margin:5px 0;}
+    #cedula-wrapper{display:flex;align-items:center;justify-content:center;gap:0;width:260px;}
+    #cedula-tipo{
+      width:44px !important;
+      min-width:44px;
+      max-width:44px;
+      padding:5px 2px;
+      margin:5px 0;
+      text-align:center;
+      border-radius:6px 0 0 6px;
+      border-right:none;
+    }
+    #cedula-wrapper #cedula{
+      border-radius:0 6px 6px 0;
+    }
     #pagomovil{color:#FF8C00;}
     .campo{display:flex;flex-direction:column;align-items:center;width:260px;margin:0 auto;}
     .cuenta-opcional{display:flex;align-items:center;gap:8px;width:100%;justify-content:center;}
@@ -457,12 +471,12 @@
         </select>
       </div>
       <div id="datos-pm">
-        <div class="campo" id="cedula-wrapper" style="display:flex;gap:8px;align-items:center;">
-          <select id="cedula-tipo" aria-label="Tipo de documento" style="max-width:72px;">
+        <div class="campo" id="cedula-wrapper">
+          <select id="cedula-tipo" aria-label="Tipo de documento">
             <option value="V" selected>V</option>
             <option value="J">J</option>
           </select>
-          <input type="text" id="cedula" placeholder="Cédula" inputmode="numeric" style="flex:1;">
+          <input type="text" id="cedula" placeholder="Cédula" inputmode="numeric">
         </div>
         <div class="campo">
           <input type="text" id="pagomovil" placeholder="Número Pago móvil" inputmode="tel">
@@ -672,10 +686,9 @@
       return { tipo:'V', numero:texto.replace(/\D/g,'') };
     }
 
-    function construirCedulaGuardado(tipo,numero){
-      const tipoNormalizado=(tipo||'V').toString().trim().toUpperCase()==='J'?'J':'V';
+    function construirCedulaGuardado(_tipo,numero){
       const numeroNormalizado=(numero||'').toString().replace(/\D/g,'').trim();
-      return numeroNormalizado?`${tipoNormalizado}${numeroNormalizado}`:'';
+      return numeroNormalizado||'';
     }
 
     function actualizarPlaceholderCedula(){

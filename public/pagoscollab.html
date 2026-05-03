@@ -581,6 +581,10 @@
       netoEl.value = neto > 0 ? neto.toFixed(2) : '';
     }
 
+    function normalizarCedulaNumerica(valor){
+      return (valor||'').toString().replace(/\D/g,'').trim();
+    }
+
     function cargarBancosColaborador(){
       db.collection('Bancos').where('estado','==','Activo').onSnapshot(snap => {
         const selectBanco = document.getElementById('banco');
@@ -811,7 +815,7 @@
         banco: document.getElementById('banco').value,
         cuenta: document.getElementById('cuenta').value.trim(),
         tipoCuenta: document.querySelector('input[name="tipo-cuenta"]:checked')?.value || '',
-        cedula: document.getElementById('cedula').value.trim(),
+        cedula: normalizarCedulaNumerica(document.getElementById('cedula').value),
         pagomovil: document.getElementById('pagomovil').value.trim(),
         creditos: billeteraActual.creditos,
         CartonesGratis: billeteraActual.cartonesGratis || 0
@@ -910,7 +914,7 @@
               banco: datos.banco || '',
               cuenta: datos.cuenta || '',
               tipoCuenta: datos.tipoCuenta || '',
-              cedula: datos.cedula || '',
+              cedula: normalizarCedulaNumerica(datos.cedula || ''),
               pagomovil: datos.pagomovil || ''
             };
             actualizarCreditos(billeteraActual.creditos);
