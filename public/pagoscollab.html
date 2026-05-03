@@ -220,12 +220,25 @@
     }
     #datos-pm .campo {
       flex: 1 0 120px;
-      max-width: 150px;
+      max-width: 200px;
       width: auto;
       margin: 0;
     }
+    #cedula-wrapper{display:flex;align-items:center;justify-content:center;gap:0;max-width:200px;}
+    #cedula-tipo{width:44px;min-width:44px;max-width:44px;height:38px;padding:5px 2px;text-align:center;border-radius:6px 0 0 6px;border-right:none;box-sizing:border-box;margin:5px 0;}
+    #cedula-wrapper #cedula{border-radius:0 6px 6px 0;}
     #datos-pm .campo input {
       width: 100%;
+      height: 38px;
+      padding: 5px 8px;
+      line-height: 1.2;
+      box-sizing: border-box;
+    }
+    #cedula {
+      max-width: 150px;
+    }
+    #pagomovil {
+      max-width: 200px;
     }
     select, input, textarea {
       font-size: 1rem;
@@ -416,7 +429,11 @@
         <label><input type="radio" name="tipo-cuenta" value="Corriente"> Corriente</label>
       </div>
       <div id="datos-pm">
-        <div class="campo">
+        <div class="campo" id="cedula-wrapper">
+          <select id="cedula-tipo" aria-label="Tipo de documento">
+            <option value="V" selected>V</option>
+            <option value="J">J</option>
+          </select>
           <input type="text" id="cedula" placeholder="Cédula" inputmode="numeric">
         </div>
         <div class="campo">
@@ -583,6 +600,27 @@
 
     function normalizarCedulaNumerica(valor){
       return (valor||'').toString().replace(/\D/g,'').trim();
+    }
+
+    function descomponerCedula(valor){
+      const limpio=(valor||'').toString().trim().toUpperCase();
+      const match=limpio.match(/^([VJ])[-\s]?([0-9]+)$/);
+      if(match) return {tipo:match[1],numero:match[2]};
+      return {tipo:'V',numero:normalizarCedulaNumerica(limpio)};
+    }
+
+    function construirCedulaGuardado(tipo,numero){
+      const num=normalizarCedulaNumerica(numero);
+      if(!num) return '';
+      const t=((tipo||'V').toString().trim().charAt(0)||'V').toUpperCase()==='J'?'J':'V';
+      return `${t}-${num}`;
+    }
+
+    function actualizarPlaceholderCedula(){
+      const tipo=(document.getElementById('cedula-tipo')?.value||'V').toUpperCase();
+      const cedulaInput=document.getElementById('cedula');
+      if(!cedulaInput) return;
+      cedulaInput.placeholder=tipo==='J'?'NIT/RIF':'Cédula';
     }
 
     function cargarBancosColaborador(){
@@ -815,13 +853,13 @@
         banco: document.getElementById('banco').value,
         cuenta: document.getElementById('cuenta').value.trim(),
         tipoCuenta: document.querySelector('input[name="tipo-cuenta"]:checked')?.value || '',
-        cedula: normalizarCedulaNumerica(document.getElementById('cedula').value),
+        cedula: construirCedulaGuardado(document.getElementById('cedula-tipo')?.value, document.getElementById('cedula').value),
         pagomovil: document.getElementById('pagomovil').value.trim(),
         creditos: billeteraActual.creditos,
         CartonesGratis: billeteraActual.cartonesGratis || 0
       };
       if(!data.cedula){ alert('Ingrese su cédula'); document.getElementById('cedula').focus(); return; }
-      if(!/^\d+$/.test(data.cedula)){ alert('La cédula solo debe contener números'); document.getElementById('cedula').focus(); return; }
+      if(!/^[VJ]-\d+$/.test(data.cedula)){ alert('La cédula debe tener formato V-12345678 o J-12345678'); document.getElementById('cedula').focus(); return; }
       if(!data.pagomovil){ alert('Ingrese su número de pago móvil'); document.getElementById('pagomovil').focus(); return; }
       if(!/^\d+$/.test(data.pagomovil)){ alert('El pago móvil solo debe contener números'); document.getElementById('pagomovil').focus(); return; }
       if(!data.banco){ alert('Seleccione su banco'); document.getElementById('banco').focus(); return; }
@@ -838,6 +876,9 @@
         alert('Ocurrió un error al guardar los datos.');
       }
     });
+
+    document.getElementById('cedula-tipo')?.addEventListener('change', actualizarPlaceholderCedula);
+    actualizarPlaceholderCedula();
 
     document.getElementById('filtro-tipo').addEventListener('change', filtrarPagos);
     document.getElementById('filtro-monto').addEventListener('input', filtrarPagos);
@@ -914,11 +955,14 @@
               banco: datos.banco || '',
               cuenta: datos.cuenta || '',
               tipoCuenta: datos.tipoCuenta || '',
-              cedula: normalizarCedulaNumerica(datos.cedula || ''),
+              cedula: (datos.cedula || '').toString().trim(),
               pagomovil: datos.pagomovil || ''
             };
             actualizarCreditos(billeteraActual.creditos);
-            document.getElementById('cedula').value = billeteraActual.cedula || '';
+            const cedulaDescompuesta = descomponerCedula(billeteraActual.cedula || '');
+            document.getElementById('cedula-tipo').value = cedulaDescompuesta.tipo;
+            document.getElementById('cedula').value = cedulaDescompuesta.numero;
+            actualizarPlaceholderCedula();
             document.getElementById('pagomovil').value = billeteraActual.pagomovil || '';
             document.getElementById('cuenta').value = billeteraActual.cuenta || '';
             if(billeteraActual.tipoCuenta){
