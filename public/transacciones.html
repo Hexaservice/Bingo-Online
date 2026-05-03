@@ -30,6 +30,7 @@
     #tabla-retiros th:nth-child(4),#tabla-retiros td:nth-child(4){white-space:normal;word-break:break-word;}
     #tabla-recargas th:nth-child(4),#tabla-recargas td:nth-child(4),
     #tabla-retiros th:nth-child(4),#tabla-retiros td:nth-child(4){padding:0 1px;}
+    #tabla-retiros tr.pendiente-relacionada td{background:#eaf4ff !important;}
     th{position:sticky;top:40px;background:rgba(255,255,255,0.8);z-index:1;}
     tbody tr{background:rgba(255,255,255,0.95);}
     .anulado td:not(:first-child){color:red!important;}
@@ -518,6 +519,7 @@
         tb.appendChild(tr);
         i--;
       });
+      resaltarPendientesMismoUsuario();
     }
     function renderRet(){
       const tb=document.querySelector('#tabla-retiros tbody');
@@ -560,7 +562,7 @@
         const chk=tr.querySelector('input[type=checkbox]');
         const refTd=tr.children[4];
         refTd.dataset.original=t.referencia||'';
-        chk.addEventListener('change',actualizarEditable);
+        chk.addEventListener('change',()=>{actualizarEditable();resaltarPendientesMismoUsuario();});
         refTd.addEventListener('input',()=>{
           const textoActual=(refTd.textContent||'');
           const posicionCursor=window.getSelection && window.getSelection().rangeCount
@@ -593,7 +595,41 @@
         tb.appendChild(tr);
         i--;
       });
+      resaltarPendientesMismoUsuario();
     }
+    function resaltarPendientesMismoUsuario(){
+      const filas=Array.from(document.querySelectorAll('#tabla-retiros tbody tr'));
+      filas.forEach(tr=>tr.classList.remove('pendiente-relacionada'));
+      const checksSeleccionados=Array.from(document.querySelectorAll('#tabla-retiros tbody input[type=checkbox]:checked'));
+      if(!checksSeleccionados.length) return;
+      const usuariosSeleccionados=new Set();
+      checksSeleccionados.forEach(chk=>{
+        const tr=chk.closest('tr');
+        const estado=(chk.dataset.estado||'').toUpperCase();
+        if(!tr || estado!=='PENDIENTE') return;
+        const usuario=(tr.children[2]?.textContent||'').trim();
+        if(usuario) usuariosSeleccionados.add(usuario);
+      });
+      if(!usuariosSeleccionados.size) return;
+      const pendientesPorUsuario={};
+      filas.forEach(tr=>{
+        const chk=tr.querySelector('input[type=checkbox]');
+        const estado=(chk?.dataset.estado||'').toUpperCase();
+        const usuario=(tr.children[2]?.textContent||'').trim();
+        if(estado==='PENDIENTE' && usuario){
+          pendientesPorUsuario[usuario]=(pendientesPorUsuario[usuario]||0)+1;
+        }
+      });
+      filas.forEach(tr=>{
+        const chk=tr.querySelector('input[type=checkbox]');
+        const estado=(chk?.dataset.estado||'').toUpperCase();
+        const usuario=(tr.children[2]?.textContent||'').trim();
+        if(estado==='PENDIENTE' && usuario && usuariosSeleccionados.has(usuario) && (pendientesPorUsuario[usuario]||0)>1){
+          tr.classList.add('pendiente-relacionada');
+        }
+      });
+    }
+
     function actualizarEditable(){
       const checks=Array.from(document.querySelectorAll('#tabla-retiros tbody input[type=checkbox]'));
       checks.forEach(c=>{
@@ -731,6 +767,23 @@
             t.set(billeteraRef,{ creditos: creditosActual+montoTransaccion },{merge:true});
           });
           upd.acreditacionAplicada=true;
+        }
+
+        if(billeteraId && estado==='APROBADO' && esRetiro && !estadoEsAprobado(data.estado)){
+          const billeteraRef=db.collection('Billetera').doc(billeteraId);
+          await db.runTransaction(async t=>{
+            const bdoc=await t.get(billeteraRef);
+            const billeteraData=bdoc.exists?(bdoc.data()||{}):{};
+            const montoTransaccion=toNumberSafe((data.MontoSolicitado ?? data.Monto),0);
+            const creditosActual=Math.max(0,toNumberSafe(billeteraData.creditos,0));
+            const transitoActual=Math.max(0,toNumberSafe(billeteraData.creditostransito,0));
+            const payload={
+              creditos: Math.max(0,creditosActual-montoTransaccion),
+              creditostransito: Math.max(0,transitoActual-montoTransaccion)
+            };
+            t.set(billeteraRef,payload,{merge:true});
+          });
+          upd.debitoRetiroAplicado=true;
         }
 
         if(estado==='APROBADO' || estado==='ANULADO'){
