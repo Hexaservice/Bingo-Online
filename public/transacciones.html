@@ -84,11 +84,19 @@
     }
 
     .copy-highlight-row td{background:#fff2d9 !important;}
+    .bank-copy-cell{
+      cursor:pointer;
+      user-select:none;
+      -webkit-user-select:none;
+      -moz-user-select:none;
+      -ms-user-select:none;
+      -webkit-touch-callout:none;
+    }
     .copy-field-btn{margin-left:8px;border:1px solid #ccc;border-radius:4px;background:#f7f7f7;cursor:pointer;font-size:0.85rem;line-height:1;padding:2px 6px;}
     .clipboard-toast{
       position:fixed;
       left:50%;
-      bottom:18px;
+      top:18px;
       transform:translateX(-50%);
       background:rgba(0,0,0,0.85);
       color:#fff;
@@ -441,17 +449,34 @@
     }
     async function copiarDatosCompletosRetiro(t,fila){
       if(!t || (t.estado||'').toString().toUpperCase()!=='PENDIENTE') return;
-      const banco4=primerosCuatroBanco(t.bancoreceptor);
-      const cedula=(t.cedula||'').toString().trim();
-      const pagoMovil=(t.pagomovil||'').toString().trim();
+      const billeteraId=(t.IDbilletera||'').toString().trim();
+      let banco=t.bancoreceptor;
+      let cedula=t.cedula;
+      let pagoMovil=t.pagomovil;
+      try{
+        if(billeteraId){
+          const billeteraSnap=await db.collection('Billetera').doc(billeteraId).get();
+          if(billeteraSnap.exists){
+            const datosBilletera=billeteraSnap.data()||{};
+            banco=datosBilletera.banco||banco;
+            cedula=datosBilletera.cedula||cedula;
+            pagoMovil=datosBilletera.pagomovil||pagoMovil;
+          }
+        }
+      }catch(err){
+        console.warn('No se pudieron cargar datos de Billetera para copiado de retiro', err);
+      }
+      const banco4=primerosCuatroBanco(banco);
+      const documento=(cedula||'').toString().trim();
+      const telefonoPagoMovil=(pagoMovil||'').toString().trim();
       const monto=formatearMonto(t.Monto);
-      const bloque=`${banco4}\n${cedula}\n${pagoMovil}\n${monto}`;
+      const bloque=`${banco4}\n${documento}\n${telefonoPagoMovil}\n${monto}`;
       const copiado=await copiarAlPortapapeles(bloque);
       if(!copiado) return;
       limpiarResaltadoFilaCopiada();
       fila.classList.add('copy-highlight-row');
       retiroFilaCopiadaId=t.id;
-      mostrarToastClipboard(`Copiados al Portapapeles:\nBanco: ${banco4}\nDocumento: ${cedula}\nN° P. Movil: ${pagoMovil}\nMonto: ${monto}`);
+      mostrarToastClipboard(`Copiados al Portapapeles:\nBanco: ${banco4}\nDocumento: ${documento}\nN° P. Movil: ${telefonoPagoMovil}\nMonto: ${monto}`);
     }
 
     async function mostrarInfoGmail(mail){
@@ -608,6 +633,7 @@
         mailTd.style.cursor='pointer';
         mailTd.addEventListener('click',()=>mostrarInfoGmail(t.IDbilletera));
         const bancoTd=tr.children[3];
+        bancoTd.addEventListener('mousedown',e=>e.preventDefault());
         bancoTd.addEventListener('click',()=>copiarDatosCompletosRetiro(t,tr));
         const fechaTd=tr.children[5];
         fechaTd.style.cursor='pointer';
@@ -685,6 +711,9 @@
         const mailTd=tr.children[2];
         mailTd.style.cursor='pointer';
         mailTd.addEventListener('click',()=>mostrarInfoGmail(t.IDbilletera));
+        const bancoTd=tr.children[3];
+        bancoTd.addEventListener('mousedown',e=>e.preventDefault());
+        bancoTd.addEventListener('click',()=>copiarDatosCompletosRetiro(t,tr));
         const fechaTd=tr.children[5];
         fechaTd.style.cursor='pointer';
         fechaTd.addEventListener('click',()=>mostrarDatosTransaccion(t));
