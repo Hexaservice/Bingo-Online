@@ -2515,6 +2515,10 @@
     return sinSigno.length>0;
   }
 
+  function normalizarTipoDocumento(valor){
+    return ((valor||'V').toString().trim().charAt(0)||'V').toUpperCase()==='J'?'J':'V';
+  }
+
   function construirCedulaCompuesta(_tipo,numero){
     const numeroNormalizado=(numero||'').toString().replace(/\D/g,'').trim();
     return numeroNormalizado||'';
@@ -2969,7 +2973,8 @@
     datosBancariosGuardarBtn.addEventListener('click',async ()=>{
       const banco=(datosBancariosBancoInput?.value||'').trim();
       const cedulaNumero=(datosBancariosCedulaInput?.value||'').replace(/\D/g,'').trim();
-      const cedula=construirCedulaCompuesta(datosBancariosCedulaTipoInput?.value,cedulaNumero);
+      const tipodocu=normalizarTipoDocumento(datosBancariosCedulaTipoInput?.value);
+      const cedula=construirCedulaCompuesta(tipodocu,cedulaNumero);
       const pagomovil=(datosBancariosPagoMovilInput?.value||'').replace(/\D/g,'').trim();
       if(!banco){ mostrarCartonAviso('Selecciona tu banco.'); datosBancariosBancoInput?.focus(); return; }
       if(!cedula){ mostrarCartonAviso('Ingresa tu cédula o NIT/RIF.'); datosBancariosCedulaInput?.focus(); return; }
@@ -2977,9 +2982,9 @@
       try{
         const user=auth.currentUser;
         if(!user) return;
-        await db.collection('Billetera').doc(user.email).set({ banco, cedula, pagomovil, actualizadoEn: firebase.firestore.FieldValue.serverTimestamp() },{merge:true});
+        await db.collection('Billetera').doc(user.email).set({ banco, tipodocu, cedula, pagomovil, actualizadoEn: firebase.firestore.FieldValue.serverTimestamp() },{merge:true});
         if(!billeteraDatosCache) billeteraDatosCache={};
-        Object.assign(billeteraDatosCache,{banco,cedula,pagomovil});
+        Object.assign(billeteraDatosCache,{banco,tipodocu,cedula,pagomovil});
         datosBancariosCompletos=true;
         cerrarModalDatosBancarios();
         await confirmarCompra();
