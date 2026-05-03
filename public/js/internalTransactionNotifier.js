@@ -177,8 +177,10 @@
               payload.creditos=creditosActual+monto;
             }
           }else if(tipo==='retiro'){
-            payload.creditos=Math.max(0,creditosActual-montoSolicitado);
-            payload.creditostransito=Math.max(0,transitoActual-montoSolicitado);
+            if(data.debitoRetiroAplicado!==true){
+              payload.creditos=Math.max(0,creditosActual-montoSolicitado);
+              payload.creditostransito=Math.max(0,transitoActual-montoSolicitado);
+            }
           }
           if(Object.keys(payload).length){
             tx.set(billeteraRef,payload,{merge:true});
