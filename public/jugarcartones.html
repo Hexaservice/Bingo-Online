@@ -427,6 +427,8 @@
       font-weight:600;
       color:#00204a;
     }
+    .datos-bancarios-doc-row{display:flex;gap:8px;width:100%;}
+    .datos-bancarios-input-tipo{max-width:70px;flex:0 0 70px;}
     .datos-bancarios-input{
       width:100%;
       border:2px solid #90caf9;
@@ -1138,7 +1140,13 @@
           <select id="datos-bancarios-banco" class="datos-bancarios-input">
             <option value="">Selecciona tu banco</option>
           </select>
-          <input id="datos-bancarios-cedula" class="datos-bancarios-input" type="text" placeholder="Cédula" inputmode="numeric" maxlength="12">
+          <div class="datos-bancarios-doc-row">
+            <select id="datos-bancarios-cedula-tipo" class="datos-bancarios-input datos-bancarios-input-tipo">
+              <option value="V" selected>V</option>
+              <option value="J">J</option>
+            </select>
+            <input id="datos-bancarios-cedula" class="datos-bancarios-input" type="text" placeholder="Cédula" inputmode="numeric" maxlength="12">
+          </div>
           <input id="datos-bancarios-pagomovil" class="datos-bancarios-input" type="text" placeholder="Número de pago móvil" inputmode="tel" maxlength="16">
           <button type="button" id="datos-bancarios-guardar" class="datos-bancarios-boton">GUARDAR PAGO MÓVIL</button>
       </div>
@@ -1266,6 +1274,7 @@
   const datosBancariosModal=document.getElementById('datos-bancarios-modal');
   const datosBancariosGuardarBtn=document.getElementById('datos-bancarios-guardar');
   const datosBancariosBancoInput=document.getElementById('datos-bancarios-banco');
+  const datosBancariosCedulaTipoInput=document.getElementById('datos-bancarios-cedula-tipo');
   const datosBancariosCedulaInput=document.getElementById('datos-bancarios-cedula');
   const datosBancariosPagoMovilInput=document.getElementById('datos-bancarios-pagomovil');
   const creditosModal=document.getElementById('creditos-modal');
@@ -2503,6 +2512,18 @@
     return sinSigno.length>0;
   }
 
+  function construirCedulaCompuesta(tipo,numero){
+    const tipoNormalizado=(tipo||'V').toString().trim().toUpperCase()==='J'?'J':'V';
+    const numeroNormalizado=(numero||'').toString().replace(/\D/g,'').trim();
+    return numeroNormalizado?`${tipoNormalizado}${numeroNormalizado}`:'';
+  }
+
+  function actualizarPlaceholderCedulaModal(){
+    if(!datosBancariosCedulaInput) return;
+    const tipo=(datosBancariosCedulaTipoInput?.value||'V').toUpperCase();
+    datosBancariosCedulaInput.placeholder=tipo==='J'?'NIT/RIF':'Cédula';
+  }
+
   function datosBancariosEstanCompletos(data){
     if(!data) return false;
     const banco=(data.banco??'').toString().trim();
@@ -2945,10 +2966,11 @@
   if(datosBancariosGuardarBtn){
     datosBancariosGuardarBtn.addEventListener('click',async ()=>{
       const banco=(datosBancariosBancoInput?.value||'').trim();
-      const cedula=(datosBancariosCedulaInput?.value||'').replace(/\D/g,'').trim();
+      const cedulaNumero=(datosBancariosCedulaInput?.value||'').replace(/\D/g,'').trim();
+      const cedula=construirCedulaCompuesta(datosBancariosCedulaTipoInput?.value,cedulaNumero);
       const pagomovil=(datosBancariosPagoMovilInput?.value||'').replace(/\D/g,'').trim();
       if(!banco){ mostrarCartonAviso('Selecciona tu banco.'); datosBancariosBancoInput?.focus(); return; }
-      if(!cedula){ mostrarCartonAviso('Ingresa tu cédula.'); datosBancariosCedulaInput?.focus(); return; }
+      if(!cedula){ mostrarCartonAviso('Ingresa tu cédula o NIT/RIF.'); datosBancariosCedulaInput?.focus(); return; }
       if(!pagomovil){ mostrarCartonAviso('Ingresa tu número de pago móvil.'); datosBancariosPagoMovilInput?.focus(); return; }
       try{
         const user=auth.currentUser;
@@ -2965,6 +2987,9 @@
       }
     });
   }
+
+  datosBancariosCedulaTipoInput?.addEventListener('change',actualizarPlaceholderCedulaModal);
+  actualizarPlaceholderCedulaModal();
   if(datosBancariosModal){
     datosBancariosModal.addEventListener('click',evento=>{
       if(evento.target===datosBancariosModal){
