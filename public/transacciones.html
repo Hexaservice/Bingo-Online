@@ -678,7 +678,8 @@
         const tr=document.createElement('tr');
         const refValue=refCookies[t.id]!==undefined?refCookies[t.id]:(t.referencia||'');
         tr.dataset.id=t.id;
-        tr.innerHTML=`<td>${i}</td><td class='monto-copy-cell' style='color:#4b0082;'>${monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td class='bank-copy-cell' style='cursor:pointer;'>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;text-align:center;direction:ltr;unicode-bidi:plaintext;' contenteditable='false' inputmode='numeric'>${refValue}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
+        const montoClass=(t.estado||'').toString().toUpperCase()==='PENDIENTE'?'monto-copy-cell':'';
+        tr.innerHTML=`<td>${i}</td><td class='${montoClass}' style='color:#4b0082;'>${monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td class='bank-copy-cell' style='cursor:pointer;'>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;text-align:center;direction:ltr;unicode-bidi:plaintext;' contenteditable='false' inputmode='numeric'>${refValue}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
         const estadoTd=tr.children[6];
         if(t.estado==='ANULADO'){
           tr.classList.add('anulado');
@@ -723,8 +724,10 @@
         mailTd.style.cursor='pointer';
         mailTd.addEventListener('click',()=>mostrarInfoGmail(t.IDbilletera));
         const montoTd=tr.children[1];
-        montoTd.addEventListener('mousedown',e=>e.preventDefault());
-        montoTd.addEventListener('click',()=>copiarMontoTransaccion(monto));
+        if((t.estado||'').toString().toUpperCase()==='PENDIENTE'){
+          montoTd.addEventListener('mousedown',e=>e.preventDefault());
+          montoTd.addEventListener('click',()=>copiarMontoTransaccion(monto));
+        }
         const bancoTd=tr.children[3];
         bancoTd.addEventListener('mousedown',e=>e.preventDefault());
         bancoTd.addEventListener('click',()=>copiarDatosCompletosRetiro(t,tr));
