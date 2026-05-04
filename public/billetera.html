@@ -608,6 +608,16 @@
       </div>
     </div>
   </div>
+  <div id="modal-documento-bloqueado" class="modal-overlay" aria-hidden="true" role="dialog" aria-label="Documento bloqueado">
+    <div class="modal-card">
+      <h4>⚠️ Documento bloqueado</h4>
+      <p>El número y tipo de documento no se pueden cambiar</p>
+      <p style="font-size:0.82rem;color:#2d3c91;">para solicitar cambio presiona aquí</p>
+      <div class="modal-actions" style="justify-content:center;">
+        <button id="modal-documento-solicitar" class="btn-primario" type="button">Solicitar cambio</button>
+      </div>
+    </div>
+  </div>
 
   <div id="tutorial-overlay" aria-hidden="true"></div>
   <img id="tutorial-hand" alt="Guía visual del tutorial" loading="lazy" />
@@ -720,6 +730,9 @@
       const cedulaDescompuesta=descomponerCedula(datos.cedula);
       if(cedulaTipoEl) cedulaTipoEl.value=cedulaDescompuesta.tipo;
       cedulaEl.value=cedulaDescompuesta.numero;
+      const cedulaGuardada=Boolean((cedulaDescompuesta.numero||'').trim());
+      if(cedulaTipoEl) cedulaTipoEl.disabled=cedulaGuardada;
+      if(cedulaEl) cedulaEl.disabled=cedulaGuardada;
       actualizarPlaceholderCedula();
       const pagomovilEl=document.getElementById('pagomovil');
       pagomovilEl.value=normalizarPagoMovil(datos.pagomovil);
@@ -2326,29 +2339,19 @@
       const user=auth.currentUser;
       const doc=await db.collection('Billetera').doc(user.email).get();
       const d=doc.data()||{};
-      if(d.banco && d.cuenta && d.cedula && d.pagomovil && d.tipoCuenta){
+      if(d.banco && d.cedula && d.pagomovil){
         return true;
       }
-      await mostrarAlertaModal('Antes de solicitar una Recarga o Retiro debes tener todos tus datos bancarios registrados');
+      await mostrarAlertaModal('Antes de solicitar una Recarga debes guardar tu banco, cédula y pago móvil');
       const toggle=document.getElementById('toggle-datos');
       toggle.checked=true;
       document.getElementById('datos-content').style.display='block';
       if(!d.banco){
         document.getElementById('banco').focus();
-      } else if(!d.cuenta){
-        const cuentaToggle=document.getElementById('cuenta-toggle');
-        cuentaToggle.checked=true;
-        actualizarEstadoCuentaOpcional(true);
-        document.getElementById('cuenta').focus();
       } else if(!d.cedula){
         document.getElementById('cedula').focus();
       } else if(!d.pagomovil){
         document.getElementById('pagomovil').focus();
-      } else if(!d.tipoCuenta){
-        const cuentaToggle=document.getElementById('cuenta-toggle');
-        cuentaToggle.checked=true;
-        actualizarEstadoCuentaOpcional(true);
-        document.querySelector('input[name="tipo-cuenta"]').focus();
       }
       return false;
     }
@@ -2471,6 +2474,19 @@
     }
 
     document.getElementById('btn-retirar').addEventListener('click', async () => {
+      const billeteraDoc=await db.collection('Billetera').doc(auth.currentUser.email).get();
+      const billeteraData=billeteraDoc.exists?(billeteraDoc.data()||{}):{};
+      if(!(billeteraData.pagomovil||'').toString().trim() || !(billeteraData.cedula||'').toString().trim()){
+        await mostrarAlertaModal('Antes de RETIRAR debes registrar tus datos de pago móvil.');
+        const toggle=document.getElementById('toggle-datos');
+        if(toggle){ toggle.checked=true; document.getElementById('datos-content').style.display='block'; }
+        if(!(billeteraData.cedula||'').toString().trim()){
+          document.getElementById('cedula')?.focus();
+        }else{
+          document.getElementById('pagomovil')?.focus();
+        }
+        return;
+      }
       const montoStr=document.getElementById('monto-retiro').value.trim();
       const monto=parseFloat(montoStr);
       if(!montoStr || isNaN(monto) || monto<=0){await mostrarAlertaModal('Ingrese un monto válido');document.getElementById('monto-retiro').focus();return;}
@@ -2501,6 +2517,30 @@
       }finally{
         restaurarTutorial();
       }
+    });
+
+    function abrirModalDocumentoBloqueado(){
+      const modal=document.getElementById('modal-documento-bloqueado');
+      if(!modal) return;
+      modal.style.display='flex';
+      modal.setAttribute('aria-hidden','false');
+    }
+    function cerrarModalDocumentoBloqueado(){
+      const modal=document.getElementById('modal-documento-bloqueado');
+      if(!modal) return;
+      modal.style.display='none';
+      modal.setAttribute('aria-hidden','true');
+    }
+    document.getElementById('modal-documento-solicitar')?.addEventListener('click',cerrarModalDocumentoBloqueado);
+    document.getElementById('modal-documento-bloqueado')?.addEventListener('click',e=>{ if(e.target.id==='modal-documento-bloqueado') cerrarModalDocumentoBloqueado(); });
+    ['cedula','cedula-tipo'].forEach(id=>{
+      const el=document.getElementById(id);
+      el?.addEventListener('click',()=>{
+        if(el.disabled){ abrirModalDocumentoBloqueado(); }
+      });
+      el?.addEventListener('focus',()=>{
+        if(el.disabled){ abrirModalDocumentoBloqueado(); }
+      });
     });
 
     document.getElementById('volver-btn').addEventListener('click',()=>{
