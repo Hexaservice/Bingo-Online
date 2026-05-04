@@ -2076,6 +2076,10 @@
       return {id,...payload, estado: estadoNormalizado, tipotrans: tipoNormalizado};
     }
 
+    function obtenerMarcaTiempoSolicitud(transaccion){
+      return parseFechaHora(transaccion?.fechasolicitud, transaccion?.horasolicitud);
+    }
+
     function sincronizarTransaccionesEnTabla(){
       transacciones.length=0;
       const premiosEnProyeccion=new Set();
@@ -2095,9 +2099,14 @@
       });
 
       transacciones.sort((a,b)=>{
-        const da=parseFechaHora(a.fechagestion||a.fechasolicitud,a.horagestion||a.horasolicitud);
-        const db=parseFechaHora(b.fechagestion||b.fechasolicitud,b.horagestion||b.horasolicitud);
-        return db-da;
+        const marcaSolicitudA=obtenerMarcaTiempoSolicitud(a);
+        const marcaSolicitudB=obtenerMarcaTiempoSolicitud(b);
+        if(marcaSolicitudB!==marcaSolicitudA){
+          return marcaSolicitudB-marcaSolicitudA;
+        }
+        const marcaGestionA=parseFechaHora(a.fechagestion,a.horagestion);
+        const marcaGestionB=parseFechaHora(b.fechagestion,b.horagestion);
+        return marcaGestionB-marcaGestionA;
       });
       filtrarTransacciones();
     }
