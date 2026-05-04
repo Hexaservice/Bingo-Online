@@ -259,6 +259,17 @@
       border-radius:0 6px 6px 0;
       border-left:none;
     }
+    #cedula.cedula-bloqueada,#cedula-tipo.cedula-bloqueada{filter:grayscale(1);background:#e5e5e5 !important;color:#666 !important;cursor:not-allowed;}
+    .retiro-datos-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.65);z-index:1800;}
+    .retiro-datos-modal.visible{display:flex;}
+    .retiro-datos-card{width:min(420px,92vw);background:linear-gradient(160deg,#004aad,#4facfe 55%,#fff);border:4px solid #ffe082;border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center;}
+    .retiro-datos-doc-row{display:flex;gap:8px;width:100%;}
+    .retiro-datos-alerta{display:none;flex-direction:column;align-items:center;justify-content:center;min-width:120px;color:#d50000;animation:parpadeoAdvertencia .6s ease-in-out infinite;}
+    .retiro-datos-alerta.visible{display:flex;}
+    .retiro-datos-alerta .titulo{font-size:.72rem;font-weight:800;}
+    .retiro-datos-alerta .texto{font-size:.62rem;font-weight:700;}
+    .retiro-datos-sub{font-size:.75rem;color:#ff8c00;font-weight:700;margin-top:-6px;}
+    @keyframes parpadeoAdvertencia{0%,100%{opacity:1;}50%{opacity:.35;}}
     #pagomovil{color:#FF8C00;width:130px;max-width:130px;height:38px;padding:5px 8px;line-height:1.2;box-sizing:border-box;margin:0;justify-self:center;align-self:center;}
     .campo{display:flex;flex-direction:column;align-items:center;width:260px;margin:0 auto;}
     .cuenta-opcional{display:flex;align-items:center;gap:8px;width:100%;justify-content:center;}
@@ -618,6 +629,22 @@
       </div>
     </div>
   </div>
+  <div id="modal-retiro-datos" class="retiro-datos-modal" aria-hidden="true" role="dialog" aria-label="Datos de pago móvil para retiro">
+    <div class="retiro-datos-card">
+      <span aria-hidden="true" style="font-size:2.2rem;">⚠️</span>
+      <h4 style="margin:0;">DATOS BANCARIOS REQUERIDOS</h4>
+      <p style="margin:0;font-weight:700;">Antes de RETIRAR debes registrar tus datos de pago móvil</p>
+      <p class="retiro-datos-sub">Tu cédula será guardada una sola vez</p>
+      <select id="retiro-datos-banco" class="datos-bancarios-input"><option value="">Selecciona tu banco</option></select>
+      <div class="retiro-datos-doc-row">
+        <select id="retiro-datos-cedula-tipo" class="datos-bancarios-input" style="max-width:64px;"><option value="V">V</option><option value="J">J</option></select>
+        <input id="retiro-datos-cedula" class="datos-bancarios-input" type="text" placeholder="Cédula" inputmode="numeric" maxlength="12">
+        <div id="retiro-datos-alerta" class="retiro-datos-alerta"><span class="titulo">ADVERTENCIA</span><span class="texto">Podrás guardarla una sola vez</span></div>
+      </div>
+      <input id="retiro-datos-pagomovil" class="datos-bancarios-input" type="text" placeholder="Número de pago móvil" inputmode="tel" maxlength="16">
+      <button id="retiro-datos-guardar" class="btn-primario" type="button">GUARDAR PAGO MÓVIL</button>
+    </div>
+  </div>
 
   <div id="tutorial-overlay" aria-hidden="true"></div>
   <img id="tutorial-hand" alt="Guía visual del tutorial" loading="lazy" />
@@ -731,8 +758,10 @@
       if(cedulaTipoEl) cedulaTipoEl.value=cedulaDescompuesta.tipo;
       cedulaEl.value=cedulaDescompuesta.numero;
       const cedulaGuardada=Boolean((cedulaDescompuesta.numero||'').trim());
-      if(cedulaTipoEl) cedulaTipoEl.disabled=cedulaGuardada;
-      if(cedulaEl) cedulaEl.disabled=cedulaGuardada;
+      if(cedulaTipoEl) cedulaTipoEl.classList.toggle('cedula-bloqueada',cedulaGuardada);
+      if(cedulaEl) cedulaEl.classList.toggle('cedula-bloqueada',cedulaGuardada);
+      if(cedulaEl) cedulaEl.dataset.locked=cedulaGuardada?'1':'0';
+      if(cedulaTipoEl) cedulaTipoEl.dataset.locked=cedulaGuardada?'1':'0';
       actualizarPlaceholderCedula();
       const pagomovilEl=document.getElementById('pagomovil');
       pagomovilEl.value=normalizarPagoMovil(datos.pagomovil);
@@ -2477,14 +2506,7 @@
       const billeteraDoc=await db.collection('Billetera').doc(auth.currentUser.email).get();
       const billeteraData=billeteraDoc.exists?(billeteraDoc.data()||{}):{};
       if(!(billeteraData.pagomovil||'').toString().trim() || !(billeteraData.cedula||'').toString().trim()){
-        await mostrarAlertaModal('Antes de RETIRAR debes registrar tus datos de pago móvil.');
-        const toggle=document.getElementById('toggle-datos');
-        if(toggle){ toggle.checked=true; document.getElementById('datos-content').style.display='block'; }
-        if(!(billeteraData.cedula||'').toString().trim()){
-          document.getElementById('cedula')?.focus();
-        }else{
-          document.getElementById('pagomovil')?.focus();
-        }
+        abrirModalRetiroDatos(billeteraData);
         return;
       }
       const montoStr=document.getElementById('monto-retiro').value.trim();
@@ -2535,13 +2557,58 @@
     document.getElementById('modal-documento-bloqueado')?.addEventListener('click',e=>{ if(e.target.id==='modal-documento-bloqueado') cerrarModalDocumentoBloqueado(); });
     ['cedula','cedula-tipo'].forEach(id=>{
       const el=document.getElementById(id);
-      el?.addEventListener('click',()=>{
-        if(el.disabled){ abrirModalDocumentoBloqueado(); }
+      el?.addEventListener('mousedown',(e)=>{
+        if(el.dataset.locked==='1'){ e.preventDefault(); abrirModalDocumentoBloqueado(); }
       });
-      el?.addEventListener('focus',()=>{
-        if(el.disabled){ abrirModalDocumentoBloqueado(); }
+      el?.addEventListener('keydown',(e)=>{
+        if(el.dataset.locked==='1'){ e.preventDefault(); abrirModalDocumentoBloqueado(); }
+      });
+      el?.addEventListener('input',(e)=>{
+        if(el.dataset.locked==='1'){ e.preventDefault(); abrirModalDocumentoBloqueado(); }
       });
     });
+
+    async function abrirModalRetiroDatos(dataActual={}){
+      const modal=document.getElementById('modal-retiro-datos');
+      if(!modal) return;
+      const bancoSel=document.getElementById('retiro-datos-banco');
+      const cedulaTipo=document.getElementById('retiro-datos-cedula-tipo');
+      const cedulaIn=document.getElementById('retiro-datos-cedula');
+      const pagoIn=document.getElementById('retiro-datos-pagomovil');
+      const comp=descomponerCedula(dataActual.cedula||'');
+      cedulaTipo.value=comp.tipo||'V';
+      cedulaIn.value=comp.numero||'';
+      pagoIn.value=normalizarPagoMovil(dataActual.pagomovil||'');
+      if(bancoSel.options.length<=1){
+        const snap=await db.collection('Bancos').where('categoria','==','Jugadores').where('estado','==','Activo').get();
+        snap.forEach(doc=>{ const op=document.createElement('option'); op.value=doc.data().nombre||doc.id; op.textContent=op.value; bancoSel.appendChild(op); });
+      }
+      bancoSel.value=(dataActual.banco||'').toString();
+      modal.classList.add('visible'); modal.setAttribute('aria-hidden','false');
+      (comp.numero?pagoIn:cedulaIn).focus();
+    }
+    function cerrarModalRetiroDatos(){
+      const modal=document.getElementById('modal-retiro-datos');
+      if(!modal) return;
+      modal.classList.remove('visible'); modal.setAttribute('aria-hidden','true');
+    }
+    document.getElementById('retiro-datos-cedula')?.addEventListener('input',e=>{
+      document.getElementById('retiro-datos-alerta')?.classList.toggle('visible',((e.target.value||'').trim().length>0));
+    });
+    document.getElementById('retiro-datos-pagomovil')?.addEventListener('input',e=>{ e.target.value=normalizarPagoMovil(e.target.value); });
+    document.getElementById('retiro-datos-cedula')?.addEventListener('input',e=>{ e.target.value=normalizarSoloNumeros(e.target.value); });
+    document.getElementById('retiro-datos-guardar')?.addEventListener('click',async ()=>{
+      const user=auth.currentUser; if(!user) return;
+      const banco=document.getElementById('retiro-datos-banco').value;
+      const tipo=document.getElementById('retiro-datos-cedula-tipo').value;
+      const cedula=construirCedulaGuardado(tipo,document.getElementById('retiro-datos-cedula').value);
+      const pagomovil=normalizarPagoMovil(document.getElementById('retiro-datos-pagomovil').value);
+      if(!banco||!cedula||!pagomovil){ await mostrarAlertaModal('Completa banco, cédula y pago móvil para retirar.'); return; }
+      await db.collection('Billetera').doc(user.email).set({banco,cedula,pagomovil,tipodocu:tipo,actualizadoEn:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+      cerrarModalRetiroDatos();
+      await mostrarAlertaModal('Datos guardados correctamente. Ahora puedes solicitar el retiro.');
+    });
+    document.getElementById('modal-retiro-datos')?.addEventListener('click',e=>{ if(e.target.id==='modal-retiro-datos') cerrarModalRetiroDatos(); });
 
     document.getElementById('volver-btn').addEventListener('click',()=>{
       window.location.href='player.html';
