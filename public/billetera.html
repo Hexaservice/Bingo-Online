@@ -387,6 +387,26 @@
       width:200px;
       cursor:pointer;
     }
+    button[data-loading="true"]{
+      position:relative;
+      pointer-events:none;
+      opacity:0.95;
+    }
+    button[data-loading="true"]::after{
+      content:'';
+      display:inline-block;
+      width:12px;
+      height:12px;
+      margin-left:8px;
+      border-radius:50%;
+      border:2px solid currentColor;
+      border-right-color:transparent;
+      animation:giro-carga 0.75s linear infinite;
+      vertical-align:middle;
+    }
+    @keyframes giro-carga{
+      to{transform:rotate(360deg);}
+    }
 
     /* Controles del modo tutorial */
     #tutorial-controls {
@@ -2318,13 +2338,33 @@
             restaurarTutorial();
             resolve(eleccionWhatsapp);
           };
-          btnAceptar.onclick=cerrar;
+          btnAceptar.onclick=()=>cerrar(false);
           if(btnWhatsapp){
             btnWhatsapp.onclick=()=>cerrar(true);
           }
           function manejarFondo(e){ if(e.target===modal){ cerrar(); } }
           modal.addEventListener('click', manejarFondo);
         });
+      }
+
+      function crearControlCargaBoton(idBoton, textoCargando='Procesando...'){
+        const boton=document.getElementById(idBoton);
+        if(!boton){
+          return { iniciar:()=>{}, terminar:()=>{} };
+        }
+        const textoOriginal=boton.textContent;
+        return {
+          iniciar:()=>{
+            boton.disabled=true;
+            boton.dataset.loading='true';
+            boton.textContent=textoCargando;
+          },
+          terminar:()=>{
+            boton.disabled=false;
+            delete boton.dataset.loading;
+            boton.textContent=textoOriginal;
+          }
+        };
       }
 
       function mostrarDetalle(t){
@@ -2475,22 +2515,28 @@
       };
       const confirmar = await mostrarConfirmacionModal(`¿Confirmas la solicitud de recarga por ${monto.toFixed(2)}?`);
       if(!confirmar){ return; }
-      await db.collection('transacciones').add(data);
-      const notificarRecarga=await mostrarAlertaModal(
-        'Bien, recibimos tu solicitud, una vez verificado el pago se recargará tu billetera',
-        {
-          mensajeExtra:'¿Quieres avisar enviando solicitud por WhatsApp?',
-          mostrarBotonWhatsapp:true,
-          acceptLabel:'No avisar'
+      const cargaRecarga=crearControlCargaBoton('btn-depositar','Enviando solicitud...');
+      cargaRecarga.iniciar();
+      try{
+        await db.collection('transacciones').add(data);
+        const notificarRecarga=await mostrarAlertaModal(
+          'Bien, recibimos tu solicitud, una vez verificado el pago se recargará tu billetera',
+          {
+            mensajeExtra:'¿Quieres avisar enviando solicitud por WhatsApp?',
+            mostrarBotonWhatsapp:true,
+            acceptLabel:'No avisar'
+          }
+        );
+        if(notificarRecarga){
+          await notificarSolicitudWhatsapp('recarga',{
+            banco:banco,
+            monto:monto,
+            referencia:ref,
+            comentario:data.comentario
+          });
         }
-      );
-      if(notificarRecarga){
-        await notificarSolicitudWhatsapp('recarga',{
-          banco:banco,
-          monto:monto,
-          referencia:ref,
-          comentario:data.comentario
-        });
+      }finally{
+        cargaRecarga.terminar();
       }
       limpiarCamposTransaccion('recarga');
       suscribirTransaccionesUsuario();
@@ -2575,6 +2621,8 @@
       const continuar=await mostrarConfirmacionModal(`¿Confirmas la solicitud de retiro por ${montoFinal.toFixed(2)}?`);
       if(!continuar){ return; }
       const restaurarTutorial=pausarTutorialTemporal();
+      const cargaRetiro=crearControlCargaBoton('btn-retirar','Enviando solicitud...');
+      cargaRetiro.iniciar();
       try{
         const resultado=await ejecutarRetiro(monto,montoFinal, comentarioRetiro);
         if(resultado?.notificarRetiro){
@@ -2595,6 +2643,7 @@
           await mostrarAlertaModal('No se pudo registrar la solicitud de retiro. Inténtalo nuevamente.');
         }
       }finally{
+        cargaRetiro.terminar();
         restaurarTutorial();
       }
     });
