@@ -84,7 +84,7 @@
     }
 
     .copy-highlight-row td{background:#fff2d9 !important;}
-    .bank-copy-cell{
+    .bank-copy-cell,.monto-copy-cell{
       cursor:pointer;
       user-select:none;
       -webkit-user-select:none;
@@ -479,6 +479,14 @@
       mostrarToastClipboard(`Copiados al Portapapeles:\nBanco: ${banco4}\nDocumento: ${documento}\nN° P. Movil: ${telefonoPagoMovil}\nMonto: ${monto}`);
     }
 
+    async function copiarMontoTransaccion(valorMonto){
+      const monto=(valorMonto??'').toString().trim();
+      if(!monto) return;
+      const copiado=await copiarAlPortapapeles(monto);
+      if(!copiado) return;
+      mostrarToastClipboard(`Monto: ${monto} copiado a portapapeles`);
+    }
+
     async function mostrarInfoGmail(mail){
       const overlay=document.createElement('div');
       Object.assign(overlay.style,{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center'});
@@ -615,7 +623,7 @@
         const montoNum=parseFloat(t.Monto);
         const monto=formatearMonto(montoNum);
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td>${t.bancoreceptor||''}</td><td style='color:#4b0082;'>${t.referencia}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
+        tr.innerHTML=`<td>${i}</td><td class='monto-copy-cell' style='color:#4b0082;'>${monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td>${t.bancoreceptor||''}</td><td style='color:#4b0082;'>${t.referencia}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
         const estadoTd=tr.children[6];
         if(t.estado==='ANULADO'){
           tr.classList.add('anulado');
@@ -632,6 +640,9 @@
         const mailTd=tr.children[2];
         mailTd.style.cursor='pointer';
         mailTd.addEventListener('click',()=>mostrarInfoGmail(t.IDbilletera));
+        const montoTd=tr.children[1];
+        montoTd.addEventListener('mousedown',e=>e.preventDefault());
+        montoTd.addEventListener('click',()=>copiarMontoTransaccion(monto));
         const bancoTd=tr.children[3];
         bancoTd.addEventListener('mousedown',e=>e.preventDefault());
         bancoTd.addEventListener('click',()=>copiarDatosCompletosRetiro(t,tr));
@@ -667,7 +678,7 @@
         const tr=document.createElement('tr');
         const refValue=refCookies[t.id]!==undefined?refCookies[t.id]:(t.referencia||'');
         tr.dataset.id=t.id;
-        tr.innerHTML=`<td>${i}</td><td style='color:#4b0082;'>${monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td class='bank-copy-cell' style='cursor:pointer;'>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;text-align:center;direction:ltr;unicode-bidi:plaintext;' contenteditable='false' inputmode='numeric'>${refValue}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
+        tr.innerHTML=`<td>${i}</td><td class='monto-copy-cell' style='color:#4b0082;'>${monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td class='bank-copy-cell' style='cursor:pointer;'>${(t.bancoreceptor||'').split(':')[0]}</td><td style='color:#4b0082;text-align:center;direction:ltr;unicode-bidi:plaintext;' contenteditable='false' inputmode='numeric'>${refValue}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
         const estadoTd=tr.children[6];
         if(t.estado==='ANULADO'){
           tr.classList.add('anulado');
@@ -711,6 +722,9 @@
         const mailTd=tr.children[2];
         mailTd.style.cursor='pointer';
         mailTd.addEventListener('click',()=>mostrarInfoGmail(t.IDbilletera));
+        const montoTd=tr.children[1];
+        montoTd.addEventListener('mousedown',e=>e.preventDefault());
+        montoTd.addEventListener('click',()=>copiarMontoTransaccion(monto));
         const bancoTd=tr.children[3];
         bancoTd.addEventListener('mousedown',e=>e.preventDefault());
         bancoTd.addEventListener('click',()=>copiarDatosCompletosRetiro(t,tr));
