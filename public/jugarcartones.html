@@ -427,7 +427,30 @@
       font-weight:600;
       color:#00204a;
     }
+    .datos-bancarios-submensaje{
+      margin:-10px 0 0 0;
+      font-size:0.75rem;
+      color:#ff8c00;
+      font-weight:700;
+    }
     .datos-bancarios-doc-row{display:flex;gap:8px;width:100%;}
+    .datos-bancarios-alerta-cedula{
+      display:none;
+      flex-direction:column;
+      justify-content:center;
+      align-items:center;
+      text-align:center;
+      color:#d50000;
+      min-width:115px;
+      animation:parpadeoAdvertencia 0.6s ease-in-out infinite;
+    }
+    .datos-bancarios-alerta-cedula.visible{display:flex;}
+    .datos-bancarios-alerta-cedula .titulo{font-size:0.7rem;font-weight:800;line-height:1.1;}
+    .datos-bancarios-alerta-cedula .texto{font-size:0.62rem;font-weight:700;line-height:1.1;}
+    @keyframes parpadeoAdvertencia{
+      0%,100%{opacity:1;}
+      50%{opacity:0.35;}
+    }
     .datos-bancarios-input-tipo{max-width:64px;flex:0 0 64px;height:38px;padding:5px 6px;text-align:center;}
     .datos-bancarios-input{
       width:100%;
@@ -1139,7 +1162,8 @@
       <div class="datos-bancarios-card" role="document">
           <span class="datos-bancarios-icono" aria-hidden="true">⚠️</span>
           <h2 id="datos-bancarios-titulo" class="datos-bancarios-titulo">DATOS BANCARIOS REQUERIDOS</h2>
-          <p class="datos-bancarios-mensaje">Para jugar debes registrar ahora tu banco, cédula y pago móvil.</p>
+          <p class="datos-bancarios-mensaje">Antes de RETIRAR debes registrar tus datos de pago móvil</p>
+          <p class="datos-bancarios-submensaje">Tu cédula será guardada una sola vez</p>
           <select id="datos-bancarios-banco" class="datos-bancarios-input">
             <option value="">Selecciona tu banco</option>
           </select>
@@ -1149,6 +1173,10 @@
               <option value="J">J</option>
             </select>
             <input id="datos-bancarios-cedula" class="datos-bancarios-input" type="text" placeholder="Cédula" inputmode="numeric" maxlength="12" style="max-width:150px;">
+            <div id="datos-bancarios-alerta-cedula" class="datos-bancarios-alerta-cedula" aria-live="polite">
+              <span class="titulo">ADVERTENCIA</span>
+              <span class="texto">Podrás guardarla una sola vez</span>
+            </div>
           </div>
           <input id="datos-bancarios-pagomovil" class="datos-bancarios-input" type="text" placeholder="Número de pago móvil" inputmode="tel" maxlength="16" style="max-width:200px;">
           <button type="button" id="datos-bancarios-guardar" class="datos-bancarios-boton">GUARDAR PAGO MÓVIL</button>
@@ -1279,6 +1307,7 @@
   const datosBancariosBancoInput=document.getElementById('datos-bancarios-banco');
   const datosBancariosCedulaTipoInput=document.getElementById('datos-bancarios-cedula-tipo');
   const datosBancariosCedulaInput=document.getElementById('datos-bancarios-cedula');
+  const datosBancariosAlertaCedula=document.getElementById('datos-bancarios-alerta-cedula');
   const datosBancariosPagoMovilInput=document.getElementById('datos-bancarios-pagomovil');
   const creditosModal=document.getElementById('creditos-modal');
   const creditosModalDisponibles=document.getElementById('creditos-modal-disponibles');
@@ -2529,6 +2558,11 @@
     const tipo=(datosBancariosCedulaTipoInput?.value||'V').toUpperCase();
     datosBancariosCedulaInput.placeholder=tipo==='J'?'NIT/RIF':'Cédula';
   }
+  function actualizarAdvertenciaCedulaModal(){
+    if(!datosBancariosAlertaCedula || !datosBancariosCedulaInput) return;
+    const tieneValor=((datosBancariosCedulaInput.value||'').trim().length>0);
+    datosBancariosAlertaCedula.classList.toggle('visible',tieneValor);
+  }
 
   function datosBancariosEstanCompletos(data){
     if(!data) return false;
@@ -2985,9 +3019,7 @@
         await db.collection('Billetera').doc(user.email).set({ banco, tipodocu, cedula, pagomovil, actualizadoEn: firebase.firestore.FieldValue.serverTimestamp() },{merge:true});
         if(!billeteraDatosCache) billeteraDatosCache={};
         Object.assign(billeteraDatosCache,{banco,tipodocu,cedula,pagomovil});
-        datosBancariosCompletos=true;
         cerrarModalDatosBancarios();
-        await confirmarCompra();
       }catch(error){
         console.error('Error guardando datos de pago móvil',error);
         mostrarCartonAviso('No se pudieron guardar los datos, intenta nuevamente.');
@@ -2996,6 +3028,8 @@
   }
 
   datosBancariosCedulaTipoInput?.addEventListener('change',actualizarPlaceholderCedulaModal);
+  datosBancariosCedulaInput?.addEventListener('input',actualizarAdvertenciaCedulaModal);
+  actualizarAdvertenciaCedulaModal();
   actualizarPlaceholderCedulaModal();
   if(datosBancariosModal){
     datosBancariosModal.addEventListener('click',evento=>{
@@ -4234,10 +4268,6 @@ function toggleForma(idx){
       return;
     }
     const billeteraInfo=await cargarDatosBilleteraUsuario(true);
-    if(!datosBancariosCompletos){
-      mostrarModalDatosBancarios();
-      return;
-    }
     const billeteraData=billeteraInfo.data||{};
     billeteraData.creditostransito=toNumberSafe(billeteraData.creditostransito,0);
     const resumenCreditos=prepararResumenCreditos(billeteraData);
