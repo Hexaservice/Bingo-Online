@@ -175,6 +175,21 @@
     #modal-detalle button:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(0,0,0,0.22);}
     .modal-actions .btn-primario{background:linear-gradient(160deg, #ffe1b5, #ff9f1a);color:#5b2e00;border-color:#ff8c00;}
     .modal-actions .btn-secundario{background:linear-gradient(160deg, #ecf1ff, #d9e1ff);color:#2d3c91;border-color:#5f73ff;}
+    .modal-alert-extra{margin-top:8px;font-size:0.9rem;color:#2d3c91;font-style:italic;font-weight:600;}
+    .btn-avisar-whatsapp{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border:1px solid #0b8b32 !important;
+      background:linear-gradient(135deg,#3aa8ff 0%, #ffffff 100%) !important;
+      color:#0b3f19 !important;
+      font-weight:700;
+    }
+    .btn-avisar-whatsapp img{
+      width:18px;
+      height:18px;
+      object-fit:contain;
+    }
     #modal-detalle .contenido{display:flex;flex-direction:column;gap:8px;font-family:'Poppins',sans-serif;font-weight:800;text-align:left;color:#1f1f1f;}
     @media (max-width:480px) and (orientation:portrait){
       body{padding:2px;}
@@ -614,8 +629,13 @@
     <div class="modal-card">
       <h4 id="modal-alert-title">Aviso</h4>
       <p id="modal-alert-text"></p>
+      <p id="modal-alert-extra" class="modal-alert-extra" style="display:none;"></p>
       <div class="modal-actions" style="justify-content:center;">
         <button id="modal-alert-accept" class="btn-primario" type="button">Entendido</button>
+        <button id="modal-alert-whatsapp" class="btn-avisar-whatsapp" type="button" style="display:none;">
+          <img src="img/whatsapp-icon.png" alt="WhatsApp">
+          <span>Avisar</span>
+        </button>
       </div>
     </div>
   </div>
@@ -2257,31 +2277,51 @@
           const texto=document.getElementById('modal-alert-text');
           const titulo=document.getElementById('modal-alert-title');
           const btnAceptar=document.getElementById('modal-alert-accept');
+          const textoExtra=document.getElementById('modal-alert-extra');
+          const btnWhatsapp=document.getElementById('modal-alert-whatsapp');
           const restaurarTutorial=pausarTutorialTemporal();
           if(!modal||!texto||!btnAceptar){
             alert(mensaje);
             restaurarTutorial();
-            resolve();
+            resolve(false);
             return;
           }
           if(titulo){
             titulo.textContent=opciones.titulo||'Aviso';
           }
           texto.textContent=mensaje;
+          if(textoExtra){
+            if(opciones.mensajeExtra){
+              textoExtra.textContent=opciones.mensajeExtra;
+              textoExtra.style.display='block';
+            }else{
+              textoExtra.textContent='';
+              textoExtra.style.display='none';
+            }
+          }
+          const mostrarBotonWhatsapp=Boolean(opciones.mostrarBotonWhatsapp && btnWhatsapp);
+          btnAceptar.textContent=opciones.acceptLabel || (mostrarBotonWhatsapp ? 'No avisar' : 'Entendido');
+          if(btnWhatsapp){
+            btnWhatsapp.style.display=mostrarBotonWhatsapp?'inline-flex':'none';
+          }
           modal.style.display='flex';
           modal.setAttribute('aria-hidden','false');
           marcarModalInteractiva(true, modal);
           btnAceptar.focus();
-          const cerrar=()=>{
+          const cerrar=(eleccionWhatsapp=false)=>{
             modal.style.display='none';
             modal.setAttribute('aria-hidden','true');
             marcarModalInteractiva(false, modal);
             btnAceptar.onclick=null;
+            if(btnWhatsapp) btnWhatsapp.onclick=null;
             modal.removeEventListener('click', manejarFondo);
             restaurarTutorial();
-            resolve();
+            resolve(eleccionWhatsapp);
           };
           btnAceptar.onclick=cerrar;
+          if(btnWhatsapp){
+            btnWhatsapp.onclick=()=>cerrar(true);
+          }
           function manejarFondo(e){ if(e.target===modal){ cerrar(); } }
           modal.addEventListener('click', manejarFondo);
         });
@@ -2436,13 +2476,22 @@
       const confirmar = await mostrarConfirmacionModal(`¿Confirmas la solicitud de recarga por ${monto.toFixed(2)}?`);
       if(!confirmar){ return; }
       await db.collection('transacciones').add(data);
-      await mostrarAlertaModal('Bien, recibimos tu solicitud, una vez verificado el pago se recargará tu billetera, serás dirigido a tu WhatsApp para poder enviar el mensaje de solicitud');
-      await notificarSolicitudWhatsapp('recarga',{
-        banco:banco,
-        monto:monto,
-        referencia:ref,
-        comentario:data.comentario
-      });
+      const notificarRecarga=await mostrarAlertaModal(
+        'Bien, recibimos tu solicitud, una vez verificado el pago se recargará tu billetera',
+        {
+          mensajeExtra:'¿Quieres avisar enviando solicitud por WhatsApp?',
+          mostrarBotonWhatsapp:true,
+          acceptLabel:'No avisar'
+        }
+      );
+      if(notificarRecarga){
+        await notificarSolicitudWhatsapp('recarga',{
+          banco:banco,
+          monto:monto,
+          referencia:ref,
+          comentario:data.comentario
+        });
+      }
       limpiarCamposTransaccion('recarga');
       suscribirTransaccionesUsuario();
     });
@@ -2496,10 +2545,17 @@
         throw error;
       }
       await refrescarResumenBilletera();
-      await mostrarAlertaModal('Solicitud enviada, una vez validada se transferirá a tu pago móvil, serás dirigido a tu WhatsApp para poder enviar el mensaje de solicitud');
+      const notificarRetiro=await mostrarAlertaModal(
+        'Solicitud enviada, una vez validada se transferirá a tu pago móvil',
+        {
+          mensajeExtra:'¿Quieres avisar enviando solicitud por WhatsApp?',
+          mostrarBotonWhatsapp:true,
+          acceptLabel:'No avisar'
+        }
+      );
       limpiarCamposTransaccion('retiro');
       suscribirTransaccionesUsuario();
-      return { data, billetera: billeteraData };
+      return { data, billetera: billeteraData, notificarRetiro };
     }
 
     document.getElementById('btn-retirar').addEventListener('click', async () => {
@@ -2521,14 +2577,16 @@
       const restaurarTutorial=pausarTutorialTemporal();
       try{
         const resultado=await ejecutarRetiro(monto,montoFinal, comentarioRetiro);
-        await notificarSolicitudWhatsapp('retiro',{
-          montoSolicitado:monto,
-          montoNeto:montoFinal,
-          comentario:comentarioRetiro,
-          banco:resultado?.billetera?.banco||resultado?.data?.bancoreceptor||'',
-          pagomovil:resultado?.billetera?.pagomovil||'',
-          cuenta:resultado?.billetera?.cuenta||''
-        });
+        if(resultado?.notificarRetiro){
+          await notificarSolicitudWhatsapp('retiro',{
+            montoSolicitado:monto,
+            montoNeto:montoFinal,
+            comentario:comentarioRetiro,
+            banco:resultado?.billetera?.banco||resultado?.data?.bancoreceptor||'',
+            pagomovil:resultado?.billetera?.pagomovil||'',
+            cuenta:resultado?.billetera?.cuenta||''
+          });
+        }
       }catch(error){
         if(error?.message==='CREDITOS_INSUFICIENTES'){
           await refrescarResumenBilletera();
