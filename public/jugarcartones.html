@@ -429,11 +429,12 @@
     }
     .datos-bancarios-submensaje{
       margin:-10px 0 0 0;
-      font-size:0.75rem;
+      font-size:0.9rem;
       color:#ff8c00;
-      font-weight:700;
+      font-weight:800;
+      text-shadow:0 0 7px rgba(255,255,255,0.95),0 0 12px rgba(255,255,255,0.75);
     }
-    .datos-bancarios-doc-row{display:flex;gap:8px;width:100%;}
+    .datos-bancarios-doc-row{display:grid;grid-template-columns:minmax(56px,20%) minmax(0,50%) minmax(0,30%);gap:10px;width:100%;align-items:center;}
     .datos-bancarios-alerta-cedula{
       display:none;
       flex-direction:column;
@@ -441,17 +442,18 @@
       align-items:center;
       text-align:center;
       color:#d50000;
-      min-width:115px;
+      min-height:38px;
+      padding:4px 6px;
       animation:parpadeoAdvertencia 0.6s ease-in-out infinite;
     }
     .datos-bancarios-alerta-cedula.visible{display:flex;}
-    .datos-bancarios-alerta-cedula .titulo{font-size:0.7rem;font-weight:800;line-height:1.1;}
-    .datos-bancarios-alerta-cedula .texto{font-size:0.62rem;font-weight:700;line-height:1.1;}
+    .datos-bancarios-alerta-cedula .titulo{font-size:0.82rem;font-weight:900;line-height:1.1;text-shadow:0 0 6px rgba(255,255,255,0.9);}
+    .datos-bancarios-alerta-cedula .texto{font-size:0.78rem;font-weight:800;line-height:1.15;text-shadow:0 0 8px rgba(255,255,255,0.95),0 0 14px rgba(255,255,255,0.75);}
     @keyframes parpadeoAdvertencia{
       0%,100%{opacity:1;}
       50%{opacity:0.35;}
     }
-    .datos-bancarios-input-tipo{max-width:64px;flex:0 0 64px;height:38px;padding:5px 6px;text-align:center;}
+    .datos-bancarios-input-tipo{width:100%;max-width:none;height:38px;padding:5px 6px;text-align:center;}
     .datos-bancarios-input{
       width:100%;
       border:2px solid #90caf9;
@@ -467,24 +469,31 @@
     }
     .datos-bancarios-boton{
       font-family:'Bangers',cursive;
-      font-size:clamp(1rem,3.2vw,1.3rem);
-      padding:10px 26px;
-      border-radius:12px;
-      border:3px solid #ffd700;
-      background:linear-gradient(135deg,#00c853,#a7ff83);
-      color:#0b1b4d;
+      font-size:clamp(1.02rem,3.4vw,1.38rem);
+      padding:11px 28px;
+      border-radius:14px;
+      border:3px solid #fff6a9;
+      background:linear-gradient(145deg,#00b748,#6dff9d 58%,#d4ff4f);
+      color:#0a1e55;
       cursor:pointer;
       text-transform:uppercase;
-      letter-spacing:1px;
-      box-shadow:0 12px 26px rgba(0,74,173,0.35);
-      transition:transform 0.25s ease,box-shadow 0.25s ease;
+      letter-spacing:1.2px;
+      box-shadow:0 14px 28px rgba(0,74,173,0.4), inset 0 2px 0 rgba(255,255,255,0.55);
+      transition:transform 0.22s ease,box-shadow 0.22s ease,filter 0.22s ease;
     }
     .datos-bancarios-boton:hover,
     .datos-bancarios-boton:focus{
-      transform:scale(1.05);
-      box-shadow:0 16px 32px rgba(0,74,173,0.45);
+      transform:translateY(-1px) scale(1.04);
+      box-shadow:0 18px 36px rgba(0,74,173,0.52), inset 0 2px 0 rgba(255,255,255,0.65);
+      filter:saturate(1.1);
       outline:none;
     }
+    @media (max-width:640px){
+      .datos-bancarios-doc-row{grid-template-columns:minmax(52px,20%) minmax(0,50%) minmax(0,30%);gap:8px;}
+      .datos-bancarios-alerta-cedula .titulo{font-size:0.74rem;}
+      .datos-bancarios-alerta-cedula .texto{font-size:0.69rem;}
+    }
+
     body.sellado-modal-activo{overflow:hidden;}
     .sellado-modal-card{
       width:min(420px,90%);
@@ -1163,7 +1172,7 @@
           <span class="datos-bancarios-icono" aria-hidden="true">⚠️</span>
           <h2 id="datos-bancarios-titulo" class="datos-bancarios-titulo">DATOS BANCARIOS REQUERIDOS</h2>
           <p class="datos-bancarios-mensaje">Antes de RETIRAR debes registrar tus datos de pago móvil</p>
-          <p class="datos-bancarios-submensaje">Tu cédula será guardada una sola vez</p>
+          <p class="datos-bancarios-submensaje">Tu cédula NO podrá ser modificada</p>
           <select id="datos-bancarios-banco" class="datos-bancarios-input">
             <option value="">Selecciona tu banco</option>
           </select>
@@ -1172,7 +1181,7 @@
               <option value="V" selected>V</option>
               <option value="J">J</option>
             </select>
-            <input id="datos-bancarios-cedula" class="datos-bancarios-input" type="text" placeholder="Cédula" inputmode="numeric" maxlength="12" style="max-width:150px;">
+            <input id="datos-bancarios-cedula" class="datos-bancarios-input" type="text" placeholder="Cédula" inputmode="numeric" maxlength="12">
             <div id="datos-bancarios-alerta-cedula" class="datos-bancarios-alerta-cedula" aria-live="polite">
               <span class="titulo">ADVERTENCIA</span>
               <span class="texto">Podrás guardarla una sola vez</span>
@@ -2978,7 +2987,11 @@
     cargarBancosModalDatosBancarios();
     datosBancariosModal.classList.add('visible');
     datosBancariosModal.setAttribute('aria-hidden','false');
-    if(datosBancariosBancoInput) datosBancariosBancoInput.focus();
+    if(datosBancariosBancoInput){
+      setTimeout(()=>{
+        datosBancariosBancoInput.focus();
+      },0);
+    }
   }
 
   function cerrarModalDatosBancarios(){
