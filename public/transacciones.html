@@ -600,10 +600,16 @@
       if(isNaN(num))return valor;
       return num%1===0?num.toString():num.toFixed(2);
     }
+    function parseFechaHoraSolicitud(fecha,hora){
+      const marcaFecha=parseFecha(fecha);
+      if(!marcaFecha) return 0;
+      const horaNormalizada=aHora24(hora||'00:00');
+      const [horas='00',minutos='00']=horaNormalizada.split(':');
+      const totalMinutos=(parseInt(horas,10)||0)*60+(parseInt(minutos,10)||0);
+      return marcaFecha + totalMinutos*60000;
+    }
     function sortTrans(a,b){
-      if(a.estado==='PENDIENTE'&&b.estado!=='PENDIENTE')return -1;
-      if(a.estado!=='PENDIENTE'&&b.estado==='PENDIENTE')return 1;
-      return parseFecha(b.fechasolicitud)-parseFecha(a.fechasolicitud);
+      return parseFechaHoraSolicitud(b.fechasolicitud,b.horasolicitud)-parseFechaHoraSolicitud(a.fechasolicitud,a.horasolicitud);
     }
     function renderRec(){
       const tb=document.querySelector('#tabla-recargas tbody');
