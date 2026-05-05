@@ -148,7 +148,7 @@
             <th><input id="filtro-rec-monto" type="text" placeholder="Monto" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'');" style="width:100%;box-sizing:border-box;"></th>
             <th><input id="filtro-rec-nombre" type="text" placeholder="Gmail" oninput="this.value=this.value.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ ]/g,'');" style="width:100%;box-sizing:border-box;"></th>
             <th><select id="filtro-rec-banco" style="width:100%;"><option value="">Banco</option></select></th>
-            <th><input id="filtro-rec-ref" type="text" placeholder="Referencia" inputmode="numeric" maxlength="4" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,4);" style="width:100%;box-sizing:border-box;"></th>
+            <th><input id="filtro-rec-ref" type="text" placeholder="Referencia" inputmode="numeric" maxlength="15" oninput="this.value=this.value.replace(/[^0-9]/g,''); this.value=this.value.slice(-4);" style="width:100%;box-sizing:border-box;"></th>
             <th><input id="filtro-rec-fecha" type="date" style="width:100%;box-sizing:border-box;"></th>
             <th><select id="filtro-rec-estado" style="width:100%;"><option value="">Estado</option><option value="PENDIENTE">Pendiente</option><option value="APROBADO">Aprobado</option><option value="ACEPTADO">Aceptado</option><option value="ANULADO">Anulado</option></select></th>
             <th style="text-align:center;"><span id="sel-rec" style="cursor:pointer;">&#10004;</span></th>
@@ -191,7 +191,7 @@
             <th><input id="filtro-ret-monto" type="text" placeholder="Monto" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'');" style="width:100%;box-sizing:border-box;"></th>
             <th><input id="filtro-ret-nombre" type="text" placeholder="Gmail" oninput="this.value=this.value.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ ]/g,'');" style="width:100%;box-sizing:border-box;"></th>
             <th><select id="filtro-ret-banco" style="width:100%;"><option value="">Banco</option></select></th>
-            <th><input id="filtro-ret-ref" type="text" placeholder="Referencia" inputmode="numeric" maxlength="4" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,4);" style="width:100%;box-sizing:border-box;"></th>
+            <th><input id="filtro-ret-ref" type="text" placeholder="Referencia" inputmode="numeric" maxlength="15" oninput="this.value=this.value.replace(/[^0-9]/g,''); this.value=this.value.slice(-4);" style="width:100%;box-sizing:border-box;"></th>
             <th><input id="filtro-ret-fecha" type="date" style="width:100%;box-sizing:border-box;"></th>
             <th><select id="filtro-ret-estado" style="width:100%;"><option value="">Estado</option><option value="PENDIENTE">Pendiente</option><option value="APROBADO">Aprobado</option><option value="ACEPTADO">Aceptado</option><option value="ANULADO">Anulado</option></select></th>
             <th style="text-align:center;"><span id="sel-ret" style="cursor:pointer;">&#10004;</span></th>
@@ -714,7 +714,7 @@
           const posicionCursor=window.getSelection && window.getSelection().rangeCount
             ? window.getSelection().getRangeAt(0).startOffset
             : textoActual.length;
-          const textoNormalizado=textoActual.replace(/[^0-9]/g,'').slice(0,4);
+          const textoNormalizado=normalizarReferenciaDesdeTexto(textoActual);
           if(textoNormalizado!==textoActual){
             refTd.textContent=textoNormalizado;
             const sel=window.getSelection && window.getSelection();

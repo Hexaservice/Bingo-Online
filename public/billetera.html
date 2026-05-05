@@ -627,7 +627,7 @@
         <option value="" disabled selected>Banco donde transferiste</option>
       </select>
       <input type="number" id="monto-deposito" placeholder="Monto">
-        <input type="text" id="referencia" placeholder="Referencia (últimos 4 dígitos)" inputmode="numeric" pattern="\d*" maxlength="4" oninput="this.value=this.value.replace(/\D/g,"").slice(0,4);">
+        <input type="text" id="referencia" placeholder="Referencia (últimos 4 dígitos)" inputmode="numeric" pattern="\d*" maxlength="15" oninput="this.value=this.value.replace(/\D/g,""); this.value=this.value.slice(-4);">
       <textarea id="comentario-deposito" placeholder="Comentario (opcional)"></textarea>
       <button id="btn-depositar">Solicitar Recarga</button>
     </div>
@@ -2553,6 +2553,10 @@
     }
 
     const referenciaInput=document.getElementById('referencia');
+    referenciaInput.addEventListener('input',()=>{
+      referenciaInput.value=normalizarReferenciaDesdeTexto(referenciaInput.value);
+    });
+
     referenciaInput.addEventListener('paste',(event)=>{
       event.preventDefault();
       const textoPegado=(event.clipboardData || window.clipboardData)?.getData('text') || '';
