@@ -627,7 +627,7 @@
         <option value="" disabled selected>Banco donde transferiste</option>
       </select>
       <input type="number" id="monto-deposito" placeholder="Monto">
-        <input type="text" id="referencia" placeholder="Referencia (últimos 5 dígitos)" inputmode="numeric" pattern="\d*" maxlength="5" oninput="this.value=this.value.replace(/\D/g,"");">
+        <input type="text" id="referencia" placeholder="Referencia (últimos 4 dígitos)" inputmode="numeric" pattern="\d*" maxlength="4" oninput="this.value=this.value.replace(/\D/g,"").slice(0,4);">
       <textarea id="comentario-deposito" placeholder="Comentario (opcional)"></textarea>
       <button id="btn-depositar">Solicitar Recarga</button>
     </div>
@@ -1447,7 +1447,7 @@
       { id:'tabla-bancos', elementId:'tabla-bancos', selectorPersonalizado:'#tabla-bancos', selectorAnimacion:'#tabla-bancos tbody tr:last-child', mano:'img/Mano-arriba.png', posicion:'debajo-centro', mensaje:'Estos son los datos de los bancos habilitados donde deberás transferir para la recarga', color:'#0a4c6a', tab:'depositar' },
       { id:'banco-deposito', elementId:'banco-deposito', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'elige el banco donde transferiste tu pago móvil', color:'#005b99', tab:'depositar' },
       { id:'monto-deposito', elementId:'monto-deposito', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Coloca el monto que transferiste. Es IMPORTANTE  que coloques el monto exacto para que no sea anulado', color:'#0b9a2e', tab:'depositar' },
-      { id:'referencia', elementId:'referencia', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Colocalos últimos 5 dígitos de la referencia. Es IMPORTANTE  que coloques los dígitos correctos, de lo contrario la recarga será anulada', color:'#6a0dad', tab:'depositar' },
+      { id:'referencia', elementId:'referencia', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Colocalos últimos 4 dígitos de la referencia. Es IMPORTANTE  que coloques los dígitos correctos, de lo contrario la recarga será anulada', color:'#6a0dad', tab:'depositar' },
       { id:'comentario-deposito', elementId:'comentario-deposito', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Aquí puedes colocar un comentario referente a la recarga, este comentario es opcional', color:'#b34700', tab:'depositar' },
       { id:'btn-depositar', elementId:'btn-depositar', mano:'img/Mano-izquierda.png', posicion:'derecha', mensaje:'Una vez coloques todos los datos de la recarga, puedes solicitar presionando este botón. Serás dirigido automaticamente a tu WhatsApp con el mensaje de solicitud para enviarlo', color:'#0a8800', tab:'depositar' },
     ];
@@ -2546,6 +2546,20 @@
       document.getElementById('monto-retiro-neto').value=neto>0?neto.toFixed(2):'';
     }
 
+    function normalizarReferenciaDesdeTexto(texto){
+      const soloDigitos=(texto||'').toString().replace(/\D/g,'');
+      if(soloDigitos.length<=4) return soloDigitos;
+      return soloDigitos.slice(-4);
+    }
+
+    const referenciaInput=document.getElementById('referencia');
+    referenciaInput.addEventListener('paste',(event)=>{
+      event.preventDefault();
+      const textoPegado=(event.clipboardData || window.clipboardData)?.getData('text') || '';
+      referenciaInput.value=normalizarReferenciaDesdeTexto(textoPegado);
+      referenciaInput.dispatchEvent(new Event('input',{bubbles:true}));
+    });
+
     document.getElementById('monto-retiro').addEventListener('input',actualizarMontoNeto);
 
     document.getElementById('btn-depositar').addEventListener('click', async () => {
@@ -2558,7 +2572,7 @@
       const monto=parseFloat(montoStr);
       if(!montoStr || isNaN(monto) || monto<=0){await mostrarAlertaModal('Ingrese un monto válido');document.getElementById('monto-deposito').focus();return;}
       const ref=document.getElementById('referencia').value.trim();
-      if(!/^[0-9]{5}$/.test(ref)){await mostrarAlertaModal('Ingrese la referencia de 5 dígitos');document.getElementById('referencia').focus();return;}
+      if(!/^[0-9]{4}$/.test(ref)){await mostrarAlertaModal('Ingrese la referencia de 4 dígitos');document.getElementById('referencia').focus();return;}
       const data = {
         tipotrans:'recarga',
         bancoreceptor:banco,
