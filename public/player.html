@@ -455,6 +455,7 @@
       .express-btn{border:none;border-radius:999px;padding:10px 18px;background:linear-gradient(135deg,#0b8f3a,#17b15e);color:#fff;font-weight:700;cursor:pointer;}
       .express-btn-next{background:linear-gradient(135deg,#f59e0b,#f97316);border:2px solid #ffe066;color:#fff;}
       .express-btn-back{padding:6px 10px;min-width:38px;background:linear-gradient(135deg,#d1d5db,#9ca3af);border:1px solid #e5e7eb;color:#f3f4f6;font-size:1rem;}
+      .express-btn-cambiar{padding:3px 8px;min-width:auto;font-size:.68rem;line-height:1.15;border:1px solid #cbd5e1;background:#fff;color:#4b5563;border-radius:8px;text-transform:uppercase;letter-spacing:.4px;}
       .express-loading{width:20px;height:20px;border:3px solid #d1d5db;border-top-color:#16a34a;border-radius:50%;animation:express-spin .8s linear infinite;margin:0 auto;}
       @keyframes express-spin{to{transform:rotate(360deg);}}
       .express-btn-no-avisar{background:linear-gradient(135deg,#f59e0b,#f97316);border:2px solid #ffe066;color:#fff;}
@@ -1485,22 +1486,24 @@
   }
   function renderRecargaExpressPaso1(){
     const host=document.getElementById('express-contenido');
-    host.innerHTML=`<div class="express-row"><strong>1ero - Escribe el monto que solicitarás:</strong></div><div class="express-row"><input id="express-monto" class="express-input express-input-monto" placeholder="Monto" inputmode="decimal"></div><div class="express-actions express-actions-center"><button id="express-back" class="express-btn express-btn-back" type="button" style="display:none;">Cambiar</button><button id="express-next" class="express-btn express-btn-next" type="button">Siguiente</button></div>`;
-    const input=host.querySelector('#express-monto'); const next=host.querySelector('#express-next'); const back=host.querySelector('#express-back');
+    host.innerHTML=`<div class="express-row"><strong>1ero - Escribe el monto que solicitarás:</strong></div><div class="express-row"><input id="express-monto" class="express-input express-input-monto" placeholder="Monto" inputmode="decimal"></div><div class="express-actions express-actions-center"><button id="express-next" class="express-btn express-btn-next" type="button">Siguiente</button></div>`;
+    const input=host.querySelector('#express-monto'); const next=host.querySelector('#express-next');
     input.addEventListener('focus',()=>document.getElementById('modal-recarga-express')?.classList.add('keyboard-open'));
     input.addEventListener('blur',()=>document.getElementById('modal-recarga-express')?.classList.remove('keyboard-open'));
     input.addEventListener('input',()=>{ input.value=input.value.replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1'); });
     const avanzarPasoMonto=()=>{
       const montoVal=parseFloat(input.value);
-      if(!(montoVal>0)) return;
-      if(next.dataset.loading==='1') return;
+      if(!(montoVal>0) || next.disabled) return;
+      next.disabled=true;
       next.dataset.loading='1';
       input.blur();
       document.getElementById('modal-recarga-express')?.classList.remove('keyboard-open');
-      renderRecargaExpressPaso2(montoVal.toFixed(2));
+      window.setTimeout(()=>renderRecargaExpressPaso2(montoVal.toFixed(2)),20);
     };
-    back.addEventListener('click',()=>input.focus());
-    next.addEventListener('click',avanzarPasoMonto);
+    next.addEventListener('click',ev=>{
+      ev.preventDefault();
+      avanzarPasoMonto();
+    });
     input.addEventListener('keydown',ev=>{
       if(ev.key==='Enter'){
         ev.preventDefault();
@@ -1526,7 +1529,7 @@
     host.innerHTML=`<div class="express-copy-line"><span class="express-copy-value">${banco.nombre||'Banco Express'}</span><button class="copy-btn" data-copy="${banco4}" type="button"><img src="img/icono-copiar.png" alt="Copiar"></button></div>
     <div class="express-copy-line"><span class="express-copy-value express-copy-value--pagomovil">${banco.pagomovil||''}</span><button class="copy-btn" data-copy="${banco.pagomovil||''}" type="button"><img src="img/icono-copiar.png" alt="Copiar"></button></div>
     <div class="express-copy-line"><span class="express-copy-value express-copy-value--cedula">${banco.cedula||''}</span><button class="copy-btn" data-copy="${banco.cedula||''}" type="button"><img src="img/icono-copiar.png" alt="Copiar"></button></div>
-    <div class="express-copy-line"><span class="express-copy-value express-copy-value--monto">Monto: ${montoTxt}</span><button class="copy-btn" data-copy="${montoTxt}" type="button"><img src="img/icono-copiar.png" alt="Copiar"></button></div>
+    <div class="express-copy-line"><button id="express-cambiar-monto" class="express-btn express-btn-cambiar" type="button">CAMBIAR</button><span class="express-copy-value express-copy-value--monto">Monto: ${montoTxt}</span><button class="copy-btn" data-copy="${montoTxt}" type="button"><img src="img/icono-copiar.png" alt="Copiar"></button></div>
     <div class="express-copy-line"><button class="express-copy-all-container" id="copy-all" type="button"><strong class="express-copy-all-value">COPIAR TODO</strong><span class="copy-btn all" aria-hidden="true"><img src="img/icono-copiar.png" alt="Copiar"></span></button></div>
     <p class="express-help" id="express-help-copy">Copia los datos de nuestro pago móvil</p>
     <p class="express-help express-help-pago" id="express-help-pago" style="display:none;">Ve a tu App bancaria realizas el PAGO, copias la referencia, REGRESAS y la pegas en este campo:</p>
@@ -1547,6 +1550,16 @@ ${montoTxt}`);
       if(refRow) refRow.style.display='block';
       host.querySelectorAll('.copy-btn[data-copy]').forEach(btn=>mostrarToastCopiado(btn,'Copiado'));
       host.querySelector('#express-ref')?.focus();
+    });
+    const btnCambiarMonto=host.querySelector('#express-cambiar-monto');
+    btnCambiarMonto?.addEventListener('click',()=>{
+      renderRecargaExpressPaso1();
+      const montoInput=document.getElementById('express-monto');
+      if(montoInput){
+        montoInput.value=montoTxt;
+        montoInput.focus();
+        montoInput.select?.();
+      }
     });
     const refInput=host.querySelector('#express-ref'); const send=host.querySelector('#express-send');
     refInput.addEventListener('input',()=>{ refInput.value=normalizarReferenciaDesdeTexto(refInput.value); send.style.display=/^[0-9]{4}$/.test(refInput.value)?'inline-block':'none'; });
