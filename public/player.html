@@ -446,6 +446,9 @@
       .express-actions-center{justify-content:center;}
       .express-btn{border:none;border-radius:999px;padding:10px 18px;background:linear-gradient(135deg,#0b8f3a,#17b15e);color:#fff;font-weight:700;cursor:pointer;}
       .express-btn-next{background:linear-gradient(135deg,#f59e0b,#f97316);border:2px solid #ffe066;color:#fff;}
+      .express-btn-back{padding:6px 10px;min-width:38px;background:linear-gradient(135deg,#d1d5db,#9ca3af);border:1px solid #e5e7eb;color:#f3f4f6;font-size:1rem;}
+      .express-loading{width:20px;height:20px;border:3px solid #d1d5db;border-top-color:#16a34a;border-radius:50%;animation:express-spin .8s linear infinite;margin:0 auto;}
+      @keyframes express-spin{to{transform:rotate(360deg);}}
       .express-btn-no-avisar{background:linear-gradient(135deg,#f59e0b,#f97316);border:2px solid #ffe066;color:#fff;}
       .express-btn-avisar{background:linear-gradient(135deg,#0b8f3a,#17b15e);border:2px solid #1e40af;color:#fff;}
       .express-btn img{height:18px;vertical-align:middle;}
@@ -1473,12 +1476,26 @@
   }
   function renderRecargaExpressPaso1(){
     const host=document.getElementById('express-contenido');
-    host.innerHTML=`<div class="express-row"><strong>1ero - Escribe el monto que solicitarás:</strong></div><div class="express-row"><input id="express-monto" class="express-input express-input-monto" placeholder="Monto" inputmode="decimal"></div><div class="express-actions express-actions-center"><button id="express-next" class="express-btn express-btn-next" style="display:none;" type="button">Siguiente</button></div>`;
-    const input=host.querySelector('#express-monto'); const next=host.querySelector('#express-next');
+    host.innerHTML=`<div class="express-row"><strong>1ero - Escribe el monto que solicitarás:</strong></div><div class="express-row"><input id="express-monto" class="express-input express-input-monto" placeholder="Monto" inputmode="decimal"></div><div class="express-actions express-actions-center"><button id="express-back" class="express-btn express-btn-back" type="button" style="display:none;">←</button><button id="express-next" class="express-btn express-btn-next" style="display:none;" type="button">Siguiente</button></div>`;
+    const input=host.querySelector('#express-monto'); const next=host.querySelector('#express-next'); const back=host.querySelector('#express-back');
     input.addEventListener('focus',()=>document.getElementById('modal-recarga-express')?.classList.add('keyboard-open'));
     input.addEventListener('blur',()=>document.getElementById('modal-recarga-express')?.classList.remove('keyboard-open'));
-    input.addEventListener('input',()=>{ input.value=input.value.replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1'); const v=parseFloat(input.value); next.style.display=v>0?'inline-block':'none'; });
-    next.addEventListener('click',()=>{ if(next.dataset.loading==='1') return; next.dataset.loading='1'; renderRecargaExpressPaso2(parseFloat(input.value).toFixed(2)); });
+    input.addEventListener('input',()=>{ input.value=input.value.replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1'); const v=parseFloat(input.value); const visible=v>0; next.style.display=visible?'inline-block':'none'; if(!visible){ back.style.display='none'; next.textContent='Siguiente'; next.dataset.estado='inicio'; } });
+    back.addEventListener('click',()=>{ input.value=''; input.dispatchEvent(new Event('input',{bubbles:true})); input.focus(); });
+    next.addEventListener('click',()=>{
+      const montoVal=parseFloat(input.value);
+      if(!(montoVal>0)) return;
+      const estado=next.dataset.estado||'inicio';
+      if(estado==='inicio'){
+        next.textContent='Confirmar';
+        back.style.display='inline-block';
+        next.dataset.estado='confirmar';
+        return;
+      }
+      if(next.dataset.loading==='1') return;
+      next.dataset.loading='1';
+      renderRecargaExpressPaso2(montoVal.toFixed(2));
+    });
   }
   async function renderRecargaExpressPaso2(montoTxt){
     const host=document.getElementById('express-contenido');
@@ -1508,10 +1525,16 @@
     send.addEventListener('click',async()=>{
       const user=auth.currentUser; if(!user) return;
       const data={tipotrans:'recarga',bancoreceptor:banco.nombre||'Banco Express',Monto:parseFloat(montoTxt),referencia:refInput.value.trim(),comentario:'Recarga Express',estado:'PENDIENTE',IDbilletera:user.email,fechasolicitud:new Date().toLocaleDateString('es-VE'),horasolicitud:new Date().toLocaleTimeString('es-VE',{hour12:false}),usuariogestor:'',rolusuario:'',fechagestion:'',horagestion:'',nota:''};
-      await firestoreRef.collection('transacciones').add(data); send.style.display='none';
+      send.style.display='none';
+      const loading=document.createElement('div');
+      loading.className='express-loading';
+      loading.setAttribute('aria-label','Procesando solicitud');
+      send.parentElement?.appendChild(loading);
+      await firestoreRef.collection('transacciones').add(data);
+      loading.remove();
       host.querySelector('#express-post').innerHTML='<div class="express-actions express-actions-center"><button id="express-no-avisar" class="express-btn express-btn-no-avisar" type="button">No avisar</button><button id="express-avisar" class="express-btn express-btn-avisar" type="button"><img src="img/whatsapp-icon.png" alt=""> Avisar</button></div>';
       host.querySelector('#express-no-avisar').addEventListener('click',cerrarModalRecargaExpress);
-      host.querySelector('#express-avisar').addEventListener('click',async()=>{ const p=await firestoreRef.collection('Variablesglobales').doc('Parametros').get(); const numero=((p.data()||{}).numeroWhatsapp||'').replace(/\\D/g,''); const msg=`💵 *SOLICITUD DE RECARGA*\\nCorreo: ${user.email}\\nUsuario: ${user.displayName||user.email}\\nBanco receptor: ${banco.nombre||''}\\nMonto: ${Math.trunc(parseFloat(montoTxt))}\\nReferencia: ${refInput.value.trim()}`; if(numero){ window.open(`https://wa.me/${numero}?text=${encodeURIComponent(msg)}`,'_blank','noopener'); } cerrarModalRecargaExpress(); });
+      host.querySelector('#express-avisar').addEventListener('click',async()=>{ const p=await firestoreRef.collection('Variablesglobales').doc('Parametros').get(); const numero=((p.data()||{}).numeroWhatsapp||'').replace(/\D/g,''); const msg=['💵 *SOLICITUD DE RECARGA*',`Correo: ${user.email}`,`Usuario: ${user.displayName||user.email}`,`Banco receptor: ${banco.nombre||''}`,`Monto: ${Math.trunc(parseFloat(montoTxt))}`,`Referencia: ${refInput.value.trim()}`].join('\n'); if(numero){ window.open(`https://wa.me/${numero}?text=${encodeURIComponent(msg)}`,'_blank','noopener'); } cerrarModalRecargaExpress(); });
     });
   }
   function abrirModalRecargaExpress(){ document.getElementById('modal-recarga-express')?.classList.add('activa'); renderRecargaExpressPaso1(); }
