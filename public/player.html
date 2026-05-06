@@ -429,7 +429,7 @@
       .express-modal.activa{display:flex;}
       .express-card{position:relative;width:min(680px,100%);background:#fff;border-radius:16px;padding:20px 18px 18px;border:3px solid #ffd700;box-shadow:0 12px 30px rgba(0,0,0,.35);text-align:left;max-height:86vh;overflow:auto;}
       .express-card h2{margin:0 0 12px;color:#117a00;text-shadow:1px 1px 0 #ffd700;font-size:2rem;text-align:center;}
-      .express-close{position:absolute;top:4px;right:6px;border:none;background:transparent;font-size:1.8rem;font-weight:700;color:#666;cursor:pointer;z-index:4;line-height:1;}
+      .express-close{position:absolute;top:6px;right:8px;border:none;background:transparent;font-size:1.25rem;font-weight:700;color:#666;cursor:pointer;z-index:4;line-height:1;padding:1px 4px;}
       .express-row{margin:10px 0;}
       .express-input{width:100%;max-width:100%;box-sizing:border-box;padding:14px 12px;border:2px solid #d2d2d2;border-radius:10px;font-size:1.4rem;text-align:center;font-weight:700;margin:0 auto;display:block;}
       .express-input-monto{font-size:clamp(1.6rem,4.5vw,2.1rem);font-weight:700;color:#0f8c2f;}
@@ -437,7 +437,10 @@
       .express-input::placeholder{color:#b8b8b8;}
       .express-copy-line{display:flex;align-items:center;justify-content:center;gap:10px;border-radius:10px;padding:6px 10px;margin:4px 0;}
       .express-copy-value{flex:1;text-align:center;font-weight:700;font-size:1.22rem;color:#0b60ff;}
-      .express-copy-all-value{text-transform:uppercase;color:#0b2f8f;font-size:1.3rem;}
+      .express-copy-all-value{text-transform:uppercase;color:#0b2f8f;font-size:1.15rem;letter-spacing:.02em;}
+      .express-copy-all-container{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(11,96,255,.28);border-radius:999px;padding:5px 14px;background:rgba(255,255,255,.96);box-shadow:0 2px 6px rgba(11,47,143,.14);cursor:pointer;animation:express-copy-all-pulse 2s ease-in-out infinite;}
+      .express-copy-all-container:focus-visible{outline:2px solid rgba(11,96,255,.55);outline-offset:2px;}
+      @keyframes express-copy-all-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.04);}}
       .copy-btn{position:relative;border:none;background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;}
       .copy-btn,.copy-btn:hover,.copy-btn:focus,.copy-btn:active{background:transparent !important;box-shadow:none !important;}
       .copy-btn img{width:22px;height:22px;object-fit:contain;}
@@ -1487,6 +1490,8 @@
       if(!(montoVal>0)) return;
       const estado=next.dataset.estado||'inicio';
       if(estado==='inicio'){
+        input.blur();
+        document.getElementById('modal-recarga-express')?.classList.remove('keyboard-open');
         next.textContent='Confirmar';
         back.style.display='inline-block';
         next.dataset.estado='confirmar';
@@ -1516,11 +1521,17 @@
     <div class="express-copy-line"><span class="express-copy-value">${banco.pagomovil||''}</span><button class="copy-btn" data-copy="${banco.pagomovil||''}" type="button"><img src="img/icono-copiar.png" alt="Copiar"></button></div>
     <div class="express-copy-line"><span class="express-copy-value">${banco.cedula||''}</span><button class="copy-btn" data-copy="${banco.cedula||''}" type="button"><img src="img/icono-copiar.png" alt="Copiar"></button></div>
     <div class="express-copy-line"><span class="express-copy-value">Monto: ${montoTxt}</span><button class="copy-btn" data-copy="${montoTxt}" type="button"><img src="img/icono-copiar.png" alt="Copiar"></button></div>
-    <div class="express-copy-line"><strong class="express-copy-value express-copy-all-value">Copiar todo</strong><button class="copy-btn all" id="copy-all" type="button"><img src="img/icono-copiar.png" alt="Copiar"></button></div>
+    <div class="express-copy-line"><button class="express-copy-all-container" id="copy-all" type="button"><strong class="express-copy-all-value">COPIAR TODO</strong><span class="copy-btn all" aria-hidden="true"><img src="img/icono-copiar.png" alt="Copiar"></span></button></div>
     <p class="express-help">Usa los iconos para copiar los datos de nuestro pago móvil, ve a tu App bancaria realizas el pago, copia la referencia, regresa y pégala en este campo:</p>
     <div class="express-row"><input id="express-ref" class="express-input express-input-ref" placeholder="Referencia" maxlength="15" inputmode="numeric"></div><div class="express-actions express-actions-center"><button id="express-send" class="express-btn" type="button" style="display:none;">SOLICITAR RECARGA</button></div><div id="express-post"></div>`;
     host.querySelectorAll('.copy-btn[data-copy]').forEach(btn=>btn.addEventListener('click',async()=>{ await copiar(btn.dataset.copy); mostrarToastCopiado(btn,'Copiado'); }));
-    host.querySelector('#copy-all').addEventListener('click',async event=>{ await copiar(`${banco4}\n${banco.cedula||''}\n${banco.pagomovil||''}\n${montoTxt}`); mostrarToastCopiado(event.currentTarget,'Copiado'); });
+    host.querySelector('#copy-all').addEventListener('click',async()=>{
+      await copiar(`${banco4}
+${banco.cedula||''}
+${banco.pagomovil||''}
+${montoTxt}`);
+      host.querySelectorAll('.copy-btn[data-copy]').forEach(btn=>mostrarToastCopiado(btn,'Copiado'));
+    });
     const refInput=host.querySelector('#express-ref'); const send=host.querySelector('#express-send');
     refInput.addEventListener('input',()=>{ refInput.value=normalizarReferenciaDesdeTexto(refInput.value); send.style.display=/^[0-9]{4}$/.test(refInput.value)?'inline-block':'none'; });
     send.addEventListener('click',async()=>{
