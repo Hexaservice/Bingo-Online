@@ -95,8 +95,8 @@
 
     .cell-marquee{display:block;overflow:hidden;white-space:nowrap;width:100%;}
     .cell-marquee.is-active{padding:0 2px;line-height:1;}
-    .cell-marquee.is-active .cell-marquee-track{display:inline-block;white-space:nowrap;animation:cellMarqueeHorizontal 6s linear infinite;font-size:var(--mobile-marquee-font-size,inherit);}
-    @keyframes cellMarqueeHorizontal{0%{transform:translateX(-100%);}100%{transform:translateX(100%);}}
+    .cell-marquee.is-active .cell-marquee-track{display:inline-block;white-space:nowrap;animation:cellMarqueeHorizontal 3s linear infinite;font-size:var(--mobile-marquee-font-size,inherit);}
+    @keyframes cellMarqueeHorizontal{0%{transform:translateX(100%);}100%{transform:translateX(-100%);}}
     .copy-field-btn{margin-left:8px;border:1px solid #ccc;border-radius:4px;background:#f7f7f7;cursor:pointer;font-size:0.85rem;line-height:1;padding:2px 6px;}
     .clipboard-toast{
       position:fixed;
@@ -502,15 +502,19 @@
     function esVistaVerticalCelular(){
       return window.matchMedia('(max-width:1023px) and (orientation:portrait)').matches;
     }
-    function activarMarquesinaCeldaRecarga(td){
-      if(!td) return;
-      const envoltura=td.querySelector('.cell-marquee');
-      if(!envoltura) return;
-      const anterior=td.parentElement?.querySelectorAll('.cell-marquee.is-active');
-      anterior?.forEach(el=>el.classList.remove('is-active'));
-      envoltura.classList.add('is-active');
-      const altoDisponible=Math.max(10,td.clientHeight-4);
-      envoltura.style.setProperty('--mobile-marquee-font-size',`${altoDisponible}px`);
+    function activarMarquesinaFilaRecarga(tr){
+      if(!tr) return;
+      const tabla=tr.closest('#tabla-recargas');
+      if(!tabla) return;
+      tabla.querySelectorAll('tbody .cell-marquee.is-active').forEach(el=>el.classList.remove('is-active'));
+      const celdasObjetivo=[tr.children[1],tr.children[5]].filter(Boolean);
+      celdasObjetivo.forEach(td=>{
+        const envoltura=td.querySelector('.cell-marquee');
+        if(!envoltura) return;
+        envoltura.classList.add('is-active');
+        const altoDisponible=Math.max(10,td.clientHeight-4);
+        envoltura.style.setProperty('--mobile-marquee-font-size',`${altoDisponible}px`);
+      });
     }
 
     async function mostrarInfoGmail(mail){
@@ -679,8 +683,8 @@
           fechaTd.style.cursor='pointer';
           montoTd.addEventListener('mousedown',e=>e.preventDefault());
           fechaTd.addEventListener('mousedown',e=>e.preventDefault());
-          montoTd.addEventListener('click',()=>activarMarquesinaCeldaRecarga(montoTd));
-          fechaTd.addEventListener('click',()=>activarMarquesinaCeldaRecarga(fechaTd));
+          montoTd.addEventListener('click',()=>activarMarquesinaFilaRecarga(tr));
+          fechaTd.addEventListener('click',()=>activarMarquesinaFilaRecarga(tr));
         }else{
           fechaTd.style.cursor='pointer';
           fechaTd.addEventListener('click',()=>mostrarDatosTransaccion(t));
