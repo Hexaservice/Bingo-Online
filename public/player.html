@@ -392,6 +392,43 @@
       .menu-label--billetera {
           text-shadow: 0 0 8px rgba(0, 77, 26, 0.85), 0 0 14px rgba(0, 128, 51, 0.9);
       }
+      .btn-recarga-express {
+          position: absolute;
+          top: -48px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: transparent;
+          border: none;
+          padding: 0;
+          width: clamp(130px, 16vw, 165px);
+          height: 62px;
+          cursor: pointer;
+          animation: recarga-flotante 2.2s ease-in-out infinite;
+      }
+      .btn-recarga-express svg { width: 100%; height: 100%; overflow: visible; }
+      .btn-recarga-express text {
+          font-family: 'Bangers', cursive;
+          font-size: 28px;
+          letter-spacing: 2px;
+          paint-order: stroke fill;
+          stroke: #ffd700;
+          stroke-width: 2px;
+          filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.65));
+      }
+      @keyframes recarga-flotante {
+          0%,100% { transform: translateX(-50%) translateY(0); }
+          50% { transform: translateX(-50%) translateY(-8px); }
+      }
+      .express-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.65);z-index:9999;padding:14px;}
+      .express-modal.activa{display:flex;}
+      .express-card{width:min(680px,100%);background:#fff;border-radius:16px;padding:18px;border:3px solid #ffd700;box-shadow:0 12px 30px rgba(0,0,0,.35);text-align:left;}
+      .express-card h2{margin:0 0 12px;color:#117a00;text-shadow:1px 1px 0 #ffd700;font-size:2rem;}
+      .express-row{margin:10px 0;}
+      .express-input{width:100%;padding:12px;border:2px solid #d2d2d2;border-radius:10px;font-size:1.4rem;text-align:center;font-weight:700;}
+      .express-copy-line{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#f7f7f7;border-radius:10px;padding:8px 10px;margin:8px 0;}
+      .copy-btn{border:none;background:transparent;font-size:1.2rem;cursor:pointer}
+      .copy-btn.all{color:#0b60ff}
+      .express-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;margin-top:12px;}
 
       .menu-label--perfil {
           text-shadow: 0 0 8px rgba(102, 51, 0, 0.8), 0 0 14px rgba(153, 76, 0, 0.85);
@@ -1125,6 +1162,17 @@
               </td>
               <td>
                 <div class="menu-opcion menu-opcion--billetera">
+                  <button id="btn-recarga-express" class="btn-recarga-express" type="button" aria-label="Abrir recarga express">
+                    <svg viewBox="0 0 180 72" role="img" aria-hidden="true">
+                      <defs>
+                        <linearGradient id="gradRecarga" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stop-color="#12b000"></stop><stop offset="100%" stop-color="#8dff73"></stop>
+                        </linearGradient>
+                      </defs>
+                      <path id="arcRecarga" d="M16,58 Q90,4 164,58" fill="none"></path>
+                      <text><textPath href="#arcRecarga" startOffset="50%" text-anchor="middle" fill="url(#gradRecarga)">RECARGAR</textPath></text>
+                    </svg>
+                  </button>
                   <img id="boton-billetera" class="menu-imagen" src="img/boton-billetera300p.png" alt="Ir a la billetera" role="button" tabindex="0" loading="lazy" />
                   <span class="menu-label menu-label--billetera">BILLETERA</span>
                 </div>
@@ -1235,6 +1283,13 @@
       <div id="modal-referidos-vacio" class="modal-referidos-vacio" hidden></div>
     </div>
   </div>
+  <div id="modal-recarga-express" class="express-modal" role="dialog" aria-modal="true" aria-labelledby="express-titulo">
+    <div class="express-card">
+      <h2 id="express-titulo">Recarga Créditos</h2>
+      <div id="express-contenido"></div>
+      <div class="express-actions"><button type="button" id="express-cerrar">Cerrar</button></div>
+    </div>
+  </div>
 
   <script src="js/logoSwitcher.js"></script>
   <script src="js/auth.js"></script>
@@ -1281,6 +1336,7 @@
   const whatsappState = { enlace:'', cargado:false };
   const APP_NOMBRE = 'BingOnline';
   let firestoreRef = null;
+  let bancoExpressActivo = null;
   let sorteoUnsubscribe = null;
   const estadoReferidos = { cantidad: 0, tieneDatos: false };
   const tutorialSteps = [
@@ -1383,6 +1439,47 @@
       console.warn('No se pudo guardar bandera de tutorial en localStorage', error);
     }
   }
+  const normalizarReferenciaDesdeTexto=(texto='')=>{ const d=String(texto).replace(/\D/g,''); return d.length<=4?d:d.slice(-4); };
+  async function cargarBancoExpressActivo(){
+    if(!firestoreRef) return null;
+    const snap=await firestoreRef.collection('Bancos').where('categoria','==','Banco Express').where('estado','==','Activo').limit(1).get();
+    bancoExpressActivo=snap.empty?null:(snap.docs[0].data()||null);
+    return bancoExpressActivo;
+  }
+  function renderRecargaExpressPaso1(){
+    const host=document.getElementById('express-contenido');
+    host.innerHTML=`<div class="express-row"><strong>1ero - Escribe el monto que solicitarás:</strong></div><div class="express-row"><input id="express-monto" class="express-input" placeholder="Monto" inputmode="decimal"></div><div class="express-actions"><button id="express-next" style="display:none;" type="button">Siguiente</button></div>`;
+    const input=host.querySelector('#express-monto'); const next=host.querySelector('#express-next');
+    input.addEventListener('input',()=>{ input.value=input.value.replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1'); const v=parseFloat(input.value); next.style.display=v>0?'inline-block':'none'; });
+    next.addEventListener('click',()=>renderRecargaExpressPaso2(parseFloat(input.value).toFixed(2)));
+  }
+  async function renderRecargaExpressPaso2(montoTxt){
+    const host=document.getElementById('express-contenido');
+    const banco=await cargarBancoExpressActivo();
+    if(!banco){ host.innerHTML='<p>No hay un Banco Express activo en este momento. Intenta más tarde.</p>'; return; }
+    const banco4=(banco.nombre||'').replace(/\D/g,'').slice(0,4) || (banco.nombre||'').toString().slice(0,4);
+    const copiar=async txt=>navigator.clipboard?.writeText(String(txt||''));
+    host.innerHTML=`<div class="express-copy-line"><span>${banco.nombre||'Banco Express'}</span><button class="copy-btn" data-copy="${banco4}" type="button">📑</button></div>
+    <div class="express-copy-line"><span>${banco.pagomovil||''}</span><button class="copy-btn" data-copy="${banco.pagomovil||''}" type="button">📑</button></div>
+    <div class="express-copy-line"><span>${banco.cedula||''}</span><button class="copy-btn" data-copy="${banco.cedula||''}" type="button">📑</button></div>
+    <div class="express-copy-line"><strong>Copiar todo</strong><button class="copy-btn all" id="copy-all" type="button">📑</button></div>
+    <p>Copia los datos de nuestro pago móvil, ve a tu App bancaria, realiza el pago y copia la referencia que te genera el banco y pégala en este campo:</p>
+    <input id="express-ref" class="express-input" placeholder="Referencia" maxlength="15" inputmode="numeric"><div class="express-actions"><button id="express-send" type="button" style="display:none;">SOLICITAR RECARGA</button></div><div id="express-post"></div>`;
+    host.querySelectorAll('.copy-btn[data-copy]').forEach(btn=>btn.addEventListener('click',()=>copiar(btn.dataset.copy)));
+    host.querySelector('#copy-all').addEventListener('click',()=>copiar(`${banco4}\n${banco.cedula||''}\n${banco.pagomovil||''}\n${montoTxt}`));
+    const refInput=host.querySelector('#express-ref'); const send=host.querySelector('#express-send');
+    refInput.addEventListener('input',()=>{ refInput.value=normalizarReferenciaDesdeTexto(refInput.value); send.style.display=/^[0-9]{4}$/.test(refInput.value)?'inline-block':'none'; });
+    send.addEventListener('click',async()=>{
+      const user=auth.currentUser; if(!user) return;
+      const data={tipotrans:'recarga',bancoreceptor:banco.nombre||'Banco Express',Monto:parseFloat(montoTxt),referencia:refInput.value.trim(),comentario:'Recarga Express',estado:'PENDIENTE',IDbilletera:user.email,fechasolicitud:new Date().toLocaleDateString('es-VE'),horasolicitud:new Date().toLocaleTimeString('es-VE',{hour12:false}),usuariogestor:'',rolusuario:'',fechagestion:'',horagestion:'',nota:''};
+      await firestoreRef.collection('transacciones').add(data); send.style.display='none';
+      host.querySelector('#express-post').innerHTML='<div class="express-actions"><button id="express-no-avisar" type="button">No avisar</button><button id="express-avisar" type="button"><img src="img/whatsapp-icon.png" alt=\"\" style=\"height:18px;vertical-align:middle\"> Avisar</button></div>';
+      host.querySelector('#express-no-avisar').addEventListener('click',cerrarModalRecargaExpress);
+      host.querySelector('#express-avisar').addEventListener('click',async()=>{ const p=await firestoreRef.collection('Variablesglobales').doc('Parametros').get(); const numero=((p.data()||{}).numeroWhatsapp||'').replace(/\\D/g,''); const msg=`💵 *SOLICITUD DE RECARGA*\\nCorreo: ${user.email}\\nUsuario: ${user.displayName||user.email}\\nBanco receptor: ${banco.nombre||''}\\nMonto: ${Math.trunc(parseFloat(montoTxt))}\\nReferencia: ${refInput.value.trim()}`; if(numero){ window.open(`https://wa.me/${numero}?text=${encodeURIComponent(msg)}`,'_blank','noopener'); } cerrarModalRecargaExpress(); });
+    });
+  }
+  function abrirModalRecargaExpress(){ document.getElementById('modal-recarga-express')?.classList.add('activa'); renderRecargaExpressPaso1(); }
+  function cerrarModalRecargaExpress(){ document.getElementById('modal-recarga-express')?.classList.remove('activa'); }
 
   function getTutorialStorageFlag(key){
     try {
@@ -2377,6 +2474,9 @@
     configurarAccionImagen('boton-jugar', ()=>{ window.location.href = 'jugarcartones.html'; });
     configurarAccionImagen('boton-sorteo', ()=>{ window.location.href = 'juegoactivo.html'; });
     configurarAccionImagen('boton-billetera', ()=>{ window.location.href = 'billetera.html'; });
+    const btnExpress=document.getElementById('btn-recarga-express');
+    btnExpress?.addEventListener('click',abrirModalRecargaExpress);
+    document.getElementById('express-cerrar')?.addEventListener('click',cerrarModalRecargaExpress);
     configurarAccionImagen('boton-perfil', ()=>{ window.location.href = 'perfil.html'; });
     configurarAccionImagen('boton-mensajes', manejarClickWhatsapp);
     configurarAccionImagen('boton-pqrs', ()=>{ window.location.href = 'ayuda.html'; });

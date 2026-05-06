@@ -1131,6 +1131,7 @@
         <select id="banco-categoria" style="flex:0 0 60%;padding:5px;text-align:center;border-radius:5px;border:1px solid #ccc;">
             <option value="Jugadores">Jugadores</option>
             <option value="Bingo">Bingo</option>
+            <option value="Banco Express">Banco Express</option>
         </select>
     </div>
     <div id="bingo-extra-fields" style="display:none;width:90%;margin-top:5px;">
@@ -1159,6 +1160,7 @@
               <option value="">Banco</option>
               <option value="Jugadores">Jugadores</option>
               <option value="Bingo">Bingo</option>
+              <option value="Banco Express">Banco Express</option>
             </select>
           </th>
           <th>
@@ -1425,7 +1427,7 @@
     const extraFields=document.getElementById('bingo-extra-fields');
     const categoriaSelect=document.getElementById('banco-categoria');
     function toggleExtraFields(){
-      extraFields.style.display=categoriaSelect.value==='Bingo'?'block':'none';
+      extraFields.style.display=['Bingo','Banco Express'].includes(categoriaSelect.value)?'block':'none';
     }
     categoriaSelect.addEventListener('change',toggleExtraFields);
     toggleExtraFields();
@@ -1441,7 +1443,7 @@
         alert('Completa todos los campos antes de guardar');
         return;
       }
-      if(categoria==='Bingo' && (!pagomovil || !cedula)){
+      if(['Bingo','Banco Express'].includes(categoria) && (!pagomovil || !cedula)){
         alert('Debe ingresar número de Pago móvil y cédula');
         return;
       }
@@ -1452,7 +1454,7 @@
         existe=consulta.exists;
       }
       const data={nombre,categoria,estado};
-      if(categoria==='Bingo'){
+      if(['Bingo','Banco Express'].includes(categoria)){
         data.pagomovil=pagomovil;
         data.cedula=cedula;
       }
