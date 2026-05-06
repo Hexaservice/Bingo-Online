@@ -437,8 +437,13 @@
       .express-input::placeholder{color:#b8b8b8;}
       .express-copy-line{display:flex;align-items:center;justify-content:center;gap:10px;border-radius:10px;padding:6px 10px;margin:4px 0;}
       .express-copy-value{flex:1;text-align:center;font-weight:700;font-size:1.22rem;color:#0b60ff;}
+      .express-copy-value--pagomovil{color:#6a0dad;}
+      .express-copy-value--cedula{color:#f97316;}
+      .express-copy-value--monto{color:#16a34a;}
       .express-copy-all-value{text-transform:uppercase;color:#0b2f8f;font-size:1.15rem;letter-spacing:.02em;}
       .express-copy-all-container{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(11,96,255,.28);border-radius:999px;padding:5px 14px;background:rgba(255,255,255,.96);box-shadow:0 2px 6px rgba(11,47,143,.14);cursor:pointer;animation:express-copy-all-pulse 2s ease-in-out infinite;}
+      .express-copy-all-container.copiado-en-bloque{background:#22c55e;border-color:#15803d;animation:none;}
+      .express-copy-all-container.copiado-en-bloque .express-copy-all-value{color:#ffffff;}
       .express-copy-all-container:focus-visible{outline:2px solid rgba(11,96,255,.55);outline-offset:2px;}
       @keyframes express-copy-all-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.04);}}
       .copy-btn{position:relative;border:none;background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;}
@@ -456,6 +461,7 @@
       .express-btn-avisar{background:linear-gradient(135deg,#0b8f3a,#17b15e);border:2px solid #1e40af;color:#fff;}
       .express-btn img{height:18px;vertical-align:middle;}
       .express-help{text-align:center;}
+      .express-help-pago{animation:express-copy-all-pulse 2s ease-in-out infinite;font-weight:700;color:#0b2f8f;}
       .copy-toast{position:absolute;left:50%;top:-18px;transform:translateX(-50%);font-size:.72rem;color:#21c321;text-shadow:1px 1px 1px rgba(120,120,120,.55);opacity:0;pointer-events:none;animation:copy-toast-fade 2s ease forwards;white-space:nowrap;}
       @keyframes copy-toast-fade{0%{opacity:0;transform:translateX(-50%) translateY(4px);}15%{opacity:1;transform:translateX(-50%) translateY(0);}80%{opacity:1;}100%{opacity:0;transform:translateX(-50%) translateY(-4px);}}
       .express-modal.keyboard-open{align-items:flex-start;padding-top:6vh;}
@@ -1484,22 +1490,22 @@
     input.addEventListener('focus',()=>document.getElementById('modal-recarga-express')?.classList.add('keyboard-open'));
     input.addEventListener('blur',()=>document.getElementById('modal-recarga-express')?.classList.remove('keyboard-open'));
     input.addEventListener('input',()=>{ input.value=input.value.replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1'); });
-    back.addEventListener('click',()=>{ back.style.display='none'; next.textContent='Siguiente'; next.dataset.estado='inicio'; input.focus(); });
-    next.addEventListener('click',()=>{
+    const avanzarPasoMonto=()=>{
       const montoVal=parseFloat(input.value);
       if(!(montoVal>0)) return;
-      const estado=next.dataset.estado||'inicio';
-      if(estado==='inicio'){
-        input.blur();
-        document.getElementById('modal-recarga-express')?.classList.remove('keyboard-open');
-        next.textContent='Confirmar';
-        back.style.display='inline-block';
-        next.dataset.estado='confirmar';
-        return;
-      }
       if(next.dataset.loading==='1') return;
       next.dataset.loading='1';
+      input.blur();
+      document.getElementById('modal-recarga-express')?.classList.remove('keyboard-open');
       renderRecargaExpressPaso2(montoVal.toFixed(2));
+    };
+    back.addEventListener('click',()=>input.focus());
+    next.addEventListener('click',avanzarPasoMonto);
+    input.addEventListener('keydown',ev=>{
+      if(ev.key==='Enter'){
+        ev.preventDefault();
+        avanzarPasoMonto();
+      }
     });
   }
   async function renderRecargaExpressPaso2(montoTxt){
@@ -1518,19 +1524,29 @@
       window.setTimeout(()=>t.remove(),2100);
     };
     host.innerHTML=`<div class="express-copy-line"><span class="express-copy-value">${banco.nombre||'Banco Express'}</span><button class="copy-btn" data-copy="${banco4}" type="button"><img src="img/icono-copiar.png" alt="Copiar"></button></div>
-    <div class="express-copy-line"><span class="express-copy-value">${banco.pagomovil||''}</span><button class="copy-btn" data-copy="${banco.pagomovil||''}" type="button"><img src="img/icono-copiar.png" alt="Copiar"></button></div>
-    <div class="express-copy-line"><span class="express-copy-value">${banco.cedula||''}</span><button class="copy-btn" data-copy="${banco.cedula||''}" type="button"><img src="img/icono-copiar.png" alt="Copiar"></button></div>
-    <div class="express-copy-line"><span class="express-copy-value">Monto: ${montoTxt}</span><button class="copy-btn" data-copy="${montoTxt}" type="button"><img src="img/icono-copiar.png" alt="Copiar"></button></div>
+    <div class="express-copy-line"><span class="express-copy-value express-copy-value--pagomovil">${banco.pagomovil||''}</span><button class="copy-btn" data-copy="${banco.pagomovil||''}" type="button"><img src="img/icono-copiar.png" alt="Copiar"></button></div>
+    <div class="express-copy-line"><span class="express-copy-value express-copy-value--cedula">${banco.cedula||''}</span><button class="copy-btn" data-copy="${banco.cedula||''}" type="button"><img src="img/icono-copiar.png" alt="Copiar"></button></div>
+    <div class="express-copy-line"><span class="express-copy-value express-copy-value--monto">Monto: ${montoTxt}</span><button class="copy-btn" data-copy="${montoTxt}" type="button"><img src="img/icono-copiar.png" alt="Copiar"></button></div>
     <div class="express-copy-line"><button class="express-copy-all-container" id="copy-all" type="button"><strong class="express-copy-all-value">COPIAR TODO</strong><span class="copy-btn all" aria-hidden="true"><img src="img/icono-copiar.png" alt="Copiar"></span></button></div>
-    <p class="express-help">Usa los iconos para copiar los datos de nuestro pago móvil, ve a tu App bancaria realizas el pago, copia la referencia, regresa y pégala en este campo:</p>
-    <div class="express-row"><input id="express-ref" class="express-input express-input-ref" placeholder="Referencia" maxlength="15" inputmode="numeric"></div><div class="express-actions express-actions-center"><button id="express-send" class="express-btn" type="button" style="display:none;">SOLICITAR RECARGA</button></div><div id="express-post"></div>`;
+    <p class="express-help" id="express-help-copy">Copia los datos de nuestro pago móvil</p>
+    <p class="express-help express-help-pago" id="express-help-pago" style="display:none;">Ve a tu App bancaria realizas el PAGO, copias la referencia, REGRESAS y la pegas en este campo:</p>
+    <div class="express-row" id="express-ref-row" style="display:none;"><input id="express-ref" class="express-input express-input-ref" placeholder="Referencia" maxlength="15" inputmode="numeric"></div><div class="express-actions express-actions-center"><button id="express-send" class="express-btn" type="button" style="display:none;">SOLICITAR RECARGA</button></div><div id="express-post"></div>`;
     host.querySelectorAll('.copy-btn[data-copy]').forEach(btn=>btn.addEventListener('click',async()=>{ await copiar(btn.dataset.copy); mostrarToastCopiado(btn,'Copiado'); }));
-    host.querySelector('#copy-all').addEventListener('click',async()=>{
+    const copyAllBtn=host.querySelector('#copy-all');
+    const helpCopy=host.querySelector('#express-help-copy');
+    const helpPago=host.querySelector('#express-help-pago');
+    const refRow=host.querySelector('#express-ref-row');
+    copyAllBtn.addEventListener('click',async()=>{
       await copiar(`${banco4}
 ${banco.cedula||''}
 ${banco.pagomovil||''}
 ${montoTxt}`);
+      copyAllBtn.classList.add('copiado-en-bloque');
+      if(helpCopy) helpCopy.style.display='none';
+      if(helpPago) helpPago.style.display='block';
+      if(refRow) refRow.style.display='block';
       host.querySelectorAll('.copy-btn[data-copy]').forEach(btn=>mostrarToastCopiado(btn,'Copiado'));
+      host.querySelector('#express-ref')?.focus();
     });
     const refInput=host.querySelector('#express-ref'); const send=host.querySelector('#express-send');
     refInput.addEventListener('input',()=>{ refInput.value=normalizarReferenciaDesdeTexto(refInput.value); send.style.display=/^[0-9]{4}$/.test(refInput.value)?'inline-block':'none'; });
