@@ -463,6 +463,7 @@
       .express-btn img{height:18px;vertical-align:middle;}
       .express-help{text-align:center;}
       .express-help-pago{animation:express-copy-all-pulse 2s ease-in-out infinite;font-weight:700;color:#0b2f8f;}
+      .express-help-success{display:none;font-weight:700;color:#16a34a;text-shadow:0 1px 2px rgba(0,0,0,.45);}
       .copy-toast{position:absolute;left:50%;top:-18px;transform:translateX(-50%);font-size:.72rem;color:#21c321;text-shadow:1px 1px 1px rgba(120,120,120,.55);opacity:0;pointer-events:none;animation:copy-toast-fade 2s ease forwards;white-space:nowrap;}
       @keyframes copy-toast-fade{0%{opacity:0;transform:translateX(-50%) translateY(4px);}15%{opacity:1;transform:translateX(-50%) translateY(0);}80%{opacity:1;}100%{opacity:0;transform:translateX(-50%) translateY(-4px);}}
       .express-modal.keyboard-open{align-items:flex-start;padding-top:6vh;}
@@ -1533,11 +1534,13 @@
     <div class="express-copy-line"><button class="express-copy-all-container" id="copy-all" type="button"><strong class="express-copy-all-value">COPIAR TODO</strong><span class="copy-btn all" aria-hidden="true"><img src="img/icono-copiar.png" alt="Copiar"></span></button></div>
     <p class="express-help" id="express-help-copy">Copia los datos de nuestro pago móvil</p>
     <p class="express-help express-help-pago" id="express-help-pago" style="display:none;">Ve a tu App bancaria realizas el PAGO, copias la referencia, REGRESAS y la pegas en este campo:</p>
+    <p class="express-help express-help-success" id="express-help-success">Solicitud de recarga EXITOSA</p>
     <div class="express-row" id="express-ref-row" style="display:none;"><input id="express-ref" class="express-input express-input-ref" placeholder="Referencia" maxlength="15" inputmode="numeric"></div><div class="express-actions express-actions-center"><button id="express-send" class="express-btn" type="button" style="display:none;">SOLICITAR RECARGA</button></div><div id="express-post"></div>`;
     host.querySelectorAll('.copy-btn[data-copy]').forEach(btn=>btn.addEventListener('click',async()=>{ await copiar(btn.dataset.copy); mostrarToastCopiado(btn,'Copiado'); }));
     const copyAllBtn=host.querySelector('#copy-all');
     const helpCopy=host.querySelector('#express-help-copy');
     const helpPago=host.querySelector('#express-help-pago');
+    const helpSuccess=host.querySelector('#express-help-success');
     const refRow=host.querySelector('#express-ref-row');
     copyAllBtn.addEventListener('click',async()=>{
       await copiar(`${banco4}
@@ -1549,7 +1552,6 @@ ${montoTxt}`);
       if(helpPago) helpPago.style.display='block';
       if(refRow) refRow.style.display='block';
       host.querySelectorAll('.copy-btn[data-copy]').forEach(btn=>mostrarToastCopiado(btn,'Copiado'));
-      host.querySelector('#express-ref')?.focus();
     });
     const btnCambiarMonto=host.querySelector('#express-cambiar-monto');
     btnCambiarMonto?.addEventListener('click',()=>{
@@ -1573,7 +1575,9 @@ ${montoTxt}`);
       send.parentElement?.appendChild(loading);
       await firestoreRef.collection('transacciones').add(data);
       loading.remove();
-      host.querySelector('#express-post').innerHTML='<div class="express-actions express-actions-center"><button id="express-no-avisar" class="express-btn express-btn-no-avisar" type="button">No avisar</button><button id="express-avisar" class="express-btn express-btn-avisar" type="button"><img src="img/whatsapp-icon.png" alt=""> Avisar</button></div>';
+      host.querySelector('#express-post').innerHTML='<div class="express-actions express-actions-center"><button id="express-no-avisar" class="express-btn express-btn-no-avisar" type="button">No avisar</button><button id="express-avisar" class="express-btn express-btn-avisar" type="button"><img src="img/whatsapp-icon.png" alt=""> Avisar</button></div>'; 
+      if(helpPago) helpPago.style.display='none';
+      if(helpSuccess) helpSuccess.style.display='block';
       host.querySelector('#express-no-avisar').addEventListener('click',cerrarModalRecargaExpress);
       host.querySelector('#express-avisar').addEventListener('click',async()=>{ const p=await firestoreRef.collection('Variablesglobales').doc('Parametros').get(); const numero=((p.data()||{}).numeroWhatsapp||'').replace(/\D/g,''); const msg=['💵 *SOLICITUD DE RECARGA*',`Correo: ${user.email}`,`Usuario: ${user.displayName||user.email}`,`Banco receptor: ${banco.nombre||''}`,`Monto: ${Math.trunc(parseFloat(montoTxt))}`,`Referencia: ${refInput.value.trim()}`].join('\n'); if(numero){ window.open(`https://wa.me/${numero}?text=${encodeURIComponent(msg)}`,'_blank','noopener'); } cerrarModalRecargaExpress(); });
     });
