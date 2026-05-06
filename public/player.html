@@ -1476,12 +1476,12 @@
   }
   function renderRecargaExpressPaso1(){
     const host=document.getElementById('express-contenido');
-    host.innerHTML=`<div class="express-row"><strong>1ero - Escribe el monto que solicitarás:</strong></div><div class="express-row"><input id="express-monto" class="express-input express-input-monto" placeholder="Monto" inputmode="decimal"></div><div class="express-actions express-actions-center"><button id="express-back" class="express-btn express-btn-back" type="button" style="display:none;">←</button><button id="express-next" class="express-btn express-btn-next" style="display:none;" type="button">Siguiente</button></div>`;
+    host.innerHTML=`<div class="express-row"><strong>1ero - Escribe el monto que solicitarás:</strong></div><div class="express-row"><input id="express-monto" class="express-input express-input-monto" placeholder="Monto" inputmode="decimal"></div><div class="express-actions express-actions-center"><button id="express-back" class="express-btn express-btn-back" type="button" style="display:none;">Cambiar</button><button id="express-next" class="express-btn express-btn-next" type="button">Siguiente</button></div>`;
     const input=host.querySelector('#express-monto'); const next=host.querySelector('#express-next'); const back=host.querySelector('#express-back');
     input.addEventListener('focus',()=>document.getElementById('modal-recarga-express')?.classList.add('keyboard-open'));
     input.addEventListener('blur',()=>document.getElementById('modal-recarga-express')?.classList.remove('keyboard-open'));
-    input.addEventListener('input',()=>{ input.value=input.value.replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1'); const v=parseFloat(input.value); const visible=v>0; next.style.display=visible?'inline-block':'none'; if(!visible){ back.style.display='none'; next.textContent='Siguiente'; next.dataset.estado='inicio'; } });
-    back.addEventListener('click',()=>{ input.value=''; input.dispatchEvent(new Event('input',{bubbles:true})); input.focus(); });
+    input.addEventListener('input',()=>{ input.value=input.value.replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1'); });
+    back.addEventListener('click',()=>{ back.style.display='none'; next.textContent='Siguiente'; next.dataset.estado='inicio'; input.focus(); });
     next.addEventListener('click',()=>{
       const montoVal=parseFloat(input.value);
       if(!(montoVal>0)) return;
@@ -1515,11 +1515,12 @@
     host.innerHTML=`<div class="express-copy-line"><span class="express-copy-value">${banco.nombre||'Banco Express'}</span><button class="copy-btn" data-copy="${banco4}" type="button"><img src="img/icono-copiar.png" alt="Copiar"></button></div>
     <div class="express-copy-line"><span class="express-copy-value">${banco.pagomovil||''}</span><button class="copy-btn" data-copy="${banco.pagomovil||''}" type="button"><img src="img/icono-copiar.png" alt="Copiar"></button></div>
     <div class="express-copy-line"><span class="express-copy-value">${banco.cedula||''}</span><button class="copy-btn" data-copy="${banco.cedula||''}" type="button"><img src="img/icono-copiar.png" alt="Copiar"></button></div>
+    <div class="express-copy-line"><span class="express-copy-value">Monto: ${montoTxt}</span><button class="copy-btn" data-copy="${montoTxt}" type="button"><img src="img/icono-copiar.png" alt="Copiar"></button></div>
     <div class="express-copy-line"><strong class="express-copy-value express-copy-all-value">Copiar todo</strong><button class="copy-btn all" id="copy-all" type="button"><img src="img/icono-copiar.png" alt="Copiar"></button></div>
     <p class="express-help">Usa los iconos para copiar los datos de nuestro pago móvil, ve a tu App bancaria realizas el pago, copia la referencia, regresa y pégala en este campo:</p>
     <div class="express-row"><input id="express-ref" class="express-input express-input-ref" placeholder="Referencia" maxlength="15" inputmode="numeric"></div><div class="express-actions express-actions-center"><button id="express-send" class="express-btn" type="button" style="display:none;">SOLICITAR RECARGA</button></div><div id="express-post"></div>`;
     host.querySelectorAll('.copy-btn[data-copy]').forEach(btn=>btn.addEventListener('click',async()=>{ await copiar(btn.dataset.copy); mostrarToastCopiado(btn,'Copiado'); }));
-    host.querySelector('#copy-all').addEventListener('click',async event=>{ await copiar(`${banco4}\n${banco.cedula||''}\n${banco.pagomovil||''}\n${montoTxt}`); mostrarToastCopiado(event.currentTarget,'Copiados todos'); });
+    host.querySelector('#copy-all').addEventListener('click',async event=>{ await copiar(`${banco4}\n${banco.cedula||''}\n${banco.pagomovil||''}\n${montoTxt}`); mostrarToastCopiado(event.currentTarget,'Copiado'); });
     const refInput=host.querySelector('#express-ref'); const send=host.querySelector('#express-send');
     refInput.addEventListener('input',()=>{ refInput.value=normalizarReferenciaDesdeTexto(refInput.value); send.style.display=/^[0-9]{4}$/.test(refInput.value)?'inline-block':'none'; });
     send.addEventListener('click',async()=>{
