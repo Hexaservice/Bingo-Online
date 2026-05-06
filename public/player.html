@@ -1578,12 +1578,31 @@ ${montoTxt}`);
       host.querySelector('#express-post').innerHTML='<div class="express-actions express-actions-center"><button id="express-no-avisar" class="express-btn express-btn-no-avisar" type="button">No avisar</button><button id="express-avisar" class="express-btn express-btn-avisar" type="button"><img src="img/whatsapp-icon.png" alt=""> Avisar</button></div>'; 
       if(helpPago) helpPago.style.display='none';
       if(helpSuccess) helpSuccess.style.display='block';
-      host.querySelector('#express-no-avisar').addEventListener('click',cerrarModalRecargaExpress);
-      host.querySelector('#express-avisar').addEventListener('click',async()=>{ const p=await firestoreRef.collection('Variablesglobales').doc('Parametros').get(); const numero=((p.data()||{}).numeroWhatsapp||'').replace(/\D/g,''); const msg=['💵 *SOLICITUD DE RECARGA*',`Correo: ${user.email}`,`Usuario: ${user.displayName||user.email}`,`Banco receptor: ${banco.nombre||''}`,`Monto: ${Math.trunc(parseFloat(montoTxt))}`,`Referencia: ${refInput.value.trim()}`].join('\n'); if(numero){ window.open(`https://wa.me/${numero}?text=${encodeURIComponent(msg)}`,'_blank','noopener'); } cerrarModalRecargaExpress(); });
+      host.querySelector('#express-no-avisar').addEventListener('click',()=>cerrarModalRecargaExpress({redirigirSiCorresponde:true}));
+      host.querySelector('#express-avisar').addEventListener('click',async()=>{ const p=await firestoreRef.collection('Variablesglobales').doc('Parametros').get(); const numero=((p.data()||{}).numeroWhatsapp||'').replace(/\D/g,''); const msg=['💵 *SOLICITUD DE RECARGA*',`Correo: ${user.email}`,`Usuario: ${user.displayName||user.email}`,`Banco receptor: ${banco.nombre||''}`,`Monto: ${Math.trunc(parseFloat(montoTxt))}`,`Referencia: ${refInput.value.trim()}`].join('\n'); if(numero){ window.open(`https://wa.me/${numero}?text=${encodeURIComponent(msg)}`,'_blank','noopener'); } cerrarModalRecargaExpress({redirigirSiCorresponde:true}); });
     });
   }
   function abrirModalRecargaExpress(){ document.getElementById('modal-recarga-express')?.classList.add('activa'); renderRecargaExpressPaso1(); }
-  function cerrarModalRecargaExpress(){ document.getElementById('modal-recarga-express')?.classList.remove('activa'); }
+
+  function debeRetornarAJugarCartones(){
+    return sessionStorage.getItem('bo_recarga_express_origin')==='jugarcartones';
+  }
+
+  function limpiarBanderaRecargaExpress(){
+    sessionStorage.removeItem('bo_open_recarga_express');
+    sessionStorage.removeItem('bo_recarga_express_origin');
+  }
+
+  function cerrarModalRecargaExpress({redirigirSiCorresponde=true}={}){
+    document.getElementById('modal-recarga-express')?.classList.remove('activa');
+    if(redirigirSiCorresponde && debeRetornarAJugarCartones()){
+      limpiarBanderaRecargaExpress();
+      window.location.href='jugarcartones.html';
+      return;
+    }
+    if(!debeRetornarAJugarCartones()) return;
+    limpiarBanderaRecargaExpress();
+  }
 
   function getTutorialStorageFlag(key){
     try {
@@ -2580,6 +2599,7 @@ ${montoTxt}`);
     configurarAccionImagen('boton-billetera', ()=>{ window.location.href = 'billetera.html'; });
     const btnExpress=document.getElementById('btn-recarga-express');
     btnExpress?.addEventListener('click',abrirModalRecargaExpress);
+    abrirRecargaExpressSiFueSolicitada();
     document.getElementById('express-cerrar')?.addEventListener('click',cerrarModalRecargaExpress);
     configurarAccionImagen('boton-perfil', ()=>{ window.location.href = 'perfil.html'; });
     configurarAccionImagen('boton-mensajes', manejarClickWhatsapp);
@@ -2621,6 +2641,19 @@ ${montoTxt}`);
     }else{
       actualizarIndicadorReferidos();
     }
+  }
+
+
+  function abrirRecargaExpressSiFueSolicitada(){
+    const desdeStorage=sessionStorage.getItem('bo_open_recarga_express')==='1';
+    const params=new URLSearchParams(window.location.search);
+    const desdeQuery=params.get('openRecargaExpress')==='1';
+    if(!desdeStorage && !desdeQuery) return;
+    if(desdeQuery){
+      sessionStorage.setItem('bo_recarga_express_origin','jugarcartones');
+    }
+    sessionStorage.removeItem('bo_open_recarga_express');
+    abrirModalRecargaExpress();
   }
 
 
