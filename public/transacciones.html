@@ -92,6 +92,11 @@
       -ms-user-select:none;
       -webkit-touch-callout:none;
     }
+
+    .cell-marquee{display:block;overflow:hidden;white-space:nowrap;width:100%;}
+    .cell-marquee.is-active{padding:0 2px;line-height:1;}
+    .cell-marquee.is-active .cell-marquee-track{display:inline-block;white-space:nowrap;animation:cellMarqueeHorizontal 6s linear infinite;font-size:var(--mobile-marquee-font-size,inherit);}
+    @keyframes cellMarqueeHorizontal{0%{transform:translateX(-100%);}100%{transform:translateX(100%);}}
     .copy-field-btn{margin-left:8px;border:1px solid #ccc;border-radius:4px;background:#f7f7f7;cursor:pointer;font-size:0.85rem;line-height:1;padding:2px 6px;}
     .clipboard-toast{
       position:fixed;
@@ -493,6 +498,21 @@
       mostrarToastClipboard(`Monto: ${monto} copiado a portapapeles`);
     }
 
+
+    function esVistaVerticalCelular(){
+      return window.matchMedia('(max-width:1023px) and (orientation:portrait)').matches;
+    }
+    function activarMarquesinaCeldaRecarga(td){
+      if(!td) return;
+      const envoltura=td.querySelector('.cell-marquee');
+      if(!envoltura) return;
+      const anterior=td.parentElement?.querySelectorAll('.cell-marquee.is-active');
+      anterior?.forEach(el=>el.classList.remove('is-active'));
+      envoltura.classList.add('is-active');
+      const altoDisponible=Math.max(10,td.clientHeight-4);
+      envoltura.style.setProperty('--mobile-marquee-font-size',`${altoDisponible}px`);
+    }
+
     async function mostrarInfoGmail(mail){
       const overlay=document.createElement('div');
       Object.assign(overlay.style,{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center'});
@@ -635,7 +655,7 @@
         const montoNum=parseFloat(t.Monto);
         const monto=formatearMonto(montoNum);
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${i}</td><td class='monto-copy-cell' style='color:#4b0082;'>${monto}</td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td>${t.bancoreceptor||''}</td><td style='color:#4b0082;'>${t.referencia}</td><td style='color:#A52A2A;'>${fecha}</td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
+        tr.innerHTML=`<td>${i}</td><td class='monto-copy-cell' style='color:#4b0082;'><span class='cell-marquee'><span class='cell-marquee-track'>${monto}</span></span></td><td class='gmail' data-mail='${t.IDbilletera}'>${abreviar(t.IDbilletera)}</td><td>${t.bancoreceptor||''}</td><td style='color:#4b0082;'>${t.referencia}</td><td style='color:#A52A2A;'><span class='cell-marquee'><span class='cell-marquee-track'>${fecha}</span></span></td><td>${t.estado}</td><td style='text-align:center;'><input type='checkbox' data-id='${t.id}' data-estado='${t.estado}'></td>`;
         const estadoTd=tr.children[6];
         if(t.estado==='ANULADO'){
           tr.classList.add('anulado');
@@ -653,14 +673,18 @@
         mailTd.style.cursor='pointer';
         mailTd.addEventListener('click',()=>mostrarInfoGmail(t.IDbilletera));
         const montoTd=tr.children[1];
-        montoTd.addEventListener('mousedown',e=>e.preventDefault());
-        montoTd.addEventListener('click',()=>copiarMontoTransaccion(monto));
-        const bancoTd=tr.children[3];
-        bancoTd.addEventListener('mousedown',e=>e.preventDefault());
-        bancoTd.addEventListener('click',()=>copiarDatosCompletosRetiro(t,tr));
         const fechaTd=tr.children[5];
-        fechaTd.style.cursor='pointer';
-        fechaTd.addEventListener('click',()=>mostrarDatosTransaccion(t));
+        if(esVistaVerticalCelular()){
+          montoTd.style.cursor='pointer';
+          fechaTd.style.cursor='pointer';
+          montoTd.addEventListener('mousedown',e=>e.preventDefault());
+          fechaTd.addEventListener('mousedown',e=>e.preventDefault());
+          montoTd.addEventListener('click',()=>activarMarquesinaCeldaRecarga(montoTd));
+          fechaTd.addEventListener('click',()=>activarMarquesinaCeldaRecarga(fechaTd));
+        }else{
+          fechaTd.style.cursor='pointer';
+          fechaTd.addEventListener('click',()=>mostrarDatosTransaccion(t));
+        }
         tb.appendChild(tr);
         i--;
       });
