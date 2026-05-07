@@ -39,6 +39,13 @@
     debugMaxRows: 20,
     debugPanelEl: null,
 
+    getAudioMode() {
+      return window.liveAudioFeatureFlags?.getMode?.() || 'legacy';
+    },
+    shouldUseLegacyAudio() {
+      return this.getAudioMode() === 'legacy';
+    },
+
     clamp(value, fallback = 1) { const n = Number(value); return Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : fallback; },
     isBlockedError(err) { return err && (err.code === 'AUDIO_CONTEXT_BLOCKED' || /bloqueado/i.test(String(err?.message || ''))); },
     nowMs() { return (typeof performance !== 'undefined' && typeof performance.now === 'function') ? performance.now() : 0; },
@@ -156,6 +163,7 @@
     async init() {
       if (this.initialized) return true;
       if (this.initPromise) return this.initPromise;
+      if (!this.shouldUseLegacyAudio()) return true;
       if (!window.audioManager) return false;
       this.initPromise = (async () => {
         this.registerBaseEvents();
@@ -214,6 +222,7 @@
     enqueueCanto(numero) {
       const n = Number(numero);
       if (!Number.isInteger(n) || n < 1 || n > 75) return;
+      if (!this.shouldUseLegacyAudio()) return;
       void this.init();
       this.registerUnlockOnInteraction();
       this.cantoQueue.push(n);
@@ -223,6 +232,7 @@
     async playCantoByInteraction(numero) {
       const n = Number(numero);
       if (!Number.isInteger(n) || n < 1 || n > 75) return;
+      if (!this.shouldUseLegacyAudio()) return;
       await this.init();
       this.registerUnlockOnInteraction();
       await this.unlock();
@@ -232,6 +242,7 @@
       try { await window.audioManager.playSfx(eventName); } catch (err) { this.pushDebugRow('fallo_reproduccion', { eventName, reason: this.getFailureReason(err), error: err?.message || String(err) }); if (!this.isBlockedError(err)) console.warn('No se pudo reproducir audio.', err); this.enqueueCanto(n); }
     },
     async playEvent(eventName, options = {}) {
+      if (!this.shouldUseLegacyAudio()) return;
       if (!eventName || !window.audioManager?.playSfx) return;
       await this.init();
       this.registerUnlockOnInteraction();
