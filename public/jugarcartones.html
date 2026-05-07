@@ -51,30 +51,6 @@
     }
     .menu-btn:hover{ transform:scale(1.05); box-shadow:0 0 15px rgba(255,215,0,0.8); }
     .menu-btn:active{ transform:scale(0.95); box-shadow:0 0 5px rgba(255,215,0,0.8); }
-    .live-radio{
-      width:min(420px,92vw);
-      margin:4px auto 10px;
-      padding:10px 12px;
-      border-radius:14px;
-      border:3px solid #ffd700;
-      background:linear-gradient(145deg,rgba(15,30,72,0.9),rgba(52,94,173,0.88));
-      box-shadow:0 8px 18px rgba(0,0,0,0.25);
-      color:#fff;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-    }
-    .live-radio__meta{display:flex;flex-direction:column;align-items:flex-start;text-align:left;}
-    .live-radio__title{font-family:'Bangers',cursive;font-size:1.2rem;letter-spacing:1px;}
-    .live-radio__status{font-size:.88rem;font-weight:600;opacity:.95;}
-    .live-radio__btn{
-      min-width:96px;height:42px;border-radius:999px;border:2px solid #fff;
-      background:linear-gradient(135deg,#2ecc71,#0b7a33);color:#fff;font-weight:700;cursor:pointer;
-    }
-    .live-radio__btn[disabled]{opacity:.55;cursor:not-allowed;}
-    .live-radio--offline .live-radio__btn{background:linear-gradient(135deg,#7f8c8d,#34495e);}
-    .live-radio--error .live-radio__btn{background:linear-gradient(135deg,#ff5252,#d32f2f);}
     .back-btn{
       position:fixed;
       top:5px;
@@ -1053,14 +1029,6 @@
 <body>
   <button id="volver-btn" class="menu-btn back-btn" data-compact-back="true"><span class="tri">&#9664;</span><span class="label">Volver</span></button>
   <h1 id="titulo">JUGAR CARTÓN</h1>
-  <section id="live-radio" class="live-radio live-radio--offline" aria-live="polite">
-    <div class="live-radio__meta">
-      <span class="live-radio__title">Escuchar en vivo</span>
-      <span id="live-radio-status" class="live-radio__status">Sin emisión</span>
-    </div>
-    <button id="live-radio-btn" class="live-radio__btn" type="button" disabled>Play</button>
-    <audio id="live-radio-audio" preload="none" playsinline></audio>
-  </section>
   <section id="sorteo-section">
     <div class="sorteo-info">
       <div class="sorteo-btn-wrap">
@@ -1291,10 +1259,6 @@
   <script src="js/notificationCenter.js"></script>
   <script src="js/timezone.js"></script>
   <script src="js/estadoSorteos.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.2/dist/hls.min.js"></script>
-  <script src="js/audioManifest.js"></script>
-  <script src="js/audioManager.js"></script>
-  <script src="js/audioManagerCompat.js"></script>
   <script>
   ensureAuth();
   initServerTime();
@@ -1426,194 +1390,6 @@
     '#carton-confirm-modal'
   ];
   let tutorialDimTimeout=null;
-  const liveRadioEl=document.getElementById('live-radio');
-  const liveRadioStatusEl=document.getElementById('live-radio-status');
-  const liveRadioBtn=document.getElementById('live-radio-btn');
-  const liveRadioAudio=document.getElementById('live-radio-audio');
-  let liveRadioUnsubscribe=null;
-  let liveRadioHls=null;
-  let liveRadioSource='';
-  let liveRadioCanPlay=false;
-  let liveRadioState='offline';
-  let liveRadioStatusBackend='offline';
-  let liveRadioFallbackMessage='Transmisión no disponible';
-  let liveRadioReconnectAttempts=0;
-  let liveRadioReconnectTimer=null;
-  let liveRadioSessionStartedAt=null;
-  const liveRadioMetrics={
-    playbackErrors:0,
-    liveSeconds:0,
-    listenersEstimate:1
-  };
-  let liveRadioMetricsTimer=null;
-
-  function syncLiveRadioWithAudioManager(){
-    const manager=window.audioManager;
-    if(!manager || !liveRadioAudio) return;
-    const currentMuted=typeof manager.muted==='boolean'?manager.muted:false;
-    const currentVolume=Number.isFinite(manager.musicVolume)?manager.musicVolume:1;
-    liveRadioAudio.muted=!!currentMuted;
-    liveRadioAudio.volume=Math.max(0,Math.min(1,currentVolume));
-    if(manager.__liveRadioHooked) return;
-    const originalSetMuted=typeof manager.setMuted==='function'?manager.setMuted.bind(manager):null;
-    const originalSetVolume=typeof manager.setVolume==='function'?manager.setVolume.bind(manager):null;
-    if(originalSetMuted){
-      manager.setMuted=(value,...args)=>{
-        const result=originalSetMuted(value,...args);
-        liveRadioAudio.muted=!!value;
-        return result;
-      };
-    }
-    if(originalSetVolume){
-      manager.setVolume=(type,value,...args)=>{
-        const result=originalSetVolume(type,value,...args);
-        if(type==='music' || type==='master'){
-          const nextVolume=type==='music'?value:(Number.isFinite(manager.musicVolume)?manager.musicVolume:value);
-          if(Number.isFinite(nextVolume)) liveRadioAudio.volume=Math.max(0,Math.min(1,nextVolume));
-        }
-        return result;
-      };
-    }
-    manager.__liveRadioHooked=true;
-  }
-
-  function setLiveRadioUi(state,message){
-    liveRadioState=state;
-    liveRadioEl.classList.toggle('live-radio--offline',state==='offline');
-    liveRadioEl.classList.toggle('live-radio--error',state==='error');
-    liveRadioStatusEl.textContent=message;
-    const playing=!liveRadioAudio.paused && !liveRadioAudio.ended;
-    liveRadioBtn.textContent=playing?'Pause':'Play';
-    liveRadioBtn.disabled=!liveRadioCanPlay;
-  }
-
-  function destroyLiveRadioPlayback(){
-    if(liveRadioReconnectTimer){
-      clearTimeout(liveRadioReconnectTimer);
-      liveRadioReconnectTimer=null;
-    }
-    if(liveRadioHls){ liveRadioHls.destroy(); liveRadioHls=null; }
-    liveRadioAudio.pause();
-    liveRadioAudio.removeAttribute('src');
-    liveRadioAudio.load();
-  }
-
-  function attachLiveRadioSource(url){
-    if(!url){ destroyLiveRadioPlayback(); return; }
-    if(liveRadioHls){ liveRadioHls.destroy(); liveRadioHls=null; }
-    const canNative=liveRadioAudio.canPlayType('application/vnd.apple.mpegurl');
-    if(canNative){
-      liveRadioAudio.src=url;
-      return;
-    }
-    if(window.Hls && window.Hls.isSupported()){
-      liveRadioHls=new window.Hls({enableWorker:true,lowLatencyMode:true});
-      liveRadioHls.loadSource(url);
-      liveRadioHls.attachMedia(liveRadioAudio);
-      liveRadioHls.on(window.Hls.Events.ERROR,(_,data)=>{
-        if(data?.fatal){ handleLiveRadioPlaybackError('Error de red en la transmisión'); }
-      });
-      return;
-    }
-    setLiveRadioUi('error','Este navegador no soporta audio en vivo');
-  }
-
-  function scheduleLiveRadioReconnect(reason){
-    if(!liveRadioCanPlay || !liveRadioSource) return;
-    if(liveRadioReconnectTimer) return;
-    const delay=Math.min(30000,Math.round(1000*(2**Math.min(liveRadioReconnectAttempts,5))));
-    liveRadioReconnectAttempts+=1;
-    setLiveRadioUi('connecting',`${reason} Reintentando en ${Math.round(delay/1000)}s...`);
-    liveRadioReconnectTimer=setTimeout(async()=>{
-      liveRadioReconnectTimer=null;
-      try{
-        attachLiveRadioSource(liveRadioSource);
-        await liveRadioAudio.play();
-        liveRadioReconnectAttempts=0;
-      }catch(error){
-        console.warn('Falló reconexión automática de radio en vivo',error);
-        scheduleLiveRadioReconnect('No se pudo reconectar.');
-      }
-    },delay);
-  }
-
-  function handleLiveRadioPlaybackError(message){
-    liveRadioMetrics.playbackErrors+=1;
-    setLiveRadioUi('error',message||liveRadioFallbackMessage);
-    scheduleLiveRadioReconnect('Conexión inestable.');
-  }
-
-  async function toggleLiveRadioPlayback(){
-    if(!liveRadioCanPlay) return;
-    try{
-      if(liveRadioAudio.paused){
-        setLiveRadioUi('connecting','Conectando...');
-        await liveRadioAudio.play();
-        setLiveRadioUi('live','En vivo');
-      }else{
-        liveRadioAudio.pause();
-        setLiveRadioUi(liveRadioStatusBackend==='live'?'live':'offline',liveRadioStatusBackend==='live'?'En vivo':'Sin emisión');
-      }
-    }catch(error){
-      console.warn('No se pudo iniciar radio en vivo',error);
-      handleLiveRadioPlaybackError('No se pudo iniciar la reproducción');
-    }
-  }
-
-  function initLiveRadio(){
-    syncLiveRadioWithAudioManager();
-    liveRadioBtn.addEventListener('click',toggleLiveRadioPlayback);
-    liveRadioAudio.addEventListener('playing',()=>{
-      if(!liveRadioSessionStartedAt) liveRadioSessionStartedAt=Date.now();
-      liveRadioReconnectAttempts=0;
-      setLiveRadioUi('live','En vivo');
-    });
-    liveRadioAudio.addEventListener('waiting',()=>setLiveRadioUi('connecting','Conectando...'));
-    liveRadioAudio.addEventListener('error',()=>handleLiveRadioPlaybackError('Error de red en la transmisión'));
-    if(!liveRadioMetricsTimer){
-      liveRadioMetricsTimer=setInterval(()=>{
-        if(liveRadioSessionStartedAt){
-          liveRadioMetrics.liveSeconds=Math.round((Date.now()-liveRadioSessionStartedAt)/1000);
-        }
-      },1000);
-    }
-    liveRadioUnsubscribe=db.collection('global').doc('liveRadio').onSnapshot((docSnap)=>{
-      const data=docSnap.exists?(docSnap.data()||{}):{};
-      const enabled=!!data.enabled;
-      liveRadioStatusBackend=String(data.status||'offline').toLowerCase();
-      liveRadioFallbackMessage=String(data.fallbackMessage||'').trim()||'Transmisión no disponible';
-      if(Number.isFinite(data.listenersEstimate)){
-        liveRadioMetrics.listenersEstimate=Math.max(0,Math.round(data.listenersEstimate));
-      }
-      if(Number.isFinite(data.playbackErrors)){
-        liveRadioMetrics.playbackErrors=Math.max(0,Math.round(data.playbackErrors));
-      }
-      const streamUrl=String(data.streamUrl||data.url||'').trim();
-      liveRadioCanPlay=enabled && liveRadioStatusBackend==='live' && !!streamUrl;
-      if(liveRadioCanPlay && streamUrl!==liveRadioSource){
-        liveRadioSource=streamUrl;
-        attachLiveRadioSource(streamUrl);
-      }
-      if(!liveRadioCanPlay){
-        liveRadioSource='';
-        destroyLiveRadioPlayback();
-      }
-      if(!enabled){
-        setLiveRadioUi('offline','Sin emisión');
-      }else if(liveRadioStatusBackend==='connecting'){
-        setLiveRadioUi('connecting','Conectando...');
-      }else if(liveRadioCanPlay){
-        setLiveRadioUi('live',liveRadioAudio.paused?'Listo para escuchar':'En vivo');
-      }else{
-        setLiveRadioUi('error',liveRadioFallbackMessage);
-      }
-    },()=>{
-      liveRadioCanPlay=false;
-      setLiveRadioUi('error',liveRadioFallbackMessage);
-    });
-  }
-
-  initLiveRadio();
 
   function asegurarManoVisible(){
     if(!tutorialHand || !tutorialState.posicionMano) return;
