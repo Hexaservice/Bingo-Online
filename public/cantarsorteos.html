@@ -1734,42 +1734,6 @@
       text-align: center;
     }
     #footer #derechos { font-size: 0.6rem; }
-    .live-radio-panel {
-      margin-top: 14px;
-      padding: 12px;
-      border-radius: 10px;
-      background: rgba(255,255,255,0.9);
-      border: 2px solid #1e3aa8;
-      width: min(460px, calc(100vw - 20px));
-      box-sizing: border-box;
-    }
-    .live-radio-panel h3 {
-      margin: 0 0 8px 0;
-      font-family: 'Bangers', cursive;
-      color: #1e3aa8;
-      letter-spacing: 1px;
-      font-size: 1.3rem;
-    }
-    .live-radio-controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      justify-content: center;
-      align-items: center;
-    }
-    .live-radio-controls button {
-      min-width: 120px;
-      font-family: 'Bangers', cursive;
-      border: 2px solid #FFD700;
-      border-radius: 8px;
-      padding: 8px 12px;
-      cursor: pointer;
-    }
-    .live-radio-status {
-      margin-top: 8px;
-      font-weight: 600;
-      color: #1f1f1f;
-    }
   </style>
   <link rel="stylesheet" href="css/desktopFrame.css">
 </head>
@@ -1932,14 +1896,6 @@
         <img src="https://api.iconify.design/mdi/cash-multiple.svg?color=%230c7a43" alt="Centro de pagos" width="28" height="28">
       </button>
     </div>
-  </section>
-  <section id="live-radio-panel" class="live-radio-panel" aria-labelledby="live-radio-title">
-    <h3 id="live-radio-title">Emisora en vivo</h3>
-    <div class="live-radio-controls">
-      <button id="live-radio-start-btn" type="button">Iniciar</button>
-      <button id="live-radio-stop-btn" type="button">Detener</button>
-    </div>
-    <div id="live-radio-status" class="live-radio-status" role="status" aria-live="polite">Estado: offline</div>
   </section>
   <section id="tabla-cantos-wrapper">
     <div id="panel-ganadores-formas" role="group" aria-label="Ganadores por forma"></div>
@@ -2218,218 +2174,7 @@
   let formasGanadorasNotificadas = new Set();
   let contadorToastGanadorPorForma = new Map();
   let evaluandoCantoActual = false;
-  const liveRadioStartBtn = document.getElementById('live-radio-start-btn');
-  const liveRadioStopBtn = document.getElementById('live-radio-stop-btn');
-  const liveRadioStatusEl = document.getElementById('live-radio-status');
-  const LIVE_RADIO_STATES = {
-    OFFLINE: 'offline',
-    STARTING: 'starting',
-    LIVE: 'live',
-    STOPPING: 'stopping'
-  };
-  const liveRadioAllowedTransitions = {
-    [LIVE_RADIO_STATES.OFFLINE]: LIVE_RADIO_STATES.STARTING,
-    [LIVE_RADIO_STATES.STARTING]: LIVE_RADIO_STATES.LIVE,
-    [LIVE_RADIO_STATES.LIVE]: LIVE_RADIO_STATES.STOPPING,
-    [LIVE_RADIO_STATES.STOPPING]: LIVE_RADIO_STATES.OFFLINE
-  };
-  let liveRadioState = LIVE_RADIO_STATES.OFFLINE;
-  let liveRadioTransitionInProgress = false;
-  let liveRadioUnsub = null;
-  let liveRadioErrorSince = null;
-  let liveRadioOutageAlerted = false;
-  let liveRadioStatusStableTimer = null;
   const advertenciasGanadorSinEmail = new Set();
-
-  function traducirEstadoLiveRadio(estado){
-    const normalizado = Object.values(LIVE_RADIO_STATES).includes(estado) ? estado : LIVE_RADIO_STATES.OFFLINE;
-    if(normalizado === LIVE_RADIO_STATES.STARTING) return 'iniciando';
-    if(normalizado === LIVE_RADIO_STATES.STOPPING) return 'deteniendo';
-    return normalizado;
-  }
-
-  function actualizarUiLiveRadio(){
-    if(liveRadioStatusEl){
-      const textoActual = String(liveRadioStatusEl.textContent || '');
-      if(!textoActual.includes('Usuarios est.:')){
-        liveRadioStatusEl.textContent = `Estado: ${traducirEstadoLiveRadio(liveRadioState)}`;
-      }
-    }
-    const enTransicion = liveRadioState === LIVE_RADIO_STATES.STARTING || liveRadioState === LIVE_RADIO_STATES.STOPPING || liveRadioTransitionInProgress;
-    if(liveRadioStartBtn){
-      liveRadioStartBtn.disabled = enTransicion || liveRadioState === LIVE_RADIO_STATES.LIVE;
-    }
-    if(liveRadioStopBtn){
-      liveRadioStopBtn.disabled = enTransicion || liveRadioState === LIVE_RADIO_STATES.OFFLINE;
-    }
-  }
-
-  function calcularSegundosLive(startedAt){
-    if(!startedAt) return 0;
-    const ms = typeof startedAt?.toMillis === 'function' ? startedAt.toMillis() : new Date(startedAt).getTime();
-    if(!Number.isFinite(ms)) return 0;
-    return Math.max(0,Math.floor((Date.now()-ms)/1000));
-  }
-
-  function evaluarAlertasOperativasLiveRadio(data){
-    const estado = String(data.status || data.estado || LIVE_RADIO_STATES.OFFLINE).toLowerCase();
-    const streamUrl = String(data.streamUrl || data.url || '').trim();
-    if(estado === 'live' && !streamUrl){
-      registrarDiagnosticoLiveRadio('Alerta operativa: stream caído (estado live sin URL)');
-    }
-    if(estado === 'error'){
-      if(!liveRadioErrorSince) liveRadioErrorSince = Date.now();
-      if(!liveRadioOutageAlerted && Date.now() - liveRadioErrorSince >= 60000){
-        liveRadioOutageAlerted = true;
-        registrarDiagnosticoLiveRadio('Alerta operativa: estado error sostenido por más de 60s');
-      }
-    }else{
-      liveRadioErrorSince = null;
-      liveRadioOutageAlerted = false;
-    }
-  }
-
-  function registrarDiagnosticoLiveRadio(mensaje, error){
-    const detalle = error?.message ? ` Detalle: ${error.message}` : '';
-    console.warn(`[LiveRadio] ${mensaje}.${detalle}`);
-    if(mensajeEl){
-      mensajeEl.textContent = `${mensaje}.${detalle}`.trim();
-    }
-  }
-
-  async function verificarDisponibilidadM3u8(url){
-    if(!url) throw new Error('No hay streamUrl configurado para validar la emisora');
-    const respuesta = await fetch(url, { method: 'GET', cache: 'no-store' });
-    if(!respuesta.ok){
-      throw new Error(`El stream respondió con HTTP ${respuesta.status}`);
-    }
-    const contenido = await respuesta.text();
-    if(!contenido.includes('#EXTM3U')){
-      throw new Error('La respuesta no parece una playlist HLS válida');
-    }
-  }
-
-  async function ejecutarTransicionLiveRadio(estadoObjetivoDirecto){
-    if(liveRadioTransitionInProgress){
-      registrarDiagnosticoLiveRadio('Acción bloqueada: hay una transición en curso');
-      return;
-    }
-    liveRadioTransitionInProgress = true;
-    actualizarUiLiveRadio();
-    try {
-      const liveRadioRef = db.collection('global').doc('liveRadio');
-      await db.runTransaction(async tx => {
-        const snapshot = await tx.get(liveRadioRef);
-        const data = snapshot.exists ? (snapshot.data() || {}) : {};
-        const estadoActualRemoto = String(data.status || data.estado || LIVE_RADIO_STATES.OFFLINE).toLowerCase();
-        const estadoActual = Object.values(LIVE_RADIO_STATES).includes(estadoActualRemoto) ? estadoActualRemoto : LIVE_RADIO_STATES.OFFLINE;
-        if(estadoActual === LIVE_RADIO_STATES.STARTING || estadoActual === LIVE_RADIO_STATES.STOPPING){
-          throw new Error(`No se puede operar porque el estado remoto está en transición (${estadoActual})`);
-        }
-        if(estadoObjetivoDirecto === LIVE_RADIO_STATES.LIVE && estadoActual !== LIVE_RADIO_STATES.OFFLINE){
-          throw new Error(`Para iniciar, el estado remoto debe ser offline (actual: ${estadoActual})`);
-        }
-        if(estadoObjetivoDirecto === LIVE_RADIO_STATES.OFFLINE && estadoActual !== LIVE_RADIO_STATES.LIVE){
-          throw new Error(`Para detener, el estado remoto debe ser live (actual: ${estadoActual})`);
-        }
-        const estadoIntermedio = liveRadioAllowedTransitions[estadoActual];
-        if(!estadoIntermedio){
-          throw new Error(`No existe transición configurada desde ${estadoActual}`);
-        }
-        const siguienteFinal = liveRadioAllowedTransitions[estadoIntermedio];
-        if(siguienteFinal !== estadoObjetivoDirecto){
-          throw new Error(`Secuencia inválida: ${estadoActual} -> ${estadoIntermedio} -> ${siguienteFinal}`);
-        }
-        tx.set(liveRadioRef, { status: estadoIntermedio, estado: estadoIntermedio, updatedAt: firebase.firestore.FieldValue.serverTimestamp(), actualizadoEn: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-        tx.set(liveRadioRef, {
-          status: estadoObjetivoDirecto,
-          estado: estadoObjetivoDirecto,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          actualizadoEn: firebase.firestore.FieldValue.serverTimestamp(),
-          startedAt: estadoObjetivoDirecto === LIVE_RADIO_STATES.LIVE ? firebase.firestore.FieldValue.serverTimestamp() : (data.startedAt || firebase.firestore.FieldValue.serverTimestamp()),
-          playbackErrors: Number.isFinite(data.playbackErrors) ? data.playbackErrors : 0,
-          listenersEstimate: Number.isFinite(data.listenersEstimate) ? data.listenersEstimate : 0,
-          fallbackMessage: typeof data.fallbackMessage === 'string' ? data.fallbackMessage : 'Transmisión no disponible'
-        }, { merge: true });
-      });
-
-      if(estadoObjetivoDirecto === LIVE_RADIO_STATES.LIVE){
-        const snapshotFinal = await db.collection('global').doc('liveRadio').get();
-        const payloadFinal = snapshotFinal.exists ? (snapshotFinal.data() || {}) : {};
-        const streamUrl = String(payloadFinal.streamUrl || payloadFinal.url || '').trim();
-        await verificarDisponibilidadM3u8(streamUrl);
-      }
-    } catch (error) {
-      registrarDiagnosticoLiveRadio('Falló la transición de Emisora en vivo', error);
-      if(estadoObjetivoDirecto === LIVE_RADIO_STATES.LIVE){
-        await db.collection('global').doc('liveRadio').set({
-          status: LIVE_RADIO_STATES.OFFLINE,
-          estado: LIVE_RADIO_STATES.OFFLINE,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true }).catch(rollbackError => {
-          registrarDiagnosticoLiveRadio('No se pudo ejecutar rollback a offline luego de fallar el health-check', rollbackError);
-        });
-      }
-    } finally {
-      liveRadioTransitionInProgress = false;
-      actualizarUiLiveRadio();
-    }
-  }
-
-  function iniciarListenerLiveRadio(){
-    if(typeof db?.collection !== 'function') return;
-    if(liveRadioUnsub){
-      liveRadioUnsub();
-    }
-    liveRadioUnsub = db.collection('global').doc('liveRadio').onSnapshot(snapshot=>{
-      const data = snapshot.exists ? (snapshot.data() || {}) : {};
-      const estadoRaw = String(data.status || data.estado || LIVE_RADIO_STATES.OFFLINE).toLowerCase();
-      const estadoRemoto = Object.values(LIVE_RADIO_STATES).includes(estadoRaw) ? estadoRaw : LIVE_RADIO_STATES.OFFLINE;
-      liveRadioState = estadoRemoto;
-      evaluarAlertasOperativasLiveRadio(data);
-      const segundosLive = calcularSegundosLive(data.startedAt);
-      if(liveRadioStatusEl){
-        const listeners = Number.isFinite(data.listenersEstimate) ? Math.max(0,Math.round(data.listenersEstimate)) : 0;
-        const errors = Number.isFinite(data.playbackErrors) ? Math.max(0,Math.round(data.playbackErrors)) : 0;
-        liveRadioStatusEl.textContent = `Estado: ${traducirEstadoLiveRadio(liveRadioState)} · Usuarios est.: ${listeners} · Errores: ${errors} · Live: ${segundosLive}s`;
-      }
-      actualizarUiLiveRadio();
-    }, error=>{
-      registrarDiagnosticoLiveRadio('No se pudo sincronizar el estado de Emisora en vivo', error);
-    });
-  }
-  if(!liveRadioStatusStableTimer){
-    liveRadioStatusStableTimer = setInterval(async()=>{
-      if(!db || liveRadioState !== LIVE_RADIO_STATES.LIVE) return;
-      try{
-        await db.collection('global').doc('liveRadio').set({
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-      }catch(error){
-        registrarDiagnosticoLiveRadio('No se pudo actualizar heartbeat de estado live', error);
-      }
-    }, 30000);
-  }
-  if(liveRadioStartBtn){
-    liveRadioStartBtn.addEventListener('click', ()=>{
-      if(liveRadioState === LIVE_RADIO_STATES.STARTING || liveRadioState === LIVE_RADIO_STATES.STOPPING){
-        registrarDiagnosticoLiveRadio('No se puede iniciar: la emisora está en transición');
-        return;
-      }
-      ejecutarTransicionLiveRadio(LIVE_RADIO_STATES.LIVE);
-    });
-  }
-  if(liveRadioStopBtn){
-    liveRadioStopBtn.addEventListener('click', ()=>{
-      if(liveRadioState === LIVE_RADIO_STATES.STARTING || liveRadioState === LIVE_RADIO_STATES.STOPPING){
-        registrarDiagnosticoLiveRadio('No se puede detener: la emisora está en transición');
-        return;
-      }
-      ejecutarTransicionLiveRadio(LIVE_RADIO_STATES.OFFLINE);
-    });
-  }
-  actualizarUiLiveRadio();
   function manejarAceptarConfirmacionCanto(){
     cerrarConfirmacionCanto(true);
   }
@@ -7565,7 +7310,6 @@
     const esperaAuth = authListoPromesa.catch(()=>{});
     try {
       await initFirebase();
-      iniciarListenerLiveRadio();
       await cargarDuracionCantoManualDesdeParametros();
       await esperaAuth;
       await cargarSorteos();
@@ -7577,7 +7321,6 @@
     if(primerIntentoFallido){
       try {
         await initFirebase();
-        iniciarListenerLiveRadio();
         await cargarDuracionCantoManualDesdeParametros();
         await esperaAuth;
         await cargarSorteos({ forzar: true });
