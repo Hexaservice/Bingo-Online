@@ -2266,6 +2266,18 @@
     }
   }
 
+  async function verificarDisponibilidadM3u8(url){
+    if(!url) throw new Error('No hay streamUrl configurado para validar la emisora');
+    const respuesta = await fetch(url, { method: 'GET', cache: 'no-store' });
+    if(!respuesta.ok){
+      throw new Error(`El stream respondió con HTTP ${respuesta.status}`);
+    }
+    const contenido = await respuesta.text();
+    if(!contenido.includes('#EXTM3U')){
+      throw new Error('La respuesta no parece una playlist HLS válida');
+    }
+  }
+
   async function ejecutarTransicionLiveRadio(estadoObjetivoDirecto){
     if(liveRadioTransitionInProgress){
       registrarDiagnosticoLiveRadio('Acción bloqueada: hay una transición en curso');
@@ -2278,7 +2290,8 @@
       await db.runTransaction(async tx => {
         const snapshot = await tx.get(liveRadioRef);
         const data = snapshot.exists ? (snapshot.data() || {}) : {};
-        const estadoActual = Object.values(LIVE_RADIO_STATES).includes(data.estado) ? data.estado : LIVE_RADIO_STATES.OFFLINE;
+        const estadoActualRemoto = String(data.status || data.estado || LIVE_RADIO_STATES.OFFLINE).toLowerCase();
+        const estadoActual = Object.values(LIVE_RADIO_STATES).includes(estadoActualRemoto) ? estadoActualRemoto : LIVE_RADIO_STATES.OFFLINE;
         if(estadoActual === LIVE_RADIO_STATES.STARTING || estadoActual === LIVE_RADIO_STATES.STOPPING){
           throw new Error(`No se puede operar porque el estado remoto está en transición (${estadoActual})`);
         }
@@ -2296,11 +2309,28 @@
         if(siguienteFinal !== estadoObjetivoDirecto){
           throw new Error(`Secuencia inválida: ${estadoActual} -> ${estadoIntermedio} -> ${siguienteFinal}`);
         }
-        tx.set(liveRadioRef, { estado: estadoIntermedio, actualizadoEn: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-        tx.set(liveRadioRef, { estado: estadoObjetivoDirecto, actualizadoEn: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        tx.set(liveRadioRef, { status: estadoIntermedio, estado: estadoIntermedio, updatedAt: firebase.firestore.FieldValue.serverTimestamp(), actualizadoEn: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        tx.set(liveRadioRef, { status: estadoObjetivoDirecto, estado: estadoObjetivoDirecto, updatedAt: firebase.firestore.FieldValue.serverTimestamp(), actualizadoEn: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
       });
+
+      if(estadoObjetivoDirecto === LIVE_RADIO_STATES.LIVE){
+        const snapshotFinal = await db.collection('global').doc('liveRadio').get();
+        const payloadFinal = snapshotFinal.exists ? (snapshotFinal.data() || {}) : {};
+        const streamUrl = String(payloadFinal.streamUrl || payloadFinal.url || '').trim();
+        await verificarDisponibilidadM3u8(streamUrl);
+      }
     } catch (error) {
       registrarDiagnosticoLiveRadio('Falló la transición de Emisora en vivo', error);
+      if(estadoObjetivoDirecto === LIVE_RADIO_STATES.LIVE){
+        await db.collection('global').doc('liveRadio').set({
+          status: LIVE_RADIO_STATES.OFFLINE,
+          estado: LIVE_RADIO_STATES.OFFLINE,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true }).catch(rollbackError => {
+          registrarDiagnosticoLiveRadio('No se pudo ejecutar rollback a offline luego de fallar el health-check', rollbackError);
+        });
+      }
     } finally {
       liveRadioTransitionInProgress = false;
       actualizarUiLiveRadio();
@@ -2314,7 +2344,8 @@
     }
     liveRadioUnsub = db.collection('global').doc('liveRadio').onSnapshot(snapshot=>{
       const data = snapshot.exists ? (snapshot.data() || {}) : {};
-      const estadoRemoto = Object.values(LIVE_RADIO_STATES).includes(data.estado) ? data.estado : LIVE_RADIO_STATES.OFFLINE;
+      const estadoRaw = String(data.status || data.estado || LIVE_RADIO_STATES.OFFLINE).toLowerCase();
+      const estadoRemoto = Object.values(LIVE_RADIO_STATES).includes(estadoRaw) ? estadoRaw : LIVE_RADIO_STATES.OFFLINE;
       liveRadioState = estadoRemoto;
       actualizarUiLiveRadio();
     }, error=>{
