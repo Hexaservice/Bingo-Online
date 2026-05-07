@@ -1436,6 +1436,16 @@
   let liveRadioCanPlay=false;
   let liveRadioState='offline';
   let liveRadioStatusBackend='offline';
+  let liveRadioFallbackMessage='Transmisión no disponible';
+  let liveRadioReconnectAttempts=0;
+  let liveRadioReconnectTimer=null;
+  let liveRadioSessionStartedAt=null;
+  const liveRadioMetrics={
+    playbackErrors:0,
+    liveSeconds:0,
+    listenersEstimate:1
+  };
+  let liveRadioMetricsTimer=null;
 
   function syncLiveRadioWithAudioManager(){
     const manager=window.audioManager;
@@ -1478,6 +1488,10 @@
   }
 
   function destroyLiveRadioPlayback(){
+    if(liveRadioReconnectTimer){
+      clearTimeout(liveRadioReconnectTimer);
+      liveRadioReconnectTimer=null;
+    }
     if(liveRadioHls){ liveRadioHls.destroy(); liveRadioHls=null; }
     liveRadioAudio.pause();
     liveRadioAudio.removeAttribute('src');
@@ -1497,11 +1511,36 @@
       liveRadioHls.loadSource(url);
       liveRadioHls.attachMedia(liveRadioAudio);
       liveRadioHls.on(window.Hls.Events.ERROR,(_,data)=>{
-        if(data?.fatal){ setLiveRadioUi('error','Error de red en la transmisión'); }
+        if(data?.fatal){ handleLiveRadioPlaybackError('Error de red en la transmisión'); }
       });
       return;
     }
     setLiveRadioUi('error','Este navegador no soporta audio en vivo');
+  }
+
+  function scheduleLiveRadioReconnect(reason){
+    if(!liveRadioCanPlay || !liveRadioSource) return;
+    if(liveRadioReconnectTimer) return;
+    const delay=Math.min(30000,Math.round(1000*(2**Math.min(liveRadioReconnectAttempts,5))));
+    liveRadioReconnectAttempts+=1;
+    setLiveRadioUi('connecting',`${reason} Reintentando en ${Math.round(delay/1000)}s...`);
+    liveRadioReconnectTimer=setTimeout(async()=>{
+      liveRadioReconnectTimer=null;
+      try{
+        attachLiveRadioSource(liveRadioSource);
+        await liveRadioAudio.play();
+        liveRadioReconnectAttempts=0;
+      }catch(error){
+        console.warn('Falló reconexión automática de radio en vivo',error);
+        scheduleLiveRadioReconnect('No se pudo reconectar.');
+      }
+    },delay);
+  }
+
+  function handleLiveRadioPlaybackError(message){
+    liveRadioMetrics.playbackErrors+=1;
+    setLiveRadioUi('error',message||liveRadioFallbackMessage);
+    scheduleLiveRadioReconnect('Conexión inestable.');
   }
 
   async function toggleLiveRadioPlayback(){
@@ -1517,20 +1556,38 @@
       }
     }catch(error){
       console.warn('No se pudo iniciar radio en vivo',error);
-      setLiveRadioUi('error','No se pudo iniciar la reproducción');
+      handleLiveRadioPlaybackError('No se pudo iniciar la reproducción');
     }
   }
 
   function initLiveRadio(){
     syncLiveRadioWithAudioManager();
     liveRadioBtn.addEventListener('click',toggleLiveRadioPlayback);
-    liveRadioAudio.addEventListener('playing',()=>setLiveRadioUi('live','En vivo'));
+    liveRadioAudio.addEventListener('playing',()=>{
+      if(!liveRadioSessionStartedAt) liveRadioSessionStartedAt=Date.now();
+      liveRadioReconnectAttempts=0;
+      setLiveRadioUi('live','En vivo');
+    });
     liveRadioAudio.addEventListener('waiting',()=>setLiveRadioUi('connecting','Conectando...'));
-    liveRadioAudio.addEventListener('error',()=>setLiveRadioUi('error','Error de red en la transmisión'));
+    liveRadioAudio.addEventListener('error',()=>handleLiveRadioPlaybackError('Error de red en la transmisión'));
+    if(!liveRadioMetricsTimer){
+      liveRadioMetricsTimer=setInterval(()=>{
+        if(liveRadioSessionStartedAt){
+          liveRadioMetrics.liveSeconds=Math.round((Date.now()-liveRadioSessionStartedAt)/1000);
+        }
+      },1000);
+    }
     liveRadioUnsubscribe=db.collection('global').doc('liveRadio').onSnapshot((docSnap)=>{
       const data=docSnap.exists?(docSnap.data()||{}):{};
       const enabled=!!data.enabled;
       liveRadioStatusBackend=String(data.status||'offline').toLowerCase();
+      liveRadioFallbackMessage=String(data.fallbackMessage||'').trim()||'Transmisión no disponible';
+      if(Number.isFinite(data.listenersEstimate)){
+        liveRadioMetrics.listenersEstimate=Math.max(0,Math.round(data.listenersEstimate));
+      }
+      if(Number.isFinite(data.playbackErrors)){
+        liveRadioMetrics.playbackErrors=Math.max(0,Math.round(data.playbackErrors));
+      }
       const streamUrl=String(data.streamUrl||data.url||'').trim();
       liveRadioCanPlay=enabled && liveRadioStatusBackend==='live' && !!streamUrl;
       if(liveRadioCanPlay && streamUrl!==liveRadioSource){
@@ -1548,11 +1605,11 @@
       }else if(liveRadioCanPlay){
         setLiveRadioUi('live',liveRadioAudio.paused?'Listo para escuchar':'En vivo');
       }else{
-        setLiveRadioUi('error','Transmisión no disponible');
+        setLiveRadioUi('error',liveRadioFallbackMessage);
       }
     },()=>{
       liveRadioCanPlay=false;
-      setLiveRadioUi('error','No se pudo conectar con la radio');
+      setLiveRadioUi('error',liveRadioFallbackMessage);
     });
   }
 

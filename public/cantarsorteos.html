@@ -2236,6 +2236,9 @@
   let liveRadioState = LIVE_RADIO_STATES.OFFLINE;
   let liveRadioTransitionInProgress = false;
   let liveRadioUnsub = null;
+  let liveRadioErrorSince = null;
+  let liveRadioOutageAlerted = false;
+  let liveRadioStatusStableTimer = null;
   const advertenciasGanadorSinEmail = new Set();
 
   function traducirEstadoLiveRadio(estado){
@@ -2247,7 +2250,10 @@
 
   function actualizarUiLiveRadio(){
     if(liveRadioStatusEl){
-      liveRadioStatusEl.textContent = `Estado: ${traducirEstadoLiveRadio(liveRadioState)}`;
+      const textoActual = String(liveRadioStatusEl.textContent || '');
+      if(!textoActual.includes('Usuarios est.:')){
+        liveRadioStatusEl.textContent = `Estado: ${traducirEstadoLiveRadio(liveRadioState)}`;
+      }
     }
     const enTransicion = liveRadioState === LIVE_RADIO_STATES.STARTING || liveRadioState === LIVE_RADIO_STATES.STOPPING || liveRadioTransitionInProgress;
     if(liveRadioStartBtn){
@@ -2255,6 +2261,31 @@
     }
     if(liveRadioStopBtn){
       liveRadioStopBtn.disabled = enTransicion || liveRadioState === LIVE_RADIO_STATES.OFFLINE;
+    }
+  }
+
+  function calcularSegundosLive(startedAt){
+    if(!startedAt) return 0;
+    const ms = typeof startedAt?.toMillis === 'function' ? startedAt.toMillis() : new Date(startedAt).getTime();
+    if(!Number.isFinite(ms)) return 0;
+    return Math.max(0,Math.floor((Date.now()-ms)/1000));
+  }
+
+  function evaluarAlertasOperativasLiveRadio(data){
+    const estado = String(data.status || data.estado || LIVE_RADIO_STATES.OFFLINE).toLowerCase();
+    const streamUrl = String(data.streamUrl || data.url || '').trim();
+    if(estado === 'live' && !streamUrl){
+      registrarDiagnosticoLiveRadio('Alerta operativa: stream caído (estado live sin URL)');
+    }
+    if(estado === 'error'){
+      if(!liveRadioErrorSince) liveRadioErrorSince = Date.now();
+      if(!liveRadioOutageAlerted && Date.now() - liveRadioErrorSince >= 60000){
+        liveRadioOutageAlerted = true;
+        registrarDiagnosticoLiveRadio('Alerta operativa: estado error sostenido por más de 60s');
+      }
+    }else{
+      liveRadioErrorSince = null;
+      liveRadioOutageAlerted = false;
     }
   }
 
@@ -2310,7 +2341,16 @@
           throw new Error(`Secuencia inválida: ${estadoActual} -> ${estadoIntermedio} -> ${siguienteFinal}`);
         }
         tx.set(liveRadioRef, { status: estadoIntermedio, estado: estadoIntermedio, updatedAt: firebase.firestore.FieldValue.serverTimestamp(), actualizadoEn: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-        tx.set(liveRadioRef, { status: estadoObjetivoDirecto, estado: estadoObjetivoDirecto, updatedAt: firebase.firestore.FieldValue.serverTimestamp(), actualizadoEn: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        tx.set(liveRadioRef, {
+          status: estadoObjetivoDirecto,
+          estado: estadoObjetivoDirecto,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          actualizadoEn: firebase.firestore.FieldValue.serverTimestamp(),
+          startedAt: estadoObjetivoDirecto === LIVE_RADIO_STATES.LIVE ? firebase.firestore.FieldValue.serverTimestamp() : (data.startedAt || firebase.firestore.FieldValue.serverTimestamp()),
+          playbackErrors: Number.isFinite(data.playbackErrors) ? data.playbackErrors : 0,
+          listenersEstimate: Number.isFinite(data.listenersEstimate) ? data.listenersEstimate : 0,
+          fallbackMessage: typeof data.fallbackMessage === 'string' ? data.fallbackMessage : 'Transmisión no disponible'
+        }, { merge: true });
       });
 
       if(estadoObjetivoDirecto === LIVE_RADIO_STATES.LIVE){
@@ -2347,10 +2387,29 @@
       const estadoRaw = String(data.status || data.estado || LIVE_RADIO_STATES.OFFLINE).toLowerCase();
       const estadoRemoto = Object.values(LIVE_RADIO_STATES).includes(estadoRaw) ? estadoRaw : LIVE_RADIO_STATES.OFFLINE;
       liveRadioState = estadoRemoto;
+      evaluarAlertasOperativasLiveRadio(data);
+      const segundosLive = calcularSegundosLive(data.startedAt);
+      if(liveRadioStatusEl){
+        const listeners = Number.isFinite(data.listenersEstimate) ? Math.max(0,Math.round(data.listenersEstimate)) : 0;
+        const errors = Number.isFinite(data.playbackErrors) ? Math.max(0,Math.round(data.playbackErrors)) : 0;
+        liveRadioStatusEl.textContent = `Estado: ${traducirEstadoLiveRadio(liveRadioState)} · Usuarios est.: ${listeners} · Errores: ${errors} · Live: ${segundosLive}s`;
+      }
       actualizarUiLiveRadio();
     }, error=>{
       registrarDiagnosticoLiveRadio('No se pudo sincronizar el estado de Emisora en vivo', error);
     });
+  }
+  if(!liveRadioStatusStableTimer){
+    liveRadioStatusStableTimer = setInterval(async()=>{
+      if(!db || liveRadioState !== LIVE_RADIO_STATES.LIVE) return;
+      try{
+        await db.collection('global').doc('liveRadio').set({
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      }catch(error){
+        registrarDiagnosticoLiveRadio('No se pudo actualizar heartbeat de estado live', error);
+      }
+    }, 30000);
   }
   if(liveRadioStartBtn){
     liveRadioStartBtn.addEventListener('click', ()=>{
