@@ -1381,17 +1381,8 @@
     }
     const datos = [];
     const tbody = document.querySelector('#bancos-table tbody');
-    const firebaseReadyPromise = initFirebase().catch(error=>{
-      console.error('No se pudo inicializar Firebase en configuración', error);
-      throw error;
-    });
-    async function asegurarFirebaseConfiguraciones(){
-      await firebaseReadyPromise;
-      if(!db) throw new Error('Firestore no disponible en configuración.');
-    }
 
-    async function cargarDatos(){
-      await asegurarFirebaseConfiguraciones();
+    function cargarDatos(){
       db.collection('Bancos').get().then(snap=>{
         datos.length = 0;
         snap.forEach(doc=>datos.push({id:doc.id, ...doc.data()}));
@@ -1444,7 +1435,6 @@
     toggleExtraFields();
 
     document.getElementById('guardar-btn').addEventListener('click', async ()=>{
-      await asegurarFirebaseConfiguraciones();
       const id=document.getElementById('banco-id').value.trim();
       const nombre=document.getElementById('banco-nombre').value.trim();
       const categoria=document.getElementById('banco-categoria').value;
@@ -1517,7 +1507,6 @@
     });
 
     document.getElementById('borrar-btn').addEventListener('click', async ()=>{
-      await asegurarFirebaseConfiguraciones();
       const chk=document.querySelector('input[name="select-banco"]:checked');
       if(!chk){ alert('Elije un banco para editar o borrar'); return; }
       if(await confirm(`¿Confirma borrar el banco ${chk.dataset.nombre}?`)){
@@ -1721,11 +1710,8 @@
       return numerosWhatsappList.map(item=>valorCompuestoNumero(item)).filter(Boolean);
     }
     function extraerListaWhatsapp(rawLista){
-      const origen = Array.isArray(rawLista)
-        ? rawLista
-        : (typeof rawLista==='string' ? rawLista.split(/[;,
-]+/) : (rawLista && typeof rawLista==='object' ? Object.values(rawLista) : []));
-      return origen
+      if(!Array.isArray(rawLista)) return [];
+      return rawLista
         .map(item=>{
           if(typeof item === 'string' || typeof item === 'number'){
             return normalizarNumeroWhatsapp(item);
@@ -1745,8 +1731,6 @@
         ?? data.numero_whatsapp
         ?? data.numeroWhatsappAplicacion
         ?? data.whatsappNumero
-        ?? data.numeroWsp
-        ?? data.whatsapp
         ?? ''
       );
     }
@@ -1907,7 +1891,6 @@
         btnEliminar.textContent='Eliminar';
         btnEliminar.addEventListener('click',async (e)=>{
           e.stopPropagation();
-          await asegurarFirebaseConfiguraciones();
           const numeroCompleto=valorCompuestoNumero(num);
           const confirmar=await confirm(`¿Deseas eliminar el número ${numeroCompleto}?`);
           if(!confirmar) return;
@@ -1953,7 +1936,6 @@
     }
 
     async function cargarParametrosWhatsapp(){
-      await asegurarFirebaseConfiguraciones();
       try {
         const doc=await db.collection('Variablesglobales').doc('Parametros').get();
         if(doc.exists){
@@ -1962,11 +1944,7 @@
           if(nombreApp){
             etiquetaNumeroWhatsapp.textContent=`Número WhatsApp para ${nombreApp}`;
           }
-          const listaRaw=obtenerValorDesdeRutas(data,[
-            'numerosWhatsapp','numeros_whatsapp','listaNumerosWhatsapp',
-            'whatsapp.numerosWhatsapp','whatsapp.numeros','whatsapp.numeros_whatsapp',
-            'configuracionWhatsapp.numerosWhatsapp','configuracionWhatsapp.numeros'
-          ]);
+          const listaRaw=obtenerValorDesdeRutas(data,['numerosWhatsapp','whatsapp.numerosWhatsapp','whatsapp.numeros','configuracionWhatsapp.numerosWhatsapp','configuracionWhatsapp.numeros']);
           const listaGuardada=extraerListaWhatsapp(listaRaw);
           const numeroGuardado=obtenerNumeroDesdeParametros(data);
           const listaNormalizada=listaGuardada.length>0?listaGuardada:[];
@@ -1981,11 +1959,7 @@
           numeroSeleccionado=numeroGuardado|| (numerosWhatsappList[0] ? `${numerosWhatsappList[0].prefijo}${numerosWhatsappList[0].local}` : '');
           renderDropdownWhatsapp();
           registrarEstadoBaseWhatsapp(baseLista.length>0?baseLista:numerosWhatsappList.map(valorCompuestoNumero));
-          const linkGuardado=(obtenerValorDesdeRutas(data,[
-            'linkWhatsapp','linkwhatsapp','link_whatsapp','linkGrupoWhatsapp','link_grupo_whatsapp',
-            'whatsapp.linkWhatsapp','whatsapp.linkwhatsapp','whatsapp.link','whatsapp.linkGrupo',
-            'configuracionWhatsapp.linkWhatsapp','configuracionWhatsapp.link'
-          ])??'').toString().trim();
+          const linkGuardado=(obtenerValorDesdeRutas(data,['linkWhatsapp','linkwhatsapp','link_whatsapp','whatsapp.linkWhatsapp','whatsapp.link','configuracionWhatsapp.linkWhatsapp','configuracionWhatsapp.link'])??'').toString().trim();
           campoLinkWhatsapp.value=linkGuardado;
           const dataSegundosCierre=(obtenerValorDesdeRutas(data,['whatsapp','configuracionWhatsapp']) && typeof obtenerValorDesdeRutas(data,['whatsapp','configuracionWhatsapp'])==='object') ? {...obtenerValorDesdeRutas(data,['whatsapp','configuracionWhatsapp']),...data} : data;
           const segundosCierre = obtenerEnteroNoNegativoDesdeClaves(dataSegundosCierre,[
