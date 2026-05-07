@@ -1381,8 +1381,17 @@
     }
     const datos = [];
     const tbody = document.querySelector('#bancos-table tbody');
+    const firebaseReadyPromise = initFirebase().catch(error=>{
+      console.error('No se pudo inicializar Firebase en configuración', error);
+      throw error;
+    });
+    async function asegurarFirebaseConfiguraciones(){
+      await firebaseReadyPromise;
+      if(!db) throw new Error('Firestore no disponible en configuración.');
+    }
 
-    function cargarDatos(){
+    async function cargarDatos(){
+      await asegurarFirebaseConfiguraciones();
       db.collection('Bancos').get().then(snap=>{
         datos.length = 0;
         snap.forEach(doc=>datos.push({id:doc.id, ...doc.data()}));
@@ -1435,6 +1444,7 @@
     toggleExtraFields();
 
     document.getElementById('guardar-btn').addEventListener('click', async ()=>{
+      await asegurarFirebaseConfiguraciones();
       const id=document.getElementById('banco-id').value.trim();
       const nombre=document.getElementById('banco-nombre').value.trim();
       const categoria=document.getElementById('banco-categoria').value;
@@ -1507,6 +1517,7 @@
     });
 
     document.getElementById('borrar-btn').addEventListener('click', async ()=>{
+      await asegurarFirebaseConfiguraciones();
       const chk=document.querySelector('input[name="select-banco"]:checked');
       if(!chk){ alert('Elije un banco para editar o borrar'); return; }
       if(await confirm(`¿Confirma borrar el banco ${chk.dataset.nombre}?`)){
@@ -1896,6 +1907,7 @@
         btnEliminar.textContent='Eliminar';
         btnEliminar.addEventListener('click',async (e)=>{
           e.stopPropagation();
+          await asegurarFirebaseConfiguraciones();
           const numeroCompleto=valorCompuestoNumero(num);
           const confirmar=await confirm(`¿Deseas eliminar el número ${numeroCompleto}?`);
           if(!confirmar) return;
@@ -1941,6 +1953,7 @@
     }
 
     async function cargarParametrosWhatsapp(){
+      await asegurarFirebaseConfiguraciones();
       try {
         const doc=await db.collection('Variablesglobales').doc('Parametros').get();
         if(doc.exists){
