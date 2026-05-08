@@ -1955,11 +1955,22 @@
     }
 
 
+
+    function obtenerInstanciaDb(){
+      if(typeof db!=='undefined' && db && typeof db.collection==='function') return db;
+      if(window.db && typeof window.db.collection==='function') return window.db;
+      return null;
+    }
+
     async function obtenerParametrosConfiguracion(){
+      const instanciaDb=obtenerInstanciaDb();
+      if(!instanciaDb){
+        throw new Error('Firestore aún no está inicializado en configuraciones');
+      }
       const candidatos=['Parametros','parametros','Configuraciones','configuraciones'];
       for(const docId of candidatos){
         try{
-          const snap=await db.collection('Variablesglobales').doc(docId).get();
+          const snap=await instanciaDb.collection('Variablesglobales').doc(docId).get();
           if(snap.exists){
             return {data:snap.data()||{},docId};
           }
@@ -1970,6 +1981,7 @@
       return {data:{},docId:null};
     }
 
+    let intentosCargaParametrosWhatsapp=0;
     async function cargarParametrosWhatsapp(){
       try {
         const {data,docId}=await obtenerParametrosConfiguracion();
@@ -2030,7 +2042,11 @@
           }
         }
       } catch(err){
+        intentosCargaParametrosWhatsapp+=1;
         console.error('No se pudieron obtener los datos de WhatsApp',err);
+        if(intentosCargaParametrosWhatsapp<=8){
+          setTimeout(cargarParametrosWhatsapp,400);
+        }
       } finally {
         actualizarVisualizacionLive();
       }
