@@ -1727,22 +1727,40 @@
     }
     function obtenerNumeroDesdeParametros(data){
       return normalizarNumeroWhatsapp(
-        data.numeroWhatsapp
-        ?? data.numero_whatsapp
-        ?? data.numeroWhatsappAplicacion
-        ?? data.whatsappNumero
+        obtenerValorDesdeRutas(data,[
+          'numeroWhatsapp','numero_whatsapp','numeroWhatsappAplicacion','whatsappNumero',
+          'whatsapp.numeroWhatsapp','configuracionWhatsapp.numeroWhatsapp'
+        ])
         ?? ''
       );
     }
     function obtenerEnteroNoNegativoDesdeClaves(data,claves){
+      if(!data || typeof data!=='object') return 0;
       for(const clave of claves){
-        if(!(clave in data)) continue;
-        const valor = Number(data[clave]);
+        const prop=obtenerPropiedadFlexible(data,clave);
+        if(!prop.encontrado) continue;
+        const valor = Number(prop.valor);
         if(Number.isFinite(valor)){
           return Math.max(0, Math.floor(valor));
         }
       }
       return 0;
+    }
+    function normalizarClaveFlexible(clave){
+      return (clave||'').toString().toLowerCase().replace(/[_\-\s]/g,'');
+    }
+    function obtenerPropiedadFlexible(objeto,segmento){
+      if(!objeto || typeof objeto!=='object') return {encontrado:false,valor:undefined};
+      if(segmento in objeto){
+        return {encontrado:true,valor:objeto[segmento]};
+      }
+      const objetivo=normalizarClaveFlexible(segmento);
+      for(const [key,valor] of Object.entries(objeto)){
+        if(normalizarClaveFlexible(key)===objetivo){
+          return {encontrado:true,valor};
+        }
+      }
+      return {encontrado:false,valor:undefined};
     }
     function obtenerValorDesdeRutas(data,rutas){
       for(const ruta of rutas){
@@ -1750,11 +1768,12 @@
         let actual=data;
         let existe=true;
         for(const segmento of segmentos){
-          if(!actual || typeof actual!=='object' || !(segmento in actual)){
+          const prop=obtenerPropiedadFlexible(actual,segmento);
+          if(!prop.encontrado){
             existe=false;
             break;
           }
-          actual=actual[segmento];
+          actual=prop.valor;
         }
         if(existe && actual!==undefined && actual!==null){
           return actual;
